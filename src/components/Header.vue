@@ -47,7 +47,7 @@ export default {
 <style lang="less" scoped>
 #nav {
     padding: .625rem 100px;
-    position: fixed;
+    position: absolute;
     left: 0;
     width: 100%;
     height: 50px;

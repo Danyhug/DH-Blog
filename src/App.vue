@@ -1,24 +1,7 @@
-<script setup lang="ts">
-import Header from './components/Header.vue';
-import Banner from './components/Banner.vue';
-import Side from './components/Side.vue';
-import Footer from './components/Footer.vue';
-
-import { onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-
-const router = useRoute()
-
-onMounted(() => {
-})
-
-</script>
-
 <template>
   <div class="container">
-    <Header></Header>
-    <Banner>
-
+    <Header ref="headerElement"></Header>
+    <Banner ref="bannerElement">
       <template v-if="router.path === '/'">
         <h1>我的个人纪录</h1>
         <h2>DH-BLOG</h2>
@@ -32,10 +15,12 @@ onMounted(() => {
           <span class="time-consum">阅读时长 1 分钟</span>
         </div>
       </template>
-
     </Banner>
+
     <div class="inner">
-      <Side></Side>
+      <div class="left" ref="leftElement">
+        <component :is="sideShowComponent"></component>
+      </div>
       <div class="right">
         <router-view></router-view>
       </div>
@@ -44,9 +29,48 @@ onMounted(() => {
   </div>
 </template>
 
+<script setup lang="ts">
+import Header from './components/Header.vue';
+import Banner from './components/Banner.vue';
+import HomeSide from './components/Side/HomeSide.vue';
+import ArticleInfoSide from './components/Side/ArticleInfoSide.vue';
+import Footer from './components/Footer.vue';
+
+import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+
+const router = useRoute()
+
+// const sideShowComponent = ref(HomeSide)
+const sideShowComponent = ref(ArticleInfoSide)
+
+onMounted(() => {
+
+})
+</script>
+
 <style scoped>
-.inner>* {
+.left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 30%;
+  height: 100vh;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  left: 0;
+}
+
+.inner {
   padding: 2.5rem 1.5625rem;
+  display: flex;
+  justify-content: space-between;;
+}
+
+.inner>* {
+  background-color: #fff;
+
 }
 
 .top {
@@ -58,7 +82,7 @@ onMounted(() => {
 }
 
 .right {
-  width: 70%;
-  box-shadow: 0 3px .625rem .125rem var(--grey-2);
+  width: 67%;
+  box-shadow: 0 0 12px 1px rgb(235, 235, 235);
 }
 </style>

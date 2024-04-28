@@ -1,16 +1,15 @@
 <template>
   <!-- 文章浏览页 -->
   <div>
-    <router-link to="/">首页</router-link>
     <div class="blog-container">
-      <v-md-preview :text="'# 测试文本'"></v-md-preview>
+      <v-md-preview :text="content"></v-md-preview>
     </div>
     <div class="info">
       <span>
-        更新于 {{ update }}
+        更新于 2024-4-28 21:31:22
       </span>
       <span>
-        阅读次数 {{ viewnum }} 次
+        阅读次数 22 次
       </span>
     </div>
   </div>
@@ -28,11 +27,6 @@ export default {
       created: 0,
       update: 0,
       viewnum: 0
-    }
-  },
-  data() {
-    return {
-      
     }
   },
 }
