@@ -55,6 +55,10 @@ export default {
 }
 </script>
 <style scoped>
+.info {
+  padding-top: 24px;
+}
+
 .links {
   margin-top: 1.5rem;
   margin-bottom: 1.25rem;

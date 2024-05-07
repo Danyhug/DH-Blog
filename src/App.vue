@@ -23,9 +23,11 @@
           <component :is="sideShowComponent"></component>
         </Transition>
       </div>
-      <div class="right">
+      <div class="right"> 
         <Transition mode="out-in">
-          <router-view></router-view>
+          <keep-alive>
+            <router-view></router-view>
+          </keep-alive>
         </Transition>
       </div>
     </div>
@@ -85,18 +87,17 @@ onMounted(() => {
   text-align: center;
   position: sticky;
   top: 0;
-  left: 0;
+  margin: .6rem 0;
 }
 
 .inner {
-  padding: 2.5rem 1.5625rem;
+  padding: 0 1.5625rem;
   display: flex;
   justify-content: space-between;
 }
 
 .inner>* {
   background-color: #fff;
-
 }
 
 .top {
@@ -111,5 +112,6 @@ onMounted(() => {
   width: 67%;
   box-shadow: 0 8px 12px 1px rgb(235, 235, 235);
   border-radius: 5px;
+  padding: 2.5rem 0;
 }
 </style>

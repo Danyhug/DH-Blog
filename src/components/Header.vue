@@ -1,39 +1,37 @@
 <template>
     <div>
         <nav id="nav">
-            <div class="inner">
-                <ul class="menu">
-                    <li class="item">
-                        <a href="/">
-                            <Icon iconName="icon-chengbao"></Icon>
-                            首页
-                        </a>
-                    </li>
-                    <li class="item">
-                        <a href="about">
-                            <Icon iconName="icon-chaoren"></Icon>
-                            关于
-                        </a>
-                    </li>
-                    <li class="item">
-                        <a href="tags">
-                            <Icon iconName="icon-fenlei"></Icon>
-                            分类
-                        </a>
-                    </li>
-                </ul>
+            <ul class="menu">
+                <li class="item">
+                    <a href="/">
+                        <Icon iconName="icon-chengbao"></Icon>
+                        首页
+                    </a>
+                </li>
+                <li class="item">
+                    <a href="about">
+                        <Icon iconName="icon-chaoren"></Icon>
+                        关于
+                    </a>
+                </li>
+                <li class="item">
+                    <a href="tags">
+                        <Icon iconName="icon-fenlei"></Icon>
+                        分类
+                    </a>
+                </li>
+            </ul>
 
-                <ul class="right">
-                    <li>
-                        <!-- 夜间模式 -->
-                        <Icon iconName="icon-richu"></Icon>
-                    </li>
-                    <li>
-                        <!-- 搜索 -->
-                        <Icon iconName="icon-sousuo"></Icon>
-                    </li>
-                </ul>
-            </div>
+            <ul class="right">
+                <li>
+                    <!-- 夜间模式 -->
+                    <Icon iconName="icon-richu"></Icon>
+                </li>
+                <li>
+                    <!-- 搜索 -->
+                    <Icon iconName="icon-sousuo"></Icon>
+                </li>
+            </ul>
         </nav>
     </div>
 </template>
@@ -48,8 +46,7 @@ export default {
 #nav {
     padding: .625rem 100px;
     position: absolute;
-    left: 0;
-    width: 100%;
+    top: 0;
     height: 50px;
     color: var(--grey-0);
     text-shadow: 0 .2rem .3rem rgba(0, 0, 0, .5);

@@ -17,5 +17,6 @@ export default {
     text-align: center;
     line-height: 2;
     padding-bottom: 20px;
+    margin-top: 36px;
 }
 </style>
