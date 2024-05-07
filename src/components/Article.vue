@@ -1,5 +1,5 @@
 <template>
-  <article class="type-img-left">
+  <article class="type-img-left" :key="key">
     <router-link :to="'/article/' + id">
       <div class="cover">
         <div class="left">
@@ -45,6 +45,10 @@ export default {
       type: Number,
       require: true
     },
+    key: {
+      type: Number,
+      require: true
+    },
     title: {
       type: String,
       require: true
@@ -64,11 +68,11 @@ export default {
 .cover {
   display: flex;
   width: 100%;
-  height: 224px;
+  height: 244px;
   border-radius: 1rem;
   background: var(--grey-0);
   overflow: hidden;
-  border: 1px solid #e4e7ed;
+  border: 1px solid #eee;
 
   div {
     width: 50%;
@@ -109,7 +113,7 @@ export default {
     }
 
     .title {
-      margin: 12px 0;
+      margin: 26px 0 16px;
       // text-align: center;
       font-weight: 700;
 

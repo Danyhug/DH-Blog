@@ -6,7 +6,7 @@
     </div>
     <div class="posts">
       <Article v-for="item in articleList" :id="item.ID" :title="item.Title" :content="item.Content"
-        :created="item.Created"></Article>
+        :created="item.Created" :key="item.ID"></Article>
     </div>
   </div>
 </template>
@@ -64,7 +64,6 @@ export default {
   width: 100%;
   text-align: center;
   font-weight: 700;
-  border-top: 1px solid var(--grey-5);
 
   p {
     display: inline-block;
@@ -79,10 +78,10 @@ export default {
 
 /* 文章父元素 */
 .posts {
-  padding: 16px 10px;
+  padding: 18px;
 }
 
 Article {
-  margin-bottom: 40px;
+  margin-bottom: 46px;
 }
 </style>

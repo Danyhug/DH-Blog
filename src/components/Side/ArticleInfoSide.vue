@@ -34,7 +34,7 @@
 
           <div class="tags">
             <el-divider>
-              <Icon iconName="icon-layers" iconSize="1"></Icon>
+              <Icon iconName="icon-shili" iconSize="1.6"></Icon>
             </el-divider>
             <a href="" class="tag" v-for="item in 9" :style="{ backgroundColor: getRandomColor() }">原神</a>
           </div>

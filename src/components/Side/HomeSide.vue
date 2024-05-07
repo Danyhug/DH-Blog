@@ -1,6 +1,6 @@
 <template>
   <div class="info">
-    <img src="../assets/images/logo.jpg" alt="">
+    <img src="@/assets/images/logo.jpg" alt="">
     <div class="info-text">
       <p class="title">Danyhug</p>
       <p class="sub-title">我们原神玩家是这样的</p>
@@ -44,6 +44,7 @@
 
 </template>
 <script>
+
 export default {
   name: 'HomeSide',
   data() {

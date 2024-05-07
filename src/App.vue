@@ -19,10 +19,14 @@
 
     <div class="inner">
       <div class="left" ref="leftElement">
-        <component :is="sideShowComponent"></component>
+        <Transition mode="out-in">
+          <component :is="sideShowComponent"></component>
+        </Transition>
       </div>
       <div class="right">
-        <router-view></router-view>
+        <Transition mode="out-in">
+          <router-view></router-view>
+        </Transition>
       </div>
     </div>
     <Footer></Footer>
@@ -36,20 +40,42 @@ import HomeSide from './components/Side/HomeSide.vue';
 import ArticleInfoSide from './components/Side/ArticleInfoSide.vue';
 import Footer from './components/Footer.vue';
 
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 const router = useRoute()
+const sideShowComponent = ref(HomeSide)
 
-// const sideShowComponent = ref(HomeSide)
-const sideShowComponent = ref(ArticleInfoSide)
-
+// 监听路由
 onMounted(() => {
-
+  watch(() => router.path, (newVal, _) => {
+    if (newVal === '/') {
+      sideShowComponent.value = HomeSide
+    } else {
+      sideShowComponent.value = ArticleInfoSide
+    }
+  })
 })
 </script>
 
 <style scoped>
+.v-enter-from,
+.v-leave-to {
+  opacity: 0;
+  transform: scale(.5);
+}
+
+.v-leave-from,
+.v-enter-to {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.v-enter-active,
+.v-leave-active {
+  transition: all .6s ease;
+}
+
 .left {
   display: flex;
   flex-direction: column;
@@ -65,7 +91,7 @@ onMounted(() => {
 .inner {
   padding: 2.5rem 1.5625rem;
   display: flex;
-  justify-content: space-between;;
+  justify-content: space-between;
 }
 
 .inner>* {
@@ -83,6 +109,7 @@ onMounted(() => {
 
 .right {
   width: 67%;
-  box-shadow: 0 0 12px 1px rgb(235, 235, 235);
+  box-shadow: 0 8px 12px 1px rgb(235, 235, 235);
+  border-radius: 5px;
 }
 </style>
