@@ -9,7 +9,7 @@
           <div>
             <p class="title">文章标题3</p>
             <div class="schedule">
-              <el-progress :percentage="50"></el-progress>
+              <el-progress :color="customColors" :percentage="sideInfo.process"></el-progress>
               <p>已阅读时长：1分24秒</p>
             </div>
           </div>
@@ -36,7 +36,7 @@
             <el-divider>
               <Icon iconName="icon-shili" iconSize="1.6"></Icon>
             </el-divider>
-            <a href="" class="tag" v-for="item in 9" :style="{ backgroundColor: getRandomColor() }">原神</a>
+            <a href="" class="tag" v-for="(item, index) in 9" :style="{ backgroundColor: tags[index] }">原神</a>
           </div>
         </el-card>
       </el-col>
@@ -44,29 +44,56 @@
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {};
-  },
-  methods: {
-    getRandomColor() {
-      const tagColors = [
-        "#FF6347", // 亮红色  
-        "#2ECC71", // 亮绿色  
-        "#3498DB", // 亮蓝色  
-        "#9B59B6", // 紫色  
-        "#F1C40F", // 黄色  
-        "#1ABC9C", // 青色  
-        "#F39C12", // 橙色  
-        "#E67E22", // 金色  
-        "#16A085", // 海蓝色  
-        "#D2527F"  // 粉色  
-      ]
-      return tagColors[Math.floor(Math.random() * tagColors.length)];
-    },
-  },
-};
+<script setup>
+import { reactive } from 'vue'
+const getRandomColor = () => {
+  const tagColors = [
+    "#FF6347", // 亮红色  
+    "#2ECC71", // 亮绿色  
+    "#3498DB", // 亮蓝色  
+    "#9B59B6", // 紫色  
+    "#F1C40F", // 黄色  
+    "#1ABC9C", // 青色  
+    "#F39C12", // 橙色  
+    "#E67E22", // 金色  
+    "#16A085", // 海蓝色  
+    "#D2527F"  // 粉色  
+  ]
+  return tagColors[Math.floor(Math.random() * tagColors.length)];
+}
+const tags = Array.from({ length: 9 }, () => getRandomColor())
+
+const customColors = [
+  { color: 'rgb(57,157,254)', percentage: 80 },
+  { color: 'rgb(0,207,102)', percentage: 100 },
+]
+
+const sideInfo = reactive({
+  process: 0
+})
+
+function debounce(func, wait) {
+  let timeout;
+  return function () {
+    const context = this;
+    const args = arguments;
+    clearTimeout(timeout);
+    timeout = setTimeout(function () {
+      func.apply(context, args);
+    }, wait);
+  };
+}
+
+window.addEventListener('scroll', debounce(() => {
+  let scrollTop = window.scrollY
+
+  // 获取div的高度
+  let height = document.querySelector('.blog-container').scrollHeight
+
+  // 计算阅读百分比
+  let process = Math.floor((scrollTop / height) * 100)
+  sideInfo.process = process > 100 ? 100 : process
+}, 16))
 </script>
 
 <style lang="less" scoped>

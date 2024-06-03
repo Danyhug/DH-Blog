@@ -112,6 +112,7 @@ onMounted(() => {
   width: 67%;
   box-shadow: 0 8px 12px 1px rgb(235, 235, 235);
   border-radius: 5px;
-  padding: 2.5rem 0;
+  margin: .6rem 0;
+  padding: 1rem 0 2rem;
 }
 </style>

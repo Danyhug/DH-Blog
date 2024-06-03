@@ -25,5 +25,6 @@
     },
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "env.d.ts"],
+  "allowSyntheticDefaultImports": true,
   "references": [{ "path": "./tsconfig.node.json" }],
 }
