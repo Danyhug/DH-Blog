@@ -1,3 +1,5 @@
+CREATE DATABASE IF NOT EXISTS `DH_Blog` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE `DH_Blog`;
 -- 用户表
 CREATE TABLE Users (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -23,7 +25,8 @@ CREATE TABLE Articles (
     publish_date DATETIME NOT NULL,
     update_date DATETIME,
     views INT DEFAULT 0,
-    word_num TINYINT DEFAULT 0
+    word_num TINYINT DEFAULT 0,
+    FOREIGN KEY (category_id) REFERENCES Categories(id) ON DELETE SET NULL -- 假设删除分类时文章的category_id置为NULL
 );
 
 -- 分类表
@@ -49,6 +52,6 @@ CREATE TABLE PostTags (
     post_id INT,
     tag_id INT,
     PRIMARY KEY (post_id, tag_id), -- 组合主键确保每篇文章和标签的配对唯一
-    FOREIGN KEY (post_id) REFERENCES BlogPosts(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES Articles(id) ON DELETE CASCADE,
     FOREIGN KEY (tag_id) REFERENCES Tags(id) ON DELETE CASCADE
 );

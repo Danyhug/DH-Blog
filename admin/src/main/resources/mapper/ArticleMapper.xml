@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.zzf4.blog.mapper.ArticleMapper">
+    <update id="updateArticle" parameterType="top.zzf4.blog.entity.model.Article">
+        UPDATE Articles
+        <set>
+            <if test="title != null">
+                title = #{title},
+            </if>
+            <if test="content != null">
+                content = #{content},
+            </if>
+            <if test="categoryId != null">
+                category_id = #{categoryId},
+            </if>
+            <if test="updateDate != null">
+                update_date = #{updateDate},
+            </if>
+            <if test="views != null">
+                views = #{views},
+            </if>
+            <if test="wordNum != null">
+                word_num = #{wordNum}
+            </if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <select id="getArticles" resultType="top.zzf4.blog.entity.model.Article">
+        SELECT id, title, content, publish_date, views, category_id FROM articles
+        <where>
+            <if test="categoryId != null">
+                category_id = #{categoryId}
+            </if>
+        </where>
+    </select>
+
+</mapper>

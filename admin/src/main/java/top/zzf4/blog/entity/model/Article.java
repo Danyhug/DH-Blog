@@ -1,5 +1,6 @@
 package top.zzf4.blog.entity.model;
 
+import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -13,7 +14,7 @@ public class Article {
 
     private String content;
 
-    private Category category;
+    private Integer categoryId;
 
     private LocalDateTime publishDate;
 

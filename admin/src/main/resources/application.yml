@@ -12,9 +12,9 @@ spring:
       blog
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:30306/moochelper?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8
+    url: jdbc:mysql://localhost:30306/dh_blog?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8
     username: root
-    password: Hh153669225
+    password: root
     hikari:
       maximum-pool-size: 10
       minimum-idle: 8
