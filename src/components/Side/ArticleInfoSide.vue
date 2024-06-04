@@ -45,19 +45,10 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, onMounted } from 'vue'
 const getRandomColor = () => {
   const tagColors = [
-    "#FF6347", // 亮红色  
-    "#2ECC71", // 亮绿色  
-    "#3498DB", // 亮蓝色  
-    "#9B59B6", // 紫色  
-    "#F1C40F", // 黄色  
-    "#1ABC9C", // 青色  
-    "#F39C12", // 橙色  
-    "#E67E22", // 金色  
-    "#16A085", // 海蓝色  
-    "#D2527F"  // 粉色  
+    "#037ef3", "#f85a40", "#00c16e", "#7552cc", "#0cb9c1", "#f48924", "#ff4f81"
   ]
   return tagColors[Math.floor(Math.random() * tagColors.length)];
 }
@@ -94,6 +85,11 @@ window.addEventListener('scroll', debounce(() => {
   let process = Math.floor((scrollTop / height) * 100)
   sideInfo.process = process > 100 ? 100 : process
 }, 16))
+
+onMounted(() => {
+  scrollTo(0, 60)
+})
+
 </script>
 
 <style lang="less" scoped>

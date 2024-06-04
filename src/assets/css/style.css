@@ -15,6 +15,10 @@ body {
     no-repeat bottom;
 }
 
+html {
+	scroll-behavior:smooth;
+}
+
 ul {
   list-style: none;
 }

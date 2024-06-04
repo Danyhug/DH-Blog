@@ -1,0 +1,33 @@
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+  tomcat:
+    uri-encoding: UTF-8
+
+spring:
+  application:
+    name:
+      blog
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:30306/moochelper?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8
+    username: root
+    password: Hh153669225
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 8
+      # 连接最大存活时间
+      max-lifetime: 120
+      # 连接在连接池中 最大的空闲时间 idle-timeout 要小于 max-lifetime
+      idle-timeout: 110
+
+#logging:
+#  file:
+#    name: app.log
+
+
+debug: true
+
+

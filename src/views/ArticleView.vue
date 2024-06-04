@@ -70,7 +70,7 @@ export default {
 .info {
   padding: 10px 0;
   font-size: 12px;
-  color: var(--gery-6);
+  color: #606266;
   text-align: right;
   border-top: 1px solid var(--grey-4);
 
