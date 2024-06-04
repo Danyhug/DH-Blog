@@ -1,6 +1,6 @@
 <template>
   <article class="type-img-left" :key="key">
-    <router-link :to="'/article/' + id">
+    <router-link :to="'./article/' + id">
       <div class="cover">
         <div class="left">
           <img src="https://source.unsplash.com/random" alt="">
@@ -37,7 +37,6 @@
 </template>
 
 <script>
-import Icon from '@/components/Child/Icon.vue'
 export default {
   name: 'Article',
   props: {

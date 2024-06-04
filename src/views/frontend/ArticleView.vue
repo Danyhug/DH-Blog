@@ -2,7 +2,7 @@
   <!-- 文章浏览页 -->
   <div>
     <div class="blog-container">
-      <v-md-preview :text="content"></v-md-preview>
+      <MdPreview :modelValue="content" previewTheme="github" />
     </div>
     <div class="info">
       <span>

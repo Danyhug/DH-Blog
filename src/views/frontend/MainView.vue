@@ -11,6 +11,7 @@
   </div>
 </template>
 <script>
+import Article from '@/components/frontend/Article.vue'
 export default {
   name: 'MainView',
   data() {
