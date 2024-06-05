@@ -140,6 +140,9 @@ public class ArticleServiceImpl implements ArticleService {
     public PageResult<Article> getPage(ArticlePageDTO articlePage) {
         PageHelper.startPage(articlePage.getPageNum(), articlePage.getPageSize());
         List<Article> articles = articleMapper.getArticles(articlePage.getCategoryId());
+        for (Article article : articles) {
+            article.setTags(tagMapper.getTagsByArticleId(article.getId()));
+        }
         return new PageResult<>(articles.size(), articles);
     }
 

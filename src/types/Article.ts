@@ -3,6 +3,7 @@ export interface Article<T> {
   title: string;
   content: string;
   categoryId: number;
+  categoryName?: string;
   publishDate?: Date;
   updateDate?: Date;
   tags?: T[];
