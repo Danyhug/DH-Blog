@@ -3,6 +3,10 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="top.zzf4.blog.mapper.ArticleMapper">
+    <insert id="saveArticle" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO Articles (title,content,category_id,publish_date,update_date,views,word_num)
+        VALUES (#{title},#{content},#{categoryId},#{publishDate},#{updateDate},#{views},#{wordNum})
+    </insert>
     <update id="updateArticle" parameterType="top.zzf4.blog.entity.model.Article">
         UPDATE Articles
         <set>

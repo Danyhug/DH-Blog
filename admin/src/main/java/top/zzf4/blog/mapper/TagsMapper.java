@@ -18,4 +18,12 @@ public interface TagsMapper {
 
     @Select("SELECT * FROM Articles WHERE id = #{id}")
     Article selectById(Long id);
+
+    // 根据slug查询标签
+    @Select("SELECT * FROM Tags WHERE slug = #{slug}")
+    Tag selectBySlug(String slug);
+
+    // 将标签插入posttags表中
+    @Insert("INSERT INTO PostTags (post_id,tag_id) VALUES (#{postId},#{tagId})")
+    void savePostTags(Long postId, Long tagId);
 }

@@ -113,6 +113,10 @@ const submit = () => {
     })
   }
 
+  let el: HTMLElement | null = document.querySelector('.md-editor-preview');
+  let count = el !== null ? el.innerText.length : 0;
+  article.wordNum = count;
+
   // 上传
   addArticle(article).then(_ => {
     ElMessage.success({

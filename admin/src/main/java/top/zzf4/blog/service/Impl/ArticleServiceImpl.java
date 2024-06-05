@@ -45,14 +45,22 @@ public class ArticleServiceImpl implements ArticleService {
         Article article = new Article();
         article.setTitle(articleInsertDto.getTitle());
         article.setContent(articleInsertDto.getContent());
-        article.setCategoryId(1);
-
+        article.setCategoryId(articleInsertDto.getCategoryId());
         // 设置观看数
         article.setViews(0);
         LocalDateTime date = LocalDateTime.now();
         article.setPublishDate(date);
         article.setUpdateDate(date);
         articleMapper.saveArticle(article);
+
+        // 查询标签slug对应id
+        for (String tag : articleInsertDto.getTags()) {
+            // 临时标签数据
+            Tag tagTemp = tagMapper.selectBySlug(tag);
+
+            // 插入进postTags表中
+            tagMapper.savePostTags(article.getId(), tagTemp.getId());
+        }
     }
 
     /**
