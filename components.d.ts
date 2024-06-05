@@ -11,6 +11,7 @@ declare module 'vue' {
     AdminSide: typeof import('./src/components/backend/AdminSide.vue')['default']
     Article: typeof import('./src/components/frontend/Article.vue')['default']
     ArticleInfoSide: typeof import('./src/components/frontend/Side/ArticleInfoSide.vue')['default']
+    ArticleTable: typeof import('./src/components/backend/Table/ArticleTable.vue')['default']
     Banner: typeof import('./src/components/frontend/Banner.vue')['default']
     CategoryTable: typeof import('./src/components/backend/Table/CategoryTable.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
@@ -49,5 +50,6 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Side: typeof import('./src/components/Side.vue')['default']
+    TagTable: typeof import('./src/components/backend/Table/TagTable.vue')['default']
   }
 }
