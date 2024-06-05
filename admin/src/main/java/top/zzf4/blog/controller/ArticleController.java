@@ -64,7 +64,7 @@ public class ArticleController {
      * 分页查询
      * @return
      */
-    @GetMapping
+    @PostMapping("/list")
     public AjaxResult<PageResult<Article>> getPage(@RequestBody ArticlePageDTO articlePage) {
         log.info("分页查询 {}", articlePage);
         return AjaxResult.success(service.getPage(articlePage));

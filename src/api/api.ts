@@ -27,7 +27,7 @@ export const updateArticle = (data: Article<any>): Promise<Article<any>> => {
  * @param id
  * @returns
  */
-export const getArticleInfo = (id: String): Promise<Article<any>> => {
+export const getArticleInfo = (id: String): Promise<PageResult<Article<any>>> => {
   return request.get('/article/' + id)
 }
 

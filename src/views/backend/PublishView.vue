@@ -142,8 +142,18 @@ const submit = () => {
 }
 
 onMounted(() => {
-  getCategories();
-  getTags()
+  getCategories().catch(error => {
+    ElMessage.error({
+      message: '获取分类失败' + error.message,
+      plain: true,
+    })
+  });
+  getTags().catch(error => {
+    ElMessage.error({
+      message: '获取标签失败' + error.message,
+      plain: true,
+    })
+  })
 
   // 获取路由部分是否为edit?id=格式
   if (articleId !== null) {

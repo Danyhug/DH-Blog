@@ -12,5 +12,5 @@ import java.util.List;
 @NoArgsConstructor
 public class PageResult<T> implements Serializable {
     private Integer total;
-    private List<T> data;
+    private List<T> list;
 }

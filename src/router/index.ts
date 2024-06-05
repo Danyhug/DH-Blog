@@ -5,6 +5,8 @@ import HomeView from '../views/frontend/HomeView.vue'
 
 import AdminView from '../views/backend/AdminView.vue'
 import PublishView from '../views/backend/PublishView.vue'
+import ManagerView from '../views/backend/ManagerView.vue'
+
 const routes = [
   // 前台页面
   {
@@ -18,7 +20,10 @@ const routes = [
   {
     path: '/admin', component: AdminView, children:
       [
-        { path: 'publish', component: PublishView }
+        // 博客发布
+        { path: 'publish', component: PublishView, name: 'publish' },
+        // 博客管理
+        { path: 'manager', component: ManagerView }
       ]
   },
 ]

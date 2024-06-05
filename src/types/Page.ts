@@ -1,7 +1,7 @@
 export interface Page {
   pageSize: Number
   pageNum: Number
-  category?: String
+  categoryId?: String
 }
 
 export interface PageResult<T> {
