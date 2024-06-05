@@ -4,6 +4,7 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 import top.zzf4.blog.entity.model.Article;
+import top.zzf4.blog.entity.model.Category;
 
 import java.util.List;
 
@@ -16,4 +17,7 @@ public interface ArticleMapper {
 
     // @Select("SELECT id, title, content, publish_date, views FROM Articles")
     List<Article> getArticles(Integer categoryId);
+
+    @Select("SELECT * FROM Categories")
+    List<Category> getArticleCategories();
 }

@@ -1,19 +1,19 @@
 <template>
   <div class="top-container">
     <div class="left">
-      <el-tabs class="demo-tabs" tabPosition="left">
+      <el-tabs tabPosition="left" v-model="activeTag">
         <el-tab-pane label="分类选择" name="first">
-          <el-radio-group>
-            <el-radio value="1" size="large" border>原神</el-radio>
-            <el-radio value="2" size="large" border>崩坏三</el-radio>
+          <el-radio-group v-model.number="article.categoryId">
+            <el-radio size="large" border v-for="category in categories" :key="category.id" :value="category.id"
+              :label="category.name">
+            </el-radio>
           </el-radio-group>
         </el-tab-pane>
         <el-tab-pane label="标签选择" name="second">
           <!-- 标签： -->
-          <el-checkbox-group size="large">
-            <el-checkbox-button v-for="(city, index) in 5" :key="index" :value="city">
-              {{ "游戏" }}
-            </el-checkbox-button>
+          <el-checkbox-group size="large" v-model="article.tags">
+            <el-checkbox-button v-for="tag in tags" :key="tag.id" :value="tag.slug"
+              :label="tag.name"></el-checkbox-button>
           </el-checkbox-group>
         </el-tab-pane>
         <el-tab-pane label="附加信息" name="third">
@@ -28,12 +28,11 @@
       </el-divider>
       <el-input placeholder="输入文章标题" clearable class="title-input" v-model="article.title"></el-input>
       <div class="btns">
-        <el-button type="primary">发布</el-button>
-        <el-button type="danger">清空</el-button>
+        <el-button type="warning" @click="clear(true)">清空</el-button>
+        <el-button type="primary" @click="submit">发布</el-button>
       </div>
     </div>
   </div>
-
 
   <el-divider content-position="center">
     <p class="tip">文章内容</p>
@@ -42,14 +41,93 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue';
-const article = reactive({
-  title: '',
-  content: '',
-  created: 0,
-  update: 0,
-  viewnum: 0,
+import { addArticle, getArticleCategoryList, getArticleTagList } from '@/api/api';
+import { Article } from '@/types/Article';
+import { Category } from '@/types/Category';
+import { Tag } from '@/types/Tag';
+
+import { onMounted, reactive, ref } from 'vue';
+
+// 切换标签
+const activeTag = ref('first')
+
+const article = reactive<Article>({
+  title: '弹奏肖邦的夜曲',
+  content: `在月光下弹琴
+对你心跳的感应
+还是如此温热亲近
+怀念你那鲜红的唇印
+那些断翅的蜻蜓 散落在这森林
+而我的眼睛 没有丝毫同情`,
+  categoryId: -1,
+  tags: []
+});
+const categories = reactive<Category[]>([]);
+const tags = reactive<Tag[]>([]);
+
+// 清空文章信息
+const clear = (manual: boolean = false) => {
+  function func() {
+    article.title = ''
+    article.content = ''
+    article.categoryId = -1
+    article.tags = []
+  }
+
+  if (manual) {
+    ElMessageBox.confirm(
+      '确定要清空所有信息吗？此操作不可恢复',
+      '警告',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    ).then(() => {
+      func()
+    })
+  } else {
+    func()
+  }
+}
+
+// 获取分类列表
+const getCategories = async () => {
+  const data = await getArticleCategoryList();
+  categories.push(...data);
+};
+
+// 获取标签列表
+const getTags = async () => {
+  const data = await getArticleTagList();
+  tags.push(...data);
+};
+
+// 提交文章
+const submit = () => {
+  console.log(article)
+  if (article.categoryId == -1) {
+    return ElMessage.error({
+      message: '未选择文章分类',
+      plain: true,
+    })
+  }
+
+  // 上传
+  addArticle(article).then(_ => {
+    ElMessage.success({
+      message: '发布成功',
+      plain: true,
+    })
+    // clear()
+  })
+}
+
+onMounted(() => {
+  getCategories();
+  getTags()
 })
+
 </script>
 
 <style scoped>

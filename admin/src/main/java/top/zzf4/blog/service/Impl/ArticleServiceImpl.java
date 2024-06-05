@@ -7,6 +7,7 @@ import top.zzf4.blog.entity.dto.ArticleInsertDto;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
 import top.zzf4.blog.entity.model.Article;
+import top.zzf4.blog.entity.model.Category;
 import top.zzf4.blog.entity.model.Tag;
 import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.mapper.ArticleMapper;
@@ -107,5 +108,15 @@ public class ArticleServiceImpl implements ArticleService {
         PageHelper.startPage(articlePage.getPageNum(), articlePage.getPageSize());
         List<Article> articles = articleMapper.getArticles(articlePage.getCategoryId());
         return new PageResult<>(articles.size(), articles);
+    }
+
+    /**
+     * 查询文章分类
+     *
+     * @return
+     */
+    @Override
+    public List<Category> getArticleCategories() {
+        return articleMapper.getArticleCategories();
     }
 }

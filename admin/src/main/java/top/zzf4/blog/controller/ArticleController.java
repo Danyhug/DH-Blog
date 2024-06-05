@@ -8,6 +8,7 @@ import top.zzf4.blog.entity.dto.ArticleInsertDto;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
 import top.zzf4.blog.entity.model.Article;
+import top.zzf4.blog.entity.model.Category;
 import top.zzf4.blog.entity.model.Tag;
 import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.service.ArticleService;
@@ -16,6 +17,7 @@ import java.util.List;
 
 @RestController
 @Log4j2
+@CrossOrigin
 @RequestMapping("/article")
 public class ArticleController {
     @Autowired
@@ -26,8 +28,8 @@ public class ArticleController {
      * @param id
      * @return
      */
-    @GetMapping("/detail")
-    public AjaxResult<Article> detail(@RequestParam String id) {
+    @GetMapping("/{id}")
+    public AjaxResult<Article> detail(@PathVariable String id) {
         log.info("获取文章详情 {}", id);
         return AjaxResult.success(
                 service.getArticleById(Long.valueOf(id))
@@ -85,5 +87,13 @@ public class ArticleController {
     @GetMapping("/tag")
     public AjaxResult<List<Tag>> getTags() {
         return AjaxResult.success(service.getTags());
+    }
+
+    /**
+     * 查询分类列表
+     */
+    @GetMapping("/category")
+    public AjaxResult<List<Category>> getArticles() {
+        return AjaxResult.success(service.getArticleCategories());
     }
 }

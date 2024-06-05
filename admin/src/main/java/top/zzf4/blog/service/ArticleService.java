@@ -4,6 +4,7 @@ import top.zzf4.blog.entity.dto.ArticleInsertDto;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
 import top.zzf4.blog.entity.model.Article;
+import top.zzf4.blog.entity.model.Category;
 import top.zzf4.blog.entity.model.Tag;
 import top.zzf4.blog.entity.vo.PageResult;
 
@@ -19,7 +20,7 @@ public interface ArticleService {
 
     /**
      * 保存文章
-     * @param ArticleInsertDto
+     * @param articleInsertDto
      */
     void saveArticle(ArticleInsertDto articleInsertDto);
 
@@ -48,4 +49,10 @@ public interface ArticleService {
     List<Tag> getTags();
 
     PageResult<Article> getPage(ArticlePageDTO articlePage);
+
+    /**
+     * 查询文章分类
+     * @return
+     */
+    List<Category> getArticleCategories();
 }
