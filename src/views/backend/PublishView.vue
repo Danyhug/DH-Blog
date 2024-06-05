@@ -41,17 +41,20 @@
 </template>
 
 <script setup lang="ts">
-import { addArticle, getArticleCategoryList, getArticleTagList } from '@/api/api';
+import { addArticle, getArticleCategoryList, getArticleInfo, getArticleTagList, updateArticle } from '@/api/api';
 import { Article } from '@/types/Article';
 import { Category } from '@/types/Category';
 import { Tag } from '@/types/Tag';
-
+import { useRoute } from 'vue-router'
 import { onMounted, reactive, ref } from 'vue';
+
+const route = useRoute()
+const articleId = route.query?.articleId
 
 // 切换标签
 const activeTag = ref('first')
 
-const article = reactive<Article>({
+const article = reactive<Article<String>>({
   title: '弹奏肖邦的夜曲',
   content: `在月光下弹琴
 对你心跳的感应
@@ -117,19 +120,46 @@ const submit = () => {
   let count = el !== null ? el.innerText.length : 0;
   article.wordNum = count;
 
-  // 上传
-  addArticle(article).then(_ => {
-    ElMessage.success({
-      message: '发布成功',
-      plain: true,
+  // 上传新文章
+  if (articleId == null) {
+    addArticle(article).then(_ => {
+      ElMessage.success({
+        message: '发布成功',
+        plain: true,
+      })
+      // clear()
     })
-    // clear()
-  })
+  } else {
+    // 更新文章
+    updateArticle(article).then(_ => {
+      ElMessage.success({
+        message: '已成功更新文章',
+        plain: true,
+      })
+      // clear()
+    })
+  }
 }
 
 onMounted(() => {
   getCategories();
   getTags()
+
+  // 获取路由部分是否为edit?id=格式
+  if (articleId !== null) {
+    // 获取文章详情
+    getArticleInfo(articleId as String).then((res: Article<Tag>) => {
+      let articleTemp = { ...res, tags: [] }
+      Object.assign(article, articleTemp);
+      if (res?.tags) {
+        for (let tag of res.tags) {
+          if (article.tags) {
+            article.tags.push(tag.slug)
+          }
+        }
+      }
+    })
+  }
 })
 
 </script>

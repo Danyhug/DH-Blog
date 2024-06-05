@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class Article {
@@ -24,5 +25,5 @@ public class Article {
 
     private byte wordNum; // TINYINT映射为byte
 
-    // 省略构造器、getter和setter方法
+    private List<Tag> tags;
 }

@@ -16,6 +16,9 @@ public interface ArticleMapper {
 
     List<Article> getArticles(Integer categoryId);
 
+    @Select("SELECT * FROM Articles WHERE id = #{id}")
+    Article selectById(Long id);
+
     @Select("SELECT * FROM Categories")
     List<Category> getArticleCategories();
 }

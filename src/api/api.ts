@@ -9,7 +9,7 @@ import request from '@/api/axios'
  * @param data 
  * @returns 
  */
-export const addArticle = (data: Article): Promise<Article> => {
+export const addArticle = (data: Article<any>): Promise<Article<any>> => {
   return request.post('/article', data)
 }
 
@@ -18,8 +18,8 @@ export const addArticle = (data: Article): Promise<Article> => {
  * @param data 
  * @returns 
  */
-export const updateArticle = (data: Article): Promise<Article> => {
-  return request.put('/article/update', data)
+export const updateArticle = (data: Article<any>): Promise<Article<any>> => {
+  return request.put('/article', data)
 }
 
 /**
@@ -27,7 +27,7 @@ export const updateArticle = (data: Article): Promise<Article> => {
  * @param id
  * @returns
  */
-export const getArticle = (id: number): Promise<Article> => {
+export const getArticleInfo = (id: String): Promise<Article<any>> => {
   return request.get('/article/' + id)
 }
 
@@ -36,7 +36,7 @@ export const getArticle = (id: number): Promise<Article> => {
  * @param data
  * @returns
  */
-export const getArticleList = (data: Page): Promise<PageResult<Article>> => {
+export const getArticleList = (data: Page): Promise<PageResult<Article<any>>> => {
   return request.post('/article/list', data)
 }
 

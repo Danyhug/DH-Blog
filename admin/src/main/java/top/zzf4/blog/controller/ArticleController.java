@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import top.zzf4.blog.entity.AjaxResult;
 import top.zzf4.blog.entity.dto.ArticleInsertDto;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
+import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
 import top.zzf4.blog.entity.model.Article;
 import top.zzf4.blog.entity.model.Category;
@@ -50,12 +51,12 @@ public class ArticleController {
 
     /**
      * 更新文章
-     * @param article
+     * @param articleUpdate
      * @return
      */
     @PutMapping
-    public AjaxResult<Void> update(@RequestBody Article article) {
-        service.updateArticle(article);
+    public AjaxResult<Void> update(@RequestBody ArticleUpdateDTO articleUpdate) {
+        service.updateArticle(articleUpdate);
         return AjaxResult.success();
     }
 

@@ -1,10 +1,13 @@
 package top.zzf4.blog.service.Impl;
 
 import com.github.pagehelper.PageHelper;
+import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import top.zzf4.blog.entity.dto.ArticleInsertDto;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
+import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
 import top.zzf4.blog.entity.model.Article;
 import top.zzf4.blog.entity.model.Category;
@@ -18,6 +21,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Log4j2
 @Service
 public class ArticleServiceImpl implements ArticleService {
     @Autowired
@@ -33,7 +37,12 @@ public class ArticleServiceImpl implements ArticleService {
      */
     @Override
     public Article getArticleById(Long id) {
-        return tagMapper.selectById(id);
+        // 查询文章的信息
+        Article article = articleMapper.selectById(id);
+        // 再查询文章的标签信息
+        List<Tag> tagsByArticleId = tagMapper.getTagsByArticleId(id);
+        article.setTags(tagsByArticleId);
+        return article;
     }
 
     /**
@@ -66,10 +75,26 @@ public class ArticleServiceImpl implements ArticleService {
     /**
      * 更新文章
      *
-     * @param article
+     * @param articleUpdateDTO
      */
     @Override
-    public void updateArticle(Article article) {
+    public void updateArticle(ArticleUpdateDTO articleUpdateDTO) {
+        Article article = new Article();
+        BeanUtils.copyProperties(articleUpdateDTO, article);
+        article.setUpdateDate(LocalDateTime.now());
+        // 删除中间表的所有信息
+        tagMapper.deleteByPostId(article.getId());
+        // 将标签插入
+        List<String> tags = articleUpdateDTO.getTags();
+        for (String tag : tags) {
+            // 临时标签数据
+            Tag tagTemp = tagMapper.selectBySlug(tag);
+
+            // 插入进postTags表中
+            tagMapper.savePostTags(article.getId(), tagTemp.getId());
+        }
+
+        log.info("更新的article属性为 {}", article);
         articleMapper.updateArticle(article);
     }
 

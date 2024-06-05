@@ -2,6 +2,7 @@ package top.zzf4.blog.service;
 
 import top.zzf4.blog.entity.dto.ArticleInsertDto;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
+import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
 import top.zzf4.blog.entity.model.Article;
 import top.zzf4.blog.entity.model.Category;
@@ -28,7 +29,7 @@ public interface ArticleService {
      * 更新文章
      * @param article
      */
-    void updateArticle(Article article);
+    void updateArticle(ArticleUpdateDTO article);
 
     /**
      * 删除文章

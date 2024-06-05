@@ -1,5 +1,6 @@
 package top.zzf4.blog.mapper;
 
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
@@ -16,12 +17,17 @@ public interface TagsMapper {
     @Select("SELECT * FROM Tags")
     List<Tag> getTags();
 
-    @Select("SELECT * FROM Articles WHERE id = #{id}")
-    Article selectById(Long id);
+    // 通过文章id查询文章的所属标签信息
+    @Select("SELECT * FROM Tags t INNER JOIN PostTags pt ON t.id = pt.tag_id WHERE pt.post_id = #{id}")
+    List<Tag> getTagsByArticleId(Long id);
 
     // 根据slug查询标签
     @Select("SELECT * FROM Tags WHERE slug = #{slug}")
     Tag selectBySlug(String slug);
+
+    // 根据post_id删除所有记录
+    @Delete("DELETE FROM PostTags WHERE post_id = #{postId}")
+    void deleteByPostId(Long postId);
 
     // 将标签插入posttags表中
     @Insert("INSERT INTO PostTags (post_id,tag_id) VALUES (#{postId},#{tagId})")
