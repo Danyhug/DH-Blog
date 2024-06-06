@@ -9,6 +9,7 @@ import top.zzf4.blog.entity.model.Category;
 import top.zzf4.blog.entity.model.Tag;
 import top.zzf4.blog.entity.vo.PageResult;
 
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.List;
 
 public interface ArticleService {
@@ -41,7 +42,7 @@ public interface ArticleService {
      * 保存标签
      * @param tagInsertDTO
      */
-    void saveTag(TagInsertDTO tagInsertDTO);
+    void saveTag(TagInsertDTO tagInsertDTO) throws SQLIntegrityConstraintViolationException;
 
     /**
      * 查询所有标签
@@ -61,7 +62,7 @@ public interface ArticleService {
      * 保存分类
      * @param category
      */
-    void saveCategory(Category category);
+    void saveCategory(Category category) throws SQLIntegrityConstraintViolationException;
 
     /**
      * 根据id查询分类

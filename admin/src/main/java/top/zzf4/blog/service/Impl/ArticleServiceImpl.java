@@ -5,6 +5,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import top.zzf4.blog.entity.dto.ArticleInsertDTO;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
@@ -18,6 +19,7 @@ import top.zzf4.blog.mapper.CategoriesMapper;
 import top.zzf4.blog.mapper.TagsMapper;
 import top.zzf4.blog.service.ArticleService;
 
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -116,7 +118,14 @@ public class ArticleServiceImpl implements ArticleService {
      * @param tagInsertDTO
      */
     @Override
-    public void saveTag(TagInsertDTO tagInsertDTO) {
+    @Transactional
+    public void saveTag(TagInsertDTO tagInsertDTO) throws SQLIntegrityConstraintViolationException {
+        // 查看表中是否有相关值
+        if (tagMapper.selectBySlug(tagInsertDTO.getSlug()) != null) {
+            // 抛出主键异常
+            throw new SQLIntegrityConstraintViolationException();
+        }
+
         Tag tag = new Tag();
         LocalDateTime date = LocalDateTime.now();
 
@@ -124,7 +133,6 @@ public class ArticleServiceImpl implements ArticleService {
         tag.setSlug(tagInsertDTO.getSlug());
         tag.setCreatedAt(date);
         tag.setUpdatedAt(date);
-        System.out.println(tag);
         tagMapper.saveTag(tag);
     }
 
@@ -168,7 +176,12 @@ public class ArticleServiceImpl implements ArticleService {
      * @param category
      */
     @Override
-    public void saveCategory(Category category) {
+    public void saveCategory(Category category) throws SQLIntegrityConstraintViolationException {
+        // 查看表中是否有相关值
+        if (categoriesMapper.selectBySlug(category.getSlug()) != null) {
+            throw new SQLIntegrityConstraintViolationException();
+        }
+
         LocalDateTime date = LocalDateTime.now();
         category.setCreatedAt(date);
         category.setUpdatedAt(date);

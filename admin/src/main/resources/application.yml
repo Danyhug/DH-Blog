@@ -23,11 +23,4 @@ spring:
       # 连接在连接池中 最大的空闲时间 idle-timeout 要小于 max-lifetime
       idle-timeout: 110
 
-#logging:
-#  file:
-#    name: app.log
-
-
 debug: true
-
-

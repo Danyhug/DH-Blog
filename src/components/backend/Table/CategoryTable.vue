@@ -38,7 +38,7 @@ const category = reactive<Category>({
 const add = () => {
   visible.value = true
   state.value = 'add'
-  Object.assign(category, { name: '', slug: '' })
+  // Object.assign(category, { name: '', slug: '' })
 
   addCategory(category).then(() => {
     visible.value = false

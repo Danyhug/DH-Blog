@@ -17,4 +17,7 @@ public interface CategoriesMapper {
 
     @Update("UPDATE Categories SET name = #{name},slug = #{slug},updated_at = #{updatedAt} WHERE id = #{id}")
     void updateCategory(Category category);
+
+    @Select("SELECT * FROM Categories WHERE slug = #{slug}")
+    Category selectBySlug(String slug);
 }

@@ -9,6 +9,7 @@ import java.util.List;
 @Mapper
 public interface TagsMapper {
     @Insert("INSERT INTO Tags (name,slug,created_at,updated_at) VALUES (#{name},#{slug},#{createdAt},#{updatedAt})")
+
     void saveTag(Tag tag);
 
     @Select("SELECT * FROM Tags")
