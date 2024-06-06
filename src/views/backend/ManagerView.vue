@@ -19,16 +19,16 @@ import ArticleTable from '@/components/backend/Table/ArticleTable.vue'
 import CategoryTable from '@/components/backend/Table/CategoryTable.vue'
 import TagTable from '@/components/backend/Table/TagTable.vue'
 
-import { getArticleCategoryList, getArticleList, getArticleTagList } from '@/api/api';
+import { getArticleList } from '@/api/api';
 import { Article } from '@/types/Article';
-import { Category } from '@/types/Category';
+
 import { Tag } from '@/types/Tag';
 import { onMounted, reactive } from 'vue';
 import { ref } from 'vue';
-import useAdminStore from '@/store/indes';
+import { useAdminStore } from '@/store/';
 
 
-const activeName = ref('third')
+const activeName = ref('second')
 const store = useAdminStore()
 
 const articles = reactive<Article<Tag>[]>([])

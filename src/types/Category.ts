@@ -1,7 +1,7 @@
 export interface Category {
-  id: number;
+  id?: number;
   name: string;
   slug: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

@@ -40,8 +40,11 @@
 import { addTag } from '@/api/api';
 import { Tag } from '@/types/Tag'
 import { reactive, ref } from 'vue'
+import {useAdminStore} from '@/store/index'
+
 const props = defineProps(['tags'])
-const visible = ref(true)
+const visible = ref(false)
+const store = useAdminStore()
 
 const tag = reactive<Tag>({
   name: '',
@@ -50,10 +53,18 @@ const tag = reactive<Tag>({
 
 // 新增标签
 const add = () => {
+  visible.value = true
+  
   addTag(tag).then(() => {
     visible.value = false
     ElMessage.success('新增标签成功')
+    store.getTags()
   })
+}
+
+// 编辑标签
+const edit = (id: number) => {
+  ElMessage.success('修改标签成功')
 }
 
 </script>

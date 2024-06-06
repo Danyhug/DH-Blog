@@ -91,10 +91,47 @@ public class ArticleController {
     }
 
     /**
+     * 更新标签信息
+     */
+    @PutMapping("/tag")
+    public AjaxResult<Void> updateTag(@RequestBody Tag tag) {
+        service.updateTag(tag);
+        return AjaxResult.success();
+    }
+
+    /**
      * 查询分类列表
      */
     @GetMapping("/category")
     public AjaxResult<List<Category>> getArticles() {
         return AjaxResult.success(service.getArticleCategories());
+    }
+
+    /**
+     * 新增分类
+     */
+    @PostMapping("/category")
+    public AjaxResult<Void> saveCategory(@RequestBody Category category) {
+        service.saveCategory(category);
+        return AjaxResult.success();
+    }
+
+    /**
+     * 根据id查询信息
+     * @param id
+     */
+    @GetMapping("/category/{id}")
+    public AjaxResult<Category> getCategoryBySlug(@PathVariable String id) {
+        return AjaxResult.success(service.getCategoryById(id));
+    }
+
+    /**
+     * 更改分类信息
+     * @param category
+     */
+    @PutMapping("/category")
+    public AjaxResult<Void> updateCategory(@RequestBody Category category) {
+        service.updateCategory(category);
+        return AjaxResult.success();
     }
 }

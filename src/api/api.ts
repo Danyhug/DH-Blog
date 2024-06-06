@@ -65,3 +65,21 @@ export const getArticleTagList = (): Promise<Tag[]> => {
 export const addTag = (data: Tag): Promise<Tag> => {
   return request.post('/article/tag', data)
 }
+
+// ********** 分类操作 **********
+
+/**
+ * 新增分类
+ * @param data
+ */
+export const addCategory = (data: Category): Promise<Category> => {
+  return request.post('/article/category', data)
+}
+
+/**
+ * 更改分类
+ * @param data
+ */
+export const updateCategory = (data: Category): Promise<Category> => {
+  return request.put('/article/category', data)
+}

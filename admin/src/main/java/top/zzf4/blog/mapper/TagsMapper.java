@@ -1,9 +1,6 @@
 package top.zzf4.blog.mapper;
 
-import org.apache.ibatis.annotations.Delete;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 import top.zzf4.blog.entity.model.Article;
 import top.zzf4.blog.entity.model.Tag;
 
@@ -28,6 +25,10 @@ public interface TagsMapper {
     // 根据post_id删除所有记录
     @Delete("DELETE FROM PostTags WHERE post_id = #{postId}")
     void deleteByPostId(Long postId);
+
+    // 更新标签记录
+    @Update("UPDATE Tags SET name = #{name},slug = #{slug},updated_at = #{updatedAt} WHERE id = #{id}")
+    void updateTag(Tag tag);
 
     // 将标签插入posttags表中
     @Insert("INSERT INTO PostTags (post_id,tag_id) VALUES (#{postId},#{tagId})")

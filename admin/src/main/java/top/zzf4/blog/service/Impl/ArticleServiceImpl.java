@@ -14,6 +14,7 @@ import top.zzf4.blog.entity.model.Category;
 import top.zzf4.blog.entity.model.Tag;
 import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.mapper.ArticleMapper;
+import top.zzf4.blog.mapper.CategoriesMapper;
 import top.zzf4.blog.mapper.TagsMapper;
 import top.zzf4.blog.service.ArticleService;
 
@@ -27,6 +28,8 @@ public class ArticleServiceImpl implements ArticleService {
     private ArticleMapper articleMapper;
     @Autowired
     private TagsMapper tagMapper;
+    @Autowired
+    private CategoriesMapper categoriesMapper;
 
     /**
      * 使用id查询文章信息
@@ -135,6 +138,11 @@ public class ArticleServiceImpl implements ArticleService {
         return tagMapper.getTags();
     }
 
+    /**
+     * 分页查询文章
+     * @param articlePage
+     * @return
+     */
     @Override
     public PageResult<Article> getPage(ArticlePageDTO articlePage) {
         PageHelper.startPage(articlePage.getPageNum(), articlePage.getPageSize());
@@ -153,5 +161,49 @@ public class ArticleServiceImpl implements ArticleService {
     @Override
     public List<Category> getArticleCategories() {
         return articleMapper.getArticleCategories();
+    }
+
+    /**
+     * 保存分类
+     * @param category
+     */
+    @Override
+    public void saveCategory(Category category) {
+        LocalDateTime date = LocalDateTime.now();
+        category.setCreatedAt(date);
+        category.setUpdatedAt(date);
+        categoriesMapper.saveCategory(category);
+    }
+
+    /**
+     * 根据id查询分类
+     * @param id
+     * @return
+     */
+    @Override
+    public Category getCategoryById(String id) {
+        return categoriesMapper.selectById(id);
+    }
+
+    /**
+     * 更新分类
+     *
+     * @param category
+     */
+    @Override
+    public void updateCategory(Category category) {
+        category.setUpdatedAt(LocalDateTime.now());
+        categoriesMapper.updateCategory(category);
+    }
+
+    /**
+     * 更新标签
+     *
+     * @param tag
+     */
+    @Override
+    public void updateTag(Tag tag) {
+        tag.setUpdatedAt(LocalDateTime.now());
+        tagMapper.updateTag(tag);
     }
 }

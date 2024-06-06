@@ -56,4 +56,29 @@ public interface ArticleService {
      * @return
      */
     List<Category> getArticleCategories();
+
+    /**
+     * 保存分类
+     * @param category
+     */
+    void saveCategory(Category category);
+
+    /**
+     * 根据id查询分类
+     * @param slug
+     * @return
+     */
+    Category getCategoryById(String id);
+
+    /**
+     * 更新分类
+     * @param category
+     */
+    void updateCategory(Category category);
+
+    /**
+     * 更新标签
+     * @param tag
+     */
+    void updateTag(Tag tag);
 }
