@@ -53,6 +53,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Side: typeof import('./src/components/Side.vue')['default']
+    TableDialog: typeof import('./src/components/backend/Table/TableDialog.vue')['default']
     TagTable: typeof import('./src/components/backend/Table/TagTable.vue')['default']
   }
 }

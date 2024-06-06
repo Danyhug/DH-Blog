@@ -66,6 +66,14 @@ export const addTag = (data: Tag): Promise<Tag> => {
   return request.post('/article/tag', data)
 }
 
+/**
+ * 更新标签
+ * @param data
+ */
+export const updateTag = (data: Tag): Promise<Tag> => {
+  return request.put('/article/tag', data)
+}
+
 // ********** 分类操作 **********
 
 /**

@@ -7,43 +7,26 @@
     <el-table-column prop="updatedAt" label="更新时间" />
     <el-table-column fixed="right" label="操作">
       <template #header>
-        <el-button type="success" round>新增标签</el-button>
+        <el-button type="success" round @click="add">新增标签</el-button>
       </template>
       <template #default="scope">
-        <el-button link type="primary" size="large" @click.prevent="edit(scope.row.id)">编辑</el-button>
+        <el-button link type="primary" size="large" @click.prevent="edit(scope.row)">编辑</el-button>
         <el-button link type="danger" size="small">删除</el-button>
       </template>
     </el-table-column>
   </el-table>
 
-  <el-dialog v-model="visible" title="新增" :show-close="false" width="300">
-    <el-form :model="tag" size="small" label-position="top">
-      <el-form-item label="名称">
-        <el-input v-model="tag.name" />
-      </el-form-item>
-      <el-form-item label="别名(SEO优化)">
-        <el-input v-model="tag.slug" />
-      </el-form-item>
-    </el-form>
-    <template #footer>
-      <div class="dialog-footer">
-        <el-button @click="visible = false">取消</el-button>
-        <el-button type="primary" @click="add">
-          新增
-        </el-button>
-      </div>
-    </template>
-  </el-dialog>
-
+  <TableDialog :visible="visible" :state="state" :data="tag" @close="visible = false" @add="add" @update="update" />
 </template>
 <script lang="ts" setup>
-import { addTag } from '@/api/api';
+import { addTag, updateTag } from '@/api/api';
 import { Tag } from '@/types/Tag'
 import { reactive, ref } from 'vue'
 import {useAdminStore} from '@/store/index'
 
 const props = defineProps(['tags'])
 const visible = ref(false)
+const state = ref('add')
 const store = useAdminStore()
 
 const tag = reactive<Tag>({
@@ -51,10 +34,13 @@ const tag = reactive<Tag>({
   slug: '',
 })
 
-// 新增标签
+
+// 新增
 const add = () => {
   visible.value = true
-  
+  state.value = 'add'
+  // Object.assign(tag, { name: '', slug: '' })
+
   addTag(tag).then(() => {
     visible.value = false
     ElMessage.success('新增标签成功')
@@ -62,9 +48,18 @@ const add = () => {
   })
 }
 
-// 编辑标签
-const edit = (id: number) => {
-  ElMessage.success('修改标签成功')
+// 编辑
+const edit = (row: Tag) => {
+  state.value = 'edit'
+  Object.assign(tag, row)
+  visible.value = true
 }
 
+const update = () => {
+  updateTag(tag).then(() => {
+    ElMessage.success('修改标签成功')
+  })
+  visible.value = false
+  store.getTags()
+}
 </script>

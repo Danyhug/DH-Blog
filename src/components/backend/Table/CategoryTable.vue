@@ -10,38 +10,23 @@
         <el-button type="success" round @click="add">新增分类</el-button>
       </template>
       <template #default="scope">
-        <el-button link type="primary" size="large" @click.prevent="edit(scope.row.id)">编辑</el-button>
+        <el-button link type="primary" size="large" @click.prevent="edit(scope.row)">编辑</el-button>
         <el-button link type="danger" size="small">删除</el-button>
       </template>
     </el-table-column>
   </el-table>
 
-  <el-dialog v-model="visible" title="新增" :show-close="false" width="300">
-    <el-form :model="category" size="small" label-position="top">
-      <el-form-item label="名称">
-        <el-input v-model="category.name" />
-      </el-form-item>
-      <el-form-item label="别名(SEO优化)">
-        <el-input v-model="category.slug" />
-      </el-form-item>
-    </el-form>
-    <template #footer>
-      <div class="dialog-footer">
-        <el-button @click="visible = false">取消</el-button>
-        <el-button type="primary" @click="add">
-          新增
-        </el-button>
-      </div>
-    </template>
-  </el-dialog>
+  <TableDialog :visible="visible" :state="state" :data="category" @close="visible = false" @add="add" @update="update" />
 </template>
 <script lang="ts" setup>
-import { addCategory } from '@/api/api';
+import { addCategory, updateCategory } from '@/api/api';
 import { useAdminStore } from '@/store';
 import { Category } from '@/types/Category';
 import { reactive, ref } from 'vue';
+import TableDialog from '@/components/backend/Table/TableDialog.vue'
 
 const store = useAdminStore()
+const state = ref('add')
 const visible = ref(false)
 const props = defineProps(['categories'])
 const category = reactive<Category>({
@@ -52,6 +37,8 @@ const category = reactive<Category>({
 // 新增
 const add = () => {
   visible.value = true
+  state.value = 'add'
+  Object.assign(category, { name: '', slug: '' })
 
   addCategory(category).then(() => {
     visible.value = false
@@ -61,7 +48,17 @@ const add = () => {
 }
 
 // 编辑
-const edit = (id: number) => {
-  ElMessage.success('修改分类成功')
+const edit = (row: Category) => {
+  state.value = 'edit'
+  Object.assign(category, row)
+  visible.value = true
+}
+
+const update = () => {
+  updateCategory(category).then(() => {
+    ElMessage.success('修改分类成功')
+  })
+  visible.value = false
+  store.getCategories()
 }
 </script>

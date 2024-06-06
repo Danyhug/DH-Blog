@@ -1,14 +1,14 @@
 <template>
   <el-table :data="props.articles" style="width: 100%;">
-    <el-table-column prop="id" label="编号" width="90" />
-    <el-table-column prop="title" label="文章标题" width="180" />
+    <el-table-column prop="id" label="编号" width="80" />
+    <el-table-column prop="title" label="文章标题" width="150" />
     <el-table-column prop="categoryName" label="分类">
       <template #default="scope">
         <el-tag type="primary">{{ scope.row.categoryName }}</el-tag>
       </template>
     </el-table-column>
 
-    <el-table-column prop="tags" label="标签">
+    <el-table-column prop="tags" label="标签" width="120">
       <template #default="scope">
         <el-tag type="primary" v-for="tag in scope.row.tags" effect="plain" round>{{ tag.name }}</el-tag>
       </template>
