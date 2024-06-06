@@ -4,7 +4,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import top.zzf4.blog.entity.AjaxResult;
-import top.zzf4.blog.entity.dto.ArticleInsertDto;
+import top.zzf4.blog.entity.dto.ArticleInsertDTO;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
@@ -43,7 +43,7 @@ public class ArticleController {
      * @return
      */
     @PostMapping
-    public AjaxResult<Void> save(@RequestBody ArticleInsertDto article) {
+    public AjaxResult<Void> save(@RequestBody ArticleInsertDTO article) {
         log.info("保存文章 {}", article);
         service.saveArticle(article);
         return AjaxResult.success();

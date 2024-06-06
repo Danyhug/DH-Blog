@@ -55,3 +55,13 @@ export const getArticleCategoryList = (): Promise<Category[]> => {
 export const getArticleTagList = (): Promise<Tag[]> => {
   return request.get('/article/tag')
 }
+
+// ********** 标签操作 **********
+
+/**
+ * 新增标签
+ * @param data
+ */
+export const addTag = (data: Tag): Promise<Tag> => {
+  return request.post('/article/tag', data)
+}

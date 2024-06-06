@@ -5,7 +5,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import top.zzf4.blog.entity.dto.ArticleInsertDto;
+import top.zzf4.blog.entity.dto.ArticleInsertDTO;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
@@ -17,7 +17,6 @@ import top.zzf4.blog.mapper.ArticleMapper;
 import top.zzf4.blog.mapper.TagsMapper;
 import top.zzf4.blog.service.ArticleService;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -50,11 +49,11 @@ public class ArticleServiceImpl implements ArticleService {
      *
      */
     @Override
-    public void saveArticle(ArticleInsertDto articleInsertDto) {
+    public void saveArticle(ArticleInsertDTO articleInsertDTO) {
         Article article = new Article();
-        article.setTitle(articleInsertDto.getTitle());
-        article.setContent(articleInsertDto.getContent());
-        article.setCategoryId(articleInsertDto.getCategoryId());
+        article.setTitle(articleInsertDTO.getTitle());
+        article.setContent(articleInsertDTO.getContent());
+        article.setCategoryId(articleInsertDTO.getCategoryId());
         // 设置观看数
         article.setViews(0);
         LocalDateTime date = LocalDateTime.now();
@@ -63,7 +62,7 @@ public class ArticleServiceImpl implements ArticleService {
         articleMapper.saveArticle(article);
 
         // 查询标签slug对应id
-        for (String tag : articleInsertDto.getTags()) {
+        for (String tag : articleInsertDTO.getTags()) {
             // 临时标签数据
             Tag tagTemp = tagMapper.selectBySlug(tag);
 

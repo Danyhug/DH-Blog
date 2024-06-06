@@ -1,6 +1,6 @@
 package top.zzf4.blog.service;
 
-import top.zzf4.blog.entity.dto.ArticleInsertDto;
+import top.zzf4.blog.entity.dto.ArticleInsertDTO;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
@@ -21,9 +21,9 @@ public interface ArticleService {
 
     /**
      * 保存文章
-     * @param articleInsertDto
+     * @param articleInsertDTO
      */
-    void saveArticle(ArticleInsertDto articleInsertDto);
+    void saveArticle(ArticleInsertDTO articleInsertDTO);
 
     /**
      * 更新文章

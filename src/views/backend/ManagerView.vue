@@ -24,33 +24,20 @@ import { Article } from '@/types/Article';
 import { Category } from '@/types/Category';
 import { Tag } from '@/types/Tag';
 import { onMounted, reactive } from 'vue';
-import { useRouter } from 'vue-router'
+import { ref } from 'vue';
+import useAdminStore from '@/store/indes';
 
-const router = useRouter()
+
+const activeName = ref('third')
+const store = useAdminStore()
 
 const articles = reactive<Article<Tag>[]>([])
-const categories = reactive<Category[]>([]);
-const tags = reactive<Tag[]>([]);
-
-const edit = (id: number) => {
-  router.push({ name: 'publish', query: { articleId: id } });
-}
-
-// 获取分类列表
-const getCategories = async () => {
-  const data = await getArticleCategoryList();
-  categories.push(...data);
-};
-
-// 获取标签列表
-const getTags = async () => {
-  const data = await getArticleTagList();
-  tags.push(...data);
-};
+const categories = store.categories
+const tags = store.tags
 
 onMounted(() => {
-  getCategories();
-  getTags();
+  store.getCategories();
+  store.getTags();
 
   getArticleList({ pageNum: 2, pageSize: 10 }).then((res) => {
     let articleList: Article<Tag>[] = [];

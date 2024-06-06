@@ -26,5 +26,13 @@
   </el-table>
 </template>
 <script lang="ts" setup>
+import { useRouter } from 'vue-router'
+
 const props = defineProps(['articles'])
+const router = useRouter()
+
+const edit = (id: number) => {
+  router.push({ name: 'publish', query: { articleId: id } });
+}
+
 </script>
