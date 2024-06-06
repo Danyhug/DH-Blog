@@ -16,7 +16,8 @@
     </el-table-column>
   </el-table>
 
-  <TableDialog :visible="visible" :state="state" :data="category" @close="visible = false" @add="add" @update="update" />
+  <TableDialog :visible="visible" :state="state" :data="category" @close="visible = false" @add="confirmAdd"
+    @update="update" @cancel="cancel" />
 </template>
 <script lang="ts" setup>
 import { addCategory, updateCategory } from '@/api/api';
@@ -38,8 +39,10 @@ const category = reactive<Category>({
 const add = () => {
   visible.value = true
   state.value = 'add'
-  // Object.assign(category, { name: '', slug: '' })
+  Object.assign(category, { name: '', slug: '' })
+}
 
+const confirmAdd = () => {
   addCategory(category).then(() => {
     visible.value = false
     ElMessage.success('新增分类成功')
@@ -61,4 +64,6 @@ const update = () => {
   visible.value = false
   store.getCategories()
 }
+
+const cancel = () => visible.value = false
 </script>

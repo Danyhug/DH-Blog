@@ -25,6 +25,7 @@ request.interceptors.response.use(
       return response.data.data;
     } else {
       // 如果code不是1，你可以根据需要处理错误，比如抛出异常或返回特定错误信息
+      ElMessage.error(response.data.msg);
       return Promise.reject(new Error(response.data.msg || 'Error'));
     }
   },

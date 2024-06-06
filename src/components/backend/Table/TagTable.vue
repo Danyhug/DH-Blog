@@ -16,13 +16,14 @@
     </el-table-column>
   </el-table>
 
-  <TableDialog :visible="visible" :state="state" :data="tag" @close="visible = false" @add="add" @update="update" />
+  <TableDialog :visible="visible" :state="state" :data="tag" @close="visible = false" @add="confirmAdd" @update="update"
+    @cancel="cancel" />
 </template>
 <script lang="ts" setup>
 import { addTag, updateTag } from '@/api/api';
 import { Tag } from '@/types/Tag'
 import { reactive, ref } from 'vue'
-import {useAdminStore} from '@/store/index'
+import { useAdminStore } from '@/store/index'
 
 const props = defineProps(['tags'])
 const visible = ref(false)
@@ -39,8 +40,10 @@ const tag = reactive<Tag>({
 const add = () => {
   visible.value = true
   state.value = 'add'
-  // Object.assign(tag, { name: '', slug: '' })
+  Object.assign(tag, { name: '', slug: '' })
+}
 
+const confirmAdd = () => {
   addTag(tag).then(() => {
     visible.value = false
     ElMessage.success('新增标签成功')
@@ -62,4 +65,6 @@ const update = () => {
   visible.value = false
   store.getTags()
 }
+
+const cancel = () => visible.value = false
 </script>

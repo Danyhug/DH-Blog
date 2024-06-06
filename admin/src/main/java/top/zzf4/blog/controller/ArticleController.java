@@ -14,6 +14,7 @@ import top.zzf4.blog.entity.model.Tag;
 import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.service.ArticleService;
 
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.List;
 
 @RestController
@@ -76,7 +77,7 @@ public class ArticleController {
      * @return
      */
     @PostMapping("/tag")
-    public AjaxResult<Void> saveTag(@RequestBody TagInsertDTO tagInsertDTO) {
+    public AjaxResult<Void> saveTag(@RequestBody TagInsertDTO tagInsertDTO) throws SQLIntegrityConstraintViolationException {
         service.saveTag(tagInsertDTO);
         return AjaxResult.success();
     }
@@ -111,7 +112,7 @@ public class ArticleController {
      * 新增分类
      */
     @PostMapping("/category")
-    public AjaxResult<Void> saveCategory(@RequestBody Category category) {
+    public AjaxResult<Void> saveCategory(@RequestBody Category category) throws SQLIntegrityConstraintViolationException {
         service.saveCategory(category);
         return AjaxResult.success();
     }

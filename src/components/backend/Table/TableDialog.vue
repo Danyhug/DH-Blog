@@ -10,7 +10,7 @@
     </el-form>
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="visible = false">取消</el-button>
+        <el-button @click="cancel">取消</el-button>
         <el-button type="primary" @click="add" v-show="state == 'add'">新增</el-button>
         <el-button type="primary" @click="update" v-show="state == 'edit'">修改</el-button>
       </div>
@@ -22,7 +22,8 @@ import { defineProps, toRefs } from 'vue'
 const porps = defineProps(['visible', 'data', 'state'])
 const { visible, data, state } = toRefs(porps)
 // 触发父元素的update方法
-const emit = defineEmits(['update', 'add'])
+const emit = defineEmits(['update', 'add', 'cancel'])
 const update = () => emit('update')
 const add = () => emit('add')
+const cancel = () => emit('cancel')
 </script>
