@@ -189,6 +189,15 @@ public class ArticleServiceImpl implements ArticleService {
     }
 
     /**
+     * 删除分类
+     * @param id
+     */
+    @Override
+    public void deleteCategory(String id) {
+        categoriesMapper.deleteById(id);
+    }
+
+    /**
      * 根据id查询分类
      * @param id
      * @return
@@ -218,5 +227,15 @@ public class ArticleServiceImpl implements ArticleService {
     public void updateTag(Tag tag) {
         tag.setUpdatedAt(LocalDateTime.now());
         tagMapper.updateTag(tag);
+    }
+
+    /**
+     * 删除标签
+     *
+     * @param id
+     */
+    @Override
+    public void deleteTag(String id) {
+        tagMapper.deleteById(id);
     }
 }

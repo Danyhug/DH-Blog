@@ -10,13 +10,21 @@ export const useAdminStore = defineStore('admin', () => {
 
   const getCategories = async () => {
     const data = await getArticleCategoryList();
-    Object.assign(categories, data)
+    if (data.length === 0) {
+      categories.length = 0
+    } else {
+      Object.assign(categories, data)
+    }
   };
 
   // 获取标签列表
   const getTags = async () => {
     const data = await getArticleTagList();
-    Object.assign(tags, data)
+    if (data.length === 0) {
+      tags.length = 0
+    } else {
+      Object.assign(tags, data)
+    }
   };
 
   return {

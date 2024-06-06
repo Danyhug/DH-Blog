@@ -34,4 +34,8 @@ public interface TagsMapper {
     // 将标签插入posttags表中
     @Insert("INSERT INTO PostTags (post_id,tag_id) VALUES (#{postId},#{tagId})")
     void savePostTags(Long postId, Long tagId);
+
+    // 删除标签
+    @Delete("DELETE FROM Tags WHERE id = #{id}")
+    void deleteById(String id);
 }

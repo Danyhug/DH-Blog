@@ -74,6 +74,14 @@ export const updateTag = (data: Tag): Promise<Tag> => {
   return request.put('/article/tag', data)
 }
 
+/**
+ * 删除标签
+ * @param id
+ */
+export const deleteTag = (id: String): Promise<any> => {
+  return request.delete('/article/tag/' + id)
+}
+
 // ********** 分类操作 **********
 
 /**
@@ -90,4 +98,12 @@ export const addCategory = (data: Category): Promise<Category> => {
  */
 export const updateCategory = (data: Category): Promise<Category> => {
   return request.put('/article/category', data)
+}
+
+/**
+ * 删除分类
+ * @param id
+ */
+export const deleteCategory = (id: String): Promise<any> => {
+  return request.delete('/article/category/' + id)
 }

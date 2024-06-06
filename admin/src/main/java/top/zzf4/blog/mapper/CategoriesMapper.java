@@ -1,9 +1,6 @@
 package top.zzf4.blog.mapper;
 
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.*;
 import top.zzf4.blog.entity.model.Category;
 
 @Mapper
@@ -20,4 +17,7 @@ public interface CategoriesMapper {
 
     @Select("SELECT * FROM Categories WHERE slug = #{slug}")
     Category selectBySlug(String slug);
+
+    @Delete("DELETE FROM Categories WHERE id = #{id}")
+    void deleteById(String id);
 }

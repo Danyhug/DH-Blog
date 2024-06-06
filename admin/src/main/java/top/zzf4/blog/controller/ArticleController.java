@@ -101,6 +101,16 @@ public class ArticleController {
     }
 
     /**
+     * 删除标签信息
+     * @param id
+     */
+    @DeleteMapping("/tag/{id}")
+    public AjaxResult<String> deleteTag(@PathVariable String id) {
+        service.deleteTag(id);
+        return AjaxResult.success("已删除标签");
+    }
+
+    /**
      * 查询分类列表
      */
     @GetMapping("/category")
@@ -134,5 +144,15 @@ public class ArticleController {
     public AjaxResult<Void> updateCategory(@RequestBody Category category) {
         service.updateCategory(category);
         return AjaxResult.success();
+    }
+
+    /**
+     * 删除分类
+     * @param id
+     */
+    @DeleteMapping("/category/{id}")
+    public AjaxResult<String> deleteCategory(@PathVariable String id) {
+        service.deleteCategory(id);
+        return AjaxResult.success("已删除分类");
     }
 }

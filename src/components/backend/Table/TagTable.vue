@@ -11,7 +11,7 @@
       </template>
       <template #default="scope">
         <el-button link type="primary" size="large" @click.prevent="edit(scope.row)">编辑</el-button>
-        <el-button link type="danger" size="small">删除</el-button>
+        <el-button link type="danger" size="small" @click.prevent="del(scope.row.id)">删除</el-button>
       </template>
     </el-table-column>
   </el-table>
@@ -20,7 +20,7 @@
     @cancel="cancel" />
 </template>
 <script lang="ts" setup>
-import { addTag, updateTag } from '@/api/api';
+import { addTag, updateTag, deleteTag } from '@/api/api';
 import { Tag } from '@/types/Tag'
 import { reactive, ref } from 'vue'
 import { useAdminStore } from '@/store/index'
@@ -34,7 +34,6 @@ const tag = reactive<Tag>({
   name: '',
   slug: '',
 })
-
 
 // 新增
 const add = () => {
@@ -64,6 +63,14 @@ const update = () => {
   })
   visible.value = false
   store.getTags()
+}
+
+// 删除
+const del = (id: String) => {
+  deleteTag(id).then(() => {
+    ElMessage.success('删除标签成功')
+    store.getTags()
+  })
 }
 
 const cancel = () => visible.value = false

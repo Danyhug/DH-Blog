@@ -72,6 +72,12 @@ public interface ArticleService {
     Category getCategoryById(String id);
 
     /**
+     * 删除分类
+     * @param id
+     */
+    void deleteCategory(String id);
+
+    /**
      * 更新分类
      * @param category
      */
@@ -82,4 +88,10 @@ public interface ArticleService {
      * @param tag
      */
     void updateTag(Tag tag);
+
+    /**
+     * 删除标签
+     * @param id
+     */
+    void deleteTag(String id);
 }

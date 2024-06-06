@@ -11,7 +11,7 @@
       </template>
       <template #default="scope">
         <el-button link type="primary" size="large" @click.prevent="edit(scope.row)">编辑</el-button>
-        <el-button link type="danger" size="small">删除</el-button>
+        <el-button link type="danger" size="small" @click.prevent="del(scope.row.id)">删除</el-button>
       </template>
     </el-table-column>
   </el-table>
@@ -20,7 +20,7 @@
     @update="update" @cancel="cancel" />
 </template>
 <script lang="ts" setup>
-import { addCategory, updateCategory } from '@/api/api';
+import { addCategory, deleteCategory, updateCategory } from '@/api/api';
 import { useAdminStore } from '@/store';
 import { Category } from '@/types/Category';
 import { reactive, ref } from 'vue';
@@ -63,6 +63,14 @@ const update = () => {
   })
   visible.value = false
   store.getCategories()
+}
+
+// 删除
+const del = (id: String) => {
+  deleteCategory(id).then(() => {
+    ElMessage.success('删除分类成功')
+    store.getCategories()
+  })
 }
 
 const cancel = () => visible.value = false
