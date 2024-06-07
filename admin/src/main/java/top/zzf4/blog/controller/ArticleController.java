@@ -2,7 +2,9 @@ package top.zzf4.blog.controller;
 
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import top.zzf4.blog.entity.AjaxResult;
 import top.zzf4.blog.entity.dto.ArticleInsertDTO;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
@@ -14,8 +16,12 @@ import top.zzf4.blog.entity.model.Tag;
 import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.service.ArticleService;
 
+import java.io.File;
+import java.io.IOException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 @RestController
 @Log4j2
@@ -25,10 +31,12 @@ public class ArticleController {
     @Autowired
     private ArticleService service;
 
+    @Value("${upload.path}")
+    private String uploadPath;
+
     /**
      * 获取文章详情
-     * @param id
-     * @return
+     * @param id 文章id
      */
     @GetMapping("/{id}")
     public AjaxResult<Article> detail(@PathVariable String id) {
@@ -40,8 +48,7 @@ public class ArticleController {
 
     /**
      * 新增文章
-     * @param article
-     * @return
+     * @param article 文章类型
      */
     @PostMapping
     public AjaxResult<Void> save(@RequestBody ArticleInsertDTO article) {
@@ -52,8 +59,7 @@ public class ArticleController {
 
     /**
      * 更新文章
-     * @param articleUpdate
-     * @return
+     * @param articleUpdate 文章数据
      */
     @PutMapping
     public AjaxResult<Void> update(@RequestBody ArticleUpdateDTO articleUpdate) {
@@ -63,7 +69,6 @@ public class ArticleController {
 
     /**
      * 分页查询
-     * @return
      */
     @PostMapping("/list")
     public AjaxResult<PageResult<Article>> getPage(@RequestBody ArticlePageDTO articlePage) {
@@ -72,9 +77,26 @@ public class ArticleController {
     }
 
     /**
+     * 文件上传
+     */
+    @PostMapping("/upload")
+    public AjaxResult<String> upload(@RequestParam("file") MultipartFile file) throws IOException {
+        log.info("上传文件 {} {}", file, uploadPath);
+        String originalFilename = file.getOriginalFilename();
+        // 截取文件后缀
+        String extension = Objects.requireNonNull(originalFilename).substring(originalFilename.lastIndexOf("."));
+        // 使用UUID作为文件名
+        String objectName = UUID.randomUUID() + extension;
+
+        file.transferTo(new File(uploadPath + objectName));
+        return AjaxResult.success(objectName);
+    }
+
+    // ******************** 标签相关 ********************
+
+    /**
      * 新增文章标签
-     * @param tagInsertDTO
-     * @return
+     * @param tagInsertDTO 标签数据
      */
     @PostMapping("/tag")
     public AjaxResult<Void> saveTag(@RequestBody TagInsertDTO tagInsertDTO) throws SQLIntegrityConstraintViolationException {
@@ -84,7 +106,6 @@ public class ArticleController {
 
     /**
      * 查询标签列表
-     * @return
      */
     @GetMapping("/tag")
     public AjaxResult<List<Tag>> getTags() {
@@ -102,13 +123,15 @@ public class ArticleController {
 
     /**
      * 删除标签信息
-     * @param id
+     * @param id 标签id
      */
     @DeleteMapping("/tag/{id}")
     public AjaxResult<String> deleteTag(@PathVariable String id) {
         service.deleteTag(id);
         return AjaxResult.success("已删除标签");
     }
+
+    // ******************** 分类相关 ********************
 
     /**
      * 查询分类列表
@@ -129,7 +152,7 @@ public class ArticleController {
 
     /**
      * 根据id查询信息
-     * @param id
+     * @param id 文章id
      */
     @GetMapping("/category/{id}")
     public AjaxResult<Category> getCategoryBySlug(@PathVariable String id) {
@@ -138,7 +161,7 @@ public class ArticleController {
 
     /**
      * 更改分类信息
-     * @param category
+     * @param category 分类信息
      */
     @PutMapping("/category")
     public AjaxResult<Void> updateCategory(@RequestBody Category category) {
@@ -148,7 +171,7 @@ public class ArticleController {
 
     /**
      * 删除分类
-     * @param id
+     * @param id 分类id
      */
     @DeleteMapping("/category/{id}")
     public AjaxResult<String> deleteCategory(@PathVariable String id) {

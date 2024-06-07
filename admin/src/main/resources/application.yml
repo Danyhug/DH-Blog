@@ -22,5 +22,12 @@ spring:
       max-lifetime: 120
       # 连接在连接池中 最大的空闲时间 idle-timeout 要小于 max-lifetime
       idle-timeout: 110
+  servlet:
+    multipart:
+      max-file-size: 10MB
+
+# 在这里写博客上传文件的目录
+upload:
+  path: D:\\博客图片\\
 
 debug: true

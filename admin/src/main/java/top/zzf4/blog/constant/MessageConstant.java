@@ -19,4 +19,12 @@ public class MessageConstant {
      */
     public static final String TAG_NOT_FOUND = "标签不存在";
     public static final String TAG_EXIST = "标签已存在";
+
+    /**
+     * 上传消息类型
+     */
+    public static final String UPLOAD_FAIL = "上传失败";
+    public static final String UPLOAD_SUCCESS = "上传成功";
+    public static final String UPLOAD_FILE_TYPE_ERROR = "上传文件类型错误";
+    public static final String UPLOAD_FILE_SIZE_ERROR = "上传文件大小错误";
 }

@@ -16,18 +16,6 @@ CREATE TABLE LoginInfo (
     city VARCHAR(100) NOT NULL
 );
 
--- 博客文章表
-CREATE TABLE Articles (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    category_id INT, -- 外键
-    publish_date DATETIME NOT NULL,
-    update_date DATETIME,
-    views INT DEFAULT 0,
-    word_num TINYINT DEFAULT 0,
-    FOREIGN KEY (category_id) REFERENCES Categories(id) ON DELETE SET NULL -- 假设删除分类时文章的category_id置为NULL
-);
 
 -- 分类表
 CREATE TABLE Categories (
@@ -45,6 +33,20 @@ CREATE TABLE Tags (
     slug VARCHAR(255) NOT NULL UNIQUE,
     created_at DATETIME,
     updated_at DATETIME
+);
+
+-- 博客文章表
+CREATE TABLE Articles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    category_id INT, -- 外键
+    publish_date DATETIME NOT NULL,
+    update_date DATETIME,
+    views INT DEFAULT 0,
+    word_num TINYINT DEFAULT 0,
+    thumbnail_url VARCHAR(255), -- 首页文章列表展示的图片
+    FOREIGN KEY (category_id) REFERENCES Categories(id) ON DELETE SET NULL -- 假设删除分类时文章的category_id置为NULL
 );
 
 -- 文章与标签的关联表

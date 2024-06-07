@@ -26,7 +26,9 @@ public class Article {
 
     private int views;
 
-    private byte wordNum; // TINYINT映射为byte
+    private byte wordNum;
 
     private List<Tag> tags;
+
+    private String thumbnail_url; // 缩略图url
 }

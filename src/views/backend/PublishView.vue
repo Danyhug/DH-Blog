@@ -156,7 +156,7 @@ onMounted(() => {
   })
 
   // 获取路由部分是否为edit?id=格式
-  if (articleId !== null) {
+  if (articleId) {
     // 获取文章详情
     getArticleInfo(articleId as String).then((res: Article<Tag>) => {
       let articleTemp = { ...res, tags: [] }
