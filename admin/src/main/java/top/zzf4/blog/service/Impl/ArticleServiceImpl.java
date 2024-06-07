@@ -6,6 +6,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import top.zzf4.blog.constant.MessageConstant;
 import top.zzf4.blog.entity.dto.ArticleInsertDTO;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
@@ -36,7 +37,7 @@ public class ArticleServiceImpl implements ArticleService {
     /**
      * 使用id查询文章信息
      *
-     * @param id
+     * @param id 文章id
      * @return 文章信息
      */
     @Override
@@ -79,7 +80,6 @@ public class ArticleServiceImpl implements ArticleService {
     /**
      * 更新文章
      *
-     * @param articleUpdateDTO
      */
     @Override
     public void updateArticle(ArticleUpdateDTO articleUpdateDTO) {
@@ -105,7 +105,7 @@ public class ArticleServiceImpl implements ArticleService {
     /**
      * 删除文章
      *
-     * @param id
+     * @param id 文章id
      */
     @Override
     public void deleteArticle(Long id) {
@@ -115,7 +115,7 @@ public class ArticleServiceImpl implements ArticleService {
     /**
      * 保存标签
      *
-     * @param tagInsertDTO
+     * @param tagInsertDTO 标签数据
      */
     @Override
     @Transactional
@@ -123,7 +123,7 @@ public class ArticleServiceImpl implements ArticleService {
         // 查看表中是否有相关值
         if (tagMapper.selectBySlug(tagInsertDTO.getSlug()) != null) {
             // 抛出主键异常
-            throw new SQLIntegrityConstraintViolationException();
+            throw new SQLIntegrityConstraintViolationException(MessageConstant.TAG_EXIST);
         }
 
         Tag tag = new Tag();
@@ -139,7 +139,7 @@ public class ArticleServiceImpl implements ArticleService {
     /**
      * 查询所有标签
      *
-     * @return
+     * @return 标签列表
      */
     @Override
     public List<Tag> getTags() {
@@ -148,8 +148,6 @@ public class ArticleServiceImpl implements ArticleService {
 
     /**
      * 分页查询文章
-     * @param articlePage
-     * @return
      */
     @Override
     public PageResult<Article> getPage(ArticlePageDTO articlePage) {
@@ -164,7 +162,7 @@ public class ArticleServiceImpl implements ArticleService {
     /**
      * 查询文章分类
      *
-     * @return
+     * @return 分类列表
      */
     @Override
     public List<Category> getArticleCategories() {
@@ -173,13 +171,13 @@ public class ArticleServiceImpl implements ArticleService {
 
     /**
      * 保存分类
-     * @param category
+     * @param category 分类
      */
     @Override
     public void saveCategory(Category category) throws SQLIntegrityConstraintViolationException {
         // 查看表中是否有相关值
         if (categoriesMapper.selectBySlug(category.getSlug()) != null) {
-            throw new SQLIntegrityConstraintViolationException();
+            throw new SQLIntegrityConstraintViolationException(MessageConstant.CATEGORY_EXIST);
         }
 
         LocalDateTime date = LocalDateTime.now();
@@ -190,7 +188,7 @@ public class ArticleServiceImpl implements ArticleService {
 
     /**
      * 删除分类
-     * @param id
+     * @param id 文章id
      */
     @Override
     public void deleteCategory(String id) {
@@ -199,8 +197,8 @@ public class ArticleServiceImpl implements ArticleService {
 
     /**
      * 根据id查询分类
-     * @param id
-     * @return
+     * @param id 文章aid
+     * @return 分类
      */
     @Override
     public Category getCategoryById(String id) {
@@ -210,7 +208,7 @@ public class ArticleServiceImpl implements ArticleService {
     /**
      * 更新分类
      *
-     * @param category
+     * @param category 分类
      */
     @Override
     public void updateCategory(Category category) {
@@ -221,7 +219,7 @@ public class ArticleServiceImpl implements ArticleService {
     /**
      * 更新标签
      *
-     * @param tag
+     * @param tag 标签
      */
     @Override
     public void updateTag(Tag tag) {
@@ -232,7 +230,7 @@ public class ArticleServiceImpl implements ArticleService {
     /**
      * 删除标签
      *
-     * @param id
+     * @param id 标签id
      */
     @Override
     public void deleteTag(String id) {

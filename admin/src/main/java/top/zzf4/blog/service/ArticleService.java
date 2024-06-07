@@ -15,38 +15,35 @@ import java.util.List;
 public interface ArticleService {
     /**
      * 使用id查询文章信息
-     * @param id
+     * @param id 文章id
      * @return 文章信息
      */
     Article getArticleById(Long id);
 
     /**
      * 保存文章
-     * @param articleInsertDTO
      */
     void saveArticle(ArticleInsertDTO articleInsertDTO);
 
     /**
      * 更新文章
-     * @param article
+     * @param article 文章信息
      */
     void updateArticle(ArticleUpdateDTO article);
 
     /**
      * 删除文章
-     * @param id
+     * @param id 文章id
      */
     void deleteArticle(Long id);
 
     /**
      * 保存标签
-     * @param tagInsertDTO
      */
     void saveTag(TagInsertDTO tagInsertDTO) throws SQLIntegrityConstraintViolationException;
 
     /**
      * 查询所有标签
-     * @return
      */
     List<Tag> getTags();
 
@@ -54,44 +51,41 @@ public interface ArticleService {
 
     /**
      * 查询文章分类
-     * @return
      */
     List<Category> getArticleCategories();
 
     /**
      * 保存分类
-     * @param category
      */
     void saveCategory(Category category) throws SQLIntegrityConstraintViolationException;
 
     /**
      * 根据id查询分类
-     * @param slug
-     * @return
+     * @param id 分类id
+     * @return 分类数据
      */
     Category getCategoryById(String id);
 
     /**
      * 删除分类
-     * @param id
+     * @param id 分类id
      */
     void deleteCategory(String id);
 
     /**
      * 更新分类
-     * @param category
+     * @param category 分类信息
      */
     void updateCategory(Category category);
 
     /**
      * 更新标签
-     * @param tag
      */
     void updateTag(Tag tag);
 
     /**
      * 删除标签
-     * @param id
+     * @param id 标签id
      */
     void deleteTag(String id);
 }

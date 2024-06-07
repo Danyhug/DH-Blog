@@ -14,8 +14,6 @@ public class GlobalExceptionHandler {
 
     /**
      * 捕获业务异常
-     * @param ex
-     * @return
      */
     @ExceptionHandler
     public AjaxResult<Void> exceptionHandler(Exception ex){
@@ -25,6 +23,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler
     public AjaxResult<Void> exceptionHandler(SQLIntegrityConstraintViolationException ex) {
-        return AjaxResult.error("主键重复");
+        return AjaxResult.error(ex.getMessage());
     }
 }
