@@ -17,7 +17,13 @@
           </el-checkbox-group>
         </el-tab-pane>
         <el-tab-pane label="附加信息" name="third">
-          我是个信息
+          <el-upload class="avatar-uploader" :action="SERVER_URL + '/article/upload'" :show-file-list="false"
+            :on-success="handleAvatarSuccess" :before-upload="beforeAvatarUpload">
+            <img v-if="imageUrl" :src="imageUrl" class="avatar" />
+            <el-icon v-else class="avatar-uploader-icon">
+              <Plus />
+            </el-icon>
+          </el-upload>
         </el-tab-pane>
       </el-tabs>
     </div>
@@ -41,12 +47,15 @@
 </template>
 
 <script setup lang="ts">
-import { addArticle, getArticleCategoryList, getArticleInfo, getArticleTagList, updateArticle } from '@/api/api';
+import { addArticle, getArticleCategoryList, getArticleInfo, getArticleTagList, updateArticle, uploadFile } from '@/api/api';
 import { Article } from '@/types/Article';
 import { Category } from '@/types/Category';
 import { Tag } from '@/types/Tag';
 import { useRoute } from 'vue-router'
 import { onMounted, reactive, ref } from 'vue';
+import type { UploadProps } from 'element-plus'
+import { SERVER_URL } from '@/types/Constant'
+import { Plus } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const articleId = route.query?.articleId
@@ -63,7 +72,8 @@ const article = reactive<Article<String>>({
 那些断翅的蜻蜓 散落在这森林
 而我的眼睛 没有丝毫同情`,
   categoryId: -1,
-  tags: []
+  tags: [],
+  thumbnail_url: ''
 });
 const categories = reactive<Category[]>([]);
 const tags = reactive<Tag[]>([]);
@@ -172,6 +182,32 @@ onMounted(() => {
   }
 })
 
+// 上传文件
+
+const imageUrl = ref('')
+
+const handleAvatarSuccess: UploadProps['onSuccess'] = (
+  response,
+  uploadFile
+) => {
+  imageUrl.value = URL.createObjectURL(uploadFile.raw!)
+  ElMessage.success({
+    message: '上传文件成功',
+    plain: true,
+  })
+
+  // 保存缩略图图片url
+  article.thumbnail_url = response.data
+}
+
+const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
+  if (rawFile.size / 1024 / 1024 > 10) {
+    ElMessage.error('图片不能超过10兆!')
+    return false
+  }
+  return true
+}
+
 </script>
 
 <style scoped>
@@ -203,5 +239,35 @@ onMounted(() => {
 
 .title-input {
   font-size: 16px;
+}
+
+.avatar-uploader .avatar {
+  max-width: 246px;
+  max-height: 138px;
+  display: block;
+}
+
+</style>
+
+<style>
+.avatar-uploader .el-upload {
+  border: 1px dashed var(--el-border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: var(--el-transition-duration-fast);
+}
+
+.avatar-uploader .el-upload:hover {
+  border-color: var(--color-blue);
+}
+
+.el-icon.avatar-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 246px;
+  height: 138px;
+  text-align: center;
 }
 </style>

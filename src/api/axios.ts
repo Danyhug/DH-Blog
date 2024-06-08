@@ -1,4 +1,5 @@
 import axios, { AxiosResponse } from "axios"
+import { SERVER_URL } from '@/types/Constant.ts'
 
 // 返回值类型
 interface AjaxResult<T> {
@@ -8,7 +9,7 @@ interface AjaxResult<T> {
 }
 
 const request = axios.create({
-  baseURL: 'http://localhost:8080',
+  baseURL: SERVER_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json;charset=UTF-8',

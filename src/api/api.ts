@@ -107,3 +107,8 @@ export const updateCategory = (data: Category): Promise<Category> => {
 export const deleteCategory = (id: String): Promise<any> => {
   return request.delete('/article/category/' + id)
 }
+
+// ********** 文件上传 **********
+export const uploadFile = (data: FormData): Promise<String> => {
+  return request.post('/article/upload', data)
+}

@@ -18,7 +18,7 @@
   </el-dialog>
 </template>
 <script lang="ts" setup>
-import { defineProps, toRefs } from 'vue'
+import { toRefs } from 'vue'
 const porps = defineProps(['visible', 'data', 'state'])
 const { visible, data, state } = toRefs(porps)
 // 触发父元素的update方法
