@@ -9,4 +9,7 @@ public class ArticleInsertDTO {
     private String[] tags;
     private Integer wordNum;
     private Integer categoryId;
+
+    // 接受内容thumbnail_url
+    private String thumbnailUrl;
 }

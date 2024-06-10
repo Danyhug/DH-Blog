@@ -68,6 +68,7 @@ public class ArticleServiceImpl implements ArticleService {
         article.setTitle(articleInsertDTO.getTitle());
         article.setContent(articleInsertDTO.getContent());
         article.setCategoryId(articleInsertDTO.getCategoryId());
+        article.setThumbnailUrl(articleInsertDTO.getThumbnailUrl());
         // 设置观看数
         article.setViews(0);
         LocalDateTime date = LocalDateTime.now();

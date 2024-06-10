@@ -15,11 +15,12 @@ public class GlobalExceptionHandler {
     /**
      * 捕获业务异常
      */
-    @ExceptionHandler
-    public AjaxResult<Void> exceptionHandler(Exception ex){
-        log.error("异常信息：{}", ex.getMessage());
-        return AjaxResult.error(ex.getMessage());
-    }
+    // @ExceptionHandler
+    // public AjaxResult<Void> exceptionHandler(Exception ex){
+    //     log.error("异常信息：{}", ex.getMessage());
+    //     log.error(ex);
+    //     return AjaxResult.error(ex.getMessage());
+    // }
 
     @ExceptionHandler
     public AjaxResult<Void> exceptionHandler(SQLIntegrityConstraintViolationException ex) {

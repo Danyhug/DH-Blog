@@ -30,5 +30,5 @@ public class Article {
 
     private List<Tag> tags;
 
-    private String thumbnail_url; // 缩略图url
+    private String thumbnailUrl; // 缩略图url
 }

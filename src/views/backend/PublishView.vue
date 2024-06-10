@@ -73,7 +73,7 @@ const article = reactive<Article<String>>({
 而我的眼睛 没有丝毫同情`,
   categoryId: -1,
   tags: [],
-  thumbnail_url: ''
+  thumbnailUrl: ''
 });
 const categories = reactive<Category[]>([]);
 const tags = reactive<Tag[]>([]);
@@ -197,7 +197,7 @@ const handleAvatarSuccess: UploadProps['onSuccess'] = (
   })
 
   // 保存缩略图图片url
-  article.thumbnail_url = response.data
+  article.thumbnailUrl = response.data
 }
 
 const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
