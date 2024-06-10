@@ -28,8 +28,8 @@
             <if test="wordNum != null">
                 word_num = #{wordNum}
             </if>
-            <if test="thumbnail_url != null">
-                thumbnail_url = #{thumbnail_url}
+            <if test="thumbnailUrl != null">
+                thumbnail_url = #{thumbnailUrl}
             </if>
         </set>
         WHERE id = #{id}

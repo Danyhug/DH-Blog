@@ -1,6 +1,5 @@
 package top.zzf4.blog.mapper;
 
-import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 import top.zzf4.blog.entity.model.Article;

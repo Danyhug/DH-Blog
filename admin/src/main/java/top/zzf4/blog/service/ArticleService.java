@@ -1,6 +1,5 @@
 package top.zzf4.blog.service;
 
-import org.springframework.web.multipart.MultipartFile;
 import top.zzf4.blog.entity.dto.ArticleInsertDTO;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.dto.ArticleUpdateDTO;

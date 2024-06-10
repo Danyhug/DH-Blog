@@ -1,7 +1,6 @@
 package top.zzf4.blog.mapper;
 
 import org.apache.ibatis.annotations.*;
-import top.zzf4.blog.entity.model.Article;
 import top.zzf4.blog.entity.model.Tag;
 
 import java.util.List;
