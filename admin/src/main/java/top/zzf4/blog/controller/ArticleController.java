@@ -3,6 +3,10 @@ package top.zzf4.blog.controller;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import top.zzf4.blog.entity.AjaxResult;
@@ -90,6 +94,20 @@ public class ArticleController {
 
         file.transferTo(new File(uploadPath + objectName));
         return AjaxResult.success(objectName);
+    }
+
+    /**
+     * 获取随机图片
+     */
+    @GetMapping("/image/random")
+    public ResponseEntity<byte[]> getRandomImage() throws IOException {
+        // 设置响应头
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.IMAGE_JPEG);
+        headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+        headers.set("Pragma", "no-cache");
+        headers.set("Expires", "0");
+        return new ResponseEntity<>(service.getRandomImage(), headers, HttpStatus.OK);
     }
 
     // ******************** 标签相关 ********************

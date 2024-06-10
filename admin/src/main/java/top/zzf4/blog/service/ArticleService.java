@@ -90,4 +90,10 @@ public interface ArticleService {
      * @param id 标签id
      */
     void deleteTag(String id);
+
+    /**
+     * 返回随机图片
+     * @return 图片字节
+     */
+    byte[] getRandomImage() throws IOException;
 }

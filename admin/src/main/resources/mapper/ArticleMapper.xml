@@ -36,7 +36,7 @@
     </update>
 
     <select id="getArticles" resultType="top.zzf4.blog.entity.model.Article">
-        SELECT id, title, publish_date, views, category_id FROM articles
+        SELECT id, title, publish_date, views, category_id, thumbnail_url, word_num FROM articles
         <where>
             <if test="categoryId != null">
                 category_id = #{categoryId}

@@ -1,10 +1,16 @@
 package top.zzf4.blog.service.Impl;
 
+import ch.qos.logback.core.testUtil.RandomUtil;
 import com.github.pagehelper.PageHelper;
 import lombok.extern.log4j.Log4j2;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,11 +31,13 @@ import top.zzf4.blog.service.ArticleService;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 
 @Log4j2
@@ -65,10 +73,8 @@ public class ArticleServiceImpl implements ArticleService {
     @Override
     public void saveArticle(ArticleInsertDTO articleInsertDTO) {
         Article article = new Article();
-        article.setTitle(articleInsertDTO.getTitle());
-        article.setContent(articleInsertDTO.getContent());
-        article.setCategoryId(articleInsertDTO.getCategoryId());
-        article.setThumbnailUrl(articleInsertDTO.getThumbnailUrl());
+        BeanUtils.copyProperties(articleInsertDTO, article);
+        log.info("保存文章{}", article);
         // 设置观看数
         article.setViews(0);
         LocalDateTime date = LocalDateTime.now();
@@ -244,5 +250,21 @@ public class ArticleServiceImpl implements ArticleService {
     @Override
     public void deleteTag(String id) {
         tagMapper.deleteById(id);
+    }
+
+    /**
+     * 返回随机图片
+     *
+     * @return 图片字节
+     */
+    @Override
+    public byte[] getRandomImage() throws IOException {
+        int num = new Random().nextInt(5) + 1;
+
+        // 从资源文件加载图片（这里假设图片位于 classpath:/static 目录下）
+        ClassPathResource resource = new ClassPathResource("static/articleBg/" + num + ".jpg");
+
+        // 返回图片字节数组
+        return Files.readAllBytes(resource.getFile().toPath());
     }
 }

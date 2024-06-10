@@ -24,9 +24,9 @@ public class Article {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateDate;
 
-    private int views;
+    private Integer views;
 
-    private byte wordNum;
+    private Integer wordNum;
 
     private List<Tag> tags;
 
