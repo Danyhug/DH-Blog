@@ -3,21 +3,22 @@
     <router-link :to="'./article/' + article.id">
       <div class="cover">
         <div class="left">
-          <img :src="article.thumbnail_url" alt="">
+          <img :src="getArticleBg(article.thumbnailUrl)" :alt="article.title">
         </div>
         <div class="right">
           <div class="top">
             <span class="date">
               <Icon iconName="icon-calendar" iconSize="1.3"></Icon>
-              {{ article.publishDate }}
+              {{ article.publishDate?.slice(0, 10) }}
             </span>
             <span class="num-word">
               <Icon iconName="icon-image-text" iconSize="1.3"></Icon>
-              {{ article.views }} 字
+              {{ article.wordNum }} 字
             </span>
             <span class="time-consum">
               <Icon iconName="icon-browse" iconSize="1.3"></Icon>
-              {{ article.wordNum ? (article.wordNum / 200 + 0.5).toFixed(0) : 0 }} 分钟
+              <!-- {{ article.wordNum ? (article.wordNum / 200 + 0.5).toFixed(0) : 0 }} 分钟 -->
+                {{ article.views }}
             </span>
           </div>
           <p class="title">
@@ -40,6 +41,7 @@
 import { defineProps } from 'vue'
 import { Article } from '@/types/Article.ts'
 import { Tag } from '@/types/Tag'
+import { getArticleBg } from '@/utils/tool'
 const props = defineProps(['article'])
 const article: Article<Tag> = props.article
 console.log(article)

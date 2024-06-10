@@ -104,9 +104,9 @@ public class ArticleController {
         // 设置响应头
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.IMAGE_JPEG);
-        headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
-        headers.set("Pragma", "no-cache");
-        headers.set("Expires", "0");
+        // headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+        // headers.set("Pragma", "no-cache");
+        // headers.set("Expires", "0");
         return new ResponseEntity<>(service.getRandomImage(), headers, HttpStatus.OK);
     }
 

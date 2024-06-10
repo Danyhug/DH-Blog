@@ -4,8 +4,8 @@ export interface Article<T> {
   content: string;
   categoryId: number;
   categoryName?: string;
-  publishDate?: Date;
-  updateDate?: Date;
+  publishDate?: string;
+  updateDate?: string;
   tags?: T[];
   views?: number;
   wordNum?: number; // TypeScript中没有byte类型，通常使用number代替
