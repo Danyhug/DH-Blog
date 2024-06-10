@@ -1,32 +1,32 @@
 <template>
-  <article class="type-img-left" :key="key">
-    <router-link :to="'./article/' + id">
+  <article class="type-img-left">
+    <router-link :to="'./article/' + article.id">
       <div class="cover">
         <div class="left">
-          <img src="https://source.unsplash.com/random" alt="">
+          <img :src="article.thumbnail_url" alt="">
         </div>
         <div class="right">
           <div class="top">
             <span class="date">
               <Icon iconName="icon-calendar" iconSize="1.3"></Icon>
-              2024-04-24
+              {{ article.publishDate }}
             </span>
             <span class="num-word">
               <Icon iconName="icon-image-text" iconSize="1.3"></Icon>
-              1000 字
+              {{ article.views }} 字
             </span>
             <span class="time-consum">
               <Icon iconName="icon-browse" iconSize="1.3"></Icon>
-              {{ (content.length / 200 + 0.5).toFixed(0) }} 分钟
+              {{ article.wordNum ? (article.wordNum / 200 + 0.5).toFixed(0) : 0 }} 分钟
             </span>
           </div>
           <p class="title">
-            <a href="">{{ title }}</a>
+            <a href="">{{ article.title }}</a>
           </p>
-          <p class="text">{{ content }}</p>
+          <p class="text">{{ article.content }}</p>
           <div class="bottom">
             <div class="bottom-tags">
-              安卓开发 |  编程 | 测试
+              {{ article.tags?.map(item => item.name).join('&nbsp;&nbsp;|&nbsp;&nbsp;') }}
             </div>
             <a href="" class="more">more...</a>
           </div>
@@ -36,31 +36,13 @@
   </article>
 </template>
 
-<script>
-export default {
-  name: 'Article',
-  props: {
-    id: {
-      type: Number,
-      require: true
-    },
-    key: {
-      type: Number,
-      require: true
-    },
-    title: {
-      type: String,
-      require: true
-    },
-    content: {
-      type: String,
-      require: true
-    },
-    created: {
-      type: Number
-    }
-  }
-}
+<script lang="ts" setup>
+import { defineProps } from 'vue'
+import { Article } from '@/types/Article.ts'
+import { Tag } from '@/types/Tag'
+const props = defineProps(['article'])
+const article: Article<Tag> = props.article
+console.log(article)
 </script>
 
 <style lang="less" scoped>

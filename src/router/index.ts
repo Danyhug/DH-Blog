@@ -8,6 +8,7 @@ import PublishView from '../views/backend/PublishView.vue'
 import ManagerView from '../views/backend/ManagerView.vue'
 
 const routes = [
+  { path: '/', redirect: '/view/home' },
   // 前台页面
   {
     path: '/view', component: HomeView, children:

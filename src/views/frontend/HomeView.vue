@@ -1,12 +1,11 @@
 <template>
   <div class="container">
-    <Header ref="headerElement"></Header>
+    <Header ref="headerElement" />
     <Banner ref="bannerElement">
-      <template v-if="router.path === '/view'">
+      <template v-if="sideShowComponent.name == 'HomeSide'">
         <h1>我的个人纪录</h1>
         <h2>DH-BLOG</h2>
       </template>
-
       <template v-else>
         <h3>{{ "文章标题3" }}</h3>
         <div class="top">
@@ -16,51 +15,48 @@
         </div>
       </template>
     </Banner>
-
     <div class="inner">
       <div class="left" ref="leftElement">
-        <Transition mode="out-in">
-          <component :is="sideShowComponent"></component>
-        </Transition>
+        <transition mode="out-in">
+          <component :is="sideShowComponent" />
+        </transition>
       </div>
       <div class="right">
-        <Transition mode="out-in">
-          <keep-alive>
-            <router-view></router-view>
-          </keep-alive>
-        </Transition>
+        <router-view v-slot="{ Component }">
+          <transition>
+            <component :is="Component" />
+          </transition>
+        </router-view>
       </div>
     </div>
-    <Footer></Footer>
+    <Footer />
   </div>
 </template>
 
 <script setup lang="ts">
 import '@/assets/css/style.css'
-
 import Header from '@/components/frontend/Header.vue';
 import Banner from '@/components/frontend/Banner.vue';
 import HomeSide from '@/components/frontend/Side/HomeSide.vue';
 import ArticleInfoSide from '@/components/frontend/Side/ArticleInfoSide.vue';
 import Footer from '@/components/frontend/Footer.vue';
+import { shallowRef } from 'vue'
+import { useRouter } from 'vue-router'
 
-import { onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+const router = useRouter();
+const sideShowComponent = shallowRef(HomeSide)
 
-const router = useRoute()
-const sideShowComponent = ref(HomeSide)
-
-// 监听路由
-onMounted(() => {
-  watch(() => router.path, (newVal, _) => {
-    if (newVal === '/') {
-      sideShowComponent.value = HomeSide
-    } else {
-      sideShowComponent.value = ArticleInfoSide
-    }
-  })
-})
+router.beforeEach((to, _, next) => {
+  if (to.path == '/view/home') {
+    // 强制重新加载 HomeSide 组件
+    sideShowComponent.value = HomeSide
+  } else {
+    sideShowComponent.value = ArticleInfoSide
+  }
+  next();
+});
 </script>
+
 
 <style scoped>
 .v-enter-from,
