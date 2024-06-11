@@ -7,11 +7,11 @@
         <h2>DH-BLOG</h2>
       </template>
       <template v-else>
-        <h3>{{ "文章标题3" }}</h3>
+        <h3>{{ store.homeHeaderInfo.title }}</h3>
         <div class="top">
-          <span class="date">发表于 2023/7/21 09:15:47</span>
-          <span class="num-word">本文字数 6 字</span>
-          <span class="time-consum">阅读时长 1 分钟</span>
+          <span class="date">发表于 {{ store.homeHeaderInfo.created }}</span>
+          <span class="num-word">本文字数 {{ store.homeHeaderInfo.wordNum }} 字</span>
+          <span class="time-consum">阅读时长 {{ store.homeHeaderInfo.timConSum }} 分钟</span>
         </div>
       </template>
     </Banner>

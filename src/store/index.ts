@@ -38,7 +38,19 @@ export const useAdminStore = defineStore('admin', () => {
 export const useUserStore = defineStore('user', () => {
   const homeShowComponent = ref('home')
 
+  // 首页上方展示内容（文章详情上面）
+  const homeHeaderInfo = reactive({
+    title: '',
+    created: '',
+    // 总字数
+    wordNum: 0,
+    // 阅读时长
+    timConSum: '0',
+    thumbnailUrl: ''
+  })
+
   return {
-    homeShowComponent
+    homeShowComponent,
+    homeHeaderInfo
   }
 })

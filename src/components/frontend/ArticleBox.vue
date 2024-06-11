@@ -8,17 +8,16 @@
         <div class="right">
           <div class="top">
             <span class="date">
-              <Icon iconName="icon-calendar" iconSize="1.3"></Icon>
+              <Icon iconName="icon-calendar" iconSize="1.35"></Icon>
               {{ article.publishDate?.slice(0, 10) }}
             </span>
             <span class="num-word">
-              <Icon iconName="icon-image-text" iconSize="1.3"></Icon>
+              <Icon iconName="icon-image-text" iconSize="1.35"></Icon>
               {{ article.wordNum }} 字
             </span>
             <span class="time-consum">
-              <Icon iconName="icon-browse" iconSize="1.3"></Icon>
-              <!-- {{ article.wordNum ? (article.wordNum / 200 + 0.5).toFixed(0) : 0 }} 分钟 -->
-                {{ article.views }}
+              <Icon iconName="icon-browse" iconSize="1.35"></Icon>
+              {{ article.views }} 次
             </span>
           </div>
           <p class="title">
@@ -91,7 +90,11 @@ console.log(article)
       color: #606266;
 
       span {
-        margin-left: 1.25rem;
+        margin-left: 1.45rem;
+
+        .icon {
+          transform: translateY(-1px);
+        }
       }
     }
 

@@ -3,11 +3,10 @@
     <el-row>
       <el-col>
         <el-card class="box">
-          <img src="https://shadow.elemecdn.com/app/element/hamburger.9cf7b091-55e9-11e9-a976-7f4d0b07eef6.png"
-            class="image" />
+          <img :src="store.homeHeaderInfo.thumbnailUrl" class="image" />
 
           <div>
-            <p class="title">文章标题3</p>
+            <p class="title">{{ store.homeHeaderInfo.title }}</p>
             <div class="schedule">
               <el-progress :color="customColors" :percentage="sideInfo.process"></el-progress>
               <p>已阅读时长：1分24秒</p>
@@ -45,6 +44,9 @@
 </template>
 
 <script setup>
+const store = useUserStore()
+
+import { useUserStore } from '@/store';
 import { reactive, onMounted } from 'vue'
 const getRandomColor = () => {
   const tagColors = [
@@ -97,6 +99,10 @@ onMounted(() => {
   padding: 0 20px;
   height: 100vh;
   background-color: #fff;
+
+  img {
+    width: 300px;
+  }
 }
 
 .schedule {

@@ -18,6 +18,9 @@
 <script lang="ts">
 import { getArticleInfo } from '@/api/api';
 import { Article } from '@/types/Article.ts'
+import { Tag } from 'element-plus';
+import { useUserStore } from '@/store';
+import { getArticleBg } from '@/utils/tool';
 
 export default {
   name: 'HomeView',
@@ -41,19 +44,30 @@ export default {
 天上风筝渐渐多了，地上孩子也多了。城里乡下，家家户户，老老小小他们也赶趟儿似的，一个个都出来了。舒活舒活筋骨抖擞抖擞精神各做各的一份事去。“一年之计在于春”；刚起头儿有的是工夫有的是希望。
 
 春天像刚落地的娃娃从头到脚都是新的它生长着。春天像小姑娘花枝招展的笑着走着。春天像健壮的青年有铁一般的胳膊和腰脚他领着我们上前去。`,
-      created: 0,
-      update: 0,
+      created: '',
+      update: '',
       viewnum: 0
     }
   },
   mounted() {
-    getArticleInfo(this.$route.params.id).then((res: Article) => {
-      this.id = res.id
-      this.title = res.title
-      this.content = res.content
-      this.created = res.publishDate
-      this.update = res.updateDate
-      this.viewnum = res.views
+    const store = useUserStore()
+
+    getArticleInfo(this.$route.params.id as string).then((res: Article<Tag>) => {
+      this.id = res.id || 0
+      this.title = res.title || ''
+      this.content = res.content || ''
+      this.created = res.publishDate || ''
+      this.update = res.updateDate || ''
+      this.viewnum = res.views || 0
+
+      // 更改pinia内容
+      store.homeHeaderInfo = {
+        title: this.title,
+        created: this.created,
+        wordNum: res.wordNum || 0,
+        timConSum: res.wordNum ? (res.wordNum / 200 + 0.5).toFixed(0) : '0',
+        thumbnailUrl: getArticleBg(res.thumbnailUrl)
+      }
     })
   },
   methods: {

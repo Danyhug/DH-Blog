@@ -30,7 +30,6 @@ const page = reactive<Page>({
 const getPageList = () => {
   getArticleList(page).then(res => {
     articleList.push(...res.list)
-    console.log(articleList)
   })
 }
 
