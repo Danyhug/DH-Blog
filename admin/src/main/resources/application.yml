@@ -32,6 +32,6 @@ spring:
 
 # 在这里写博客上传文件的目录
 upload:
-  path: P:\\Code\\Github\\DH-Blog\\admin\\src\\main\\resources\\static\\upload\\
+  path: P:\\Code\\Github\\DH-Blog\\admin\\src\\main\\resources\\static\\articleUpload\\
 
 debug: true
