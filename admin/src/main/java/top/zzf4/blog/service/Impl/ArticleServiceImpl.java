@@ -255,7 +255,7 @@ public class ArticleServiceImpl implements ArticleService {
      */
     @Override
     public byte[] getRandomImage() throws IOException {
-        int num = new Random().nextInt(5) + 1;
+        int num = new Random().nextInt(9) + 1;
 
         // 从资源文件加载图片（这里假设图片位于 classpath:/static 目录下）
         ClassPathResource resource = new ClassPathResource("static/articleBg/" + num + ".jpg");

@@ -2,7 +2,7 @@ import { getArticleCategoryList, getArticleTagList } from '@/api/api'
 import { Category } from '@/types/Category'
 import { Tag } from '@/types/Tag'
 import { defineStore } from 'pinia'
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 
 export const useAdminStore = defineStore('admin', () => {
   const tags = reactive<Tag[]>([])
@@ -35,4 +35,10 @@ export const useAdminStore = defineStore('admin', () => {
   }
 })
 
-export const useUserStore = defineStore('user', () => { })
+export const useUserStore = defineStore('user', () => {
+  const homeShowComponent = ref('home')
+
+  return {
+    homeShowComponent
+  }
+})

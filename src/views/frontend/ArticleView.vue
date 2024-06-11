@@ -6,16 +6,19 @@
     </div>
     <div class="info">
       <span>
-        更新于 2024-4-28 21:31:22
+        更新于 {{ created }}
       </span>
       <span>
-        阅读次数 22 次
+        阅读次数 {{ viewnum }} 次
       </span>
     </div>
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { getArticleInfo } from '@/api/api';
+import { Article } from '@/types/Article.ts'
+
 export default {
   name: 'HomeView',
   data() {
@@ -44,13 +47,21 @@ export default {
     }
   },
   mounted() {
-
+    getArticleInfo(this.$route.params.id).then((res: Article) => {
+      this.id = res.id
+      this.title = res.title
+      this.content = res.content
+      this.created = res.publishDate
+      this.update = res.updateDate
+      this.viewnum = res.views
+    })
   },
   methods: {
 
   }
 }
 </script>
+
 <style lang="less" scoped>
 .blog-container {
   padding: 1.25rem 1.5rem;

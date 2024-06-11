@@ -23,9 +23,11 @@
       </div>
       <div class="right">
         <router-view v-slot="{ Component }">
-          <transition>
-            <component :is="Component" />
-          </transition>
+          <keep-alive>
+            <transition>
+              <component :is="Component" />
+            </transition>
+          </keep-alive>
         </router-view>
       </div>
     </div>
@@ -40,21 +42,34 @@ import Banner from '@/components/frontend/Banner.vue';
 import HomeSide from '@/components/frontend/Side/HomeSide.vue';
 import ArticleInfoSide from '@/components/frontend/Side/ArticleInfoSide.vue';
 import Footer from '@/components/frontend/Footer.vue';
-import { shallowRef } from 'vue'
-import { useRouter } from 'vue-router'
+import { shallowRef } from 'vue';
 
-const router = useRouter();
-const sideShowComponent = shallowRef(HomeSide)
+import { useUserStore } from '@/store/index'
+import { useRouter, useRoute } from 'vue-router';
 
-router.beforeEach((to, _, next) => {
-  if (to.path == '/view/home') {
-    // 强制重新加载 HomeSide 组件
-    sideShowComponent.value = HomeSide
-  } else {
-    sideShowComponent.value = ArticleInfoSide
+const sideShowComponent = shallowRef(HomeSide);
+
+const store = useUserStore();
+const router = useRouter()
+const route = useRoute()
+
+if (route.path == '/view/home') {
+  sideShowComponent.value = HomeSide;
+  store.homeShowComponent = 'home'
+} else {
+  sideShowComponent.value = ArticleInfoSide;
+  store.homeShowComponent = 'articleInfoSide'
+}
+
+router.beforeEach(() => {
+  if (store.homeShowComponent == 'articleInfoSide') {
+    sideShowComponent.value = HomeSide;
+    store.homeShowComponent = 'home'
+  } else if (store.homeShowComponent == 'home') {
+    sideShowComponent.value = ArticleInfoSide;
+    store.homeShowComponent = 'articleInfoSide'
   }
-  next();
-});
+})
 </script>
 
 
@@ -85,11 +100,11 @@ router.beforeEach((to, _, next) => {
   text-align: center;
   position: sticky;
   top: 0;
-  margin: .6rem 0;
+  margin: 9.6px 0;
 }
 
 .inner {
-  padding: 0 1.5625rem;
+  padding: 0 25px;
   display: flex;
   justify-content: space-between;
 }
@@ -99,18 +114,18 @@ router.beforeEach((to, _, next) => {
 }
 
 .top {
-  margin-top: 1.125rem;
+  margin-top: 18px;
 
   span {
-    margin-right: 1.25rem;
+    margin-right: 20px;
   }
 }
 
 .right {
   width: 67%;
-  box-shadow: 0 8px 12px 1px rgb(235, 235, 235);
-  border-radius: 5px;
-  margin: .6rem 0;
-  padding: 1rem 0 2rem;
+  box-shadow: 0 .5rem .75rem .0625rem rgb(235, 235, 235);
+  border-radius: .3125rem;
+  margin: 9.6px 0;
+  padding: 16px 0 32px;
 }
 </style>
