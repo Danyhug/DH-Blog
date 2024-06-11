@@ -110,5 +110,9 @@ export const deleteCategory = (id: String): Promise<any> => {
 
 // ********** 文件上传 **********
 export const uploadFile = (data: FormData): Promise<String> => {
-  return request.post('/article/upload', data)
+  return request.post('/article/upload', data, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
 }

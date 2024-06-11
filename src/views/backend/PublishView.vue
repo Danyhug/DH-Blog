@@ -43,7 +43,7 @@
   <el-divider content-position="center">
     <p class="tip">文章内容</p>
   </el-divider>
-  <MdEditor v-model="article.content" previewTheme="github" />
+  <MdEditor v-model="article.content" previewTheme="github" @onUploadImg="onUploadImg" />
 </template>
 
 <script setup lang="ts">
@@ -56,6 +56,7 @@ import { onMounted, reactive, ref } from 'vue';
 import type { UploadProps } from 'element-plus'
 import { SERVER_URL } from '@/types/Constant'
 import { Plus } from '@element-plus/icons-vue'
+import { getArticleBg } from '@/utils/tool';
 
 const route = useRoute()
 const articleId = route.query?.articleId
@@ -114,6 +115,28 @@ const getCategories = async () => {
 const getTags = async () => {
   const data = await getArticleTagList();
   tags.push(...data);
+};
+
+const onUploadImg = async (files: any[], callback: (arg0: any[]) => void) => {
+  const res = await Promise.all(
+    files.map((file) => {
+      return new Promise((resolve, reject) => {
+        const form = new FormData();
+        form.append('file', file);
+        // 上传文件
+        uploadFile(form)
+          .then((res) => {
+            ElMessage.success('上传成功');
+            resolve(res);
+          })
+          .catch((err) => {
+            ElMessage.error('上传失败');
+            reject(err);
+          })
+      });
+    })
+  ) as string[];
+  callback(res.map(item => `${SERVER_URL}/articleUpload/${item}`))
 };
 
 // 提交文章
@@ -246,7 +269,6 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
   max-height: 138px;
   display: block;
 }
-
 </style>
 
 <style>
