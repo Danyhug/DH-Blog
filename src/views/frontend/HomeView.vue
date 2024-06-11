@@ -24,7 +24,7 @@
       <div class="right">
         <router-view v-slot="{ Component }">
           <keep-alive>
-            <transition>
+            <transition mode="out-in">
               <component :is="Component" />
             </transition>
           </keep-alive>
@@ -71,7 +71,6 @@ router.beforeEach(() => {
   }
 })
 </script>
-
 
 <style scoped>
 .v-enter-from,

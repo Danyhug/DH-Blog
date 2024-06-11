@@ -37,7 +37,6 @@
 </template>
 
 <script lang="ts" setup>
-import { defineProps } from 'vue'
 import { Article } from '@/types/Article.ts'
 import { Tag } from '@/types/Tag'
 import { getArticleBg } from '@/utils/tool'
