@@ -9,7 +9,7 @@
             <p class="title">{{ store.homeHeaderInfo.title }}</p>
             <div class="schedule">
               <el-progress :color="customColors" :percentage="sideInfo.process"></el-progress>
-              <p>已阅读时长：1分24秒</p>
+              <p>已阅读时长：{{ formatSeconds(second) }}</p>
             </div>
           </div>
 
@@ -44,10 +44,10 @@
 </template>
 
 <script setup>
+import { useUserStore } from '@/store';
+import { reactive, onMounted, onBeforeUnmount, ref } from 'vue'
 const store = useUserStore()
 
-import { useUserStore } from '@/store';
-import { reactive, onMounted } from 'vue'
 const getRandomColor = () => {
   const tagColors = [
     "#037ef3", "#f85a40", "#00c16e", "#7552cc", "#0cb9c1", "#f48924", "#ff4f81"
@@ -77,7 +77,20 @@ function debounce(func, wait) {
   };
 }
 
-window.addEventListener('scroll', debounce(() => {
+// 计算分钟和秒
+function formatSeconds(seconds) {
+  if (seconds >= 60) {
+    var minutes = Math.floor(seconds / 60);
+    var remainingSeconds = seconds % 60;
+    return minutes + '分' + remainingSeconds + '秒';
+  } else {
+    return seconds + '秒';
+  }
+}
+
+let timer = null
+let second = ref(0)
+const scrollListener = debounce(() => {
   let scrollTop = window.scrollY
 
   // 获取div的高度
@@ -86,10 +99,18 @@ window.addEventListener('scroll', debounce(() => {
   // 计算阅读百分比
   let process = Math.floor((scrollTop / height) * 100)
   sideInfo.process = process > 100 ? 100 : process
-}, 16))
+}, 16)
 
 onMounted(() => {
+  window.addEventListener('scroll', scrollListener)
   scrollTo(0, 60)
+
+  timer = setInterval(() => second.value++, 1000)
+})
+
+onBeforeUnmount(() => {
+  clearInterval(timer)
+  window.removeEventListener('scroll', scrollListener)
 })
 
 </script>

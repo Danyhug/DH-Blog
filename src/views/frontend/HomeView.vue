@@ -22,13 +22,11 @@
         </transition>
       </div>
       <div class="right">
-        <router-view v-slot="{ Component }">
+        <transition mode="out-in">
           <keep-alive>
-            <transition mode="out-in">
-              <component :is="Component" />
-            </transition>
+            <router-view />
           </keep-alive>
-        </router-view>
+        </transition>
       </div>
     </div>
     <Footer />
@@ -60,15 +58,18 @@ if (route.path == '/view/home') {
   sideShowComponent.value = ArticleInfoSide;
   store.homeShowComponent = 'articleInfoSide'
 }
-
-router.beforeEach(() => {
+router.beforeEach((_, __, next) => {
   if (store.homeShowComponent == 'articleInfoSide') {
     sideShowComponent.value = HomeSide;
+    console.log(sideShowComponent.value)
     store.homeShowComponent = 'home'
   } else if (store.homeShowComponent == 'home') {
     sideShowComponent.value = ArticleInfoSide;
     store.homeShowComponent = 'articleInfoSide'
   }
+  console.log('sideShowComponent:', sideShowComponent.value);
+
+  next()
 })
 </script>
 
