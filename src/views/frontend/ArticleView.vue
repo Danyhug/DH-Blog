@@ -66,7 +66,8 @@ export default {
         created: this.created,
         wordNum: res.wordNum || 0,
         timConSum: res.wordNum ? (res.wordNum / 200 + 0.5).toFixed(0) : '0',
-        thumbnailUrl: getArticleBg(res.thumbnailUrl)
+        thumbnailUrl: getArticleBg(res.thumbnailUrl),
+        tags: res.tags
       }
     })
   },

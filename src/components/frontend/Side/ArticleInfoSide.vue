@@ -35,7 +35,7 @@
             <el-divider>
               <Icon iconName="icon-shili" iconSize="1.6"></Icon>
             </el-divider>
-            <a href="" class="tag" v-for="(item, index) in 9" :style="{ backgroundColor: tags[index] }">原神</a>
+            <a href="" class="tag" v-for="(item, index) in store.homeHeaderInfo.tags" :style="{ backgroundColor: tags[index] }">{{ item.name }}</a>
           </div>
         </el-card>
       </el-col>

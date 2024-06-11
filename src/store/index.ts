@@ -39,14 +39,23 @@ export const useUserStore = defineStore('user', () => {
   const homeShowComponent = ref('home')
 
   // 首页上方展示内容（文章详情上面）
-  const homeHeaderInfo = reactive({
+  interface HomeHeaderInfo {
+    title: string
+    created: string,
+    wordNum: number,
+    tags: any,
+    thumbnailUrl: string,
+    timConSum: string
+  }
+  const homeHeaderInfo = reactive<HomeHeaderInfo>({
     title: '',
     created: '',
     // 总字数
     wordNum: 0,
     // 阅读时长
     timConSum: '0',
-    thumbnailUrl: ''
+    thumbnailUrl: '',
+    tags: []
   })
 
   return {
