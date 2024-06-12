@@ -44,7 +44,7 @@ CREATE TABLE Articles (
     publish_date DATETIME NOT NULL,
     update_date DATETIME,
     views INT DEFAULT 0,
-    word_num TINYINT DEFAULT 0,
+    word_num INT DEFAULT 0,
     thumbnail_url VARCHAR(255), -- 首页文章列表展示的图片
     FOREIGN KEY (category_id) REFERENCES Categories(id) ON DELETE SET NULL -- 假设删除分类时文章的category_id置为NULL
 );

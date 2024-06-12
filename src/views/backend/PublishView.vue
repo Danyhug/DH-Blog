@@ -56,7 +56,6 @@ import { onMounted, reactive, ref } from 'vue';
 import type { UploadProps } from 'element-plus'
 import { SERVER_URL } from '@/types/Constant'
 import { Plus } from '@element-plus/icons-vue'
-import { getArticleBg } from '@/utils/tool';
 
 const route = useRoute()
 const articleId = route.query?.articleId
@@ -65,13 +64,8 @@ const articleId = route.query?.articleId
 const activeTag = ref('first')
 
 const article = reactive<Article<String>>({
-  title: '弹奏肖邦的夜曲',
-  content: `在月光下弹琴
-对你心跳的感应
-还是如此温热亲近
-怀念你那鲜红的唇印
-那些断翅的蜻蜓 散落在这森林
-而我的眼睛 没有丝毫同情`,
+  title: '',
+  content: ``,
   categoryId: -1,
   tags: [],
   thumbnailUrl: ''
@@ -160,7 +154,7 @@ const submit = () => {
         message: '发布成功',
         plain: true,
       })
-      // clear()
+      clear()
     })
   } else {
     // 更新文章
@@ -169,7 +163,7 @@ const submit = () => {
         message: '已成功更新文章',
         plain: true,
       })
-      // clear()
+      clear()
     })
   }
 }
