@@ -42,6 +42,7 @@
                 category_id = #{categoryId}
             </if>
         </where>
+        ORDER BY publish_date DESC
     </select>
 
 </mapper>

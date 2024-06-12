@@ -43,7 +43,17 @@
   <el-divider content-position="center">
     <p class="tip">文章内容</p>
   </el-divider>
-  <MdEditor v-model="article.content" previewTheme="github" @onUploadImg="onUploadImg" />
+  <MdEditor v-model="article.content" :toolbars="toolbars" previewTheme="github" @onUploadImg="onUploadImg">
+    <template #defToolbars>
+      <Emoji :emojis="emojis" :selectAfterInsert="false">
+        <template #trigger>
+          <span style="font-size: 1.5rem;">🐶</span>
+        </template>
+      </Emoji>
+    </template>
+    <template #defFooters>
+    </template>
+  </MdEditor>
 </template>
 
 <script setup lang="ts">
@@ -56,6 +66,8 @@ import { onMounted, reactive, ref } from 'vue';
 import type { UploadProps } from 'element-plus'
 import { SERVER_URL } from '@/types/Constant'
 import { Plus } from '@element-plus/icons-vue'
+import { Emoji } from '@vavt/v3-extension'
+import { toolbars, emojis } from '@/types/Constant'
 
 const route = useRoute()
 const articleId = route.query?.articleId
@@ -285,5 +297,17 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
   width: 246px;
   height: 138px;
   text-align: center;
+}
+
+.emojis {
+  display: grid;
+  font-size: 1.5rem;
+  grid-template-columns: repeat(5, 1fr);
+  grid-gap: 12px;
+
+  li {
+    list-style: none;
+    cursor: pointer;
+  }
 }
 </style>

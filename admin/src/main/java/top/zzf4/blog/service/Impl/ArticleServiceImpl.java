@@ -51,12 +51,13 @@ public class ArticleServiceImpl implements ArticleService {
         // 再查询文章的标签信息
         List<Tag> tagsByArticleId = tagMapper.getTagsByArticleId(id);
         article.setTags(tagsByArticleId);
+        article.setViews(article.getViews() + 1);
 
         // 观看数+1
         articleMapper.updateArticle(
                 Article.builder()
                 .id(article.getId())
-                .views(article.getViews() + 1)
+                .views(article.getViews())
                 .build()
         );
         return article;
