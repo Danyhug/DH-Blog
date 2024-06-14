@@ -39,7 +39,7 @@ onMounted(() => {
   store.getCategories();
   store.getTags();
 
-  getArticleList({ pageNum: 2, pageSize: 10 }).then((res) => {
+  getArticleList({ pageNum: 1, pageSize: 10 }).then((res) => {
     let articleList: Article<Tag>[] = [];
     res.list.forEach(item => {
       item.categoryName = categories.find(c => c.id === item.categoryId)?.name

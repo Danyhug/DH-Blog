@@ -15,7 +15,9 @@ public class ArticleUpdateDTO {
 
     private Integer categoryId;
 
-    private byte wordNum; // TINYINT映射为byte
+    private Integer wordNum;
 
     private List<String> tags;
+
+    private String thumbnailUrl;
 }

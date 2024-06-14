@@ -10,10 +10,10 @@
     <update id="updateArticle" parameterType="top.zzf4.blog.entity.model.Article">
         UPDATE Articles
         <set>
-            <if test="title != null">
+            <if test="title != null and title != ''">
                 title = #{title},
             </if>
-            <if test="content != null">
+            <if test="content != null and content != ''">
                 content = #{content},
             </if>
             <if test="categoryId != null">
@@ -28,7 +28,7 @@
             <if test="wordNum != null">
                 word_num = #{wordNum}
             </if>
-            <if test="thumbnailUrl != null">
+            <if test="thumbnailUrl != null and thumbnailUrl != ''">
                 thumbnail_url = #{thumbnailUrl}
             </if>
         </set>
