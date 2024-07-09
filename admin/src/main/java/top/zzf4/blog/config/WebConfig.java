@@ -12,6 +12,7 @@ public class WebConfig implements WebMvcConfigurer {
     private String uploadPath;
 
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 存放上传文件的目录
         registry.addResourceHandler("/articleUpload/**")
                 .addResourceLocations("file:" + uploadPath);
     }

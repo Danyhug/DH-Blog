@@ -6,6 +6,7 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import path from 'path'
 
 export default defineConfig({
+  base: "./",
   plugins: [vue(), AutoImport({
     resolvers: [ElementPlusResolver()],
   }),
@@ -17,6 +18,5 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, './src')
     }
-  }
-
+  },
 })

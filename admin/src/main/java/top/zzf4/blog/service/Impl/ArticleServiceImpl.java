@@ -22,6 +22,7 @@ import top.zzf4.blog.mapper.TagsMapper;
 import top.zzf4.blog.service.ArticleService;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.LocalDateTime;
@@ -165,7 +166,7 @@ public class ArticleServiceImpl implements ArticleService {
     public PageResult<Article> getPage(ArticlePageDTO articlePage) {
         PageHelper.startPage(articlePage.getPageNum(), articlePage.getPageSize());
         List<Article> articles = articleMapper.getArticles(articlePage.getCategoryId());
-        for (Article article : articles) {
+        for (Article article: articles) {
             article.setTags(tagMapper.getTagsByArticleId(article.getId()));
         }
         return new PageResult<>(articles.size(), articles);
@@ -262,6 +263,9 @@ public class ArticleServiceImpl implements ArticleService {
         ClassPathResource resource = new ClassPathResource("static/articleBg/" + num + ".jpg");
 
         // 返回图片字节数组
-        return Files.readAllBytes(resource.getFile().toPath());
+        try (InputStream inputStream = resource.getInputStream()) {
+            // 读取整个流到字节数组
+            return inputStream.readAllBytes();
+        }
     }
 }

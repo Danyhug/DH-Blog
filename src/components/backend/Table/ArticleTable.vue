@@ -1,7 +1,7 @@
 <template>
   <el-table :data="props.articles" style="width: 100%;">
-    <el-table-column prop="id" label="编号" width="80" />
-    <el-table-column prop="title" label="文章标题" width="150" />
+    <el-table-column prop="id" label="编号" width="70" />
+    <el-table-column prop="title" label="文章标题" width="145" />
     <el-table-column prop="categoryName" label="分类">
       <template #default="scope">
         <el-tag type="primary">{{ scope.row.categoryName }}</el-tag>
@@ -20,6 +20,7 @@
     <el-table-column fixed="right" label="操作" width="100">
       <template #default="scope">
         <el-button link type="primary" size="large" @click.prevent="edit(scope.row.id)">编辑</el-button>
+        <br>
         <el-button link type="danger" size="small">删除</el-button>
       </template>
     </el-table-column>
