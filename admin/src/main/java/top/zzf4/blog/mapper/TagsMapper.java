@@ -8,7 +8,7 @@ import java.util.List;
 
 @Mapper
 public interface TagsMapper extends BaseMapper<Tag> {
-    @Insert("INSERT INTO Tags (name,slug,created_at,updated_at) VALUES (#{name},#{slug},#{createdAt},#{updatedAt})")
+    @Insert("INSERT INTO Tags (name,slug,created_at,updated_at) VALUES (#{name},#{slug},#{createTime},#{updateTime})")
     void saveTag(Tag tag);
 
     @Select("SELECT * FROM Tags")
@@ -27,7 +27,7 @@ public interface TagsMapper extends BaseMapper<Tag> {
     void deleteByPostId(Long postId);
 
     // 更新标签记录
-    @Update("UPDATE Tags SET name = #{name},slug = #{slug},updated_at = #{updatedAt} WHERE id = #{id}")
+    @Update("UPDATE Tags SET name = #{name},slug = #{slug},updated_at = #{updateTime} WHERE id = #{id}")
     void updateTag(Tag tag);
 
     // 将标签插入posttags表中

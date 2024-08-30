@@ -26,7 +26,6 @@ import top.zzf4.blog.service.ArticleService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.SQLIntegrityConstraintViolationException;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
 
@@ -72,9 +71,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
         log.info("保存文章{}", articles);
         // 设置观看数
         articles.setViews(0);
-        LocalDateTime date = LocalDateTime.now();
-        articles.setPublishDate(date);
-        articles.setUpdateDate(date);
         this.save(articles);
 
         // 查询标签slug对应id
@@ -95,7 +91,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
     public void updateArticle(ArticleUpdateDTO articleUpdateDTO) {
         Articles articles = new Articles();
         BeanUtils.copyProperties(articleUpdateDTO, articles);
-        articles.setUpdateDate(LocalDateTime.now());
         // 删除中间表的所有信息
         tagMapper.deleteByPostId(articles.getId());
         // 将标签插入
@@ -137,12 +132,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
         }
 
         Tag tag = new Tag();
-        LocalDateTime date = LocalDateTime.now();
 
         tag.setName(tagInsertDTO.getName());
         tag.setSlug(tagInsertDTO.getSlug());
-        tag.setCreatedAt(date);
-        tag.setUpdatedAt(date);
         tagMapper.saveTag(tag);
     }
 
@@ -190,9 +182,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
             throw new SQLIntegrityConstraintViolationException(MessageConstant.CATEGORY_EXIST);
         }
 
-        LocalDateTime date = LocalDateTime.now();
-        category.setCreatedAt(date);
-        category.setUpdatedAt(date);
         categoriesMapper.insert(category);
     }
 
@@ -222,7 +211,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
      */
     @Override
     public void updateCategory(Category category) {
-        category.setUpdatedAt(LocalDateTime.now());
         categoriesMapper.updateById(category);
     }
 
@@ -233,7 +221,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
      */
     @Override
     public void updateTag(Tag tag) {
-        tag.setUpdatedAt(LocalDateTime.now());
         tagMapper.updateTag(tag);
     }
 

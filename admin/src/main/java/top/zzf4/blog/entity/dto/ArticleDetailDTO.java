@@ -17,7 +17,7 @@ public class ArticleDetailDTO {
 
     private LocalDateTime publishDate;
 
-    private LocalDateTime updateDate;
+    private LocalDateTime updateTimee;
 
     private int views;
 

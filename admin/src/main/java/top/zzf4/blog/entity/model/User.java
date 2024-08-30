@@ -12,7 +12,5 @@ public class User {
 
     private String password;
 
-    private LocalDateTime registerDate;
-
-    // 省略构造器、getter和setter方法
+    private LocalDateTime createTime;
 }
