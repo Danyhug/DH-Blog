@@ -34,6 +34,9 @@
       </el-divider>
       <el-input placeholder="输入文章标题" clearable class="title-input" v-model="article.title"></el-input>
       <div class="btns">
+        <!-- 本地保存提示信息 -->
+        <div class="save-text">{{ autoSaveText }}</div>
+
         <el-button type="warning" @click="clear(true)">清空</el-button>
         <el-button type="primary" @click="submit">发布</el-button>
       </div>
@@ -74,6 +77,7 @@ const articleId = route.query?.articleId
 
 // 切换标签
 const activeTag = ref('first')
+const autoSaveText = ref('')
 
 const article = reactive<Article<String>>({
   title: '',
@@ -85,6 +89,29 @@ const article = reactive<Article<String>>({
 const categories = reactive<Category[]>([]);
 const tags = reactive<Tag[]>([]);
 
+// 自动保存
+const autoSave = () => {
+  if (article.content.length === 0) return;
+
+  localStorage.setItem("DHBlog_Article", JSON.stringify(article));
+
+  // 创建一个Date对象，表示当前时间
+  var now = new Date();
+  // 获取当前年份、月份（+1因为月份是从0开始的）、日期、小时、分钟和秒
+  var year = now.getFullYear();
+  var month = String(now.getMonth() + 1).padStart(2, '0'); // 使用padStart确保月份是两位数
+  var day = String(now.getDate()).padStart(2, '0'); // 使用padStart确保日期是两位数
+  var hours = String(now.getHours()).padStart(2, '0'); // 使用padStart确保小时是两位数
+  var minutes = String(now.getMinutes()).padStart(2, '0'); // 使用padStart确保分钟是两位数
+  var seconds = String(now.getSeconds()).padStart(2, '0'); // 使用padStart确保秒是两位数
+  // 使用模板字符串拼接日期和时间
+  var formattedTime = `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+  // 更新提示信息
+  autoSaveText.value = `${formattedTime} 自动保存`;
+}
+// 30秒自动保存一次
+setInterval(autoSave, 1000 * 30);
+
 // 清空文章信息
 const clear = (manual: boolean = false) => {
   function func() {
@@ -92,6 +119,8 @@ const clear = (manual: boolean = false) => {
     article.content = ''
     article.categoryId = -1
     article.tags = []
+    // 清空本地
+    localStorage.removeItem("DHBlog_Article")
   }
 
   if (manual) {
@@ -194,7 +223,7 @@ onMounted(() => {
     })
   })
 
-  // 获取路由部分是否为edit?id=格式
+  // 获取路由部分是否为edit?id=格式 此时是更新信息，获取文章信息
   if (articleId) {
     // 获取文章详情
     getArticleInfo(articleId as String).then((res: Article<Tag>) => {
@@ -208,11 +237,14 @@ onMounted(() => {
         }
       }
     })
+  } else {
+    // 尝试获取本地文章信息
+    let temp = localStorage.getItem('DHBlog_Article') || null;
+    Object.assign(article, JSON.parse(temp as string));
   }
 })
 
 // 上传文件
-
 const imageUrl = ref('')
 
 const handleAvatarSuccess: UploadProps['onSuccess'] = (
@@ -251,6 +283,13 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
 
   .right {
     .btns {
+
+      .save-text {
+        float: left;
+        font-size: 14px;
+        color: #999;
+      }
+
       margin: 20px 0;
       text-align: right;
     }
