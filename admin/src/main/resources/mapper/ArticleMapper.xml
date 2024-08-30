@@ -4,12 +4,12 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="top.zzf4.blog.mapper.ArticleMapper">
     <select id="getArticles" resultType="top.zzf4.blog.entity.model.Articles">
-        SELECT id, title, publish_date, views, category_id, thumbnail_url, word_num, update_date FROM articles
+        SELECT id, title, create_time, views, category_id, thumbnail_url, word_num, update_time FROM articles
         <where>
             <if test="categoryId != null">
                 category_id = #{categoryId}
             </if>
         </where>
-        ORDER BY publish_date DESC
+        ORDER BY create_time DESC
     </select>
 </mapper>

@@ -1,6 +1,7 @@
 package top.zzf4.blog.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.conditions.query.QueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.pagehelper.PageHelper;
 import lombok.extern.log4j.Log4j2;
@@ -56,7 +57,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
         articles.setTags(tagsByArticleId);
         articles.setViews(articles.getViews() + 1);
 
-        this.update().eq("id", id).set("views", articles.getViews());
+        this.update().eq("id", id).set("views", articles.getViews()).update();
         return articles;
     }
 
@@ -154,6 +155,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
     @Override
     public PageResult<Articles> getPage(ArticlePageDTO articlePage) {
         PageHelper.startPage(articlePage.getPageNum(), articlePage.getPageSize());
+
         List<Articles> articles = articleMapper.getArticles(articlePage.getCategoryId());
         for (Articles article: articles) {
             article.setTags(tagMapper.getTagsByArticleId(article.getId()));
