@@ -42,8 +42,8 @@ export default {
       this.id = res.id || 0
       this.title = res.title || ''
       this.content = res.content || ''
-      this.created = res.publishDate || ''
-      this.update = res.updateDate || ''
+      this.created = res.createTime || ''
+      this.update = res.updateTime || ''
       this.viewnum = res.views || 0
 
       // 更改pinia内容

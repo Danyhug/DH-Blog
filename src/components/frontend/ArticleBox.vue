@@ -9,7 +9,7 @@
           <div class="top">
             <span class="date">
               <Icon iconName="icon-calendar" iconSize="1.35"></Icon>
-              {{ article.publishDate?.slice(0, 10) }}
+              {{ article.createTime?.slice(0, 10) }}
             </span>
             <span class="num-word">
               <Icon iconName="icon-image-text" iconSize="1.35"></Icon>

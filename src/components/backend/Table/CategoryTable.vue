@@ -3,8 +3,8 @@
     <el-table-column prop="id" label="编号" />
     <el-table-column prop="name" label="名称" />
     <el-table-column prop="slug" label="编码名称" />
-    <el-table-column prop="createdAt" label="发布时间" />
-    <el-table-column prop="updatedAt" label="更新时间" />
+    <el-table-column prop="createTime" label="发布时间" />
+    <el-table-column prop="updateTime" label="更新时间" />
     <el-table-column fixed="right" label="操作">
       <template #header>
         <el-button type="success" round @click="add">新增分类</el-button>
