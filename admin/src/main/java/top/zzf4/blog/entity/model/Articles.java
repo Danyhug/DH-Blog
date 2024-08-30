@@ -1,5 +1,8 @@
 package top.zzf4.blog.entity.model;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,8 +16,9 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class Article {
+public class Articles {
 
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     private String title;
@@ -33,6 +37,7 @@ public class Article {
 
     private Integer wordNum;
 
+    @TableField(exist = false)
     private List<Tag> tags;
 
     private String thumbnailUrl; // 缩略图url

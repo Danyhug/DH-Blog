@@ -1,10 +1,11 @@
 package top.zzf4.blog.service;
 
+import com.baomidou.mybatisplus.extension.service.IService;
 import top.zzf4.blog.entity.dto.ArticleInsertDTO;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
-import top.zzf4.blog.entity.model.Article;
+import top.zzf4.blog.entity.model.Articles;
 import top.zzf4.blog.entity.model.Category;
 import top.zzf4.blog.entity.model.Tag;
 import top.zzf4.blog.entity.vo.PageResult;
@@ -13,13 +14,13 @@ import java.io.IOException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.List;
 
-public interface ArticleService {
+public interface ArticleService extends IService<Articles> {
     /**
      * 使用id查询文章信息
      * @param id 文章id
      * @return 文章信息
      */
-    Article getArticleById(Long id);
+    Articles getArticleById(Long id);
 
     /**
      * 保存文章
@@ -48,7 +49,7 @@ public interface ArticleService {
      */
     List<Tag> getTags();
 
-    PageResult<Article> getPage(ArticlePageDTO articlePage);
+    PageResult<Articles> getPage(ArticlePageDTO articlePage);
 
     /**
      * 查询文章分类

@@ -14,7 +14,7 @@ import top.zzf4.blog.entity.dto.ArticleInsertDTO;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
-import top.zzf4.blog.entity.model.Article;
+import top.zzf4.blog.entity.model.Articles;
 import top.zzf4.blog.entity.model.Category;
 import top.zzf4.blog.entity.model.Tag;
 import top.zzf4.blog.entity.vo.PageResult;
@@ -43,7 +43,7 @@ public class ArticleController {
      * @param id 文章id
      */
     @GetMapping("/{id}")
-    public AjaxResult<Article> detail(@PathVariable String id) {
+    public AjaxResult<Articles> detail(@PathVariable String id) {
         log.info("获取文章详情 {}", id);
         return AjaxResult.success(
                 service.getArticleById(Long.valueOf(id))
@@ -75,7 +75,7 @@ public class ArticleController {
      * 分页查询
      */
     @PostMapping("/list")
-    public AjaxResult<PageResult<Article>> getPage(@RequestBody ArticlePageDTO articlePage) {
+    public AjaxResult<PageResult<Articles>> getPage(@RequestBody ArticlePageDTO articlePage) {
         log.info("分页查询 {}", articlePage);
         return AjaxResult.success(service.getPage(articlePage));
     }

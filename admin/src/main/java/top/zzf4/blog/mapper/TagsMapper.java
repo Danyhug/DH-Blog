@@ -1,14 +1,14 @@
 package top.zzf4.blog.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.*;
 import top.zzf4.blog.entity.model.Tag;
 
 import java.util.List;
 
 @Mapper
-public interface TagsMapper {
+public interface TagsMapper extends BaseMapper<Tag> {
     @Insert("INSERT INTO Tags (name,slug,created_at,updated_at) VALUES (#{name},#{slug},#{createdAt},#{updatedAt})")
-
     void saveTag(Tag tag);
 
     @Select("SELECT * FROM Tags")

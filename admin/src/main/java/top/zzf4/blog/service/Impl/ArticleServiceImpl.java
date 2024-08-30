@@ -1,5 +1,7 @@
 package top.zzf4.blog.service.Impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.pagehelper.PageHelper;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.BeanUtils;
@@ -12,7 +14,7 @@ import top.zzf4.blog.entity.dto.ArticleInsertDTO;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
-import top.zzf4.blog.entity.model.Article;
+import top.zzf4.blog.entity.model.Articles;
 import top.zzf4.blog.entity.model.Category;
 import top.zzf4.blog.entity.model.Tag;
 import top.zzf4.blog.entity.vo.PageResult;
@@ -23,7 +25,6 @@ import top.zzf4.blog.service.ArticleService;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,7 +32,8 @@ import java.util.Random;
 
 @Log4j2
 @Service
-public class ArticleServiceImpl implements ArticleService {
+public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> implements ArticleService {
+
     @Autowired
     private ArticleMapper articleMapper;
     @Autowired
@@ -46,22 +48,17 @@ public class ArticleServiceImpl implements ArticleService {
      * @return 文章信息
      */
     @Override
-    public Article getArticleById(Long id) {
+    public Articles getArticleById(Long id) {
         // 查询文章的信息
-        Article article = articleMapper.selectById(id);
+        Articles articles = this.getById(id);
         // 再查询文章的标签信息
         List<Tag> tagsByArticleId = tagMapper.getTagsByArticleId(id);
-        article.setTags(tagsByArticleId);
-        article.setViews(article.getViews() + 1);
+        // 本次观看数据+1返回
+        articles.setTags(tagsByArticleId);
+        articles.setViews(articles.getViews() + 1);
 
-        // 观看数+1
-        articleMapper.updateArticle(
-                Article.builder()
-                .id(article.getId())
-                .views(article.getViews())
-                .build()
-        );
-        return article;
+        this.update().eq("id", id).set("views", articles.getViews());
+        return articles;
     }
 
     /**
@@ -70,15 +67,15 @@ public class ArticleServiceImpl implements ArticleService {
      */
     @Override
     public void saveArticle(ArticleInsertDTO articleInsertDTO) {
-        Article article = new Article();
-        BeanUtils.copyProperties(articleInsertDTO, article);
-        log.info("保存文章{}", article);
+        Articles articles = new Articles();
+        BeanUtils.copyProperties(articleInsertDTO, articles, "id");
+        log.info("保存文章{}", articles);
         // 设置观看数
-        article.setViews(0);
+        articles.setViews(0);
         LocalDateTime date = LocalDateTime.now();
-        article.setPublishDate(date);
-        article.setUpdateDate(date);
-        articleMapper.saveArticle(article);
+        articles.setPublishDate(date);
+        articles.setUpdateDate(date);
+        this.save(articles);
 
         // 查询标签slug对应id
         for (String tag : articleInsertDTO.getTags()) {
@@ -86,7 +83,7 @@ public class ArticleServiceImpl implements ArticleService {
             Tag tagTemp = tagMapper.selectBySlug(tag);
 
             // 插入进postTags表中
-            tagMapper.savePostTags(article.getId(), tagTemp.getId());
+            tagMapper.savePostTags(articles.getId(), tagTemp.getId());
         }
     }
 
@@ -96,11 +93,11 @@ public class ArticleServiceImpl implements ArticleService {
      */
     @Override
     public void updateArticle(ArticleUpdateDTO articleUpdateDTO) {
-        Article article = new Article();
-        BeanUtils.copyProperties(articleUpdateDTO, article);
-        article.setUpdateDate(LocalDateTime.now());
+        Articles articles = new Articles();
+        BeanUtils.copyProperties(articleUpdateDTO, articles);
+        articles.setUpdateDate(LocalDateTime.now());
         // 删除中间表的所有信息
-        tagMapper.deleteByPostId(article.getId());
+        tagMapper.deleteByPostId(articles.getId());
         // 将标签插入
         List<String> tags = articleUpdateDTO.getTags();
         for (String tag : tags) {
@@ -108,11 +105,11 @@ public class ArticleServiceImpl implements ArticleService {
             Tag tagTemp = tagMapper.selectBySlug(tag);
 
             // 插入进postTags表中
-            tagMapper.savePostTags(article.getId(), tagTemp.getId());
+            tagMapper.savePostTags(articles.getId(), tagTemp.getId());
         }
 
-        log.info("更新的article属性为 {}", article);
-        articleMapper.updateArticle(article);
+        log.info("更新的article属性为 {}", articles);
+        this.updateById(articles);
     }
 
     /**
@@ -163,10 +160,10 @@ public class ArticleServiceImpl implements ArticleService {
      * 分页查询文章
      */
     @Override
-    public PageResult<Article> getPage(ArticlePageDTO articlePage) {
+    public PageResult<Articles> getPage(ArticlePageDTO articlePage) {
         PageHelper.startPage(articlePage.getPageNum(), articlePage.getPageSize());
-        List<Article> articles = articleMapper.getArticles(articlePage.getCategoryId());
-        for (Article article: articles) {
+        List<Articles> articles = articleMapper.getArticles(articlePage.getCategoryId());
+        for (Articles article: articles) {
             article.setTags(tagMapper.getTagsByArticleId(article.getId()));
         }
         return new PageResult<>(articles.size(), articles);
@@ -189,14 +186,14 @@ public class ArticleServiceImpl implements ArticleService {
     @Override
     public void saveCategory(Category category) throws SQLIntegrityConstraintViolationException {
         // 查看表中是否有相关值
-        if (categoriesMapper.selectBySlug(category.getSlug()) != null) {
+        if (categoriesMapper.selectOne(new QueryWrapper<>(category).eq("slug", category.getSlug())) != null) {
             throw new SQLIntegrityConstraintViolationException(MessageConstant.CATEGORY_EXIST);
         }
 
         LocalDateTime date = LocalDateTime.now();
         category.setCreatedAt(date);
         category.setUpdatedAt(date);
-        categoriesMapper.saveCategory(category);
+        categoriesMapper.insert(category);
     }
 
     /**
@@ -226,7 +223,7 @@ public class ArticleServiceImpl implements ArticleService {
     @Override
     public void updateCategory(Category category) {
         category.setUpdatedAt(LocalDateTime.now());
-        categoriesMapper.updateCategory(category);
+        categoriesMapper.updateById(category);
     }
 
     /**
