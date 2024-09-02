@@ -1,4 +1,5 @@
 import { getArticleCategoryList, getArticleTagList } from '@/api/api'
+import { ArticleModel } from '@/types/ArticleModel'
 import { Category } from '@/types/Category'
 import { Tag } from '@/types/Tag'
 import { defineStore } from 'pinia'
@@ -58,8 +59,15 @@ export const useUserStore = defineStore('user', () => {
     tags: []
   })
 
+  // 文章状态控制
+  const aritcleModel = reactive<ArticleModel>({
+    isDarkMode: false,
+    isFullPreview: false
+  })
+
   return {
     homeShowComponent,
-    homeHeaderInfo
+    homeHeaderInfo,
+    aritcleModel
   }
 })

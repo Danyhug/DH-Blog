@@ -18,7 +18,7 @@
               <Icon iconName="icon-31erweima" iconSize="2"></Icon>
             </a>
             <a>
-              <Icon iconName="icon-home" iconSize="2"></Icon>
+              <Icon iconName="icon-fangda" style="margin-top: 3px;" iconSize="1.56" @click="store.aritcleModel.isFullPreview = !store.aritcleModel.isFullPreview"></Icon>
             </a>
             <a>
               <Icon iconName="icon-forward" iconSize="2"></Icon>
@@ -35,7 +35,8 @@
             <el-divider>
               <Icon iconName="icon-shili" iconSize="1.6"></Icon>
             </el-divider>
-            <a href="" class="tag" v-for="(item, index) in store.homeHeaderInfo.tags" :style="{ backgroundColor: tags[index] }">{{ item.name }}</a>
+            <a href="" class="tag" v-for="(item, index) in store.homeHeaderInfo.tags"
+              :style="{ backgroundColor: tags[index] }">{{ item.name }}</a>
           </div>
         </el-card>
       </el-col>
@@ -151,6 +152,10 @@ onBeforeUnmount(() => {
   width: 100%;
   color: #909399;
   font-size: 14px;
+
+  a {
+    cursor: pointer;
+  }
 }
 
 .tags {

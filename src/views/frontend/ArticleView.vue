@@ -1,7 +1,9 @@
 <template>
   <!-- 文章浏览页 -->
   <div>
-    <div class="blog-container">
+    <!-- 全屏观看文章信息 -->
+    <div :class="`blog-container ${store.aritcleModel.isFullPreview ? 'full-screen-preview' : ''}`">
+      <p class="title" v-show="store.aritcleModel.isFullPreview" @click="changeIsFullPreview()">{{ title }}</p>
       <MdPreview :modelValue="content" previewTheme="github" />
     </div>
     <div class="info">
@@ -21,6 +23,7 @@ import { Article } from '@/types/Article.ts'
 import { Tag } from 'element-plus';
 import { useUserStore } from '@/store';
 import { getArticleBg } from '@/utils/tool';
+import { watch } from 'vue';
 
 export default {
   name: 'HomeView',
@@ -32,11 +35,19 @@ export default {
       content: ``,
       created: '',
       update: '',
-      viewnum: 0
+      viewnum: 0,
+      store: useUserStore(),
     }
   },
   mounted() {
-    const store = useUserStore()
+    const store = this.store
+    watch(() => store.aritcleModel.isFullPreview, (val) => {
+      if (val) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+      }
+    })
 
     getArticleInfo(this.$route.params.id as string).then((res: Article<Tag>) => {
       this.id = res.id || 0
@@ -58,7 +69,9 @@ export default {
     })
   },
   methods: {
-
+    changeIsFullPreview() {
+      this.store.aritcleModel.isFullPreview = !this.store.aritcleModel.isFullPreview
+    }
   }
 }
 </script>
@@ -67,6 +80,36 @@ export default {
 .blog-container {
   padding: 1.25rem 1.5rem;
   padding-top: 0;
+
+  .title {
+    font-size: 1.6rem;
+    font-family: "宋体";
+    font-weight: bold;
+    text-align: center;
+    padding: 1.875rem 0 1rem;
+    cursor: pointer;
+  }
+
+  ::v-deep .md-editor-preview {
+    font-family: 'Microsoft YaHei';
+  }
+}
+
+.full-screen-preview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 0;
+  background-color: #fff;
+  ;
+
+  ::v-deep .md-editor-preview {
+    padding: 0 10px;
+    background-color: rgb(250, 250, 250);
+  }
 }
 
 .left {
