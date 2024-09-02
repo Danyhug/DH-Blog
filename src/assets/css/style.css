@@ -1,6 +1,6 @@
 @font-face {
-  font-family: 'Varela Round';
-  src: url('../../assets/css/VarelaRound-Regular.ttf');
+  font-family: "Varela Round";
+  src: url("../../assets/css/VarelaRound-Regular.ttf");
 }
 
 * {
@@ -21,7 +21,7 @@ body {
 }
 
 html {
-	scroll-behavior:smooth;
+  scroll-behavior: smooth;
 }
 
 ul {
@@ -110,8 +110,31 @@ a {
 .inner {
   display: flex;
   flex-direction: row;
-  width: 1200px;
+  width: 92.8%;
   margin: auto;
+}
+
+/* 适配平板 */
+@media screen and (max-width: 1024px) {
+  #nav {
+    width: 100%;
+  }
+
+  #banner {
+    height: 45vh !important;
+  }
+
+  .inner {
+    width: 100% !important;
+  }
+
+  .inner > .left {
+    display: none !important;
+  }
+
+  .inner > .right {
+    width: 100% !important;
+  }
 }
 
 .ProseMirror,
