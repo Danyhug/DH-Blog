@@ -121,6 +121,11 @@ router.beforeEach((_, __, next) => {
   }
 }
 
+.date {
+  text-shadow: rgba(0, 0, 0, .5) 0rem .2rem .3rem;
+}
+
+
 .right {
   width: 67%;
   box-shadow: 0 .5rem .75rem .0625rem rgb(235, 235, 235);

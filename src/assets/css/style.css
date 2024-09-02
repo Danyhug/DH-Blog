@@ -128,6 +128,14 @@ a {
     width: 100% !important;
   }
 
+  .md-editor-preview-wrapper {
+    padding: 10px!important;
+  }
+
+  .md-editor-preview ul {
+    padding-left: 1em!important;
+  }
+
   .inner > .left {
     display: none !important;
   }
