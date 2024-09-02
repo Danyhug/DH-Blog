@@ -39,15 +39,25 @@ export default {
       store: useUserStore(),
     }
   },
-  mounted() {
+  created() {
     const store = this.store
-    watch(() => store.aritcleModel.isFullPreview, (val) => {
+
+    // 使用ua检测是否是移动端访问，是移动端直接变为全屏浏览
+    const width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+    if (width <= 768) {
+      store.aritcleModel.isFullPreview = true;
+    }
+  },
+  mounted() {
+    // 监听是否全屏浏览状态
+    watch(() => this.store.aritcleModel.isFullPreview, (val) => {
       if (val) {
         document.body.style.overflow = 'hidden';
       } else {
         document.body.style.overflow = '';
       }
     })
+
 
     getArticleInfo(this.$route.params.id as string).then((res: Article<Tag>) => {
       this.id = res.id || 0
@@ -58,7 +68,7 @@ export default {
       this.viewnum = res.views || 0
 
       // 更改pinia内容
-      store.homeHeaderInfo = {
+      this.store.homeHeaderInfo = {
         title: this.title,
         created: this.created,
         wordNum: res.wordNum || 0,
@@ -90,7 +100,7 @@ export default {
     cursor: pointer;
   }
 
-  ::v-deep .md-editor-preview {
+  :deep(.md-editor-preview) {
     font-family: 'Microsoft YaHei';
   }
 }

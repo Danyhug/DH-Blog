@@ -137,6 +137,69 @@ a {
   }
 }
 
+/* 适配手机 */
+@media screen and (max-width: 768px) {
+  #nav {
+    display: none;
+  }
+
+  #banner {
+    height: 26vh !important;
+    font-size: 0.6rem;
+  }
+
+  .inner .cover {
+    position: relative;
+
+    .left {
+      width: 100%;
+      clip-path: none;
+    }
+
+    .top {
+      width: 100%;
+      justify-content: center !important;
+
+      .date {
+        margin-left: 0 !important;
+      }
+
+      .icon {
+        display: none;
+        color: #333 !important;
+        font-weight: bold;
+      }
+
+      .num-word {
+        display: none;
+      }
+
+      .time-consum {
+        display: none;
+      }
+    }
+
+    .right {
+      position: absolute;
+      top: 8%;
+      left: 8%;
+      width: 84%;
+      height: 84%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(4px) brightness(90%);
+      background-color: rgba(255, 255, 255, 0.5);
+      border-radius: 10px;
+    }
+
+    .bottom {
+      display: none !important;
+    }
+  }
+}
+
 .ProseMirror,
 .toastui-editor-contents {
   font-size: 18px;
