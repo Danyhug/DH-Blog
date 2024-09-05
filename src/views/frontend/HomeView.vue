@@ -91,6 +91,22 @@ router.beforeEach((_, __, next) => {
   transition: all .6s ease;
 }
 
+h1 {
+  font-size: 3.5em;
+}
+
+h2 {
+  font-size: 2.5em;
+  text-shadow: rgba(0, 0, 0, 0.5) 0rem 0.2rem 0.3rem;
+}
+
+h3 {
+  font-size: 2.2em;
+  font-weight: bold;
+  text-shadow: rgba(0, 0, 0, 0.5) 0rem 0.2rem 0.3rem;
+  letter-spacing: 0.125rem;
+}
+
 .left {
   display: flex;
   flex-direction: column;
@@ -124,7 +140,6 @@ router.beforeEach((_, __, next) => {
 .date {
   text-shadow: rgba(0, 0, 0, .5) 0rem .2rem .3rem;
 }
-
 
 .right {
   width: 67%;

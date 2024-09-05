@@ -46,7 +46,7 @@
   <el-divider content-position="center">
     <p class="tip">文章内容</p>
   </el-divider>
-  <MdEditor v-model="article.content" :toolbars="toolbars" previewTheme="github" @onUploadImg="onUploadImg">
+  <MdEditor v-model="article.content" :toolbars="toolbars" previewTheme="cyanosis" codeFoldable="false" @onUploadImg="onUploadImg">
     <template #defToolbars>
       <Emoji :emojis="emojis" :selectAfterInsert="false">
         <template #trigger>

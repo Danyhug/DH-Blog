@@ -74,4 +74,8 @@ export default {
         margin-left: 1.875rem;
     }
 }
+
+ul {
+    list-style: none;
+}
 </style>

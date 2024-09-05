@@ -4,7 +4,7 @@
     <!-- 全屏观看文章信息 -->
     <div :class="`blog-container ${store.aritcleModel.isFullPreview ? 'full-screen-preview' : ''}`">
       <p class="title" v-show="store.aritcleModel.isFullPreview" @click="changeIsFullPreview()">{{ title }}</p>
-      <MdPreview :modelValue="content" previewTheme="github" />
+      <MdPreview :modelValue="content" previewTheme="cyanosis" codeFoldable="false" />
     </div>
     <div class="info">
       <span>
@@ -116,7 +116,7 @@ export default {
   background-color: #fff;
   ;
 
-  ::v-deep .md-editor-preview {
+  :deep(.md-editor-preview) {
     padding: 0 10px;
     background-color: rgb(250, 250, 250);
   }

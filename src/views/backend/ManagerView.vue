@@ -46,7 +46,6 @@ onMounted(() => {
       articleList.push({ ...item })
     })
     articles.push(...articleList);
-    console.log(articles)
   })
 })
 </script>

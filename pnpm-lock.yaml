@@ -21,8 +21,8 @@ importers:
         specifier: ^2.7.2
         version: 2.7.2(vue@3.4.25(typescript@5.4.5))
       md-editor-v3:
-        specifier: ^4.15.6
-        version: 4.15.6(@codemirror/view@6.26.4)(@lezer/common@1.2.1)(vue@3.4.25(typescript@5.4.5))
+        specifier: ^4.19.2
+        version: 4.19.2(@codemirror/view@6.26.4)(@lezer/common@1.2.1)(vue@3.4.25(typescript@5.4.5))
       pinia:
         specifier: ^2.1.7
         version: 2.1.7(typescript@5.4.5)(vue@3.4.25(typescript@5.4.5))
@@ -523,8 +523,8 @@ packages:
   '@types/web-bluetooth@0.0.16':
     resolution: {integrity: sha512-oh8q2Zc32S6gd/j50GowEjKLoOVOwHP/bWVjKJInBwQqdOYMdPrf1oVlelTlyfFK3CKxL1uahMDAr+vy8T7yMQ==}
 
-  '@vavt/util@1.6.2':
-    resolution: {integrity: sha512-YSurh9awM1Xax5qgSkKbZZQZxC5bBTlqOq+YLQ2GqexKN87iz40IOq4cdTD7n63rIjT3fQH/GZmMpRJxwNev2w==}
+  '@vavt/util@2.0.0':
+    resolution: {integrity: sha512-zf1sY9Gy4jj5SE7FuSTXu7PrUdnKJf0zKvhNLAHWiGg1t8IkMfYwRN5567HcUgZSaSuJ8FR3dr+w6E2XzxoPiQ==}
 
   '@vavt/v3-extension@1.2.3':
     resolution: {integrity: sha512-Y4rKGxyAPpcUkQB6eTk80bOHdVnQj0rTH85wfLoyu5Y88NnOfphmEDRUck9GmLsehjVw3Oqa2FtZpw88R1x48Q==}
@@ -888,15 +888,12 @@ packages:
     peerDependencies:
       markdown-it: '*'
 
-  markdown-it-task-lists@2.1.1:
-    resolution: {integrity: sha512-TxFAc76Jnhb2OUu+n3yz9RMu4CwGfaT788br6HhEDlvWfdeJcLUsxk1Hgw2yJio0OXsxv7pyIPmvECY7bMbluA==}
-
   markdown-it@14.1.0:
     resolution: {integrity: sha512-a54IwgWPaeBCAAsv13YgmALOF1elABB08FxO9i+r4VFk5Vl4pKokRPeX8u5TCgSsPi6ec1otfLjdOpVcgbpshg==}
     hasBin: true
 
-  md-editor-v3@4.15.6:
-    resolution: {integrity: sha512-VmxE31yTTS1qyF9leogljmPYEkDqzRQPfFvAtWUT2NsnizbeSvrfVDwgnbBV4jlHHSX5tN8lzWiX7ziI0cA+QQ==}
+  md-editor-v3@4.19.2:
+    resolution: {integrity: sha512-2NWg5S1C+8tyq6j32ZxqpuVPn1Ev26HXo349mBXeqsVMwzDVRt2QRXYermCkAbFSSK7TwAtNRcplmT4JvE6qeA==}
     peerDependencies:
       vue: ^3.2.47
 
@@ -1801,7 +1798,7 @@ snapshots:
 
   '@types/web-bluetooth@0.0.16': {}
 
-  '@vavt/util@1.6.2': {}
+  '@vavt/util@2.0.0': {}
 
   '@vavt/v3-extension@1.2.3':
     dependencies:
@@ -2247,8 +2244,6 @@ snapshots:
     dependencies:
       markdown-it: 14.1.0
 
-  markdown-it-task-lists@2.1.1: {}
-
   markdown-it@14.1.0:
     dependencies:
       argparse: 2.0.1
@@ -2258,18 +2253,17 @@ snapshots:
       punycode.js: 2.3.1
       uc.micro: 2.1.0
 
-  md-editor-v3@4.15.6(@codemirror/view@6.26.4)(@lezer/common@1.2.1)(vue@3.4.25(typescript@5.4.5)):
+  md-editor-v3@4.19.2(@codemirror/view@6.26.4)(@lezer/common@1.2.1)(vue@3.4.25(typescript@5.4.5)):
     dependencies:
       '@codemirror/lang-markdown': 6.2.5
       '@codemirror/language-data': 6.5.1(@codemirror/view@6.26.4)
       '@types/markdown-it': 14.1.1
-      '@vavt/util': 1.6.2
+      '@vavt/util': 2.0.0
       codemirror: 6.0.1(@lezer/common@1.2.1)
       copy-to-clipboard: 3.3.3
       lru-cache: 10.2.2
       markdown-it: 14.1.0
       markdown-it-image-figures: 2.1.1(markdown-it@14.1.0)
-      markdown-it-task-lists: 2.1.1
       medium-zoom: 1.1.0
       punycode: 2.3.1
       vue: 3.4.25(typescript@5.4.5)
