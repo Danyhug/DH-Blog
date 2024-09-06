@@ -301,6 +301,12 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
   background-color: #1E9FFF;
 }
 
+:deep(.cm-editor .cm-line) {
+  font-family: '微软雅黑', 'Georgia';
+  line-height: 25px!important;
+  font-size: 16px;
+}
+
 .tip {
   font-size: 18px;
   margin: 10px 0;
