@@ -23,3 +23,4 @@ dist-ssr
 *.sln
 *.sw?
 admin/src/main/resources/static/
+stats.html
