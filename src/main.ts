@@ -5,7 +5,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 
 import '@/assets/iconfont/iconfont.js'
-import { MdEditor, MdPreview } from 'md-editor-v3';
+import { MdEditor, MdPreview, MdCatalog  } from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
 import { createPinia } from 'pinia';
 
@@ -14,6 +14,7 @@ const pinia = createPinia()
 
 app.component('MdEditor', MdEditor)
   .component('MdPreview', MdPreview)
+  .component('MdCatalog', MdCatalog)
   .component('Icon', Icon)
 
 app.use(router)

@@ -2,7 +2,7 @@
   <div class="common-layout">
     <el-container>
       <el-container style="position: relative;">
-        <el-aside width="200px" style="position: sticky; top: 0; height: 100vh;">
+        <el-aside>
           <AdminSide></AdminSide>
         </el-aside>
         <el-container>
@@ -23,4 +23,18 @@ import AdminSide from '@/components/backend/AdminSide.vue';
 import AdminFooter from '@/components/backend/AdminFooter.vue';
 </script>
 
-<style scoped></style>
+<style scoped>
+.el-aside {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 200px;
+}
+
+/* 手机适配 */
+@media (max-width: 768px) {
+  .el-aside {
+    display: none;
+  }
+}
+</style>

@@ -4,7 +4,8 @@
     <!-- 全屏观看文章信息 -->
     <div :class="`blog-container ${store.aritcleModel.isFullPreview ? 'full-screen-preview' : ''}`">
       <p class="title" v-show="store.aritcleModel.isFullPreview" @click="changeIsFullPreview()">{{ title }}</p>
-      <MdPreview :modelValue="content" previewTheme="cyanosis" codeFoldable="false" />
+      <MdPreview :editorId="state.id" :modelValue="content" previewTheme="cyanosis" codeFoldable="false"
+        :theme="state.theme" :scrollElement="scrollElement" />
     </div>
     <div class="info">
       <span>
@@ -37,6 +38,11 @@ export default {
       update: '',
       viewnum: 0,
       store: useUserStore(),
+      scrollElement: document.documentElement,
+      state: {
+        theme: 'light',
+        id: 'dh-editor'
+      }
     }
   },
   created() {

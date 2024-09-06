@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div style="width: 100%;">
     <el-row>
       <el-col>
         <el-card class="box">
@@ -18,7 +18,8 @@
               <Icon iconName="icon-31erweima" iconSize="2"></Icon>
             </a>
             <a>
-              <Icon iconName="icon-fangda" style="margin-top: 3px;" iconSize="1.56" @click="store.aritcleModel.isFullPreview = !store.aritcleModel.isFullPreview"></Icon>
+              <Icon iconName="icon-fangda" style="margin-top: 3px;" iconSize="1.56"
+                @click="store.aritcleModel.isFullPreview = !store.aritcleModel.isFullPreview"></Icon>
             </a>
             <a>
               <Icon iconName="icon-forward" iconSize="2"></Icon>
@@ -33,10 +34,14 @@
 
           <div class="tags">
             <el-divider>
-              <Icon iconName="icon-shili" iconSize="1.6"></Icon>
+              <Icon iconName="icon-shili" iconSize="1.56"></Icon>
             </el-divider>
             <a href="" class="tag" v-for="(item, index) in store.homeHeaderInfo.tags"
               :style="{ backgroundColor: tags[index] }">{{ item.name }}</a>
+          </div>
+
+          <div class="catelog">
+            <MdCatalog editorId="dh-editor" :scrollElement="scrollElement" theme="light" />
           </div>
         </el-card>
       </el-col>
@@ -48,6 +53,8 @@
 import { useUserStore } from '@/store';
 import { reactive, onMounted, onBeforeUnmount, ref } from 'vue'
 const store = useUserStore()
+
+const scrollElement = document.documentElement
 
 const getRandomColor = () => {
   const tagColors = [
@@ -118,13 +125,27 @@ onBeforeUnmount(() => {
 
 <style lang="less" scoped>
 .box {
-  padding: 0 20px;
-  height: 100vh;
   background-color: #fff;
 
   img {
-    width: 300px;
+    width: 95%;
   }
+}
+
+:deep(.el-card__body) {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+::-webkit-scrollbar {
+  width: 0;
+}
+
+.catelog {
+  flex: 1;
+  overflow-y: auto;
+  text-align: left;
 }
 
 .schedule {
@@ -135,23 +156,24 @@ onBeforeUnmount(() => {
 }
 
 .title {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   margin: 0.75rem 0;
 }
 
 .box {
   width: 100%;
+  min-height: 100vh;
 }
 
 .links {
-  margin-top: 30px;
-  padding: 8px 0;
+  margin-top: 14px;
+  padding-top: 8px;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   justify-items: center;
   width: 100%;
   color: #909399;
-  font-size: 14px;
+  font-size: 12px;
 
   a {
     cursor: pointer;

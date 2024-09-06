@@ -46,7 +46,8 @@
   <el-divider content-position="center">
     <p class="tip">文章内容</p>
   </el-divider>
-  <MdEditor v-model="article.content" :toolbars="toolbars" previewTheme="cyanosis" codeFoldable="false" @onUploadImg="onUploadImg">
+  <MdEditor ref="editor" v-model="article.content" :toolbars="toolbars" previewTheme="cyanosis" codeFoldable="false"
+    @onUploadImg="onUploadImg">
     <template #defToolbars>
       <Emoji :emojis="emojis" :selectAfterInsert="false">
         <template #trigger>
@@ -73,6 +74,7 @@ import { Emoji } from '@vavt/v3-extension'
 import { toolbars, emojis } from '@/types/Constant'
 
 const route = useRoute()
+const editor = ref(null) // 编辑器
 const articleId = route.query?.articleId
 
 // 切换标签
@@ -176,7 +178,6 @@ const onUploadImg = async (files: any[], callback: (arg0: any[]) => void) => {
 
 // 提交文章
 const submit = () => {
-  console.log(article)
   if (article.categoryId == -1) {
     return ElMessage.error({
       message: '未选择文章分类',
@@ -184,8 +185,8 @@ const submit = () => {
     })
   }
 
-  let el: HTMLElement | null = document.querySelector('.md-editor-preview');
-  let count = el !== null ? el.innerText.length : 0;
+  let el: HTMLElement | null = document.querySelector('.cm-editor');
+  let count = el !== null ? el.innerText.replace(/[# -]/g, '').length : 0;
   article.wordNum = count;
 
   // 上传新文章

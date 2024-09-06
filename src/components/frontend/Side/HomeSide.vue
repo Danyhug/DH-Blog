@@ -67,6 +67,7 @@ export default {
 
   li {
     color: var(--grey-7);
+    list-style: none;
 
     .num {
       font-weight: bold;
