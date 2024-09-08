@@ -185,8 +185,8 @@ const submit = () => {
     })
   }
 
-  let el: HTMLElement | null = document.querySelector('.cm-editor');
-  let count = el !== null ? el.innerText.replace(/[# -]/g, '').length : 0;
+  let el: HTMLElement | null = document.querySelector('.md-editor-footer-item span');
+  let count = el !== null ? parseInt(el.innerText) : 0;
   article.wordNum = count;
 
   // 上传新文章
@@ -303,7 +303,7 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
 
 :deep(.cm-editor .cm-line) {
   font-family: '微软雅黑', 'Georgia';
-  line-height: 25px!important;
+  line-height: 25px !important;
   font-size: 16px;
 }
 

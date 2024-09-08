@@ -31,8 +31,8 @@ import AdminFooter from '@/components/backend/AdminFooter.vue';
   width: 200px;
 }
 
-/* 手机适配 */
-@media (max-width: 768px) {
+/* 平板适配 */
+@media screen and (max-width: 1024px) {
   .el-aside {
     display: none;
   }

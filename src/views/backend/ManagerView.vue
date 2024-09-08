@@ -28,7 +28,7 @@ import { ref } from 'vue';
 import { useAdminStore } from '@/store/';
 
 
-const activeName = ref('second')
+const activeName = ref('first')
 const store = useAdminStore()
 
 const articles = reactive<Article<Tag>[]>([])
