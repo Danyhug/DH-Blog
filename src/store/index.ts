@@ -4,6 +4,20 @@ import { Category } from '@/types/Category'
 import { Tag } from '@/types/Tag'
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
+import { MdInit } from '@/types/MdEditor'
+
+export const useSystemStore = defineStore('system', () => {
+  const mdEditorInit = reactive<MdInit>({
+    codeFoldable: false,
+    editorId: 'dh-editor',
+    previewTheme: 'cyanosis',
+    theme: 'light'
+  })
+
+  return {
+    mdEditorInit
+  }
+})
 
 export const useAdminStore = defineStore('admin', () => {
   const tags = reactive<Tag[]>([])

@@ -4,8 +4,9 @@
     <!-- 全屏观看文章信息 -->
     <div :class="`blog-container ${store.aritcleModel.isFullPreview ? 'full-screen-preview' : ''}`">
       <p class="title" v-show="store.aritcleModel.isFullPreview" @click="changeIsFullPreview()">{{ title }}</p>
-      <MdPreview :editorId="state.id" :modelValue="content" previewTheme="cyanosis" codeFoldable="false"
-        :theme="state.theme" :scrollElement="scrollElement" />
+      <MdPreview :editorId="system.mdEditorInit.editorId" :modelValue="content"
+        :previewTheme="system.mdEditorInit.previewTheme" :codeFoldable="system.mdEditorInit.codeFoldable"
+        :theme="system.mdEditorInit.theme" :scrollElement="scrollElement" />
     </div>
     <div class="info">
       <span>
@@ -22,7 +23,7 @@
 import { getArticleInfo } from '@/api/api';
 import { Article } from '@/types/Article.ts'
 import { Tag } from 'element-plus';
-import { useUserStore } from '@/store';
+import { useUserStore, useSystemStore } from '@/store';
 import { getArticleBg } from '@/utils/tool';
 import { watch } from 'vue';
 
@@ -38,11 +39,8 @@ export default {
       update: '',
       viewnum: 0,
       store: useUserStore(),
+      system: useSystemStore(),
       scrollElement: document.documentElement,
-      state: {
-        theme: 'light',
-        id: 'dh-editor'
-      }
     }
   },
   created() {

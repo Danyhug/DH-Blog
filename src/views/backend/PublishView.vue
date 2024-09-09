@@ -46,8 +46,8 @@
   <el-divider content-position="center">
     <p class="tip">文章内容</p>
   </el-divider>
-  <MdEditor ref="editor" v-model="article.content" :toolbars="toolbars" previewTheme="cyanosis" codeFoldable="false"
-    @onUploadImg="onUploadImg">
+  <MdEditor ref="editor" v-model="article.content" :toolbars="toolbars" :previewTheme="system.mdEditorInit.previewTheme"
+    :codeFoldable="system.mdEditorInit.codeFoldable" @onUploadImg="onUploadImg">
     <template #defToolbars>
       <Emoji :emojis="emojis" :selectAfterInsert="false">
         <template #trigger>
@@ -61,18 +61,24 @@
 </template>
 
 <script setup lang="ts">
-import { addArticle, getArticleCategoryList, getArticleInfo, getArticleTagList, updateArticle, uploadFile } from '@/api/api';
-import { Article } from '@/types/Article';
-import { Category } from '@/types/Category';
-import { Tag } from '@/types/Tag';
 import { useRoute } from 'vue-router'
 import { onMounted, reactive, ref } from 'vue';
 import type { UploadProps } from 'element-plus'
 import { SERVER_URL } from '@/types/Constant'
 import { Plus } from '@element-plus/icons-vue'
 import { Emoji } from '@vavt/v3-extension'
-import { toolbars, emojis } from '@/types/Constant'
 
+import {
+  addArticle, getArticleCategoryList, getArticleInfo, getArticleTagList, updateArticle, uploadFile
+} from '@/api/api';
+
+import { toolbars, emojis } from '@/types/Constant'
+import { Article } from '@/types/Article';
+import { Category } from '@/types/Category';
+import { Tag } from '@/types/Tag';
+import { useSystemStore } from '@/store';
+
+const system = useSystemStore()
 const route = useRoute()
 const editor = ref(null) // 编辑器
 const articleId = route.query?.articleId
