@@ -129,7 +129,7 @@ const clear = (manual: boolean = false) => {
     article.categoryId = -1
     article.tags = []
     // 清空本地
-    localStorage.removeItem("DHBlog_Article")
+    localStorage.removeItem(article_save_key)
   }
 
   if (manual) {
@@ -242,16 +242,18 @@ onMounted(() => {
         getArticleById();
       } else {
         ElMessageBox.confirm(
-          '是否继续编辑该文章？',
+          '是否继续使用上次草稿？',
           '提示',
           {
             confirmButtonText: '继续编辑',
             cancelButtonText: '重新获取',
             type: 'warning',
+            showClose: false
           }
         ).then(() => {
           Object.assign(article, JSON.parse(temp as string));
         }).catch(() => {
+          clear();
           getArticleById();
         });
       }
