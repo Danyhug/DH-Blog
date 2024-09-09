@@ -76,6 +76,8 @@ import { toolbars, emojis } from '@/types/Constant'
 const route = useRoute()
 const editor = ref(null) // 编辑器
 const articleId = route.query?.articleId
+// 保存文章的key
+const article_save_key = `DHBlog_Article_${articleId == null ? 'Draft' : articleId.toString()}`;
 
 // 切换标签
 const activeTag = ref('first')
@@ -94,8 +96,7 @@ const tags = reactive<Tag[]>([]);
 // 自动保存
 const autoSave = () => {
   if (article.content.length === 0) return;
-
-  localStorage.setItem("DHBlog_Article", JSON.stringify(article));
+  localStorage.setItem(article_save_key, JSON.stringify(article));
 
   // 创建一个Date对象，表示当前时间
   var now = new Date();
@@ -224,23 +225,45 @@ onMounted(() => {
     })
   })
 
+  // 尝试获取本地文章信息
+  const temp = localStorage.getItem(article_save_key) || null;
+
   // 获取路由部分是否为edit?id=格式 此时是更新信息，获取文章信息
   if (articleId) {
-    // 获取文章详情
-    getArticleInfo(articleId as String).then((res: Article<Tag>) => {
-      let articleTemp = { ...res, tags: [] }
-      Object.assign(article, articleTemp);
-      if (res?.tags) {
-        for (let tag of res.tags) {
-          if (article.tags) {
-            article.tags.push(tag.slug)
+    // 弹窗询问用户是否继续编辑草稿还是重新获取文章信息
+    const handleArticleId = () => {
+      if (temp === null) {
+        getArticleById();
+      } else {
+        ElMessageBox.confirm(
+          '是否继续编辑该文章？',
+          '提示',
+          {
+            confirmButtonText: '继续编辑',
+            cancelButtonText: '重新获取',
+            type: 'warning',
           }
-        }
+        ).then(() => {
+          Object.assign(article, JSON.parse(temp as string));
+        }).catch(() => {
+          getArticleById();
+        });
       }
-    })
-  } else {
-    // 尝试获取本地文章信息
-    let temp = localStorage.getItem('DHBlog_Article') || null;
+    };
+
+    const getArticleById = () => {
+      getArticleInfo(articleId as string).then((res: Article<Tag>) => {
+        const articleTemp = { ...res, tags: res.tags?.map(tag => tag.slug) || [] };
+        Object.assign(article, articleTemp);
+      });
+    };
+
+    handleArticleId();
+    return;
+  }
+
+  // 如果没有 articleId，则直接从本地存储加载文章信息
+  if (temp) {
     Object.assign(article, JSON.parse(temp as string));
   }
 })
