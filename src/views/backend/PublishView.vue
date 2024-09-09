@@ -247,8 +247,7 @@ onMounted(() => {
           {
             confirmButtonText: '继续编辑',
             cancelButtonText: '重新获取',
-            type: 'warning',
-            showClose: false
+            type: 'warning'
           }
         ).then(() => {
           Object.assign(article, JSON.parse(temp as string));
