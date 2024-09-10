@@ -1,16 +1,19 @@
 package top.zzf4.blog.service.Impl;
 
+import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.conditions.query.QueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.github.pagehelper.PageHelper;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import top.zzf4.blog.constant.MessageConstant;
+import top.zzf4.blog.constant.RedisConstant;
 import top.zzf4.blog.entity.dto.ArticleInsertDTO;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
@@ -27,8 +30,10 @@ import top.zzf4.blog.service.ArticleService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.SQLIntegrityConstraintViolationException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 @Log4j2
 @Service
@@ -40,6 +45,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
     private TagsMapper tagMapper;
     @Autowired
     private CategoriesMapper categoriesMapper;
+
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
 
     /**
      * 使用id查询文章信息
@@ -154,13 +162,12 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
      */
     @Override
     public PageResult<Articles> getPage(ArticlePageDTO articlePage) {
-        PageHelper.startPage(articlePage.getPageNum(), articlePage.getPageSize());
-
         List<Articles> articles = articleMapper.getArticles(articlePage.getCategoryId());
         for (Articles article: articles) {
             article.setTags(tagMapper.getTagsByArticleId(article.getId()));
         }
-        return new PageResult<>(articles.size(), articles);
+        // return new PageResult<>(articles.size(), articles);
+        return null;
     }
 
     /**
@@ -253,5 +260,51 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
             // 读取整个流到字节数组
             return inputStream.readAllBytes();
         }
+    }
+
+    /**
+     * 缓存首页的文章缩略信息
+     * 从redis中返回 不带内容 的文章基本信息列表，文章按照id倒序排列
+     * @return 文章缩略信息列表
+     */
+    @Override
+    public PageResult<Articles> getArticleThumbnail(int pageSize, int currentPage) {
+        PageResult<Articles> result = new PageResult<>();
+
+        // 1. 若本地无缓存
+        if (Boolean.FALSE.equals(stringRedisTemplate.hasKey(RedisConstant.CACHE_ARTICLE_THUMBNAILS))) {
+
+            // 1.1 查询数据库数据
+            // 获取所有文章的基本信息
+            List<Articles> articles = new ArrayList<>(articleMapper.selectList(new LambdaQueryWrapper<Articles>()
+                    .select(Articles::getId, Articles::getTitle, Articles::getThumbnailUrl, Articles::getCreateTime, Articles::getViews, Articles::getWordNum)));
+
+            // 1.2 获取文章的所有标签
+            for (Articles article: articles) {
+                article.setTags(tagMapper.getTagsByArticleId(article.getId()));
+            }
+
+            // 1.3 更新缓存
+            // 批量插入缓存
+            stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                for (Articles article : articles) {
+                    stringRedisTemplate.opsForZSet().add(RedisConstant.CACHE_ARTICLE_THUMBNAILS, JSONUtil.toJsonStr(article), Double.valueOf(article.getId()));
+                }
+                return null;
+            });
+        }
+
+        // 有缓存的情况下，获取缓存
+        Long card = stringRedisTemplate.opsForZSet().zCard(RedisConstant.CACHE_ARTICLE_THUMBNAILS);
+
+        // 总页数
+        long totalPage = (long) Math.ceil((double) card / pageSize);
+        result.setTotal(totalPage);
+
+        result.setCurr((long) currentPage);
+        result.setList(stringRedisTemplate.opsForZSet().reverseRange(RedisConstant.CACHE_ARTICLE_THUMBNAILS, (long) (currentPage - 1) * pageSize, (long) currentPage * pageSize - 1)
+                .stream().map(s -> JSONUtil.toBean(s, Articles.class)).collect(Collectors.toList()));
+
+        return result;
     }
 }
