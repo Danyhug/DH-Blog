@@ -1,10 +1,11 @@
 export interface Page {
-  pageSize: Number
-  pageNum: Number
-  categoryId?: String
+  pageSize: number
+  pageNum: number
+  total: number
+  categoryId?: string
 }
 
 export interface PageResult<T> {
-  total: Number
+  total: number
   list: T[]
 }
