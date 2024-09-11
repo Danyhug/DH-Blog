@@ -32,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import '@/assets/css/style.css'
+import '@/assets/css/style.less'
 import Header from '@/components/frontend/Header.vue';
 import Banner from '@/components/frontend/Banner.vue';
 import HomeSide from '@/components/frontend/Side/HomeSide.vue';
