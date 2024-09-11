@@ -31,10 +31,10 @@ const page = reactive<Page>({
 
 const getPageList = () => {
   getArticleList(page).then(res => {
-    articleList.splice(0, articleList.length)
-    articleList.push(...res.list)
+    articleList.splice(0, articleList.length, ...res.list)
 
-    page.total == 0 ? page.total = res.total : page.total
+    // 首次获取数据总数
+    if (page.total == 0) page.total = res.total
   })
 }
 

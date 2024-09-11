@@ -26,6 +26,7 @@ import top.zzf4.blog.mapper.ArticleMapper;
 import top.zzf4.blog.mapper.CategoriesMapper;
 import top.zzf4.blog.mapper.TagsMapper;
 import top.zzf4.blog.service.ArticleService;
+import top.zzf4.blog.utils.RedisCacheUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -48,6 +49,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
 
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    private RedisCacheUtils redisCacheUtils;
 
     /**
      * 使用id查询文章信息
@@ -272,30 +276,27 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
         PageResult<Articles> result = new PageResult<>();
 
         // 1. 若本地无缓存
-        if (Boolean.FALSE.equals(stringRedisTemplate.hasKey(RedisConstant.CACHE_ARTICLE_THUMBNAILS))) {
-
+        if (!redisCacheUtils.hasKey(RedisConstant.CACHE_ARTICLE_THUMBNAILS)) {
             // 1.1 查询数据库数据
             // 获取所有文章的基本信息
             List<Articles> articles = new ArrayList<>(articleMapper.selectList(new LambdaQueryWrapper<Articles>()
                     .select(Articles::getId, Articles::getTitle, Articles::getThumbnailUrl, Articles::getCreateTime, Articles::getViews, Articles::getWordNum)));
 
+            // 所有分数
+            ArrayList<Double> scores = new ArrayList<>();
             // 1.2 获取文章的所有标签
             for (Articles article: articles) {
                 article.setTags(tagMapper.getTagsByArticleId(article.getId()));
+                scores.add(Double.valueOf(article.getId()));
             }
 
             // 1.3 更新缓存
             // 批量插入缓存
-            stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-                for (Articles article : articles) {
-                    stringRedisTemplate.opsForZSet().add(RedisConstant.CACHE_ARTICLE_THUMBNAILS, JSONUtil.toJsonStr(article), Double.valueOf(article.getId()));
-                }
-                return null;
-            });
+            redisCacheUtils.batchSetZSet(RedisConstant.CACHE_ARTICLE_THUMBNAILS, articles, scores);
         }
 
         // 有缓存的情况下，获取缓存
-        Long card = stringRedisTemplate.opsForZSet().zCard(RedisConstant.CACHE_ARTICLE_THUMBNAILS);
+        long card = redisCacheUtils.getZSetCard(RedisConstant.CACHE_ARTICLE_THUMBNAILS);
 
         // 总页数
         long totalPage = (long) Math.ceil((double) card / pageSize);

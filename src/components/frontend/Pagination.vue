@@ -2,9 +2,6 @@
   <!-- 分页组件 -->
   <el-pagination background layout="prev, pager, next" :current-page="currPage" :page-size="props.pageSize"
     :page-count="props.total" @current-change="currChange($event)" />
-
-  {{ props }}
-
 </template>
 <script lang="ts" setup>
 import { defineProps, ref, defineEmits } from 'vue';
