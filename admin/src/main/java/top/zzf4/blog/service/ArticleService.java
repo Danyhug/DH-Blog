@@ -2,7 +2,6 @@ package top.zzf4.blog.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import top.zzf4.blog.entity.dto.ArticleInsertDTO;
-import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
 import top.zzf4.blog.entity.model.Articles;

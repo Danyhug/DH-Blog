@@ -1,11 +1,14 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import ArticleView from '../views/frontend/ArticleView.vue'
-import MainView from '../views/frontend/MainView.vue'
-import HomeView from '../views/frontend/HomeView.vue'
+// 前端路由组件
+const ArticleView = () => import(/* webpackChunkName: "article" */ '../views/frontend/ArticleView.vue');
+const MainView = () => import(/* webpackChunkName: "main" */ '../views/frontend/MainView.vue');
+const HomeView = () => import(/* webpackChunkName: "home" */ '../views/frontend/HomeView.vue');
 
-import AdminView from '../views/backend/AdminView.vue'
-import PublishView from '../views/backend/PublishView.vue'
-import ManagerView from '../views/backend/ManagerView.vue'
+// 后端路由组件
+const AdminView = () => import(/* webpackChunkName: "admin" */ '../views/backend/AdminView.vue');
+const PublishView = () => import(/* webpackChunkName: "publish" */ '../views/backend/PublishView.vue');
+const ManagerView = () => import(/* webpackChunkName: "manager" */ '../views/backend/ManagerView.vue');
+
 
 const routes = [
   { path: '/', redirect: '/view/home' },
@@ -13,9 +16,10 @@ const routes = [
   {
     path: '/view', component: HomeView, children:
       [
-        { path: 'home', component: MainView },
-        { path: 'article/:id', component: ArticleView }
-      ]
+        { path: 'home', component: MainView, meta: { keepAlive: true } },
+        { path: 'article/:id', component: ArticleView, meta: { keepAlive: true } }
+      ],
+    meta: { keepAlive: true }
   },
   // 后台页面
   {

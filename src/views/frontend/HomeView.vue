@@ -23,9 +23,7 @@
       </div>
       <div class="right">
         <transition mode="out-in">
-          <keep-alive>
-            <router-view />
-          </keep-alive>
+          <router-view />
         </transition>
       </div>
     </div>
@@ -61,13 +59,11 @@ if (route.path == '/view/home') {
 router.beforeEach((_, __, next) => {
   if (store.homeShowComponent == 'articleInfoSide') {
     sideShowComponent.value = HomeSide;
-    console.log(sideShowComponent.value)
     store.homeShowComponent = 'home'
   } else if (store.homeShowComponent == 'home') {
     sideShowComponent.value = ArticleInfoSide;
     store.homeShowComponent = 'articleInfoSide'
   }
-  console.log('sideShowComponent:', sideShowComponent.value);
 
   next()
 })
