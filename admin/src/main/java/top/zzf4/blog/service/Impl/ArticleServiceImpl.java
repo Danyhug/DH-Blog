@@ -1,5 +1,8 @@
 package top.zzf4.blog.service.Impl;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -32,6 +35,7 @@ import java.io.InputStream;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -60,15 +64,34 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
      */
     @Override
     public Articles getArticleById(Long id) {
-        // 查询文章的信息
-        Articles articles = this.getById(id);
-        // 再查询文章的标签信息
-        List<Tag> tagsByArticleId = tagMapper.getTagsByArticleId(id);
-        // 本次观看数据+1返回
-        articles.setTags(tagsByArticleId);
+        // 1. 判断数据库中是否有缓存
+        if (redisCacheUtils.hasNullKey(RedisConstant.CACHE_ARTICLE_ID + id)) {
+            // 1.1 无缓存，新增缓存
+
+            // 查询文章的信息
+            Articles articles = this.getById(id);
+            // 再查询文章的标签信息
+            List<Tag> tagsByArticleId = tagMapper.getTagsByArticleId(id);
+            articles.setTags(tagsByArticleId);
+
+
+            // 1.2 保存到 redis
+            redisCacheUtils.setHash(RedisConstant.CACHE_ARTICLE_ID + id, BeanUtil.beanToMap(articles));
+            System.out.println("已缓存文章信息");
+        }
+
+        // 2. 获取缓存数据
+        Map<Object, Object> hash = redisCacheUtils.getHash(RedisConstant.CACHE_ARTICLE_ID + id);
+        Articles articles = BeanUtil.toBean(hash, Articles.class);
+
+        // 2.1 本次观看数据+1
         articles.setViews(articles.getViews() + 1);
 
+        // 2.2 更新 redis 缓存观看数
+        redisCacheUtils.updateHash(RedisConstant.CACHE_ARTICLE_ID + id, "views", articles.getViews());
         this.update().eq("id", id).set("views", articles.getViews()).update();
+
+        // 返回数据
         return articles;
     }
 
@@ -115,7 +138,11 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
             tagMapper.savePostTags(articles.getId(), tagTemp.getId());
         }
 
-        log.info("更新的article属性为 {}", articles);
+        // 删除对应文章id
+        redisCacheUtils.delete(RedisConstant.CACHE_ARTICLE_ID + articles.getId());
+        // 删除首页缩略缓存
+        redisCacheUtils.delete(RedisConstant.CACHE_ARTICLE_THUMBNAILS);
+
         this.updateById(articles);
     }
 
@@ -158,19 +185,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
     @Override
     public List<Tag> getTags() {
         return tagMapper.getTags();
-    }
-
-    /**
-     * 分页查询文章
-     */
-    @Override
-    public PageResult<Articles> getPage(ArticlePageDTO articlePage) {
-        List<Articles> articles = articleMapper.getArticles(articlePage.getCategoryId());
-        for (Articles article: articles) {
-            article.setTags(tagMapper.getTagsByArticleId(article.getId()));
-        }
-        // return new PageResult<>(articles.size(), articles);
-        return null;
     }
 
     /**
@@ -266,7 +280,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
     }
 
     /**
-     * 缓存首页的文章缩略信息
+     * 分页查询缓存首页的文章缩略信息
      * 从redis中返回 不带内容 的文章基本信息列表，文章按照id倒序排列
      * @return 文章缩略信息列表
      */
@@ -275,7 +289,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
         PageResult<Articles> result = new PageResult<>();
 
         // 1. 若本地无缓存
-        if (!redisCacheUtils.hasKey(RedisConstant.CACHE_ARTICLE_THUMBNAILS)) {
+        if (redisCacheUtils.hasNullKey(RedisConstant.CACHE_ARTICLE_THUMBNAILS)) {
             // 1.1 查询数据库数据
             // 获取所有文章的基本信息
             List<Articles> articles = new ArrayList<>(articleMapper.selectList(new LambdaQueryWrapper<Articles>()
@@ -292,6 +306,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
             // 1.3 更新缓存
             // 批量插入缓存
             redisCacheUtils.batchSetZSet(RedisConstant.CACHE_ARTICLE_THUMBNAILS, articles, scores);
+            log.info("已缓存首页缩略文章信息");
         }
 
         // 有缓存的情况下，获取缓存

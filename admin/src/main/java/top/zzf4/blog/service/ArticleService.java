@@ -49,8 +49,6 @@ public interface ArticleService extends IService<Articles> {
      */
     List<Tag> getTags();
 
-    PageResult<Articles> getPage(ArticlePageDTO articlePage);
-
     /**
      * 查询文章分类
      */
