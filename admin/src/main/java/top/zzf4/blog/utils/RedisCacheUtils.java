@@ -6,8 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
-import top.zzf4.blog.constant.RedisConstant;
-import top.zzf4.blog.entity.model.Articles;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
