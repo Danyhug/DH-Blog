@@ -5,10 +5,12 @@ import { Tag } from '@/types/Tag'
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
 import { MdInit } from '@/types/MdEditor'
+import { Article } from '@/types/Article'
+import { Page } from '@/types/Page'
 
 export const useSystemStore = defineStore('system', () => {
   const mdEditorInit = reactive<MdInit>({
-    codeFoldable: false,
+    codeFoldable: true,
     editorId: 'dh-editor',
     previewTheme: 'cyanosis',
     theme: 'light'
@@ -79,9 +81,19 @@ export const useUserStore = defineStore('user', () => {
     isFullPreview: false
   })
 
+  // 首页文章列表
+  const articleList = reactive<Article<Tag[]>[]>([])
+  const page = reactive<Page>({
+    pageNum: 1,
+    pageSize: 10,
+    total: 0
+  })
+
   return {
     homeShowComponent,
     homeHeaderInfo,
-    aritcleModel
+    aritcleModel,
+    articleList,
+    page
   }
 })

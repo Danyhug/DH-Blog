@@ -16,10 +16,11 @@ const routes = [
   {
     path: '/view', component: HomeView, children:
       [
-        { path: 'home', component: MainView, meta: { keepAlive: true } },
-        { path: 'article/:id', component: ArticleView, meta: { keepAlive: true } }
-      ],
-    meta: { keepAlive: true }
+        {
+          path: 'home', component: MainView, name: 'Home'
+        },
+        { path: 'article/:id', component: ArticleView }
+      ]
   },
   // 后台页面
   {

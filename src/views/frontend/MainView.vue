@@ -5,10 +5,10 @@
       <p>文章列表</p>
     </div>
     <div class="posts">
-      <ArticleBox v-for="item in articleList" :article="item" :key="item.id"></ArticleBox>
+      <ArticleBox v-for="item in store.articleList" :article="item" :key="item.id"></ArticleBox>
     </div>
     <div class="page">
-      <Pagination :pageSize="page.pageSize" :currentPage="page.pageNum" :total="page.total"
+      <Pagination :pageSize="store.page.pageSize" :currentPage="store.page.pageNum" :total="store.page.total"
         @update:currentPage="changePage"></Pagination>
     </div>
   </div>
@@ -17,37 +17,33 @@
 import { getArticleList } from '@/api/api';
 import ArticleBox from '@/components/frontend/ArticleBox.vue'
 import Pagination from '@/components/frontend/Pagination.vue';
-import { onMounted, reactive } from 'vue'
-import { Page } from '@/types/Page.ts'
-import { Article } from '@/types/Article';
-import { Tag } from '@/types/Tag';
+import { onMounted } from 'vue'
+import { useUserStore } from '@/store';
 
-const articleList = reactive<Article<Tag[]>[]>([])
-const page = reactive<Page>({
-  pageNum: 1,
-  pageSize: 10,
-  total: 0
-})
+const store = useUserStore()
 
 const getPageList = () => {
-  getArticleList(page).then(res => {
-    articleList.splice(0, articleList.length, ...res.list)
+  getArticleList(store.page).then(res => {
+    store.articleList.splice(0, store.articleList.length, ...res.list)
 
     // 首次获取数据总数
-    if (page.total == 0) page.total = res.total
+    if (store.page.total == 0) store.page.total = res.total
   })
 }
 
 onMounted(() => {
-  getPageList()
+  // 无缓存
+  if (store.articleList.length == 0) {
+    // 第一次加载，从服务器获取数据
+    getPageList()
+  }
 })
 
 // 更新页面
 const changePage = (curr: number) => {
-  page.pageNum = curr;
+  store.page.pageNum = curr;
   getPageList()
 }
-
 </script>
 <style lang="less" scoped>
 .tip {

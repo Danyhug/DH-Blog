@@ -42,7 +42,6 @@ import { Tag } from '@/types/Tag'
 import { getArticleBg } from '@/utils/tool'
 const props = defineProps(['article'])
 const article: Article<Tag> = props.article
-console.log(article)
 </script>
 
 <style lang="less" scoped>
