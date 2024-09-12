@@ -56,7 +56,13 @@ public class RedisCacheUtils {
         });
     }
 
-    // 获取 zSet 的 card
+    public <T> void batchSetZSet(String key, List<T> values, List<Double> scores, long time, TimeUnit unit) {
+        this.batchSetZSet(key, values, scores);
+        // 设置过期时间
+        stringRedisTemplate.expire(key, time, unit);
+    }
+
+        // 获取 zSet 的 card
     public long getZSetCard(String key) {
         Long card = stringRedisTemplate.opsForZSet().zCard(key);
         if (card == null) {

@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Log4j2
@@ -302,7 +303,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
 
             // 1.3 更新缓存
             // 批量插入缓存
-            redisCacheUtils.batchSetZSet(RedisConstant.CACHE_ARTICLE_THUMBNAILS, articles, scores);
+            redisCacheUtils.batchSetZSet(RedisConstant.CACHE_ARTICLE_THUMBNAILS, articles, scores, 6, TimeUnit.HOURS);
             log.info("已缓存首页缩略文章信息");
         }
 
