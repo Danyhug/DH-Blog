@@ -28,6 +28,7 @@ target/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
+*-dev.yml
 
 ### VS Code ###
 .vscode/

@@ -6,6 +6,8 @@ import { ToolbarNames } from "md-editor-v3/lib/types/MdEditor/type";
 // export const SERVER_URL = 'http://localhost:8080'
 export const SERVER_URL = 'http://danyhug.zzf4.top:8080'
 
+export const OSS_URL = 'http://blog.zzf4.top'
+
 /**
  * md编辑器
  */

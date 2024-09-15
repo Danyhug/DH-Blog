@@ -9,6 +9,8 @@ import { MdEditor, MdPreview, MdCatalog  } from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
 import { createPinia } from 'pinia';
 
+import '@/assets/css/style.less'
+
 const app = createApp(App)
 const pinia = createPinia()
 
