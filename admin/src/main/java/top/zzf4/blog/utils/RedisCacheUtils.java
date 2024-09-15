@@ -1,5 +1,6 @@
 package top.zzf4.blog.utils;
 
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,21 @@ public class RedisCacheUtils {
     public Object get(String key) {
         return stringRedisTemplate.opsForValue().get(key);
     }
+
+    // 设置列表
+    public <T> void setList(String key, List<T> values) {
+        stringRedisTemplate.opsForList().rightPushAll(key, values.stream().map(JSONUtil::toJsonStr).toList());
+    }
+
+    // 列表中随机获取值
+    public String getRandomListValue(String key) {
+        // 获取长度
+        long size = stringRedisTemplate.opsForList().size(key);
+        // 获取随机索引
+        long index = RandomUtil.randomInt((int) size);
+        return stringRedisTemplate.opsForList().index(key, index);
+    }
+
 
     // 设置 zSet
     public void setZSet(String key, Object value, Double score) {
@@ -73,9 +89,18 @@ public class RedisCacheUtils {
         return card;
     }
 
-    // 判断 key 是否存在
+    /**
+     * 判断 key 是否为空，true 为不存在key
+     * @param key
+     * @return
+     */
     public boolean hasNullKey(String key) {
         return Boolean.FALSE.equals(stringRedisTemplate.hasKey(key));
+    }
+
+    // 设置过期时间
+    public void setExpire(String key, long time, TimeUnit unit) {
+        stringRedisTemplate.expire(key, time, unit);
     }
 
     // 设置 hash 缓存（方便增加观看数）

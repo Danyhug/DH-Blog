@@ -53,6 +53,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
 
     @Autowired
     private RedisCacheUtils redisCacheUtils;
+    @Autowired
+    private QiniuServiceImpl qiniuServiceImpl;
 
     /**
      * 使用id查询文章信息
@@ -104,6 +106,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
         log.info("保存文章{}", articles);
         // 设置观看数
         articles.setViews(0);
+        if (articleInsertDTO.getThumbnailUrl().isEmpty()) {
+            // 没上传图片，就获取一个随机图片
+            articles.setThumbnailUrl(qiniuServiceImpl.getRandomDefaultImage());
+        }
         this.save(articles);
 
         // 查询标签slug对应id
@@ -114,6 +120,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
             // 插入进postTags表中
             tagMapper.savePostTags(articles.getId(), tagTemp.getId());
         }
+
+        // 删除首页缩略缓存
+        redisCacheUtils.delete(RedisConstant.CACHE_ARTICLE_THUMBNAILS);
     }
 
     /**
@@ -141,6 +150,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
         // 删除首页缩略缓存
         redisCacheUtils.delete(RedisConstant.CACHE_ARTICLE_THUMBNAILS);
 
+        if (articles.getThumbnailUrl().isEmpty()) {
+            // 没上传图片，就获取一个随机图片
+            articles.setThumbnailUrl(qiniuServiceImpl.getRandomDefaultImage());
+        }
         this.updateById(articles);
     }
 
