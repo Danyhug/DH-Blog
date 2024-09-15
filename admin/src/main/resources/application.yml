@@ -40,10 +40,12 @@ spring:
           max-idle: 10
           min-idle: 1
           time-between-eviction-runs: 10s
+  profiles:
+    active: dev
 
 qiniu:
-  accessKey: f-oc8zsqfc64FPhg32gwwWLdVHtPkysVNMFrEL-N
-  secretKey: edFgsPxYTUNpUCyKei9JWtrQ8uWUyA1jugCy2FWh
+  accessKey: ${qiniu.accessKey}
+  secretKey: ${qiniu.secretKey}
   bucket: dh-blog
   default-image-name: defaultArticleImg
 
