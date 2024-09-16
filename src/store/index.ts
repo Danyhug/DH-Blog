@@ -85,7 +85,7 @@ export const useUserStore = defineStore('user', () => {
   const articleList = reactive<Article<Tag[]>[]>([])
   const page = reactive<Page>({
     pageNum: 1,
-    pageSize: 10,
+    pageSize: 8,
     total: 0
   })
 
