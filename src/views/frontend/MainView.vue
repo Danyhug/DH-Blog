@@ -5,7 +5,9 @@
       <p>文章列表</p>
     </div>
     <div class="posts">
-      <ArticleBox v-for="item in store.articleList" :article="item" :key="item.id"></ArticleBox>
+      <transition-group name="fade" tag="div">
+        <ArticleBox v-loading="show" v-for="item in store.articleList" :article="item" :key="item.id"></ArticleBox>
+      </transition-group>
     </div>
     <div class="page">
       <Pagination :pageSize="store.page.pageSize" :currentPage="store.page.pageNum" :total="store.page.total"
@@ -17,17 +19,25 @@
 import { getArticleList } from '@/api/api';
 import ArticleBox from '@/components/frontend/ArticleBox.vue'
 import Pagination from '@/components/frontend/Pagination.vue';
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useUserStore } from '@/store';
 
 const store = useUserStore()
+const show = ref(true)
 
 const getPageList = () => {
   getArticleList(store.page).then(res => {
     store.articleList.splice(0, store.articleList.length, ...res.list)
+    show.value = false
 
     // 首次获取数据总数
     if (store.page.total == 0) store.page.total = res.total
+    else {
+      setTimeout(() => {
+        const bannerHeight = document.querySelector('#banner')?.scrollHeight
+        scrollTo(0, bannerHeight || 0)
+      }, 320)
+    }
   })
 }
 
@@ -36,16 +46,38 @@ onMounted(() => {
   if (store.articleList.length == 0) {
     // 第一次加载，从服务器获取数据
     getPageList()
+  } else {
+    show.value = false;
   }
 })
 
 // 更新页面
 const changePage = (curr: number) => {
+  show.value = true;
+
   store.page.pageNum = curr;
   getPageList()
 }
+
 </script>
 <style lang="less" scoped>
+.fade-enter-active {
+  transition: all .8s ease;
+}
+
+.fade-leave-active {
+  transition: all .1s ease;
+}
+
+.fade-leave-to {
+  opacity: 1;
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(30px);
+}
+
 .tip {
   display: block;
   width: 100%;
