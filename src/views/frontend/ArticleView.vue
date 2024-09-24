@@ -10,7 +10,7 @@
     </div>
     <div class="info">
       <span>
-        更新于 {{ created }}
+        更新于 {{ update }}
       </span>
       <span>
         阅读次数 {{ viewnum }} 次
