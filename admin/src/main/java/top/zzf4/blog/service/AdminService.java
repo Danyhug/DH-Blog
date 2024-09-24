@@ -1,6 +1,5 @@
 package top.zzf4.blog.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
 import top.zzf4.blog.entity.dto.ArticleInsertDTO;
 import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
@@ -9,40 +8,10 @@ import top.zzf4.blog.entity.model.Category;
 import top.zzf4.blog.entity.model.Tag;
 import top.zzf4.blog.entity.vo.PageResult;
 
-import java.io.IOException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.List;
 
-public interface ArticleService extends IService<Articles> {
-    /**
-     * 使用id查询文章信息
-     * @param id 文章id
-     * @return 文章信息
-     */
-    Articles getArticleById(Long id);
-
-    /**
-     * 根据id查询分类
-     * @param id 分类id
-     * @return 分类数据
-     */
-    Category getCategoryById(String id);
-
-    /**
-     * 缓存首页的文章缩略信息
-     * 从redis中返回 不带内容 的文章基本信息列表，文章按照id倒序排列
-     * @return 文章缩略信息列表
-     */
-    PageResult<Articles> getArticleThumbnail(int pageSize, int currentPage);
-
-    /**
-     * 返回随机图片
-     * @return 图片字节
-     */
-    byte[] getRandomImage() throws IOException;
-
-    // ===============================================================================================
-
+public interface AdminService {
     /**
      * 保存文章
      */
@@ -102,4 +71,10 @@ public interface ArticleService extends IService<Articles> {
      * @param id 标签id
      */
     void deleteTag(String id);
+
+    /**
+     * 获取文章列表
+     * @return 文章信息列表
+     */
+    PageResult<Articles> getArticleList(int pageSize, int currentPage);
 }
