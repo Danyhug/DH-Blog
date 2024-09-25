@@ -1,5 +1,6 @@
 package top.zzf4.blog.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,10 +28,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-@RestController
 @Log4j2
 @CrossOrigin
+@RestController
 @RequestMapping("/article")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "文章管理控制器")
 public class ArticleController {
     @Autowired
     private ArticleService service;
@@ -42,6 +44,7 @@ public class ArticleController {
      * 获取文章详情
      * @param id 文章id
      */
+    @Operation(description = "获取文章详情")
     @GetMapping("/{id}")
     public AjaxResult<Articles> detail(@PathVariable String id) {
         log.info("获取文章详情 {}", id);
@@ -54,6 +57,7 @@ public class ArticleController {
      * 新增文章
      * @param article 文章类型
      */
+    @Operation(description = "新增文章")
     @PostMapping
     public AjaxResult<Void> save(@RequestBody ArticleInsertDTO article) {
         log.info("保存文章 {}", article);
@@ -65,6 +69,7 @@ public class ArticleController {
      * 更新文章
      * @param articleUpdate 文章数据
      */
+    @Operation(description = "更新文章")
     @PutMapping
     public AjaxResult<Void> update(@RequestBody ArticleUpdateDTO articleUpdate) {
         service.updateArticle(articleUpdate);
@@ -74,6 +79,7 @@ public class ArticleController {
     /**
      * 分页查询
      */
+    @Operation(description = "分页查询")
     @PostMapping("/list")
     public AjaxResult<PageResult<Articles>> getPage(@RequestBody ArticlePageDTO articlePage) {
         log.info("分页查询 {}", articlePage);
@@ -83,6 +89,7 @@ public class ArticleController {
     /**
      * 文件上传
      */
+    @Operation(description = "文件上传")
     @PostMapping("/upload")
     public AjaxResult<String> upload(@RequestParam("file") MultipartFile file) throws IOException {
         log.info("上传文件 {} {}", file, uploadPath);
@@ -99,6 +106,7 @@ public class ArticleController {
     /**
      * 获取随机图片
      */
+    @Operation(description = "为首页返回随机图片")
     @GetMapping("/image/random")
     public ResponseEntity<byte[]> getRandomImage() throws IOException {
         // 设置响应头
@@ -116,6 +124,7 @@ public class ArticleController {
      * 新增文章标签
      * @param tagInsertDTO 标签数据
      */
+    @Operation(description = "新增文章标签")
     @PostMapping("/tag")
     public AjaxResult<Void> saveTag(@RequestBody TagInsertDTO tagInsertDTO) throws SQLIntegrityConstraintViolationException {
         service.saveTag(tagInsertDTO);
@@ -125,6 +134,7 @@ public class ArticleController {
     /**
      * 查询标签列表
      */
+    @Operation(description = "查询标签列表")
     @GetMapping("/tag")
     public AjaxResult<List<Tag>> getTags() {
         return AjaxResult.success(service.getTags());
