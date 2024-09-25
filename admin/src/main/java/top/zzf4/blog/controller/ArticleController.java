@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.util.List;
 
 @Log4j2
-@CrossOrigin
 @RestController
 @RequestMapping("/article")
 @io.swagger.v3.oas.annotations.tags.Tag(name = "文章管理控制器")

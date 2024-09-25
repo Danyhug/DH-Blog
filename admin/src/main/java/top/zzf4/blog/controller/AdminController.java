@@ -9,9 +9,13 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import top.zzf4.blog.entity.AjaxResult;
 import top.zzf4.blog.entity.dto.ArticleInsertDTO;
+import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
+import top.zzf4.blog.entity.model.Articles;
 import top.zzf4.blog.entity.model.Category;
+import top.zzf4.blog.entity.vo.PageResult;
+import top.zzf4.blog.service.AdminService;
 import top.zzf4.blog.service.ArticleService;
 
 import java.io.File;
@@ -21,11 +25,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-@RestController
 @Tag(name = "后台管理控制器")
 @Log4j2
+@RestController
 @RequestMapping("/admin")
 public class AdminController {
+    @Autowired
+    private AdminService adminService;
     @Autowired
     private ArticleService service;
 
@@ -148,5 +154,15 @@ public class AdminController {
     public AjaxResult<String> deleteCategory(@PathVariable String id) {
         service.deleteCategory(id);
         return AjaxResult.success("已删除分类");
+    }
+
+    /**
+     * 分页查询
+     */
+    @Operation(summary = "分页查询")
+    @PostMapping("/article/list")
+    public AjaxResult<PageResult<Articles>> getPage(@RequestBody ArticlePageDTO articlePage) {
+        log.info("分页查询 {}", articlePage);
+        return AjaxResult.success(adminService.getArticleList(articlePage.getPageSize(), articlePage.getPageNum()));
     }
 }
