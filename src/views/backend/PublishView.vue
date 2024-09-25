@@ -69,8 +69,10 @@ import { Plus } from '@element-plus/icons-vue'
 import { Emoji } from '@vavt/v3-extension'
 
 import {
-  addArticle, getArticleCategoryList, getArticleInfo, getArticleTagList, updateArticle, uploadFile
-} from '@/api/api';
+  addArticle, updateArticle, uploadFile
+} from '@/api/admin';
+
+import { getArticleInfo, getArticleCategoryList, getArticleTagList } from '@/api/user'
 
 import { toolbars, emojis } from '@/types/Constant'
 import { Article } from '@/types/Article';

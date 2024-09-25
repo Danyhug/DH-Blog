@@ -16,7 +16,7 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { getArticleList } from '@/api/api';
+import { getArticleList } from '@/api/user';
 import ArticleBox from '@/components/frontend/ArticleBox.vue'
 import Pagination from '@/components/frontend/Pagination.vue';
 import { onMounted, ref } from 'vue'

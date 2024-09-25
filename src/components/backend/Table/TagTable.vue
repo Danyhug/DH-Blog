@@ -20,7 +20,7 @@
     @cancel="cancel" />
 </template>
 <script lang="ts" setup>
-import { addTag, updateTag, deleteTag } from '@/api/api';
+import { addTag, updateTag, deleteTag } from '@/api/admin';
 import { Tag } from '@/types/Tag'
 import { reactive, ref } from 'vue'
 import { useAdminStore } from '@/store/index'

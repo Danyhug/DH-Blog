@@ -114,7 +114,7 @@ const article: Article<Tag> = props.article
       max-height: 128px;
       display: -webkit-box;
       -webkit-box-orient: vertical;
-      -webkit-line-clamp: 3;
+      line-clamp: 3;
       text-overflow: ellipsis;
       overflow: hidden;
     }

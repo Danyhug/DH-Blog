@@ -1,4 +1,4 @@
-import { getArticleCategoryList, getArticleTagList } from '@/api/api'
+import { getArticleCategoryList, getArticleTagList } from '@/api/user'
 import { ArticleModel } from '@/types/ArticleModel'
 import { Category } from '@/types/Category'
 import { Tag } from '@/types/Tag'

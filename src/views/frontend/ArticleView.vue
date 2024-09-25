@@ -20,7 +20,7 @@
 </template>
 
 <script lang="ts">
-import { getArticleInfo } from '@/api/api';
+import { getArticleInfo } from '@/api/user';
 import { Article } from '@/types/Article.ts'
 import { Tag } from 'element-plus';
 import { useUserStore, useSystemStore } from '@/store';

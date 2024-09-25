@@ -19,7 +19,7 @@ import ArticleTable from '@/components/backend/Table/ArticleTable.vue'
 import CategoryTable from '@/components/backend/Table/CategoryTable.vue'
 import TagTable from '@/components/backend/Table/TagTable.vue'
 
-import { getArticleList } from '@/api/api';
+import { getArticleList } from '@/api/user';
 import { Article } from '@/types/Article';
 
 import { Tag } from '@/types/Tag';

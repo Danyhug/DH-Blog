@@ -20,7 +20,7 @@
     @update="update" @cancel="cancel" />
 </template>
 <script lang="ts" setup>
-import { addCategory, deleteCategory, updateCategory } from '@/api/api';
+import { addCategory, deleteCategory, updateCategory } from '@/api/admin';
 import { useAdminStore } from '@/store';
 import { Category } from '@/types/Category';
 import { reactive, ref } from 'vue';
