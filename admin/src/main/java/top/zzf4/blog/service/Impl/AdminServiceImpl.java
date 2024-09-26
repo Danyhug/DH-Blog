@@ -1,5 +1,6 @@
 package top.zzf4.blog.service.Impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -25,7 +26,9 @@ public class AdminServiceImpl implements AdminService {
         PageResult<Articles> result = new PageResult<>();
 
         // 获取所有文章的基本信息
-        List<Articles> articles = new ArrayList<>(articleMapper.selectList(new QueryWrapper<>()));
+        List<Articles> articles = new ArrayList<>(
+                articleMapper.selectList(new LambdaQueryWrapper<Articles>().orderByDesc(Articles::getId))
+        );
 
         // 获取文章的所有标签
         for (Articles article: articles) {

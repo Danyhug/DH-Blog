@@ -21,7 +21,6 @@ import top.zzf4.blog.service.ArticleService;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLIntegrityConstraintViolationException;
-import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -43,7 +42,7 @@ public class AdminController {
      * @param article 文章类型
      */
     @Operation(summary = "新增文章")
-    @PostMapping
+    @PostMapping("/article")
     public AjaxResult<Void> save(@RequestBody ArticleInsertDTO article) {
         log.info("保存文章 {}", article);
         service.saveArticle(article);
@@ -55,7 +54,7 @@ public class AdminController {
      * @param articleUpdate 文章数据
      */
     @Operation(summary = "更新文章")
-    @PutMapping
+    @PutMapping("/article")
     public AjaxResult<Void> update(@RequestBody ArticleUpdateDTO articleUpdate) {
         service.updateArticle(articleUpdate);
         return AjaxResult.success();

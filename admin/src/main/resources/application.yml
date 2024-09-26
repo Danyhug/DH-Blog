@@ -53,4 +53,4 @@ qiniu:
 upload:
   path: P:\\Code\\Github\\DH-Blog\\admin\\src\\main\\resources\\static\\articleUpload\\
 
-debug: true
+debug: false
