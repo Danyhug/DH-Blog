@@ -1,0 +1,17 @@
+# 上线时将本文件命名为 application-prod.yml
+qiniu:
+  accessKey: 你的七牛访问密钥
+  secretKey: 你的七牛秘密密钥
+
+# 上传文件的目录，配置为 服务器的指定目录，博客的所有上传文件会在这里
+UPLOAD_PATH: 你的上传文件路径
+
+# 数据库的相关配置
+DATASOURCE_USER: 你的数据库用户名
+DATASOURCE_PASSWORD: 你的数据库密码
+DATASOURCE_HOST: 你的数据库主机地址
+
+# Redis的相关配置
+REDIS_HOST: 你的Redis主机地址
+REDIS_PASSWD: 你的Redis密码
+REDIS_PORT: 你的Redis端口

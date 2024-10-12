@@ -7,14 +7,16 @@ server:
     uri-encoding: UTF-8
 
 spring:
+  profiles:
+    active: prod
   application:
     name:
-      blog
+      DH-Blog
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:30306/dh_blog?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8
-    username: root
-    password: root
+    url: jdbc:mysql://${DATASOURCE_HOST}/dh_blog?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8
+    username: ${DATASOURCE_USER:root}
+    password: ${DATASOURCE_PASSWORD:root}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 8
@@ -31,17 +33,15 @@ spring:
         - classpath:/static/
   data:
     redis:
-      host: 127.0.0.1
-      port: 6379
-      password:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWD:}
       lettuce:
         pool:
           max-active: 10
           max-idle: 10
           min-idle: 1
           time-between-eviction-runs: 10s
-  profiles:
-    active: dev
 
 qiniu:
   accessKey: ${qiniu.accessKey}
@@ -51,6 +51,6 @@ qiniu:
 
 # 在这里写博客上传文件的目录
 upload:
-  path: P:\\Code\\Github\\DH-Blog\\admin\\src\\main\\resources\\static\\articleUpload\\
+  path: ${UPLOAD_PATH:P:\\Code\\Github\\DH-Blog\\admin\\src\\main\\resources\\static\\articleUpload\\}
 
 debug: false

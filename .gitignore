@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 admin/src/main/resources/static/
 stats.html
+admin/blog.tar.gz
+admin/src/main/resources/application-prod.yml
