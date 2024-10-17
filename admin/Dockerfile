@@ -10,7 +10,7 @@ COPY target/blog-0.0.1-SNAPSHOT.jar /app/dhBlog.jar
 # 设置环境变量，指定使用prov配置文件
 ENV SPRING_PROFILES_ACTIVE=prod
 
-# 暴露 Spring Boot 和 Nginx 端口
+# 暴露 Spring Boot 端口
 EXPOSE 8080
 
 # 启动脚本，同时启动 Nginx 和 Spring Boot

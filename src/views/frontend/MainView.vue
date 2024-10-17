@@ -5,9 +5,7 @@
       <p>文章列表</p>
     </div>
     <div class="posts">
-      <transition-group name="fade" tag="div">
-        <ArticleBox v-loading="show" v-for="item in store.articleList" :article="item" :key="item.id"></ArticleBox>
-      </transition-group>
+      <ArticleBox v-loading="show" v-for="item in store.articleList" :article="item" :key="item.id"></ArticleBox>
     </div>
     <div class="page">
       <Pagination :pageSize="store.page.pageSize" :currentPage="store.page.pageNum" :total="store.page.total"
@@ -28,7 +26,6 @@ const show = ref(true)
 const getPageList = () => {
   getArticleList(store.page).then(res => {
     store.articleList.splice(0, store.articleList.length, ...res.list)
-    show.value = false
 
     // 首次获取数据总数
     if (store.page.total == 0) store.page.total = res.total
@@ -36,6 +33,7 @@ const getPageList = () => {
       setTimeout(() => {
         const bannerHeight = document.querySelector('#banner')?.scrollHeight
         scrollTo(0, bannerHeight || 0)
+        show.value = false
       }, 320)
     }
   })
@@ -61,23 +59,6 @@ const changePage = (curr: number) => {
 
 </script>
 <style lang="less" scoped>
-.fade-enter-active {
-  transition: all .8s ease;
-}
-
-.fade-leave-active {
-  transition: all .1s ease;
-}
-
-.fade-leave-to {
-  opacity: 1;
-}
-
-.fade-enter-from {
-  opacity: 0;
-  transform: translateY(30px);
-}
-
 .tip {
   display: block;
   width: 100%;

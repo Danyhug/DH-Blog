@@ -8,10 +8,7 @@ import path from 'path'
 
 export default defineConfig({
   base: "./",
-  esbuild: {
-    drop: ['console', 'debugger'], // 删除 debugger
-  },
-
+  
   plugins: [
     visualizer(), vue(),
     AutoImport({ resolvers: [ElementPlusResolver()], }),
