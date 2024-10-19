@@ -129,6 +129,7 @@ onBeforeUnmount(() => {
 
   img {
     width: 95%;
+    margin: 0 auto;
   }
 }
 

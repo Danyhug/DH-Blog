@@ -25,18 +25,21 @@ const show = ref(true)
 
 const getPageList = () => {
   getArticleList(store.page).then(res => {
-    store.articleList.splice(0, store.articleList.length, ...res.list)
+    store.articleList = res.list; // 简化数组替换
 
-    // 首次获取数据总数
-    if (store.page.total == 0) store.page.total = res.total
-    else {
+    // 如果是首次加载数据，则设置数据总数
+    if (store.page.total === 0) {
+      store.page.total = res.total;
+      show.value = false;
+    } else {
+      // 无论是否首次，都在一段时间后隐藏加载动画并滚动
       setTimeout(() => {
-        const bannerHeight = document.querySelector('#banner')?.scrollHeight
-        scrollTo(0, bannerHeight || 0)
-        show.value = false
-      }, 320)
+        const bannerHeight = document.querySelector('#banner')?.scrollHeight || 0;
+        scrollTo(0, bannerHeight);
+        show.value = false;
+      }, 320);
     }
-  })
+  });
 }
 
 onMounted(() => {
