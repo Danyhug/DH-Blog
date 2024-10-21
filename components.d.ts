@@ -47,6 +47,7 @@ declare module 'vue' {
     HomeSide: typeof import('./src/components/frontend/Side/HomeSide.vue')['default']
     Icon: typeof import('./src/components/Child/Icon.vue')['default']
     Pagination: typeof import('./src/components/frontend/Pagination.vue')['default']
+    Pet: typeof import('./src/components/frontend/Pet.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     TableDialog: typeof import('./src/components/backend/Table/TableDialog.vue')['default']

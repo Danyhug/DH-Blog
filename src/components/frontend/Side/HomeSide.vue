@@ -40,10 +40,12 @@
         </li>
       </ul>
     </div>
-  </div>
 
+    <Pet />
+  </div>
 </template>
 <script>
+import Pet from '@/components/frontend/Pet.vue'
 
 export default {
   name: 'HomeSide',
@@ -57,6 +59,8 @@ export default {
 <style scoped>
 .info {
   padding-top: 24px;
+  position: relative;
+  height: 100vh;
 }
 
 .links {

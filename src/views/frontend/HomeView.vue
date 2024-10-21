@@ -27,6 +27,7 @@
         </transition>
       </div>
     </div>
+
     <Footer />
   </div>
 </template>
@@ -37,6 +38,7 @@ import Banner from '@/components/frontend/Banner.vue';
 import HomeSide from '@/components/frontend/Side/HomeSide.vue';
 import ArticleInfoSide from '@/components/frontend/Side/ArticleInfoSide.vue';
 import Footer from '@/components/frontend/Footer.vue';
+
 import { shallowRef } from 'vue';
 
 import { useUserStore } from '@/store/index'
