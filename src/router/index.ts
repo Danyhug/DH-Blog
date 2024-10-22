@@ -8,7 +8,7 @@ const HomeView = () => import(/* webpackChunkName: "home" */ '../views/frontend/
 const AdminView = () => import(/* webpackChunkName: "admin" */ '../views/backend/AdminView.vue');
 const PublishView = () => import(/* webpackChunkName: "publish" */ '../views/backend/PublishView.vue');
 const ManagerView = () => import(/* webpackChunkName: "manager" */ '../views/backend/ManagerView.vue');
-
+const LoginView = () => import(/* webpackChunkName: "login" */ '../views/backend/LoginView.vue');
 
 const routes = [
   { path: '/', redirect: '/view/home' },
@@ -32,6 +32,8 @@ const routes = [
         { path: 'manager', component: ManagerView }
       ]
   },
+  // 登录页面
+  { path: '/login', component: LoginView, name: 'Login' }
 ]
 
 const router = createRouter({
