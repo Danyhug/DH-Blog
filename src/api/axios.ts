@@ -1,5 +1,6 @@
-import axios, { AxiosResponse } from "axios"
+import axios, { AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from "axios"
 import { SERVER_URL } from '@/types/Constant.ts'
+import router from "@/router"
 
 // 返回值类型
 interface AjaxResult<T> {
@@ -15,6 +16,19 @@ const request = axios.create({
     'Content-Type': 'application/json;charset=UTF-8',
   },
 })
+
+// 添加请求拦截器
+request.interceptors.request.use(
+  function (config: InternalAxiosRequestConfig) {
+    // 在发送请求之前做些什么
+    config.headers.Authorization = localStorage.getItem('token') || '';
+    return config;
+  },
+  function (error) {
+    // 对请求错误做些什么
+    return Promise.reject(error);
+  }
+);
 
 // 添加响应拦截器
 request.interceptors.response.use(
@@ -33,6 +47,11 @@ request.interceptors.response.use(
   function (error) {
     // 超出 2xx 范围的状态码都会触发该函数。
     // 这里可以处理网络错误、超时等
+    if (error.status === 401) {
+      localStorage.removeItem('token')
+      router.replace({ name: 'Login' })
+    }
+
     return Promise.reject(error);
   }
 );

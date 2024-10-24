@@ -30,6 +30,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler
     public AjaxResult<String> exceptionHandler(RuntimeException ex) {
         log.error("异常信息：{}", ex.getMessage());
+        ex.printStackTrace();
         return AjaxResult.error(ex.getMessage());
     }
 }

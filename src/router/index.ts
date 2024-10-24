@@ -1,3 +1,4 @@
+import { userCheck } from '@/api/user';
 import { createRouter, createWebHashHistory } from 'vue-router'
 // 前端路由组件
 const ArticleView = () => import(/* webpackChunkName: "article" */ '../views/frontend/ArticleView.vue');
@@ -9,6 +10,7 @@ const AdminView = () => import(/* webpackChunkName: "admin" */ '../views/backend
 const PublishView = () => import(/* webpackChunkName: "publish" */ '../views/backend/PublishView.vue');
 const ManagerView = () => import(/* webpackChunkName: "manager" */ '../views/backend/ManagerView.vue');
 const LoginView = () => import(/* webpackChunkName: "login" */ '../views/backend/LoginView.vue');
+
 
 const routes = [
   { path: '/', redirect: '/view/home' },
@@ -24,7 +26,7 @@ const routes = [
   },
   // 后台页面
   {
-    path: '/admin', component: AdminView, children:
+    path: '/admin', component: AdminView, name: 'Admin', children:
       [
         // 博客发布
         { path: 'publish', component: PublishView, name: 'publish' },
@@ -41,14 +43,25 @@ const router = createRouter({
   routes,
 })
 
+const isAuthenticated = () => {
+  if (localStorage.getItem('token')) {
+    return userCheck()
+  }
+  return router.replace({ name: 'Login' })
+}
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   if (to.meta) {
     window.document.title = 'DH-Blog / ' + to.meta.title;
   } else {
     window.document.title = 'DH-Blog的个人纪录';
   }
-  next();
+
+  if (to.path.startsWith('/admin')) {
+    isAuthenticated()
+  }
+
+  next()
 })
 
 export default router

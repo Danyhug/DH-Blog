@@ -1,5 +1,6 @@
 package top.zzf4.blog.utils;
 
+import cn.hutool.core.convert.NumberWithFormat;
 import cn.hutool.crypto.digest.BCrypt;
 import cn.hutool.jwt.JWTPayload;
 import cn.hutool.jwt.JWTUtil;
@@ -37,7 +38,7 @@ public class JwtUtils {
             throw new RuntimeException("token无效");
         }
 
-        Long expire = (Long) payload.getClaim("expire");
+        long expire = ((NumberWithFormat) payload.getClaim("expire")).longValue();
         if (expire < System.currentTimeMillis()) {
             throw new RuntimeException("token 已过期");
         }

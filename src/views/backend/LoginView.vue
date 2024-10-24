@@ -131,7 +131,7 @@
     .left-wrap {
       display: none;
     }
-    
+
     .right-wrap {
       width: 100%;
     }
@@ -141,11 +141,13 @@
 
 <script setup lang="ts">
 import { UserLogin } from "@/types/User";
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
+import { userLogin } from "@/api/user";
+import router from "@/router";
 
 const user = ref<UserLogin>({
-  username: "",
-  password: "",
+  username: "admin",
+  password: "admin",
   valid: true,
   remember: false,
 });
@@ -155,8 +157,17 @@ const login = () => {
     if (user.value.username.length == 0 || user.value.password.length == 0) {
       ElMessage.error("账号或密码不能为空");
     } else {
-      ElMessage.success("登录成功");
+      userLogin(user.value).then(token => {
+        localStorage.setItem('token', token);
+
+        ElMessage.success('登录成功')
+        router.replace({ name: "Admin" })
+      })
     }
   }
 }
+
+onMounted(() => {
+  if (localStorage.getItem('token')) router.replace({ name: "Admin" })
+})
 </script>

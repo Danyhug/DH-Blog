@@ -3,6 +3,7 @@ import { Category } from '@/types/Category'
 import { Page, PageResult } from '@/types/Page'
 import { Tag } from '@/types/Tag'
 import request from '@/api/axios'
+import { UserLogin } from '@/types/User'
 
 /**
  * 查询文章详情
@@ -38,4 +39,16 @@ export const getArticleTagList = (): Promise<Tag[]> => {
   return request.get('/article/tag')
 }
 
+/**
+ * 用户登录
+ */
+export const userLogin = (user: UserLogin): Promise<string> => {
+  return request.post('/user/login', user)
+}
 
+/**
+ * 用户校验
+ */
+export const userCheck = () => {
+  return request.post('/user/check')
+}
