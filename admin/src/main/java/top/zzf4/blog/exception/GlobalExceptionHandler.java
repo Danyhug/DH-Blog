@@ -8,8 +8,8 @@ import top.zzf4.blog.entity.AjaxResult;
 import java.sql.SQLIntegrityConstraintViolationException;
 
 // 全局异常处理
-@RestControllerAdvice
 @Log4j2
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     /**
@@ -23,7 +23,13 @@ public class GlobalExceptionHandler {
     // }
 
     @ExceptionHandler
-    public AjaxResult<Void> exceptionHandler(SQLIntegrityConstraintViolationException ex) {
+    public AjaxResult<String> exceptionHandler(SQLIntegrityConstraintViolationException ex) {
+        return AjaxResult.error(ex.getMessage());
+    }
+
+    @ExceptionHandler
+    public AjaxResult<String> exceptionHandler(RuntimeException ex) {
+        log.error("异常信息：{}", ex.getMessage());
         return AjaxResult.error(ex.getMessage());
     }
 }

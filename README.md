@@ -7,6 +7,7 @@
 - JDK21 + SpringBoot3
 - MySQL + MybatisPlus
 - Redis
+- Swagger
 
 ### 前端部分
 
@@ -28,7 +29,7 @@
 - [ ] 文章类型功能 `博客 / 随笔，在不同页面展现`
 
 ## 部署
-> DH-Blog使用前后端分离技术，因此前端可以部署到任意地方，直接在 `src/types/Constant.ts` 中更改服务器地址和端口即可
+> `DH-Blog` 使用前后端分离技术，因此前端可以部署到任意地方，直接在 `src/types/Constant.ts` 中更改服务器地址和端口即可
 
 > 后端推荐使用 `docker` 进行部署
 
@@ -42,3 +43,4 @@
 ### 后端部分
 1. 进入 `admin` 目录下
 2. docker 容器开启端口 `8080:8080`
+3. 博客使用 `Swagger` 书写 API 文档，可以访问 `http://localhost:8080/doc.html` 直接打开文档
