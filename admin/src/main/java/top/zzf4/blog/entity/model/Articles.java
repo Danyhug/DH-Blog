@@ -44,4 +44,8 @@ public class Articles {
     private List<Tag> tags;
 
     private String thumbnailUrl; // 缩略图url
+    
+    private Boolean lock;
+
+    private String lockPassword;
 }

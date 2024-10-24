@@ -17,7 +17,7 @@ const routes = [
     path: '/view', component: HomeView, children:
       [
         {
-          path: 'home', component: MainView, name: 'Home'
+          path: 'home', component: MainView, name: 'Home', meta: { title: '我的个人纪录' }
         },
         { path: 'article/:id', component: ArticleView }
       ]
@@ -33,12 +33,22 @@ const routes = [
       ]
   },
   // 登录页面
-  { path: '/login', component: LoginView, name: 'Login' }
+  { path: '/login', component: LoginView, name: 'Login', meta: { title: '登录' } }
 ]
 
 const router = createRouter({
   history: createWebHashHistory(),
   routes,
+})
+
+
+router.beforeEach((to, from, next) => {
+  if (to.meta) {
+    window.document.title = 'DH-Blog / ' + to.meta.title;
+  } else {
+    window.document.title = 'DH-Blog的个人纪录';
+  }
+  next();
 })
 
 export default router

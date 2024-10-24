@@ -18,17 +18,17 @@
             <el-input v-model="user.username" placeholder="请输入账号" size="large" />
           </div>
           <div class="input-wrap">
-            <el-input v-model="user.password" placeholder="请输入密码" size="large" />
+            <el-input v-model="user.password" placeholder="请输入密码" size="large" type="password" />
           </div>
 
           <!-- TODO 验证滑块 -->
           <div class="forget-password">
-            <el-checkbox value="Online activities" name="type">记住密码</el-checkbox>
+            <el-checkbox v-model="user.remember" name="type">记住密码</el-checkbox>
             <a href="忘记密码？"></a>
           </div>
 
           <div class="login-btn">
-            <el-button type="primary" size="large">登录</el-button>
+            <el-button type="primary" size="large" @click="login">登录</el-button>
           </div>
         </div>
       </div>
@@ -52,12 +52,12 @@
       height: 200px;
       position: absolute;
       left: -58%;
-      top: 5%;
+      top: 0;
       background-color: rgba(0, 0, 0, .8);
-      transform: rotate(-45deg) translateX(50%);
+      transform: rotate(-38deg) translateX(50%);
 
       img {
-        transform: rotate(45deg) translateX(59%) translateY(8%);
+        transform: rotate(38deg) translateX(56%) translateY(24%);
         height: 130px;
       }
     }
@@ -124,6 +124,19 @@
     }
   }
 }
+
+// 平板适配
+@media screen and (max-width: 960px) {
+  .login {
+    .left-wrap {
+      display: none;
+    }
+    
+    .right-wrap {
+      width: 100%;
+    }
+  }
+}
 </style>
 
 <script setup lang="ts">
@@ -133,7 +146,17 @@ import { ref } from "vue";
 const user = ref<UserLogin>({
   username: "",
   password: "",
-  valid: false,
+  valid: true,
   remember: false,
 });
+
+const login = () => {
+  if (user.value.valid) {
+    if (user.value.username.length == 0 || user.value.password.length == 0) {
+      ElMessage.error("账号或密码不能为空");
+    } else {
+      ElMessage.success("登录成功");
+    }
+  }
+}
 </script>
