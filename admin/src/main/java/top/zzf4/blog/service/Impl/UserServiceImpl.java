@@ -20,7 +20,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         User user = this.getOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
         if (user == null) throw new RuntimeException("用户不存在");
 
-        if (!user.getPassword().equals(password)) throw new RuntimeException("密码错误");
+        // 验证密码
+        if (!JwtUtils.verifyByBCrypt(password, user.getPassword())) {
+            throw new RuntimeException("密码错误");
+        }
 
         return JwtUtils.createToken(user);
     }

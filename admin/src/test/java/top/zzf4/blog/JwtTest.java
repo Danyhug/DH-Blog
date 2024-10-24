@@ -7,7 +7,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import top.zzf4.blog.entity.model.User;
 import top.zzf4.blog.mapper.UserMapper;
 import top.zzf4.blog.utils.JwtUtils;
-import top.zzf4.blog.utils.Tools;
 
 @Log4j2
 @SpringBootTest
@@ -27,9 +26,9 @@ public class JwtTest {
 
     @Test
     public void addUser() {
-        String username = "danyhug";
-        String rawPassword = "153669225";
-        String hashPassword = Tools.encodeByBCrypt(rawPassword);
+        String username = "admin";
+        String rawPassword = "admin";
+        String hashPassword = JwtUtils.encodeByBCrypt(rawPassword);
         userMapper.insert(User.builder().username(username).password(hashPassword).build());
     }
 }

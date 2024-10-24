@@ -23,4 +23,10 @@ public class UserController {
     public AjaxResult<String> login(String username, String password) {
         return AjaxResult.success(userService.login(username, password));
     }
+
+    @Operation(summary = "用户校验")
+    @PostMapping("/check")
+    public AjaxResult<Void> check() {
+        return AjaxResult.success();
+    }
 }
