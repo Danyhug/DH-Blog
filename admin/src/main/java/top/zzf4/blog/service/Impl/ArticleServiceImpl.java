@@ -273,7 +273,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
     @Override
     public void saveCategoryDefaultTags(Long categoryId, Long[] tagIds) {
         // 能执行到这里说明 categoryId 肯定存在
-        
+
         // 删除之前的数据
         categoryDefaultTagsMapper.delete(new LambdaQueryWrapper<CategoryDefaultTags>().eq(CategoryDefaultTags::getCategoryId, categoryId));
 
@@ -307,6 +307,11 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
     @Override
     public void deleteTag(String id) {
         tagMapper.deleteById(id);
+    }
+
+    @Override
+    public List<Long> getCategoryDefaultTagsById(Long id) {
+        return categoryDefaultTagsMapper.selectList(new LambdaQueryWrapper<CategoryDefaultTags>().eq(CategoryDefaultTags::getCategoryId, id)).stream().map(CategoryDefaultTags::getTagId).collect(Collectors.toList());
     }
 
     /**

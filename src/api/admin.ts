@@ -82,6 +82,15 @@ export const deleteCategory = (id: String): Promise<any> => {
   return request.delete('/admin/category/' + id)
 }
 
+/**
+ * 通过分类id查询标签列表
+ * @param data 
+ * @returns 
+ */
+export const getTagListByCategoryId = (categoryId: number): Promise<number[]> => {
+  return request.get(`/admin/category/${categoryId}/tags`)
+}
+
 // ********** 文件上传 **********
 export const uploadFile = (data: FormData): Promise<String> => {
   return request.post('/admin/upload', data, {

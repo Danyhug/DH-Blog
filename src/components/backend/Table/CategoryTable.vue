@@ -25,16 +25,14 @@
 </template>
 
 <script lang="ts" setup>
-import { addCategory, deleteCategory, updateCategory } from '@/api/admin';
+import { addCategory, deleteCategory, getTagListByCategoryId, updateCategory } from '@/api/admin';
 import { useAdminStore } from '@/store';
 import { Category } from '@/types/Category';
-import { reactive, ref, onMounted } from 'vue';
+import { reactive, ref } from 'vue';
 import TableDialog from '@/components/backend/Table/TableDialog.vue'
 
+// 绑定的标签
 const bindTags = ref<number[]>([])
-
-onMounted(() => {
-})
 
 const store = useAdminStore()
 const state = ref('add')
@@ -66,6 +64,12 @@ const edit = (row: Category) => {
   state.value = 'edit'
   Object.assign(category, row)
   visible.value = true
+
+  if (category.id) {
+    getTagListByCategoryId(category.id).then(res => {
+      bindTags.value = res
+    })
+  }
 }
 
 const update = () => {

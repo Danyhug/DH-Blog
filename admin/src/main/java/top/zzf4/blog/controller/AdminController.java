@@ -21,6 +21,7 @@ import top.zzf4.blog.service.ArticleService;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLIntegrityConstraintViolationException;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -158,6 +159,15 @@ public class AdminController {
     public AjaxResult<String> deleteCategory(@PathVariable String id) {
         service.deleteCategory(id);
         return AjaxResult.success("已删除分类");
+    }
+
+    /**
+     * 根据分类id查询标签id
+     */
+    @Operation(summary = "根据分类id查询标签id")
+    @GetMapping("/category/{id}/tags")
+    public AjaxResult<List<Long>> getTagsByCategoryId(@PathVariable String id) {
+        return AjaxResult.success(service.getCategoryDefaultTagsById(Long.valueOf(id)));
     }
 
     /**

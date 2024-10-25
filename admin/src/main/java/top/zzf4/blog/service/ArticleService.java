@@ -107,4 +107,10 @@ public interface ArticleService extends IService<Articles> {
      * @param id 标签id
      */
     void deleteTag(String id);
+
+    /**
+     * 查询分类默认标签
+     * @return 分类默认标签id列表
+     */
+    List<Long> getCategoryDefaultTagsById(Long id);
 }
