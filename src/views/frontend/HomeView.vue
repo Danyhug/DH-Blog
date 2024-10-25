@@ -42,7 +42,7 @@ import Footer from '@/components/frontend/Footer.vue';
 import { shallowRef, watch } from 'vue';
 
 import { useUserStore } from '@/store/index'
-import { useRouter, useRoute } from 'vue-router';
+import { useRoute } from 'vue-router';
 
 const sideShowComponent = shallowRef(HomeSide);
 

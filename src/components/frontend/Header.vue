@@ -1,81 +1,76 @@
 <template>
-    <div>
-        <nav id="nav">
-            <ul class="menu">
-                <li class="item">
-                    <a href="/">
-                        <Icon iconName="icon-chengbao"></Icon>
-                        首页
-                    </a>
-                </li>
-                <li class="item">
-                    <a href="about">
-                        <Icon iconName="icon-chaoren"></Icon>
-                        关于
-                    </a>
-                </li>
-                <li class="item">
-                    <a href="tags">
-                        <Icon iconName="icon-fenlei"></Icon>
-                        分类
-                    </a>
-                </li>
-            </ul>
-
-            <ul class="right">
-                <li>
-                    <!-- 夜间模式 -->
-                    <Icon iconName="icon-richu"></Icon>
-                </li>
-                <li>
-                    <!-- 搜索 -->
-                    <Icon iconName="icon-sousuo"></Icon>
-                </li>
-            </ul>
-        </nav>
-    </div>
+  <div>
+    <nav id="nav">
+      <ul class="menu">
+        <li class="item">
+          <router-link to="/">
+            <Icon iconName="icon-chengbao"></Icon>
+            首页
+          </router-link>
+        </li>
+        <li class="item">
+          <router-link to="/about">
+            <Icon iconName="icon-chaoren"></Icon>
+            关于
+          </router-link>
+        </li>
+        <li class="item">
+          <router-link to="/tags">
+            <Icon iconName="icon-fenlei"></Icon>
+            分类
+          </router-link>
+        </li>
+        <li class="item">
+          <router-link to="/admin">
+            <Icon iconName="icon-fenlei"></Icon>
+            后台
+          </router-link>
+        </li>
+      </ul>
+    </nav>
+  </div>
 </template>
 
 <script>
 export default {
-    name: "Header"
+  name: "Header"
 }
 </script>
 
 <style lang="less" scoped>
 #nav {
-    padding: .625rem 100px;
-    position: absolute;
-    top: 0;
-    height: 50px;
-    color: var(--grey-0);
-    text-shadow: 0 .2rem .3rem rgba(0, 0, 0, .5);
-    line-height: 50px;
+  padding: .625rem 100px;
+  position: absolute;
+  top: 0;
+  height: 50px;
+  color: var(--grey-0);
+  text-shadow: 0 .2rem .3rem rgba(0, 0, 0, .5);
+  line-height: 50px;
 }
 
 #nav .inner {
-    display: flex;
-    flex-wrap: nowrap;
+  display: flex;
+  flex-wrap: nowrap;
 }
 
 .menu {
-    width: 100%;
+  width: 100%;
 
-    .item {
-        padding: 0 20px;
-    }
+  .item {
+    padding: 0 20px;
+  }
 }
 
 .menu,
 .right {
-    display: flex;
+  display: flex;
 
-    li {
-        margin-left: 1.875rem;
-    }
+  li {
+    margin-left: 1.875rem;
+  }
 }
 
 ul {
-    list-style: none;
+  list-style: none;
 }
 </style>
