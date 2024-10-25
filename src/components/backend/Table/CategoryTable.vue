@@ -53,6 +53,7 @@ const add = () => {
 }
 
 const confirmAdd = () => {
+  category.tagIds = bindTags.value
   addCategory(category).then(() => {
     visible.value = false
     ElMessage.success('新增分类成功')
@@ -84,9 +85,4 @@ const del = (id: String) => {
 }
 
 const cancel = () => visible.value = false
-
-// 绑定标签
-const bindTag = () => {
-  alert(5)
-}
 </script>

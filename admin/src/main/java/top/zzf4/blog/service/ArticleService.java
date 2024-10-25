@@ -93,6 +93,11 @@ public interface ArticleService extends IService<Articles> {
     void updateCategory(Category category);
 
     /**
+     * 保存分类默认标签
+     */
+    void saveCategoryDefaultTags(Long categoryId, Long[] tagIds);
+
+    /**
      * 更新标签
      */
     void updateTag(Tag tag);

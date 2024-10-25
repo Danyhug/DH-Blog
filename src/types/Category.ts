@@ -4,4 +4,5 @@ export interface Category {
   slug: string;
   createTime?: Date;
   updateTime?: Date;
+  tagIds?: number[];
 }

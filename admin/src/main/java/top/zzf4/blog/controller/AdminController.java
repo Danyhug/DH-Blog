@@ -119,7 +119,10 @@ public class AdminController {
     @Operation(summary = "新增分类")
     @PostMapping("/category")
     public AjaxResult<Void> saveCategory(@RequestBody Category category) throws SQLIntegrityConstraintViolationException {
+        // 保存分类
         service.saveCategory(category);
+        // 保存分类默认标签
+        service.saveCategoryDefaultTags(category.getId(), category.getTagIds());
         return AjaxResult.success();
     }
 

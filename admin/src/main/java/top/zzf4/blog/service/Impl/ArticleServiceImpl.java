@@ -19,10 +19,12 @@ import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
 import top.zzf4.blog.entity.model.Articles;
 import top.zzf4.blog.entity.model.Category;
+import top.zzf4.blog.entity.model.CategoryDefaultTags;
 import top.zzf4.blog.entity.model.Tag;
 import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.mapper.ArticleMapper;
 import top.zzf4.blog.mapper.CategoriesMapper;
+import top.zzf4.blog.mapper.CategoryDefaultTagsMapper;
 import top.zzf4.blog.mapper.TagsMapper;
 import top.zzf4.blog.service.ArticleService;
 import top.zzf4.blog.utils.RedisCacheUtils;
@@ -46,6 +48,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
     private TagsMapper tagMapper;
     @Autowired
     private CategoriesMapper categoriesMapper;
+    @Autowired
+    private CategoryDefaultTagsMapper categoryDefaultTagsMapper;
 
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
@@ -250,6 +254,25 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
     @Override
     public void updateCategory(Category category) {
         categoriesMapper.updateById(category);
+    }
+
+    @Override
+    public void saveCategoryDefaultTags(Long categoryId, Long[] tagIds) {
+        // 能执行到这里说明 categoryId 肯定存在
+
+        // 遍历tags
+        for (Long tagId: tagIds) {
+            // 删除之前的数据
+            categoryDefaultTagsMapper.delete(new LambdaQueryWrapper<CategoryDefaultTags>().eq(CategoryDefaultTags::getCategoryId, categoryId));
+
+            // 插入新的数据
+            categoryDefaultTagsMapper.insert(
+                    CategoryDefaultTags.builder()
+                            .categoryId(categoryId)
+                            .tagId(tagId)
+                            .build()
+            );
+        }
     }
 
     /**

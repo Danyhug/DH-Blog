@@ -63,7 +63,7 @@ export const deleteTag = (id: String): Promise<any> => {
  * @param data
  */
 export const addCategory = (data: Category): Promise<Category> => {
-  return request.post('/admin/article/category', data)
+  return request.post('/admin/category', data)
 }
 
 /**
@@ -71,7 +71,7 @@ export const addCategory = (data: Category): Promise<Category> => {
  * @param data
  */
 export const updateCategory = (data: Category): Promise<Category> => {
-  return request.put('/admin/article/category', data)
+  return request.put('/admin/category', data)
 }
 
 /**
@@ -79,7 +79,7 @@ export const updateCategory = (data: Category): Promise<Category> => {
  * @param id
  */
 export const deleteCategory = (id: String): Promise<any> => {
-  return request.delete('/admin/article/category/' + id)
+  return request.delete('/admin/category/' + id)
 }
 
 // ********** 文件上传 **********
