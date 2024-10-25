@@ -49,8 +49,8 @@ public class ArticleController {
      * 获取需要解密的文章
      */
     @Operation(summary = "获取需要解密的文章")
-    @PostMapping("/unlock")
-    public AjaxResult<Articles> getLockArticle(@RequestBody String id, @RequestBody String password) {
+    @GetMapping("/unlock/{id}/{password}")
+    public AjaxResult<Articles> getLockArticle(@PathVariable String id, @PathVariable String password) {
         log.info("获取需要解密的文章 {}", id);
         Articles articleById = service.getArticleById(Long.valueOf(id));
 

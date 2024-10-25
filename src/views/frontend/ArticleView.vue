@@ -26,6 +26,7 @@ import { Tag } from 'element-plus';
 import { useUserStore, useSystemStore } from '@/store';
 import { getArticleBg } from '@/utils/tool';
 import { watch } from 'vue';
+import router from '@/router';
 
 export default {
   name: 'HomeView',
@@ -62,29 +63,43 @@ export default {
       }
     })
 
+    let unlockData = localStorage.getItem('unlockArticle')
+    if (unlockData) {
+      const data = JSON.parse(unlockData) as Article<any>
+      this.changeArticleInfo(data)
+      localStorage.removeItem('unlockArticle')
+      return
+    }
 
     getArticleInfo(this.$route.params.id as string).then((res: Article<Tag>) => {
-      this.id = res.id || 0
-      this.title = res.title || ''
-      this.content = res.content || ''
-      this.created = res.createTime || ''
-      this.update = res.updateTime || ''
-      this.viewnum = res.views || 0
-
-      // 更改pinia内容
-      this.store.homeHeaderInfo = {
-        title: this.title,
-        created: this.created,
-        wordNum: res.wordNum || 0,
-        timConSum: res.wordNum ? (res.wordNum / 400 + 0.5).toFixed(0) : '0',
-        thumbnailUrl: getArticleBg(res.thumbnailUrl),
-        tags: res.tags
+      this.changeArticleInfo(res)
+    }).catch(err => {
+      if (err.message.indexOf('输入密码') != -1) {
+        router.replace({ name: 'Lock', query: { id: this.$route.params.id } })
       }
     })
   },
   methods: {
     changeIsFullPreview() {
       this.store.aritcleModel.isFullPreview = !this.store.aritcleModel.isFullPreview
+    },
+    changeArticleInfo(article: Article<Tag>) {
+      this.id = article.id || 0
+      this.title = article.title || ''
+      this.content = article.content || ''
+      this.created = article.createTime || ''
+      this.update = article.updateTime || ''
+      this.viewnum = article.views || 0
+
+      // 更改pinia内容
+      this.store.homeHeaderInfo = {
+        title: this.title,
+        created: this.created,
+        wordNum: article.wordNum || 0,
+        timConSum: article.wordNum ? (article.wordNum / 400 + 0.5).toFixed(0) : '0',
+        thumbnailUrl: getArticleBg(article.thumbnailUrl),
+        tags: article.tags
+      }
     }
   }
 }

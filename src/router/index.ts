@@ -22,7 +22,7 @@ const routes = [
         {
           path: 'home', component: MainView, name: 'Home', meta: { title: '我的个人纪录' }
         },
-        { path: 'article/:id', component: ArticleView }
+        { path: 'article/:id', component: ArticleView, name: 'ArticleInfo' }
       ]
   },
   // 后台页面
@@ -38,7 +38,7 @@ const routes = [
   // 登录页面
   { path: '/login', component: LoginView, name: 'Login', meta: { title: '登录' } },
   // 加密页面
-  { path: '/lock', component: LockView, name: 'Lock', meta: { title: '锁定' } },
+  { path: '/lock', component: LockView, name: 'Lock', meta: { title: '私密文章' } },
 ]
 
 const router = createRouter({

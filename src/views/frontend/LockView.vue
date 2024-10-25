@@ -13,15 +13,16 @@
           </div>
         </div>
 
-        <div class="title">已被设为私密文章 / 输入秘钥解锁</div>
+        <div class="title">已被设为私密文章 / 输入密钥解锁</div>
         <div class="form">
-          <input type="text">
-          <el-icon size="2em" style="vertical-align: text-bottom; position: relative; left: -30px;">
+          <input type="text" autofocus v-model="data.password" />
+          <el-icon size="2em" style="vertical-align: text-bottom; position: relative; left: -30px; cursor: pointer;"
+            @click="check">
             <Unlock />
           </el-icon>
         </div>
 
-        <button>
+        <button @click="goBack">
           <span class="text">返回</span>
         </button>
       </div>
@@ -30,6 +31,26 @@
 </template>
 
 <script setup lang="ts">
+import { unLockArticle } from '@/api/user';
+import router from '@/router';
+import { useRoute } from 'vue-router';
+import { reactive } from 'vue';
+
+const route = useRoute()
+const goBack = () => router.back()
+
+const data = reactive({
+  id: route.query.id as unknown as number,
+  password: ''
+})
+
+const check = () => {
+  unLockArticle(data.id, data.password).then(res => {
+    // 携带数据返回文章页
+    localStorage.setItem('unlockArticle', JSON.stringify(res))
+    router.replace({ name: 'ArticleInfo', params: { id: data.id } })
+  })
+}
 </script>
 
 <style scoped lang="less">

@@ -39,7 +39,7 @@ import HomeSide from '@/components/frontend/Side/HomeSide.vue';
 import ArticleInfoSide from '@/components/frontend/Side/ArticleInfoSide.vue';
 import Footer from '@/components/frontend/Footer.vue';
 
-import { shallowRef } from 'vue';
+import { shallowRef, watch } from 'vue';
 
 import { useUserStore } from '@/store/index'
 import { useRouter, useRoute } from 'vue-router';
@@ -47,7 +47,6 @@ import { useRouter, useRoute } from 'vue-router';
 const sideShowComponent = shallowRef(HomeSide);
 
 const store = useUserStore();
-const router = useRouter()
 const route = useRoute()
 
 if (route.path == '/view/home') {
@@ -57,17 +56,17 @@ if (route.path == '/view/home') {
   sideShowComponent.value = ArticleInfoSide;
   store.homeShowComponent = 'articleInfoSide'
 }
-router.beforeEach((_, __, next) => {
-  if (store.homeShowComponent == 'articleInfoSide') {
+
+watch(() => route.path, _ => {
+  if (route.path == '/view/home') {
     sideShowComponent.value = HomeSide;
     store.homeShowComponent = 'home'
-  } else if (store.homeShowComponent == 'home') {
+  } else {
     sideShowComponent.value = ArticleInfoSide;
     store.homeShowComponent = 'articleInfoSide'
   }
-
-  next()
 })
+
 </script>
 
 <style scoped>

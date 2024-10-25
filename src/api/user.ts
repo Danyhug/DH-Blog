@@ -52,3 +52,10 @@ export const userLogin = (user: UserLogin): Promise<string> => {
 export const userCheck = () => {
   return request.post('/user/check')
 }
+
+/**
+ *  解密文章
+ */
+export const unLockArticle = (id: number, password: string): Promise<Article<any>> => {
+  return request.get(`/article/unlock/${id}/${password}`)
+}
