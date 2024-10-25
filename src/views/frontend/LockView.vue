@@ -17,9 +17,13 @@
         <div class="form">
           <input type="text">
           <el-icon size="2em" style="vertical-align: text-bottom; position: relative; left: -30px;">
-            <Search />
+            <Unlock />
           </el-icon>
         </div>
+
+        <button>
+          <span class="text">返回</span>
+        </button>
       </div>
     </div>
   </div>
@@ -42,6 +46,8 @@
   color: #f5f5f5;
 
   .left {
+    padding-right: 5%;
+
     img {
       width: 360px;
       height: 471px;
@@ -49,6 +55,7 @@
   }
 
   .right {
+    margin-right: 7%;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -107,6 +114,54 @@
         }
       }
     }
+
+    button {
+      margin-top: 14px;
+      margin-right: 14%;
+      align-self: flex-end;
+      background-image: linear-gradient(144deg, #af40ff, #5b42f3 50%, #00ddeb);
+      border: 0;
+      border-radius: 8px;
+      box-shadow: rgba(151, 65, 252, 0.2) 0 15px 30px -5px;
+      box-sizing: border-box;
+      color: #f5f5f5;
+      display: flex;
+      font-size: 18px;
+      justify-content: center;
+      line-height: 1em;
+      width: 23%;
+      padding: 3px;
+      text-decoration: none;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    button:active,
+    button:hover {
+      outline: 0;
+    }
+
+    button span {
+      background-color: rgb(5, 6, 45);
+      padding: 16px 24px;
+      border-radius: 6px;
+      width: 100%;
+      height: 100%;
+      transition: 300ms;
+    }
+
+    button:hover span {
+      background: none;
+    }
+
+    button:active {
+      transform: scale(0.9);
+    }
+
   }
 }
 </style>

@@ -303,7 +303,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
             // 1.1 查询数据库数据
             // 获取所有文章的基本信息
             List<Articles> articles = new ArrayList<>(articleMapper.selectList(new LambdaQueryWrapper<Articles>()
-                    .select(Articles::getId, Articles::getTitle, Articles::getThumbnailUrl, Articles::getCreateTime, Articles::getViews, Articles::getWordNum)));
+                    .select(Articles::getId, Articles::getTitle, Articles::getThumbnailUrl, Articles::getCreateTime,
+                            Articles::getViews, Articles::getWordNum, Articles::getIsLocked)));
 
             // 所有分数
             ArrayList<Double> scores = new ArrayList<>();

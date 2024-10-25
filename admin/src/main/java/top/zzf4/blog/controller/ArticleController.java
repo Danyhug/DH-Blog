@@ -35,9 +35,30 @@ public class ArticleController {
     @GetMapping("/{id}")
     public AjaxResult<Articles> detail(@PathVariable String id) {
         log.info("获取文章详情 {}", id);
-        return AjaxResult.success(
-                service.getArticleById(Long.valueOf(id))
-        );
+        Articles articleById = service.getArticleById(Long.valueOf(id));
+
+        // 检查是否需要 解密
+        if (articleById.getIsLocked()) {
+            return AjaxResult.error("加密文章，请输入密码后访问");
+        }
+
+        return AjaxResult.success(articleById);
+    }
+
+    /**
+     * 获取需要解密的文章
+     */
+    @Operation(summary = "获取需要解密的文章")
+    @PostMapping("/unlock")
+    public AjaxResult<Articles> getLockArticle(@RequestBody String id, @RequestBody String password) {
+        log.info("获取需要解密的文章 {}", id);
+        Articles articleById = service.getArticleById(Long.valueOf(id));
+
+        if (articleById.isUnLock(password)) {
+            return AjaxResult.success(articleById);
+        }
+
+        return AjaxResult.error("密码错误");
     }
 
     /**
