@@ -37,7 +37,7 @@ export const updateArticle = (data: Article<any>): Promise<Article<any>> => {
  * @param data
  */
 export const addTag = (data: Tag): Promise<Tag> => {
-  return request.post('/admin/article/tag', data)
+  return request.post('/admin/tag', data)
 }
 
 /**
@@ -45,7 +45,7 @@ export const addTag = (data: Tag): Promise<Tag> => {
  * @param data
  */
 export const updateTag = (data: Tag): Promise<Tag> => {
-  return request.put('/admin/article/tag', data)
+  return request.put('/admin/tag', data)
 }
 
 /**
@@ -53,7 +53,7 @@ export const updateTag = (data: Tag): Promise<Tag> => {
  * @param id
  */
 export const deleteTag = (id: String): Promise<any> => {
-  return request.delete('/admin/article/tag/' + id)
+  return request.delete('/admin/tag' + id)
 }
 
 // ********** 分类操作 **********

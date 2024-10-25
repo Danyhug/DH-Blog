@@ -168,6 +168,9 @@ const login = () => {
 }
 
 onMounted(() => {
-  if (localStorage.getItem('token')) router.replace({ name: "Admin" })
+  if (localStorage.getItem('token')) {
+    ElMessage.success('登录状态校验成功')
+    router.replace({ name: "Admin" })
+  }
 })
 </script>

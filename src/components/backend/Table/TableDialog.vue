@@ -7,6 +7,8 @@
       <el-form-item label="别名(SEO优化)">
         <el-input v-model="data.slug" />
       </el-form-item>
+
+      <slot></slot> 
     </el-form>
     <template #footer>
       <div class="dialog-footer">

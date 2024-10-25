@@ -21,7 +21,7 @@
           </router-link>
         </li>
         <li class="item">
-          <router-link to="/admin">
+          <router-link to="/login">
             <Icon iconName="icon-fenlei"></Icon>
             后台
           </router-link>

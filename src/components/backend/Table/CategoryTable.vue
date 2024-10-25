@@ -17,19 +17,29 @@
   </el-table>
 
   <TableDialog :visible="visible" :state="state" :data="category" @close="visible = false" @add="confirmAdd"
-    @update="update" @cancel="cancel" />
+    @update="update" @cancel="cancel">
+    <el-form-item label="绑定标签">
+      <el-checkbox v-model="bindTags" :label="tag.name" :value="tag.id" :key="tag.id" v-for="tag in tags" />
+    </el-form-item>
+  </TableDialog>
 </template>
+
 <script lang="ts" setup>
 import { addCategory, deleteCategory, updateCategory } from '@/api/admin';
 import { useAdminStore } from '@/store';
 import { Category } from '@/types/Category';
-import { reactive, ref } from 'vue';
+import { reactive, ref, onMounted } from 'vue';
 import TableDialog from '@/components/backend/Table/TableDialog.vue'
+
+const bindTags = ref<number[]>([])
+
+onMounted(() => {
+})
 
 const store = useAdminStore()
 const state = ref('add')
 const visible = ref(false)
-const props = defineProps(['categories'])
+const props = defineProps(['categories', 'tags'])
 const category = reactive<Category>({
   name: '',
   slug: ''
@@ -74,4 +84,9 @@ const del = (id: String) => {
 }
 
 const cancel = () => visible.value = false
+
+// 绑定标签
+const bindTag = () => {
+  alert(5)
+}
 </script>

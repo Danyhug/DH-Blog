@@ -70,7 +70,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
             // 查询文章的信息
             Articles articles = this.getById(id);
             // 再查询文章的标签信息
-            List<Tag> tagsByArticleId = tagMapper.getTagsByArticleId(id);
+            List<Tag> tagsByArticleId = tagMapper.selectList(new LambdaQueryWrapper<Tag>().eq(Tag::getId, articles.getId()));
+
             articles.setTags(tagsByArticleId);
 
 
@@ -114,7 +115,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
         // 查询标签slug对应id
         for (String tag : articleInsertDTO.getTags()) {
             // 临时标签数据
-            Tag tagTemp = tagMapper.selectBySlug(tag);
+            // Tag tagTemp = tagMapper.selectBySlug(tag);
+            Tag tagTemp = tagMapper.selectOne(new LambdaQueryWrapper<Tag>().eq(Tag::getSlug, tag));
 
             // 插入进postTags表中
             tagMapper.savePostTags(articles.getId(), tagTemp.getId());
@@ -138,7 +140,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
         List<String> tags = articleUpdateDTO.getTags();
         for (String tag : tags) {
             // 临时标签数据
-            Tag tagTemp = tagMapper.selectBySlug(tag);
+            Tag tagTemp = tagMapper.selectOne(new LambdaQueryWrapper<Tag>().eq(Tag::getSlug, tag));
 
             // 插入进postTags表中
             tagMapper.savePostTags(articles.getId(), tagTemp.getId());
@@ -175,16 +177,16 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
     @Transactional
     public void saveTag(TagInsertDTO tagInsertDTO) throws SQLIntegrityConstraintViolationException {
         // 查看表中是否有相关值
-        if (tagMapper.selectBySlug(tagInsertDTO.getSlug()) != null) {
+        if (tagMapper.selectOne(new LambdaQueryWrapper<Tag>().eq(Tag::getSlug, tagInsertDTO.getSlug())) != null) {
             // 抛出主键异常
             throw new SQLIntegrityConstraintViolationException(MessageConstant.TAG_EXIST);
         }
 
         Tag tag = new Tag();
-
         tag.setName(tagInsertDTO.getName());
         tag.setSlug(tagInsertDTO.getSlug());
-        tagMapper.saveTag(tag);
+
+        tagMapper.insert(tag);
     }
 
     /**
@@ -194,7 +196,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
      */
     @Override
     public List<Tag> getTags() {
-        return tagMapper.getTags();
+        return tagMapper.selectList(new QueryWrapper<>());
     }
 
     /**
@@ -257,7 +259,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
      */
     @Override
     public void updateTag(Tag tag) {
-        tagMapper.updateTag(tag);
+        tagMapper.updateById(tag);
     }
 
     /**

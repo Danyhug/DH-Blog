@@ -5,7 +5,7 @@
     </el-tab-pane>
 
     <el-tab-pane label="分类管理" name="second">
-      <CategoryTable :categories="categories"></CategoryTable>
+      <CategoryTable :categories="categories" :tags="tags"></CategoryTable>
     </el-tab-pane>
 
     <el-tab-pane label="标签管理" name="third">
