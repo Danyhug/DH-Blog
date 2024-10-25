@@ -4,6 +4,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 const ArticleView = () => import(/* webpackChunkName: "article" */ '../views/frontend/ArticleView.vue');
 const MainView = () => import(/* webpackChunkName: "main" */ '../views/frontend/MainView.vue');
 const HomeView = () => import(/* webpackChunkName: "home" */ '../views/frontend/HomeView.vue');
+const LockView = () => import(/* webpackChunkName: "lock" */ '../views/frontend/LockView.vue');
 
 // 后端路由组件
 const AdminView = () => import(/* webpackChunkName: "admin" */ '../views/backend/AdminView.vue');
@@ -35,7 +36,9 @@ const routes = [
       ]
   },
   // 登录页面
-  { path: '/login', component: LoginView, name: 'Login', meta: { title: '登录' } }
+  { path: '/login', component: LoginView, name: 'Login', meta: { title: '登录' } },
+  // 加密页面
+  { path: '/lock', component: LockView, name: 'Lock', meta: { title: '锁定' } },
 ]
 
 const router = createRouter({

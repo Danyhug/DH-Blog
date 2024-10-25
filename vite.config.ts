@@ -12,7 +12,7 @@ export default defineConfig({
 
   plugins: [
     visualizer(), vue(),
-    AutoImport({ resolvers: [ElementPlusResolver()], }),
+    AutoImport({ resolvers: [ElementPlusResolver()] }),
     Components({
       resolvers: [ElementPlusResolver()],
     }),
