@@ -52,7 +52,6 @@ public class Articles {
     /**
      * 判断文章是否解锁
      * @param password 明文密码
-     * @return
      */
     public Boolean isUnLock(String password) {
         return this.lockPassword.equals(password);

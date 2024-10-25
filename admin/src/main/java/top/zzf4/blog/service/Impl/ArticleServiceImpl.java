@@ -32,10 +32,7 @@ import top.zzf4.blog.utils.RedisCacheUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.SQLIntegrityConstraintViolationException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Log4j2
@@ -73,11 +70,28 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
 
             // 查询文章的信息
             Articles articles = this.getById(id);
-            // 再查询文章的标签信息
+
+            // 1.1.1 获取文章的分类id
+            Integer categoryId = articles.getCategoryId();
+
+            // 1.1.2 根据分类id查询默认标签的id
+            Set<Long> tagsIdsSet = categoryDefaultTagsMapper.selectList(new LambdaQueryWrapper<CategoryDefaultTags>()
+                    .eq(CategoryDefaultTags::getCategoryId, categoryId)).stream().map(CategoryDefaultTags::getTagId)
+                    .collect(Collectors.toSet());
+
+            // 1.1.3 遍历所有标签id查询出对应id信息
+            List<Tag> tags = new ArrayList<>();
+            if (!tagsIdsSet.isEmpty()) {
+                tags = tagMapper.selectList(new LambdaQueryWrapper<Tag>().in(Tag::getId, tagsIdsSet));
+            }
+
+            // 1.1.4 再查询文章的标签信息
             List<Tag> tagsByArticleId = tagMapper.selectList(new LambdaQueryWrapper<Tag>().eq(Tag::getId, articles.getId()));
 
-            articles.setTags(tagsByArticleId);
-
+            // 1.1.5 tags 和 tagsByArticleId 做并集
+            tags.addAll(tagsByArticleId);
+            // 保存到文章信息中
+            articles.setTags(tags);
 
             // 1.2 保存到 redis
             redisCacheUtils.setHash(RedisConstant.CACHE_ARTICLE_ID + id, BeanUtil.beanToMap(articles));
@@ -259,12 +273,12 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
     @Override
     public void saveCategoryDefaultTags(Long categoryId, Long[] tagIds) {
         // 能执行到这里说明 categoryId 肯定存在
+        
+        // 删除之前的数据
+        categoryDefaultTagsMapper.delete(new LambdaQueryWrapper<CategoryDefaultTags>().eq(CategoryDefaultTags::getCategoryId, categoryId));
 
         // 遍历tags
         for (Long tagId: tagIds) {
-            // 删除之前的数据
-            categoryDefaultTagsMapper.delete(new LambdaQueryWrapper<CategoryDefaultTags>().eq(CategoryDefaultTags::getCategoryId, categoryId));
-
             // 插入新的数据
             categoryDefaultTagsMapper.insert(
                     CategoryDefaultTags.builder()

@@ -144,6 +144,8 @@ public class AdminController {
     @PutMapping("/category")
     public AjaxResult<Void> updateCategory(@RequestBody Category category) {
         service.updateCategory(category);
+        // 保存分类默认标签
+        service.saveCategoryDefaultTags(category.getId(), category.getTagIds());
         return AjaxResult.success();
     }
 

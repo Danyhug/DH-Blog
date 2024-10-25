@@ -69,6 +69,7 @@ const edit = (row: Category) => {
 }
 
 const update = () => {
+  category.tagIds = bindTags.value
   updateCategory(category).then(() => {
     ElMessage.success('修改分类成功')
   })
