@@ -88,10 +88,13 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
             // 1.1.4 再查询文章的标签信息
             List<Tag> tagsByArticleId = tagMapper.selectList(new LambdaQueryWrapper<Tag>().eq(Tag::getId, articles.getId()));
 
-            // 1.1.5 tags 和 tagsByArticleId 做并集
-            tags.addAll(tagsByArticleId);
+            // 1.1.5 tags 和 tagsByArticleId 做并集并去重
+            Set<Tag> set = new HashSet<>();
+            set.addAll(tags);
+            set.addAll(tagsByArticleId);
+
             // 保存到文章信息中
-            articles.setTags(tags);
+            articles.setTags(new ArrayList<>(set));
 
             // 1.2 保存到 redis
             redisCacheUtils.setHash(RedisConstant.CACHE_ARTICLE_ID + id, BeanUtil.beanToMap(articles));

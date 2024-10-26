@@ -39,6 +39,7 @@ public class ArticleController {
 
         // 检查是否需要 解密
         if (articleById.getIsLocked()) {
+            articleById.setLockPassword(null);
             return AjaxResult.error("加密文章，请输入密码后访问");
         }
 

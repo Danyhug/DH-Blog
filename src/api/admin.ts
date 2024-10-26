@@ -3,6 +3,16 @@ import { Article } from '@/types/Article'
 import { Category } from '@/types/Category'
 import { Page, PageResult } from '@/types/Page'
 import { Tag } from '@/types/Tag'
+
+/**
+ * 查询文章详情
+ * @param id
+ * @returns
+ */
+export const getArticleInfo = (id: String): Promise<Article<any>> => {
+  return request.get('/admin/article/' + id)
+}
+
 /**
  * 新增文章
  * @param data 

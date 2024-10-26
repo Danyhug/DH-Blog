@@ -39,6 +39,19 @@ public class AdminController {
     private String uploadPath;
 
     /**
+     * 获取文章详情
+     * @param id 文章id
+     */
+    @Operation(summary = "获取文章详情")
+    @GetMapping("/article/{id}")
+    public AjaxResult<Articles> detail(@PathVariable String id) {
+        log.info("获取文章详情 {}", id);
+        Articles articleById = service.getArticleById(Long.valueOf(id));
+
+        return AjaxResult.success(articleById);
+    }
+
+    /**
      * 新增文章
      * @param article 文章类型
      */

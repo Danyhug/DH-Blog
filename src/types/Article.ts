@@ -11,4 +11,5 @@ export interface Article<T> {
   wordNum?: number; // TypeScript中没有byte类型，通常使用number代替
   thumbnailUrl?: string;
   isLocked?: boolean;
+  lockPassword?: string;
 }

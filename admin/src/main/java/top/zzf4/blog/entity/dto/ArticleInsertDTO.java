@@ -12,4 +12,6 @@ public class ArticleInsertDTO {
 
     // 接受内容thumbnail_url
     private String thumbnailUrl;
+    private Boolean isLocked;
+    private String lockPassword;
 }

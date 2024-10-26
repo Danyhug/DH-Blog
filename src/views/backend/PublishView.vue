@@ -32,7 +32,13 @@
       <el-divider content-position="center">
         <p class="tip">文章标题</p>
       </el-divider>
-      <el-input placeholder="输入文章标题" clearable class="title-input" v-model="article.title"></el-input>
+
+      <div class="form-box">
+        <el-input placeholder="输入文章标题" clearable class="title-input" v-model="article.title" />
+        <el-switch class="article-status" style="--el-switch-on-color: #13ce66; --el-switch-off-color: #4aa0ff"
+          inactive-text="公开" active-text="私密" v-model="article.isLocked" @change="changeArticleStatus" />
+      </div>
+
       <div class="btns">
         <!-- 本地保存提示信息 -->
         <div class="save-text">{{ autoSaveText }}</div>
@@ -72,7 +78,8 @@ import {
   addArticle, updateArticle, uploadFile
 } from '@/api/admin';
 
-import { getArticleInfo, getArticleCategoryList, getArticleTagList } from '@/api/user'
+import { getArticleCategoryList, getArticleTagList } from '@/api/user'
+import { getArticleInfo } from '@/api/admin'
 
 import { toolbars, emojis } from '@/types/Constant'
 import { Article } from '@/types/Article';
@@ -96,10 +103,22 @@ const article = reactive<Article<String>>({
   content: ``,
   categoryId: -1,
   tags: [],
-  thumbnailUrl: ''
+  thumbnailUrl: '',
+  isLocked: false,
+
 });
 const categories = reactive<Category[]>([]);
 const tags = reactive<Tag[]>([]);
+
+// 切换文章状态 公开 > 私密
+const changeArticleStatus = (val: boolean) => {
+  if (!val) return article.lockPassword = '';
+
+  ElMessageBox.prompt("请输入文章密钥：", "提示").then(res => {
+    article.lockPassword = res.value
+    ElMessage.success(`设置密钥为 ${article.lockPassword}`)
+  })
+}
 
 // 自动保存
 const autoSave = () => {
@@ -304,7 +323,7 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
 
 </script>
 
-<style scoped>
+<style scoped lang="less">
 .top-container {
   display: flex;
   justify-content: space-between;
@@ -315,8 +334,21 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
   }
 
   .right {
-    .btns {
 
+    .form-box {
+      display: flex;
+      justify-content: space-between;
+
+      .el-input {
+        width: calc(100% - 150px);
+      }
+
+      .article-status {
+        width: 120px;
+      }
+    }
+
+    .btns {
       .save-text {
         float: left;
         font-size: 14px;
