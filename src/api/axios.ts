@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from "axios"
+import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios"
 import { SERVER_URL } from '@/types/Constant.ts'
 import router from "@/router"
 

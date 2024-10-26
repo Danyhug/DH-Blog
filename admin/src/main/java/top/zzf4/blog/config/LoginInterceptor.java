@@ -1,6 +1,5 @@
 package top.zzf4.blog.config;
 
-import cn.hutool.jwt.JWTException;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

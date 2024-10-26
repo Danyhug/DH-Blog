@@ -24,11 +24,11 @@ public class JwtTest {
         log.info("测试JWT解析token {}", JwtUtils.parseToken(token));
     }
 
-    @Test
-    public void addUser() {
-        String username = "admin";
-        String rawPassword = "admin";
-        String hashPassword = JwtUtils.encodeByBCrypt(rawPassword);
-        userMapper.insert(User.builder().username(username).password(hashPassword).build());
-    }
+    // @Test
+    // public void addUser() {
+    //     String username = "admin";
+    //     String rawPassword = "admin";
+    //     String hashPassword = JwtUtils.encodeByBCrypt(rawPassword);
+    //     userMapper.insert(User.builder().username(username).password(hashPassword).build());
+    // }
 }

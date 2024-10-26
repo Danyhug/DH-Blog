@@ -53,7 +53,7 @@ const isAuthenticated = () => {
   return router.replace({ name: 'Login' })
 }
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, _, next) => {
   if (to.meta) {
     window.document.title = 'DH-Blog / ' + to.meta.title;
   } else {

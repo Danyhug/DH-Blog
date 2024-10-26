@@ -56,7 +56,8 @@ export default {
   }
 }
 </script>
-<style scoped>
+
+<style scoped lang="less">
 .info {
   padding-top: 24px;
   position: relative;

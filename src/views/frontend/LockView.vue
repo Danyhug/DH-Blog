@@ -15,8 +15,8 @@
 
         <div class="title">已被设为私密文章 / 输入密钥解锁</div>
         <div class="form">
-          <input type="text" autofocus v-model="data.password" />
-          <el-icon size="2em" style="vertical-align: text-bottom; position: relative; left: -30px; cursor: pointer;"
+          <input type="text" autofocus v-model="data.password" @keyup.enter="check" />
+          <el-icon size="2em" style="vertical-align: text-bottom; position: relative; left: -50px; cursor: pointer;"
             @click="check">
             <Unlock />
           </el-icon>
@@ -54,6 +54,36 @@ const check = () => {
 </script>
 
 <style scoped lang="less">
+// 适配手机
+@media (max-width: 1024px) {
+  .left {
+    display: none;
+  }
+
+  .lock-view .right .logo .logo-text {
+    font-size: 2.4em!important;
+  }
+
+  .lock-view {
+    .right {
+      margin-right: 0 !important;
+    font-size: 12px!important;
+
+      justify-content: center;
+      align-items: center;
+
+      &>div {
+        margin-left: 5px !important;
+        margin-right: 5px !important;
+      }
+
+      .form input {
+        width: 94% !important;
+      }
+    }
+  }
+}
+
 .lock-view-container {
   padding-top: 10%;
   height: 100vh;
@@ -76,6 +106,7 @@ const check = () => {
   }
 
   .right {
+    position: relative;
     margin-right: 7%;
     height: 100%;
     display: flex;
@@ -121,7 +152,7 @@ const check = () => {
         padding-top: 15px;
         padding-bottom: 11px;
         font-size: 1.8em;
-        padding-right: 60px;
+        padding-right: 80px;
         text-align: center;
         width: 460px;
         // 字符之间隔2px
@@ -137,8 +168,10 @@ const check = () => {
     }
 
     button {
-      margin-top: 14px;
-      margin-right: 14%;
+      position: absolute;
+      bottom: -20%;
+      right: 14%;
+
       align-self: flex-end;
       background-image: linear-gradient(144deg, #af40ff, #5b42f3 50%, #00ddeb);
       border: 0;
