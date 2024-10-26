@@ -13,7 +13,7 @@ CREATE TABLE `articles` (
   `views` INT DEFAULT 0 COMMENT '记录文章浏览次数',
   `word_num` INT DEFAULT NULL COMMENT '文章字数',
   `thumbnail_url` VARCHAR(255) DEFAULT NULL COMMENT '文章缩略图的URL',
-  `lock` TINYINT(1) DEFAULT 0 COMMENT '文章是否被锁定，0表示未锁定，1表示锁定',
+  `is_locked` TINYINT(1) DEFAULT 0 COMMENT '文章是否被锁定，0表示未锁定，1表示锁定',
   `lock_password` VARCHAR(16) DEFAULT NULL COMMENT '锁定密码，用于解锁文章',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB;

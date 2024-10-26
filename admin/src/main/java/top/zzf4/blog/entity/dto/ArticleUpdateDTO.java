@@ -20,4 +20,7 @@ public class ArticleUpdateDTO {
     private List<String> tags;
 
     private String thumbnailUrl;
+
+    private Boolean isLocked;
+    private String lockPassword;
 }
