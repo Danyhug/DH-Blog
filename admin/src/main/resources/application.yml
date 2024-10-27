@@ -53,4 +53,8 @@ qiniu:
 upload:
   path: ${UPLOAD_PATH:P:\\Code\\Github\\DH-Blog\\admin\\src\\main\\resources\\static\\articleUpload\\}
 
+# 这里填写你的 jwt 密钥
+jwt:
+  secret: ${JWT_SECRET:zzf4}
+
 debug: false

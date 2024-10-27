@@ -4,12 +4,24 @@ import cn.hutool.core.convert.NumberWithFormat;
 import cn.hutool.crypto.digest.BCrypt;
 import cn.hutool.jwt.JWTPayload;
 import cn.hutool.jwt.JWTUtil;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import top.zzf4.blog.entity.model.User;
 
 import java.util.HashMap;
 
+@Component
 public class JwtUtils {
-    private static final String SECRET = "zzf4";
+    @Value("${jwt.secret}")
+    private String secret;
+
+    private static String SECRET;
+
+    @PostConstruct
+    public void init() {
+        SECRET = secret;
+    }
 
     /**
      * 生成token

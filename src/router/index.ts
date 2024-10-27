@@ -22,7 +22,7 @@ const routes = [
         {
           path: 'home', component: MainView, name: 'Home', meta: { title: '我的个人纪录' }
         },
-        { path: 'article/:id', component: ArticleView, name: 'ArticleInfo' }
+        { path: 'article/:id', component: ArticleView, name: 'ArticleInfo', meta: { title: '文章详情'} }
       ]
   },
   // 后台页面
