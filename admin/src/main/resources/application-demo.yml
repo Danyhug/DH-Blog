@@ -17,5 +17,5 @@ REDIS_PASSWD: 你的Redis密码
 REDIS_PORT: 你的Redis端口
 
 # JWT 密钥
-JWT_SECRET: B6HWsP64BfhTwj7PfHR2pcQrFAxm6JS9
+JWT_SECRET: 你的 jwt 密钥
 
