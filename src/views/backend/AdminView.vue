@@ -1,18 +1,16 @@
 <template>
   <div class="common-layout">
-    <el-container>
-      <el-container style="position: relative;">
-        <el-aside>
-          <AdminSide></AdminSide>
-        </el-aside>
-        <el-container>
-          <el-main>
-            <router-view></router-view>
-          </el-main>
-          <el-footer style="display: flex; align-items: center; justify-content: center;">
-            <AdminFooter></AdminFooter>
-          </el-footer>
-        </el-container>
+    <el-container style="position: relative;">
+      <el-aside>
+        <AdminSide></AdminSide>
+      </el-aside>
+      <el-container>
+        <el-main>
+          <router-view></router-view>
+        </el-main>
+        <el-footer style="display: flex; align-items: center; justify-content: center;">
+          <AdminFooter></AdminFooter>
+        </el-footer>
       </el-container>
     </el-container>
   </div>
@@ -27,8 +25,10 @@ import AdminFooter from '@/components/backend/AdminFooter.vue';
 .el-aside {
   position: sticky;
   top: 0;
+  --el-aside-width: 230px;
   height: 100vh;
-  width: 200px;
+  background-color: #fbfbfb;
+  box-shadow: 4px 0 10px rgb(248, 248, 248);
 }
 
 /* 平板适配 */
