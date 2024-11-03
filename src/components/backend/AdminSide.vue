@@ -6,7 +6,7 @@
         <el-icon :size="iconSize">
           <Odometer />
         </el-icon>
-        仪表盘
+        数据总览
       </el-menu-item>
       <el-menu-item index="/admin/publish">
         <el-icon :size="iconSize">
@@ -51,17 +51,17 @@ h1 {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: #fafbfc;
 }
 
 :deep(.el-menu) {
-  padding: 0 10px;
+  padding: 0 12px;
   background-color: #fff;
   flex: 1;
   border: none;
 }
 
 .el-icon {
+  margin-left: 10px;
   margin-right: 15px;
 }
 
@@ -74,7 +74,7 @@ h1 {
 .is-active {
   --el-menu-active-color: #3F8CFF;
   background-color: var(--el-menu-bg-color);
-  box-shadow: 0 0 27px #0000000f;
+  box-shadow: -2px 2px 26px #0000001b;
 }
 </style>
 <script setup>

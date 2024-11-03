@@ -25,14 +25,14 @@ import AdminFooter from '@/components/backend/AdminFooter.vue';
 .el-aside {
   position: sticky;
   top: 0;
-  --el-aside-width: 230px;
+  --el-aside-width: 234px;
   height: 100vh;
   background-color: #fbfbfb;
   box-shadow: 4px 0 10px rgb(248, 248, 248);
 }
 
 .el-main {
-  background-color: #fafbfc;
+  background-color: var(--dh-admin-bg);
 }
 
 /* 平板适配 */

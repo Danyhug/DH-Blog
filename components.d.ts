@@ -54,6 +54,7 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     TableDialog: typeof import('./src/components/backend/Table/TableDialog.vue')['default']
     TagTable: typeof import('./src/components/backend/Table/TagTable.vue')['default']
+    TotalItem: typeof import('./src/components/backend/DashBoard/TotalItem.vue')['default']
   }
   export interface ComponentCustomProperties {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']
