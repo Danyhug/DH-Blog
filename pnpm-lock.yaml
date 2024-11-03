@@ -23,6 +23,9 @@ importers:
       md-editor-v3:
         specifier: ^4.21.2
         version: 4.21.2(@codemirror/view@6.34.1)(@lezer/common@1.2.3)(vue@3.5.12(typescript@5.6.3))
+      nprogress:
+        specifier: ^0.2.0
+        version: 0.2.0
       pinia:
         specifier: ^2.2.5
         version: 2.2.5(typescript@5.6.3)(vue@3.5.12(typescript@5.6.3))
@@ -1021,6 +1024,9 @@ packages:
 
   normalize-wheel-es@1.2.0:
     resolution: {integrity: sha512-Wj7+EJQ8mSuXr2iWfnujrimU35R2W4FAErEyTmJoJ7ucwTn2hOUSsRehMb5RSYkxXGTM7Y9QpvPmp++w5ftoJw==}
+
+  nprogress@0.2.0:
+    resolution: {integrity: sha512-I19aIingLgR1fmhftnbWWO3dXc0hSxqHQHQb3H8m+K3TnEn/iSeTZZOyvKXWqQESMwuUVnatlCnZdLBZZt2VSA==}
 
   open@8.4.2:
     resolution: {integrity: sha512-7x81NCL719oNbsq/3mh+hVrAWmFuEYUqrq/Iw3kUzH8ReypT9QQ0BLoJS7/G9k6N81XjW4qHWtjWwe/9eLy1EQ==}
@@ -2477,6 +2483,8 @@ snapshots:
   normalize-path@3.0.0: {}
 
   normalize-wheel-es@1.2.0: {}
+
+  nprogress@0.2.0: {}
 
   open@8.4.2:
     dependencies:

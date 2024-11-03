@@ -10,13 +10,13 @@
 </template>
 <style lang="less" scoped>
 div {
-  font-size: 14px;
+  font-size: 13px;
   color: #666;
   text-align: center;
 
   span {
     display: inline-block;
-    font-size: 24px;
+    font-size: 23px;
     vertical-align: middle;
     transform: translateY(-3px);
   }

@@ -31,6 +31,10 @@ import AdminFooter from '@/components/backend/AdminFooter.vue';
   box-shadow: 4px 0 10px rgb(248, 248, 248);
 }
 
+.el-main {
+  background-color: #fafbfc;
+}
+
 /* 平板适配 */
 @media screen and (max-width: 1024px) {
   .el-aside {
