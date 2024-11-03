@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import top.zzf4.blog.aop.Limit;
 import top.zzf4.blog.entity.AjaxResult;
 import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.model.Articles;
@@ -31,6 +32,7 @@ public class ArticleController {
      * 获取文章详情
      * @param id 文章id
      */
+    @Limit(num = 5, time = 60)
     @Operation(summary = "获取文章详情")
     @GetMapping("/{id}")
     public AjaxResult<Articles> detail(@PathVariable String id) {
@@ -49,6 +51,7 @@ public class ArticleController {
     /**
      * 获取需要解密的文章
      */
+    @Limit(num = 2, time = 60)
     @Operation(summary = "获取需要解密的文章")
     @GetMapping("/unlock/{id}/{password}")
     public AjaxResult<Articles> getLockArticle(@PathVariable String id, @PathVariable String password) {
@@ -75,18 +78,19 @@ public class ArticleController {
     /**
      * 获取随机图片
      */
-    @Operation(summary = "为首页返回随机图片")
-    @GetMapping("/image/random")
-    public ResponseEntity<byte[]> getRandomImage() throws IOException {
-        // 设置响应头
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.IMAGE_JPEG);
-        return new ResponseEntity<>(service.getRandomImage(), headers, HttpStatus.OK);
-    }
+    // @Operation(summary = "为首页返回随机图片")
+    // @GetMapping("/image/random")
+    // public ResponseEntity<byte[]> getRandomImage() throws IOException {
+    //     // 设置响应头
+    //     HttpHeaders headers = new HttpHeaders();
+    //     headers.setContentType(MediaType.IMAGE_JPEG);
+    //     return new ResponseEntity<>(service.getRandomImage(), headers, HttpStatus.OK);
+    // }
 
     /**
      * 查询标签列表
      */
+    @Limit
     @Operation(summary = "查询标签列表")
     @GetMapping("/tag")
     public AjaxResult<List<Tag>> getTags() {
@@ -97,6 +101,7 @@ public class ArticleController {
     /**
      * 查询分类列表
      */
+    @Limit
     @Operation(summary = "查询分类列表")
     @GetMapping("/category")
     public AjaxResult<List<Category>> getArticles() {

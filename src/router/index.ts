@@ -39,7 +39,7 @@ const routes = [
   },
   // 后台页面
   {
-    path: '/admin', component: AdminView, name: 'Admin', meta: { titie: '后台管理' }, children:
+    path: '/admin', redirect: '/admin/dashboard', component: AdminView, name: 'Admin', meta: { title: '后台管理' }, children:
       [
         // 仪表盘
         { path: 'dashboard', component: DashBoardView, name: 'Dashboard', meta: { title: '后台 仪表盘' } },

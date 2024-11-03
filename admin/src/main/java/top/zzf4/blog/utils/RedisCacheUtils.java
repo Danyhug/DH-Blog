@@ -25,16 +25,16 @@ public class RedisCacheUtils {
 
     // 设置普通缓存
     public void set(String key, Object value) {
-        stringRedisTemplate.opsForValue().set(key, (String) value);
+        redisTemplate.opsForValue().set(key, value);
     }
 
     public void set(String key, Object value, Long time, TimeUnit unit) {
-        stringRedisTemplate.opsForValue().set(key, (String) value, time, unit);
+        redisTemplate.opsForValue().set(key, value, time, unit);
     }
 
     // 获取普通缓存
     public Object get(String key) {
-        return stringRedisTemplate.opsForValue().get(key);
+        return redisTemplate.opsForValue().get(key);
     }
 
     // 设置列表
@@ -95,6 +95,11 @@ public class RedisCacheUtils {
     // 设置过期时间
     public void setExpire(String key, long time, TimeUnit unit) {
         stringRedisTemplate.expire(key, time, unit);
+    }
+
+    // 自增
+    public Long incr(String key) {
+        return redisTemplate.opsForValue().increment(key);
     }
 
     // 设置 hash 缓存（方便增加观看数）

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import top.zzf4.blog.aop.Limit;
 import top.zzf4.blog.entity.AjaxResult;
 import top.zzf4.blog.entity.model.User;
 import top.zzf4.blog.service.UserService;
@@ -20,12 +21,14 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    @Limit
     @Operation(summary = "用户登录")
     @PostMapping("/login")
     public AjaxResult<String> login(@RequestBody User user) {
         return AjaxResult.success(userService.login(user.getUsername(), user.getPassword()));
     }
 
+    @Limit
     @Operation(summary = "用户校验")
     @PostMapping("/check")
     public AjaxResult<String> check() {

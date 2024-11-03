@@ -10,4 +10,7 @@ public class RedisConstant {
 
     // 七牛云缓存的默认展示图片
     public static final String CACHE_QINIU_DEFAULT_IMAGE = "dhBlog:cache:qiniu:defaultImage";
+
+    // ip缓存信息
+    public static final String CACHE_IP = "dhBlog:cache:ip:";
 }
