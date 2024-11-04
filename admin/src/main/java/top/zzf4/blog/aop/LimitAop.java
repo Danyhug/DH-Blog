@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -31,22 +32,26 @@ public class LimitAop {
         // 打印或处理客户端 IP 地址
         System.out.println("Client IP: " + clientIp);
 
+        MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
+        String methodName = methodSignature.getName();
+
+        String key = RedisConstant.CACHE_IP + methodName + ":" + clientIp;
         // 不存在ip的情况
-        if (redisCacheUtils.hasNullKey(RedisConstant.CACHE_IP + clientIp)) {
+        if (redisCacheUtils.hasNullKey(key)) {
             // 缓存客户端 IP 地址
-            redisCacheUtils.set(RedisConstant.CACHE_IP + clientIp, 0);
+            redisCacheUtils.set(key, 1);
             // 每10秒钟限制访问接口10次
-            redisCacheUtils.setExpire(RedisConstant.CACHE_IP + clientIp, limit.time(), TimeUnit.SECONDS);
+            redisCacheUtils.setExpire(key, limit.time(), TimeUnit.SECONDS);
         } else {
             // 获取当前 IP 地址的访问次数
-            Integer count = (Integer) redisCacheUtils.get(RedisConstant.CACHE_IP + clientIp);
+            Integer count = (Integer) redisCacheUtils.get(key);
             // 判断是否超过限制次数
-            if (count > limit.num()) {
+            if (count >= limit.num()) {
                 // 说明超过次数，抛出异常
                 throw new RuntimeException(limit.msg());
             } else {
                 // 累加访问次数
-                redisCacheUtils.incr(RedisConstant.CACHE_IP + clientIp);
+                redisCacheUtils.incr(key);
             }
         }
 
@@ -76,10 +81,12 @@ public class LimitAop {
         if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getRemoteAddr();
         }
-        // 处理多个 IP 地址的情况
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0];
+
+        // 将 IPv6 的本地回环地址转换为 IPv4 的本地回环地址
+        if (ip.equals("0:0:0:0:0:0:0:1") || ip.equals("::1")) {
+            ip = "127.0.0.1";
         }
+
         return ip;
     }
 }

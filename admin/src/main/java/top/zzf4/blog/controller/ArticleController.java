@@ -3,10 +3,6 @@ package top.zzf4.blog.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import top.zzf4.blog.aop.Limit;
 import top.zzf4.blog.entity.AjaxResult;
@@ -17,7 +13,6 @@ import top.zzf4.blog.entity.model.Tag;
 import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.service.ArticleService;
 
-import java.io.IOException;
 import java.util.List;
 
 @Log4j2
