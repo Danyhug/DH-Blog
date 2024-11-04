@@ -29,6 +29,12 @@ spring:
       max-file-size: 10MB
   web:
     resources:
+      cache:
+        cachecontrol:
+          max-age: 2592000
+          must-revalidate: true
+          no-transform: true
+          cache-public: true
       static-locations:
         - classpath:/static/
   data:

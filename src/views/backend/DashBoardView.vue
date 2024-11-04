@@ -26,10 +26,10 @@
 
         <div class="item-table">
           <el-table :data="ipData" max-height="315px">
-            <el-table-column type="index" label="序号" min-width="10%"></el-table-column>
+            <el-table-column type="index" label="序号" min-width="9%"></el-table-column>
             <el-table-column prop="city" label="城市" min-width="20%"></el-table-column>
-            <el-table-column prop="ip" label="IP" min-width="20%"></el-table-column>
-            <el-table-column prop="count" label="访问数" min-width="15%"></el-table-column>
+            <el-table-column prop="ip" label="IP" min-width="22%"></el-table-column>
+            <el-table-column prop="count" label="访问数" min-width="14%"></el-table-column>
             <el-table-column prop="ban" label="Ban" min-width="10%"></el-table-column>
           </el-table>
         </div>

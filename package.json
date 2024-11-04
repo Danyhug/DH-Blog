@@ -16,7 +16,7 @@
     "element-plus": "^2.8.7",
     "md-editor-v3": "^4.21.2",
     "nprogress": "^0.2.0",
-    "pinia": "^2.2.5",
+    "pinia": "^2.2.6",
     "vue": "^3.5.12",
     "vue-echarts": "^7.0.3",
     "vue-router": "^4.4.5"

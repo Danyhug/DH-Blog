@@ -11,8 +11,9 @@
 
 ### 前端部分
 
-- TS + Vue3 + ElementPlus
+- TS + Vue3 + ElementPlus + Echarts
 - Axios
+- [vue-echarts](https://github.com/ecomfe/vue-echarts)
 - [md-editor-v3](https://github.com/imzbf/md-editor-v3) `作为 markdown 编辑器`
 
 ## 博客功能
