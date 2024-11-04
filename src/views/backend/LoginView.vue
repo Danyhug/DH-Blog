@@ -72,8 +72,9 @@
     }
 
     .left-img {
+      width: 600px;
       position: relative;
-      margin: 300px auto auto;
+      margin: 180px 0 0 -40px;
       z-index: 4;
       display: block;
     }
