@@ -12,6 +12,8 @@ import { createPinia } from 'pinia';
 import '@/assets/css/style.less'
 
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+import ElementPlus from 'element-plus'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 
 const app = createApp(App)
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
@@ -27,5 +29,8 @@ app.component('MdEditor', MdEditor)
 
 app.use(router)
   .use(pinia)
+  .use(ElementPlus, {
+    locale: zhCn,
+  })
 
 app.mount('#app')
