@@ -37,10 +37,13 @@
 
       <div class="chart-right">
         <div class="item-top">
-          <div class="item-title">访问量</div>
-          <div class="item-sub">
-            本月增长
-            <span class="add">+15%</span>
+          <div>
+            <div class="item-title">访问量</div>
+            <div class="item-sub">
+              本月增长
+              <span class="add">+15%</span> /
+              <span>10 人在线</span>
+            </div>
           </div>
         </div>
         <div class="div-item-charts">
@@ -72,6 +75,10 @@
 
     .item-top {
       padding: 0 18px;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
 
       .item-title {
         font-size: 18px;
@@ -101,13 +108,6 @@
     width: 44%;
     --el-border-radius-base: 6px;
 
-    .item-top {
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
     .item-table {
       margin-top: 15px;
       padding: 0 8px;
@@ -120,6 +120,11 @@
     .chart {
       margin-top: 10px;
       height: 400px;
+    }
+
+    .online-count {
+      font-size: 13px;
+      color: rgb(120, 130, 157);
     }
   }
 }

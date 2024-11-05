@@ -117,7 +117,7 @@ const changeArticleStatus = (val: boolean) => {
   ElMessageBox.prompt("请输入文章密钥：", "提示").then(res => {
     article.lockPassword = res.value
     ElMessage.success(`设置密钥为 ${article.lockPassword}`)
-  })
+  }).catch(_ => article.isLocked = false)
 }
 
 // 自动保存
