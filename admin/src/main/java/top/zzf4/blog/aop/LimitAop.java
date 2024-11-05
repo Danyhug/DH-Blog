@@ -11,10 +11,9 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import top.zzf4.blog.constant.RedisConstant;
 import top.zzf4.blog.utils.RedisCacheUtils;
+import top.zzf4.blog.utils.Tools;
 
 import java.util.concurrent.TimeUnit;
-
-import top.zzf4.blog.utils.Tools;
 
 @Aspect
 @Component

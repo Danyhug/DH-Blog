@@ -67,9 +67,9 @@ public class QiniuServiceImpl {
 
     /**
      * Redis 中缓存预热，将需要的七牛云数据缓存到 Redis 中
-     * 目前是缓存默认的展示图片，一天更新一次
+     * 目前是缓存默认的展示图片，三天更新一次
      */
-    @Scheduled(fixedDelay = 1000 * 60 * 60 * 24, initialDelay = 1000)
+    @Scheduled(fixedDelay = 1000 * 60 * 60 * 24 * 3, initialDelay = 1000)
     public void initCache() {
         // 获取默认的图片列表名
         List<String> defaultArticleImages = Arrays.stream(getFileList(qiniuProperties.getDefaultImageName()))

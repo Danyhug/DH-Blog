@@ -4,9 +4,7 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.*;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -120,5 +118,17 @@ public class RedisCacheUtils {
     // 删除缓存
     public void delete(String key) {
         stringRedisTemplate.delete(key);
+    }
+
+    // 使用scan获取键的列表
+    public List<String> scan(String pattern) {
+        return stringRedisTemplate.execute((RedisCallback<List<String>>) connection -> {
+            List<String> result = new java.util.ArrayList<>();
+            Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions().match(pattern).count(1000).build());
+            while (cursor.hasNext()) {
+                result.add(new String(cursor.next()));
+            }
+            return result;
+        });
     }
 }

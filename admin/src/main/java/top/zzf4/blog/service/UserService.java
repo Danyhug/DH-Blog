@@ -9,4 +9,7 @@ public interface UserService extends IService<User> {
 
     // 用户在线监测
     void online(String ip);
+
+    // 返回在线人数
+    Integer getOnlineNum();
 }

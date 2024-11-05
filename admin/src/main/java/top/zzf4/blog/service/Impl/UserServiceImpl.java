@@ -46,4 +46,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             redisCacheUtils.setExpire(key, RedisConstant.EXPIRE_HEART_IP, TimeUnit.SECONDS);
         }
     }
+
+    @Override
+    public Integer getOnlineNum() {
+        return redisCacheUtils.scan(RedisConstant.HEART_IP + "*").size();
+    }
 }

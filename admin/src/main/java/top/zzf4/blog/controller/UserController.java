@@ -39,6 +39,6 @@ public class UserController {
     @GetMapping("/heart")
     public AjaxResult<String> online(HttpServletRequest request) {
         userService.online(Tools.getClientIp(request));
-        return AjaxResult.success("咚咚咚 ~ 咚咚咚 ~");
+        return AjaxResult.success("咚咚咚 ~ 咚咚咚 ~" + userService.getOnlineNum());
     }
 }
