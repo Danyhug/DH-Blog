@@ -4,15 +4,22 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import top.zzf4.blog.constant.RedisConstant;
 import top.zzf4.blog.entity.model.User;
 import top.zzf4.blog.mapper.UserMapper;
 import top.zzf4.blog.service.UserService;
 import top.zzf4.blog.utils.JwtUtils;
+import top.zzf4.blog.utils.RedisCacheUtils;
+
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private RedisCacheUtils redisCacheUtils;
 
     @Override
     public String login(String username, String password) {
@@ -28,4 +35,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return JwtUtils.createToken(user);
     }
 
+    @Override
+    public void online(String ip) {
+        String key = RedisConstant.HEART_IP + ip;
+        if (redisCacheUtils.hasNullKey(key)) {
+            // 不存在key，则新增
+            redisCacheUtils.set(key, null, RedisConstant.EXPIRE_HEART_IP, TimeUnit.SECONDS);
+        } else {
+            // 续期
+            redisCacheUtils.setExpire(key, RedisConstant.EXPIRE_HEART_IP, TimeUnit.SECONDS);
+        }
+    }
 }

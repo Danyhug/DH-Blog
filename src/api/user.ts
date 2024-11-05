@@ -59,3 +59,10 @@ export const userCheck = () => {
 export const unLockArticle = (id: number, password: string): Promise<Article<any>> => {
   return request.get(`/article/unlock/${id}/${password}`)
 }
+
+/**
+ * 心跳
+ */
+export const heartBeat = () => {
+  return request.get('/user/heart')
+}

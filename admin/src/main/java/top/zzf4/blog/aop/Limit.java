@@ -11,7 +11,7 @@ public @interface Limit{
     // 缓存的存在时间
     int time() default 60;
     // 允许的最大次数
-    int num() default 10;
+    int num() default 30;
     // 返回文本
     String msg() default "请求过于频繁！";
 }
