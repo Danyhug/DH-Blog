@@ -17,4 +17,7 @@ public class RedisConstant {
     // ip心跳
     public static final String HEART_IP = "dhBlog:heart:ip:";
     public static final Long EXPIRE_HEART_IP = 10L; // 生存时间十秒
+
+    // 数据总览
+    public static final String CACHE_OVERVIEW = "dhBlog:cache:overview";
 }

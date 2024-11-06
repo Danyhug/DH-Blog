@@ -21,6 +21,7 @@ import top.zzf4.blog.entity.model.Articles;
 import top.zzf4.blog.entity.model.Category;
 import top.zzf4.blog.entity.model.CategoryDefaultTags;
 import top.zzf4.blog.entity.model.Tag;
+import top.zzf4.blog.entity.vo.OverviewCount;
 import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.mapper.ArticleMapper;
 import top.zzf4.blog.mapper.CategoriesMapper;
@@ -33,6 +34,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Log4j2
@@ -315,6 +317,29 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
     @Override
     public List<Long> getCategoryDefaultTagsById(Long id) {
         return categoryDefaultTagsMapper.selectList(new LambdaQueryWrapper<CategoryDefaultTags>().eq(CategoryDefaultTags::getCategoryId, id)).stream().map(CategoryDefaultTags::getTagId).collect(Collectors.toList());
+    }
+
+    @Override
+    public OverviewCount getOverview() {
+        if (redisCacheUtils.hasNullKey(RedisConstant.CACHE_OVERVIEW)) {
+            // 创建 key
+            Long tagCount = tagMapper.selectCount(new LambdaQueryWrapper<Tag>().select(Tag::getId));
+            Long articleCount = articleMapper.selectCount(new LambdaQueryWrapper<Articles>().select(Articles::getId));
+            Long commentCount = 4396L;
+
+            OverviewCount overviewCount = OverviewCount.builder()
+                    .articleCount(articleCount)
+                    .categoryCount(categoriesMapper.selectCount(new LambdaQueryWrapper<Category>().select(Category::getId)))
+                    .tagCount(tagCount)
+                    .commentCount(commentCount)
+                    .build();
+
+            // 生成缓存
+            redisCacheUtils.set(RedisConstant.CACHE_OVERVIEW, JSONUtil.toJsonStr(overviewCount));
+            redisCacheUtils.setExpire(RedisConstant.CACHE_OVERVIEW, 12, TimeUnit.HOURS);
+            return overviewCount;
+        }
+        return JSONUtil.toBean( (String) redisCacheUtils.get(RedisConstant.CACHE_OVERVIEW), OverviewCount.class);
     }
 
     /**

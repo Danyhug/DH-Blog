@@ -7,21 +7,21 @@
       <ul class="links">
         <li>
           <a href="">
-            <p class="num">46</p>
+            <p class="num">{{ data.articleCount }}</p>
             文章
           </a>
         </li>
         <span></span>
         <li>
           <a href="">
-            <p class="num">17</p>
+            <p class="num">{{ data.categoryCount }}</p>
             分类
           </a>
         </li>
         <span></span>
         <li>
           <a href="">
-            <p class="num">53</p>
+            <p class="num">{{ data.tagCount }}</p>
             标签
           </a>
         </li>
@@ -44,17 +44,21 @@
     <Pet />
   </div>
 </template>
-<script>
+<script setup lang="ts">
 import Pet from '@/components/frontend/Pet.vue'
+import { getOverview } from '@/api/user';
+import { OverView } from '@/types/DashBoard';
+const data = reactive<OverView>({
+  articleCount: 0,
+  categoryCount: 0,
+  commentCount: 0,
+  tagCount: 0
+})
 
-export default {
-  name: 'HomeSide',
-  data() {
-    return {
-
-    }
-  }
-}
+onMounted(async () => {
+  const overview = await getOverview()
+  Object.assign(data, overview)
+})
 </script>
 
 <style scoped lang="less">

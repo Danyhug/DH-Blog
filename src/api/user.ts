@@ -4,6 +4,7 @@ import { Page, PageResult } from '@/types/Page'
 import { Tag } from '@/types/Tag'
 import request from '@/api/axios'
 import { UserLogin } from '@/types/User'
+import { OverView } from '@/types/DashBoard'
 
 /**
  * 查询文章详情
@@ -65,4 +66,11 @@ export const unLockArticle = (id: number, password: string): Promise<Article<any
  */
 export const heartBeat = () => {
   return request.get('/user/heart')
+}
+
+/**
+ * 数据总览
+ */
+export const getOverview = (): Promise<OverView> => {
+  return request.get('/article/overview')
 }

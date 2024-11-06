@@ -4,7 +4,7 @@
     <li>
       <div class="item-left">
         <span class="title">总文章数</span>
-        <span class="num">100</span>
+        <span class="num">{{ data.articleCount }}</span>
         <span class="trend">+30%</span>
       </div>
       <div class="item-right">
@@ -14,7 +14,7 @@
     <li>
       <div class="item-left">
         <span class="title">总分类数</span>
-        <span class="num">100</span>
+        <span class="num">{{ data.categoryCount }}</span>
         <span class="trend">+30%</span>
       </div>
       <div class="item-right">
@@ -24,7 +24,7 @@
     <li>
       <div class="item-left">
         <span class="title">总标签数</span>
-        <span class="num">100</span>
+        <span class="num">{{ data.tagCount }}</span>
         <span class="trend">+30%</span>
       </div>
       <div class="item-right">
@@ -34,7 +34,7 @@
     <li>
       <div class="item-left">
         <span class="title">总评论数</span>
-        <span class="num">100</span>
+        <span class="num">{{ data.commentCount }}</span>
         <span class="trend">+30%</span>
       </div>
       <div class="item-right">
@@ -68,6 +68,7 @@
       .title {
         font-size: 13px;
         color: #78829d;
+        display: block;
       }
 
       .num {
@@ -111,8 +112,21 @@
   }
 }
 </style>
-<script setup>
+<script setup lang="ts">
+import { getOverview } from '@/api/user';
+import { OverView } from '@/types/DashBoard';
 const iconSize = reactive({
   itemTotal: '1.2'
+})
+const data = reactive<OverView>({
+  articleCount: 0,
+  categoryCount: 0,
+  commentCount: 0,
+  tagCount: 0
+})
+
+onMounted(async () => {
+  const overview = await getOverview()
+  Object.assign(data, overview)
 })
 </script>

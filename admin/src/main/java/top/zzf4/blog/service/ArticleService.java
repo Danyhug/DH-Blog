@@ -7,6 +7,7 @@ import top.zzf4.blog.entity.dto.TagInsertDTO;
 import top.zzf4.blog.entity.model.Articles;
 import top.zzf4.blog.entity.model.Category;
 import top.zzf4.blog.entity.model.Tag;
+import top.zzf4.blog.entity.vo.OverviewCount;
 import top.zzf4.blog.entity.vo.PageResult;
 
 import java.io.IOException;
@@ -113,4 +114,9 @@ public interface ArticleService extends IService<Articles> {
      * @return 分类默认标签id列表
      */
     List<Long> getCategoryDefaultTagsById(Long id);
+
+    /**
+     * 查询数据总览
+     */
+    OverviewCount getOverview();
 }

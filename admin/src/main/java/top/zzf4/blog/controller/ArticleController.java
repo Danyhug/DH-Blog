@@ -10,6 +10,7 @@ import top.zzf4.blog.entity.dto.ArticlePageDTO;
 import top.zzf4.blog.entity.model.Articles;
 import top.zzf4.blog.entity.model.Category;
 import top.zzf4.blog.entity.model.Tag;
+import top.zzf4.blog.entity.vo.OverviewCount;
 import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.service.ArticleService;
 
@@ -71,16 +72,14 @@ public class ArticleController {
     }
 
     /**
-     * 获取随机图片
+     * 获取总览
      */
-    // @Operation(summary = "为首页返回随机图片")
-    // @GetMapping("/image/random")
-    // public ResponseEntity<byte[]> getRandomImage() throws IOException {
-    //     // 设置响应头
-    //     HttpHeaders headers = new HttpHeaders();
-    //     headers.setContentType(MediaType.IMAGE_JPEG);
-    //     return new ResponseEntity<>(service.getRandomImage(), headers, HttpStatus.OK);
-    // }
+    @Limit
+    @Operation(summary = "获取总览")
+    @GetMapping("/overview")
+    public AjaxResult<OverviewCount> getOverview() {
+        return AjaxResult.success(service.getOverview());
+    }
 
     /**
      * 查询标签列表

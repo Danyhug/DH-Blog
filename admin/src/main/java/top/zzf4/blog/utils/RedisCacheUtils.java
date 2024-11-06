@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.*;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -123,7 +124,7 @@ public class RedisCacheUtils {
     // 使用scan获取键的列表
     public List<String> scan(String pattern) {
         return stringRedisTemplate.execute((RedisCallback<List<String>>) connection -> {
-            List<String> result = new java.util.ArrayList<>();
+            List<String> result = new ArrayList<>();
             Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions().match(pattern).count(1000).build());
             while (cursor.hasNext()) {
                 result.add(new String(cursor.next()));
