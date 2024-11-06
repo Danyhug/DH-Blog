@@ -42,7 +42,7 @@
             <div class="item-sub">
               本月增长
               <span class="add">+15%</span> /
-              <span>10 人在线</span>
+              <span>{{ store.online }} 人在线</span>
             </div>
           </div>
         </div>
@@ -139,6 +139,7 @@ import { use } from 'echarts/core'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
+import { useAdminStore } from "@/store";
 provide(THEME_KEY, 'light');
 
 use([GridComponent, TooltipComponent, LineChart, CanvasRenderer])
@@ -213,4 +214,6 @@ const option = ref({
     containLabel: true
   }
 })
+
+const store = useAdminStore()
 </script>

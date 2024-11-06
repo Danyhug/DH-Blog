@@ -24,6 +24,7 @@ export const useSystemStore = defineStore('system', () => {
 export const useAdminStore = defineStore('admin', () => {
   const tags = reactive<Tag[]>([])
   const categories = reactive<Category[]>([])
+  const online = ref(0)
   
   const getCategories = async () => {
     const data = await getArticleCategoryList();
@@ -49,6 +50,7 @@ export const useAdminStore = defineStore('admin', () => {
     categories,
     getCategories,
     getTags,
+    online
   }
 })
 
