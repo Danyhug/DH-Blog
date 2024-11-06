@@ -44,7 +44,7 @@ import { shallowRef, watch } from 'vue';
 import { useUserStore } from '@/store/index'
 import { useRoute } from 'vue-router';
 
-const sideShowComponent = shallowRef(HomeSide);
+const sideShowComponent = shallowRef<Component>(HomeSide);
 
 const store = useUserStore();
 const route = useRoute()
