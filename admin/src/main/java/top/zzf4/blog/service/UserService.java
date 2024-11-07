@@ -8,7 +8,7 @@ public interface UserService extends IService<User> {
     String login(String username, String password);
 
     // 用户在线监测
-    void online(String ip);
+    void heart(String ip);
 
     // 返回在线人数
     Integer getOnlineNum();

@@ -36,7 +36,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    public void online(String ip) {
+    public void heart(String ip) {
         String key = RedisConstant.HEART_IP + ip;
         if (redisCacheUtils.hasNullKey(key)) {
             // 不存在key，则新增

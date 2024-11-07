@@ -37,8 +37,8 @@ public class UserController {
     @Limit
     @Operation(summary = "用户在线状态监测")
     @GetMapping("/heart")
-    public AjaxResult<String> online(HttpServletRequest request) {
-        userService.online(Tools.getClientIp(request));
+    public AjaxResult<String> heart(HttpServletRequest request) {
+        userService.heart(Tools.getClientIp(request));
         return AjaxResult.success("咚咚咚 ~ 咚咚咚 ~" + userService.getOnlineNum());
     }
 }

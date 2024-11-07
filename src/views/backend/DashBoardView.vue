@@ -42,7 +42,7 @@
             <div class="item-sub">
               本月增长
               <span class="add">+15%</span> /
-              <span>{{ store.online }} 人在线</span>
+              <span> {{ store.online }}人在线</span>
             </div>
           </div>
         </div>

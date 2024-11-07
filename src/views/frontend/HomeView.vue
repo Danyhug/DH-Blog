@@ -2,7 +2,7 @@
   <div class="container">
     <Header ref="headerElement" />
     <Banner ref="bannerElement">
-      <template v-if="sideShowComponent.name == 'HomeSide'">
+      <template v-if="sideShowComponent.__name == 'HomeSide'">
         <h1>我的个人纪录</h1>
         <h2>DH-BLOG</h2>
       </template>
@@ -44,7 +44,7 @@ import { shallowRef, watch } from 'vue';
 import { useUserStore } from '@/store/index'
 import { useRoute } from 'vue-router';
 
-const sideShowComponent = shallowRef<Component>(HomeSide);
+const sideShowComponent = shallowRef<any>(HomeSide);
 
 const store = useUserStore();
 const route = useRoute()

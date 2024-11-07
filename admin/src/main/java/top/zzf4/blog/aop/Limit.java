@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Limit{
     // 缓存的存在时间
-    int time() default 60;
+    long time() default 60;
     // 允许的最大次数
     int num() default 30;
     // 返回文本

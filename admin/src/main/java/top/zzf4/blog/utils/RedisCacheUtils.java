@@ -5,9 +5,12 @@ import cn.hutool.json.JSONUtil;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.*;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -98,7 +101,17 @@ public class RedisCacheUtils {
 
     // 自增
     public Long incr(String key) {
-        return redisTemplate.opsForValue().increment(key);
+        // Lua 脚本
+        String script = """
+                local exists = redis.call('EXISTS', KEYS[1])
+                if exists == 1 then
+                    local count = redis.call('INCR', KEYS[1])
+                    return count
+                else
+                    return 0
+                end""";
+        RedisScript<Long> redisScript = new DefaultRedisScript<>(script, Long.class);
+        return stringRedisTemplate.execute(redisScript, Collections.singletonList(key));
     }
 
     // 设置 hash 缓存（方便增加观看数）

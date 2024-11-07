@@ -31,7 +31,7 @@ public class LimitAop {
         // 获取客户端 IP 地址
         String clientIp = Tools.getClientIp(request);
         // 打印或处理客户端 IP 地址
-        System.out.println("Client IP: " + clientIp);
+        // System.out.println("Client IP: " + clientIp);
 
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
         String methodName = methodSignature.getName();
@@ -40,9 +40,8 @@ public class LimitAop {
         // 不存在ip的情况
         if (redisCacheUtils.hasNullKey(key)) {
             // 缓存客户端 IP 地址
-            redisCacheUtils.set(key, 1);
             // 每10秒钟限制访问接口10次
-            redisCacheUtils.setExpire(key, limit.time(), TimeUnit.SECONDS);
+            redisCacheUtils.set(key, 1, limit.time(), TimeUnit.SECONDS);
         } else {
             // 获取当前 IP 地址的访问次数
             Integer count = (Integer) redisCacheUtils.get(key);
