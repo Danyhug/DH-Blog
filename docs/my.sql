@@ -80,3 +80,13 @@ CREATE TABLE `users` (
   PRIMARY KEY (`id`),
   UNIQUE INDEX `username` (`username`) COMMENT '用户名的唯一索引'
 ) ENGINE=InnoDB;
+
+-- 创建每日统计数据表 (`daily_stats`)
+CREATE TABLE daily_stats (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '唯一标识每一天的统计数据',
+    date DATE NOT NULL UNIQUE COMMENT '记录日期',
+    visit_count INT NOT NULL DEFAULT 0 COMMENT '记录当天的访问量',
+    article_count INT NOT NULL DEFAULT 0 COMMENT '记录当天的文章发布数量',
+    comment_count INT NOT NULL DEFAULT 0 COMMENT '记录当天的评论数量',
+    tag_count INT NOT NULL DEFAULT 0 COMMENT '记录当天的标签发布数量'
+);
