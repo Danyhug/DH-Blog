@@ -20,4 +20,7 @@ public class RedisConstant {
 
     // 数据总览
     public static final String CACHE_OVERVIEW = "dhBlog:cache:overview";
+
+    // 每日的 pv 统计
+    public static final String CACHE_DAILY_PV = "dhBlog:cache:daily:pv:";
 }

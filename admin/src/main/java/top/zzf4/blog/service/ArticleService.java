@@ -119,4 +119,9 @@ public interface ArticleService extends IService<Articles> {
      * 查询数据总览
      */
     OverviewCount getOverview();
+
+    /**
+     * pv+1
+     */
+    void pv();
 }

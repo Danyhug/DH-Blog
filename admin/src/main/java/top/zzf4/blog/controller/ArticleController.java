@@ -41,6 +41,8 @@ public class ArticleController {
             return AjaxResult.error("加密文章，请输入密码后访问");
         }
 
+        // pv++
+        service.pv();
         return AjaxResult.success(articleById);
     }
 

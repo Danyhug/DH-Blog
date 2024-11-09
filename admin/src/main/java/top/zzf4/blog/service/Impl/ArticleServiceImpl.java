@@ -1,6 +1,7 @@
 package top.zzf4.blog.service.Impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -340,6 +341,19 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
             return overviewCount;
         }
         return JSONUtil.toBean( (String) redisCacheUtils.get(RedisConstant.CACHE_OVERVIEW), OverviewCount.class);
+    }
+
+    @Override
+    public void pv() {
+        // 计算今日的key值
+        String key = RedisConstant.CACHE_DAILY_PV + DateUtil.format(new Date(), "yyyy-MM-dd");
+        if (redisCacheUtils.hasNullKey(key)) {
+            // 不存在key，新建+1
+            redisCacheUtils.set(key, 1L, 48L, TimeUnit.HOURS);
+            return;
+        }
+
+        redisCacheUtils.incr(key);
     }
 
     /**
