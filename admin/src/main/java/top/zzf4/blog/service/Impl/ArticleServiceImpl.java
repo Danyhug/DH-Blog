@@ -11,6 +11,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import top.zzf4.blog.constant.MessageConstant;
@@ -343,6 +344,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
         return JSONUtil.toBean( (String) redisCacheUtils.get(RedisConstant.CACHE_OVERVIEW), OverviewCount.class);
     }
 
+    @Async
     @Override
     public void pv() {
         // 计算今日的key值
