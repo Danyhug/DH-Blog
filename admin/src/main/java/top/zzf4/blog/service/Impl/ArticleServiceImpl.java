@@ -359,25 +359,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
     }
 
     /**
-     * 返回随机图片
-     *
-     * @return 图片字节
-     */
-    @Override
-    public byte[] getRandomImage() throws IOException {
-        int num = new Random().nextInt(9) + 1;
-
-        // 从资源文件加载图片（这里假设图片位于 classpath:/static 目录下）
-        ClassPathResource resource = new ClassPathResource("static/articleBg/" + num + ".jpg");
-
-        // 返回图片字节数组
-        try (InputStream inputStream = resource.getInputStream()) {
-            // 读取整个流到字节数组
-            return inputStream.readAllBytes();
-        }
-    }
-
-    /**
      * 分页查询缓存首页的文章缩略信息
      * 从redis中返回 不带内容 的文章基本信息列表，文章按照id倒序排列
      * @return 文章缩略信息列表

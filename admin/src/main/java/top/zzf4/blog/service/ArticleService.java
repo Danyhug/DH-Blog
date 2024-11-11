@@ -36,12 +36,6 @@ public interface ArticleService extends IService<Articles> {
      */
     PageResult<Articles> getArticleThumbnail(int pageSize, int currentPage);
 
-    /**
-     * 返回随机图片
-     * @return 图片字节
-     */
-    byte[] getRandomImage() throws IOException;
-
     // ===============================================================================================
 
     /**

@@ -85,6 +85,12 @@ public class QiniuServiceImpl {
     }
 
     public String getRandomDefaultImage() {
-        return redisCacheUtils.getRandomListValue(RedisConstant.CACHE_QINIU_DEFAULT_IMAGE);
+        try {
+            return redisCacheUtils.getRandomListValue(RedisConstant.CACHE_QINIU_DEFAULT_IMAGE);
+        } catch (RuntimeException e) {
+            log.info(e.getMessage());
+            this.initCache();
+            return redisCacheUtils.getRandomListValue(RedisConstant.CACHE_QINIU_DEFAULT_IMAGE);
+        }
     }
 }

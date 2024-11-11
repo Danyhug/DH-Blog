@@ -47,9 +47,11 @@ public class RedisCacheUtils {
     // 列表中随机获取值
     public String getRandomListValue(String key) {
         // 获取长度
-        long size = stringRedisTemplate.opsForList().size(key);
+        Long size = stringRedisTemplate.opsForList().size(key);
+        if (size == null) throw new RuntimeException("随机获取值时，获取的值为空");
+
         // 获取随机索引
-        long index = RandomUtil.randomInt((int) size);
+        long index = RandomUtil.randomInt(size.intValue());
         return stringRedisTemplate.opsForList().index(key, index);
     }
 

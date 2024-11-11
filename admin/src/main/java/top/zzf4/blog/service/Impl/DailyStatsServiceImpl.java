@@ -1,5 +1,6 @@
 package top.zzf4.blog.service.Impl;
 
+import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.log4j.Log4j2;
@@ -36,16 +37,16 @@ public class DailyStatsServiceImpl implements DailyStatsService {
     @Override
     @Scheduled(cron = "0 0 0 * * ? ")
     public void daily() {
-        // 获取本日信息
-        Date date = new Date();
+        // 获取前一日日期
+        DateTime dateTime = DateUtil.offsetDay(new Date(), -1);
         DailyStats build = DailyStats.builder()
-                .date(date)
+                .date(dateTime)
                 .articleCount(countArticle())
                 .commentCount(countComment())
                 .tagCount(countTag())
                 .visitCount(countVisit())
                 .build();
-        log.info("本日数据 {}", build);
+        log.info("{} 数据 {}", dateTime.toString(), build);
         dailyStatsMapper.insert(build);
     }
 
