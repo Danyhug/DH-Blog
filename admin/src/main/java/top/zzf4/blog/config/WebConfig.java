@@ -1,5 +1,6 @@
 package top.zzf4.blog.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +13,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+    @Autowired
+    private AccessLogInterceptor accessLogInterceptor;
 
     @Value("${upload.path}")
     private String uploadPath;
@@ -36,10 +39,13 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        // 登录拦截器
         registry.addInterceptor(new LoginInterceptor())
                 .addPathPatterns("/user/**")
                 .addPathPatterns("/admin/**")
                 .excludePathPatterns("/user/login")
                 .excludePathPatterns("/user/heart");
+        // 访问日志
+        registry.addInterceptor(accessLogInterceptor).excludePathPatterns("/user/heart");
     }
 }

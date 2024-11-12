@@ -99,20 +99,20 @@ CREATE TABLE daily_stats (
     tag_count INT NOT NULL DEFAULT 0 COMMENT '记录当天的标签发布数量'
 );
 
--- 创建访问记录表 (`access_logs`)
+-- 访问记录表 (`access_logs`)
 CREATE TABLE access_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '唯一标识每次访问',
     ip_address CHAR(15) NOT NULL COMMENT '记录访问者的IP地址',
     access_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '记录访问时间',
     user_agent VARCHAR(255) COMMENT '记录用户的浏览器信息',
-    request_url VARCHAR(255) COMMENT '记录请求的URL',
-    status_code INT NOT NULL COMMENT '记录HTTP响应状态码'
-);
+    request_url VARCHAR(255) COMMENT '记录请求的URL'
+) COMMENT='记录每次访问的详细信息';
 
--- 创建IP统计表 (`ip_stats`)
+-- ip 地址统计表 (`ip_stats`)
 CREATE TABLE ip_stats (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '唯一标识每个IP地址的统计信息',
     ip_address CHAR(15) NOT NULL UNIQUE COMMENT '记录IP地址',
+    city CHAR(20) COMMENT '记录IP所在的城市',
     access_count INT NOT NULL DEFAULT 0 COMMENT '记录该IP地址的访问次数',
     banned_count INT NOT NULL DEFAULT 0 COMMENT '记录该IP地址被封禁的次数'
-);
+) COMMENT='记录每个IP地址的访问次数和被封禁次数';

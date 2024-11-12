@@ -5,8 +5,6 @@ import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import top.zzf4.blog.constant.RedisConstant;
 import top.zzf4.blog.entity.model.DailyStats;
@@ -33,10 +31,8 @@ public class DailyStatsServiceImpl implements DailyStatsService {
     @Autowired
     private RedisCacheUtils RedisUtil;
 
-    @Async
     @Override
-    @Scheduled(cron = "0 0 0 * * ? ")
-    public void daily() {
+    public void start() {
         // 获取前一日日期
         DateTime dateTime = DateUtil.offsetDay(new Date(), -1);
         DailyStats build = DailyStats.builder()

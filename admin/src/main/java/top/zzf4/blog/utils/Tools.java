@@ -2,7 +2,6 @@ package top.zzf4.blog.utils;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.http.HttpUtil;
-import cn.hutool.json.JSONUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import top.zzf4.blog.utils.ip.Csdn;
 
@@ -39,6 +38,42 @@ public class Tools {
         }
 
         return ip;
+    }
+
+    /**
+     * 根据ua获取系统和浏览器
+     */
+    public static String parseUserAgent(String userAgentString) {
+        String os = "";
+        String browser = "";
+
+        // 解析操作系统
+        if (userAgentString.contains("Windows NT 10.0")) {
+            os = "Windows 10";
+        } else if (userAgentString.contains("Windows NT 6.3")) {
+            os = "Windows 8.1";
+        } else if (userAgentString.contains("Windows NT 6.2")) {
+            os = "Windows 8";
+        } else if (userAgentString.contains("Windows NT 6.1")) {
+            os = "Windows 7";
+        } else if (userAgentString.contains("Macintosh")) {
+            os = "Mac OS";
+        } else if (userAgentString.contains("Linux")) {
+            os = "Linux";
+        }
+
+        // 解析浏览器
+        if (userAgentString.contains("Edg/")) {
+            browser = "Edge " + userAgentString.split("Edg/")[1].split(" ")[0];
+        } else if (userAgentString.contains("Chrome/")) {
+            browser = "Chrome " + userAgentString.split("Chrome/")[1].split(" ")[0];
+        } else if (userAgentString.contains("Firefox/")) {
+            browser = "Firefox " + userAgentString.split("Firefox/")[1].split(" ")[0];
+        } else if (userAgentString.contains("Safari/")) {
+            browser = "Safari " + userAgentString.split("Version/")[1].split(" ")[0];
+        }
+
+        return os + "; " + browser;
     }
 
     /**

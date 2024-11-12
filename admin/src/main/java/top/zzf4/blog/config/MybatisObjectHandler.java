@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 @Configuration
 public class MybatisObjectHandler implements MetaObjectHandler {
@@ -19,6 +20,7 @@ public class MybatisObjectHandler implements MetaObjectHandler {
     public void insertFill(MetaObject metaObject) {
         setFieldValByName("createTime", this.getLocalTime(), metaObject);
         setFieldValByName("updateTime", this.getLocalTime(), metaObject);
+        setFieldValByName("accessTime", this.getLocalTime(), metaObject);
     }
 
     @Override

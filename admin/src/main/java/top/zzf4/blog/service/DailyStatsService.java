@@ -6,7 +6,7 @@ import java.util.Date;
 
 public interface DailyStatsService{
     // 每日0点自动计算数据
-    void daily();
+    void start();
 
     // 计算文章总数
     Integer countArticle();
