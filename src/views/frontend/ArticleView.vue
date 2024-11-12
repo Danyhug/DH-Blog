@@ -122,6 +122,10 @@ export default {
   :deep(.md-editor-preview) {
     font-family: 'Microsoft YaHei';
   }
+
+  :deep(.md-editor-preview .md-editor-code pre code) {
+    font-size: 15px;
+  }
 }
 
 .full-screen-preview {
@@ -133,11 +137,16 @@ export default {
   overflow-y: auto;
   padding: 0;
   background-color: #fff;
-  ;
 
   :deep(.md-editor-preview) {
     padding: 0 10px;
     background-color: rgb(250, 250, 250);
+    font-size: 17.5px;
+    line-height: 2em;
+  }
+
+  :deep(.md-editor-preview .md-editor-code pre code) {
+    font-size: 18px;
   }
 }
 
