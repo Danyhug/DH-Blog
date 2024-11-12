@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONUtil;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.log4j.Log4j2;
 import top.zzf4.blog.utils.ip.Csdn;
 
 import java.util.HashMap;
@@ -12,6 +13,7 @@ import java.util.Map;
 /**
  * { "code": 200, "msg": "success", "data": { "address": "中国 河北 石家庄 联通", "ip": "218.12.18.209" } }
  */
+@Log4j2
 public class Tools {
     /**
      * 获取客户端真实 IP 地址
@@ -60,8 +62,14 @@ public class Tools {
             os = "Windows 8";
         } else if (userAgentString.contains("Windows NT 6.1")) {
             os = "Windows 7";
-        } else if (userAgentString.contains("Macintosh")) {
+        } else if (userAgentString.contains("Macintosh") || userAgentString.contains("Mac OS X")) {
             os = "Mac OS";
+        } else if (userAgentString.contains("Android")) {
+            os = "Android";
+        } else if (userAgentString.contains("iPhone") || userAgentString.contains("iPad") || userAgentString.contains("iPod")) {
+            os = "iOS";
+        } else if (userAgentString.contains("HarmonyOS")) {
+            os = "鸿蒙";
         } else if (userAgentString.contains("Linux")) {
             os = "Linux";
         }
@@ -100,16 +108,12 @@ public class Tools {
         headers.put("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36");
         // 发送GET请求并获取响应
         String responseString = HttpUtil.createGet(url).addHeaders(headers).execute().body();
+        log.info("IP 地址查询结果: {}", responseString);
 
         // 转为 JSON 对象
         Csdn bean = JSONUtil.toBean(responseString, Csdn.class);
         if (bean.getCode() == 200) {
-            String address = bean.getData().getAddress();
-            if (address.contains("中国")) {
-                String[] strings = address.split(" ");
-                return strings[1] + strings[2] + "|" + strings[3];
-            }
-            return address.split(" ")[1];
+            return bean.getData().getAddress();
         }
 
         return "";
