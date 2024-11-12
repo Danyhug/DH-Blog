@@ -46,6 +46,6 @@ public class WebConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/user/login")
                 .excludePathPatterns("/user/heart");
         // 访问日志
-        registry.addInterceptor(accessLogInterceptor).excludePathPatterns("/user/heart");
+        registry.addInterceptor(accessLogInterceptor).excludePathPatterns("/user/heart").excludePathPatterns("/user/check");
     }
 }

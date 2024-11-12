@@ -2,8 +2,12 @@ package top.zzf4.blog.utils;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.http.HttpUtil;
+import cn.hutool.json.JSONUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import top.zzf4.blog.utils.ip.Csdn;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * { "code": 200, "msg": "success", "data": { "address": "中国 河北 石家庄 联通", "ip": "218.12.18.209" } }
@@ -90,13 +94,22 @@ public class Tools {
          * https://sp0.baidu.com/8aQDcjqpAAV3otqbppnN2DJv/api.php?query=123.123.123.123&co=&resource_id=6006&oe=utf8
          */
         String url = "https://searchplugin.csdn.net/api/v1/ip/get?ip=" + ip;
-        // 响应的字符串
-        String responseString = HttpUtil.get(url);
-        // 转为 JSON 对象
-        Csdn bean = BeanUtil.toBean(responseString, Csdn.class);
+        // 伪装为浏览器发送请求
+        // 创建一个Map对象来设置请求头
+        Map<String, String> headers = new HashMap<>();
+        headers.put("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36");
+        // 发送GET请求并获取响应
+        String responseString = HttpUtil.createGet(url).addHeaders(headers).execute().body();
 
+        // 转为 JSON 对象
+        Csdn bean = JSONUtil.toBean(responseString, Csdn.class);
         if (bean.getCode() == 200) {
-            return bean.getData().getAddress();
+            String address = bean.getData().getAddress();
+            if (address.contains("中国")) {
+                String[] strings = address.split(" ");
+                return strings[1] + strings[2] + "|" + strings[3];
+            }
+            return address.split(" ")[1];
         }
 
         return "";

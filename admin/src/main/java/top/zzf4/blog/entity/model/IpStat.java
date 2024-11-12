@@ -17,6 +17,8 @@ public class IpStat {
     @TableField("ip_address")
     private String ipAddress;
 
+    private String city;
+
     @TableField(value = "access_count")
     private Integer accessCount;
 

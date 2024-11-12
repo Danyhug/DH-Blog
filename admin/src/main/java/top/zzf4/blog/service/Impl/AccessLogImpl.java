@@ -46,7 +46,9 @@ public class AccessLogImpl {
         } else {
             // 否则插入新的
             ipStatMapper.insert(
-                    IpStat.builder().ipAddress(accessLog.getIpAddress()).accessCount(1).bannedCount(0).build()
+                    IpStat.builder().ipAddress(accessLog.getIpAddress())
+                            .accessCount(1).bannedCount(0).city(Tools.getIpCity(accessLog.getIpAddress()))
+                            .build()
             );
         }
         log.info("IP 统计插入成功：{}", ipStat);

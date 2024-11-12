@@ -9,6 +9,7 @@ import top.zzf4.blog.service.DailyStatsService;
 public class DailyTest {
     @Autowired
     private DailyStatsService dailyStatsService;
+
     @Test
     public void init() {
         // dailyStatsService.daily();
