@@ -3,10 +3,8 @@ import { ToolbarNames } from "md-editor-v3/lib/types/MdEditor/type";
 /**
  * 定义项目的所有常量
  */
-export const SERVER_URL = 'http://localhost:8080'
-// export const SERVER_URL = 'http://danyhug.zzf4.top:8080'
-
-export const OSS_URL = 'http://blog.zzf4.top'
+export const SERVER_URL = import.meta.env.VITE_APP_SERVER_URL;
+export const OSS_URL = import.meta.env.VITE_APP_OSS_URL;
 
 /**
  * md编辑器
