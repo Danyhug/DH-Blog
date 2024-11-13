@@ -101,6 +101,10 @@ export default {
         tags: article.tags
       }
     }
+  },
+  // 卸载组件时
+  beforeUnmount() {
+    document.body.style.overflow = '';
   }
 }
 </script>
@@ -125,6 +129,10 @@ export default {
 
   :deep(.md-editor-preview .md-editor-code pre code) {
     font-size: 15px;
+  }
+
+  :deep(.hljs-comment) {
+    font-style: normal;
   }
 }
 

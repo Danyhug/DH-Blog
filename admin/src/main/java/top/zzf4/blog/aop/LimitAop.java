@@ -37,14 +37,15 @@ public class LimitAop {
         String methodName = methodSignature.getName();
 
         String key = RedisConstant.CACHE_IP + methodName + ":" + clientIp;
+        Object o = redisCacheUtils.get(key);
         // 不存在ip的情况
-        if (redisCacheUtils.hasNullKey(key)) {
+        if (o == null) {
             // 缓存客户端 IP 地址
             // 每10秒钟限制访问接口10次
             redisCacheUtils.set(key, 1, limit.time(), TimeUnit.SECONDS);
         } else {
             // 获取当前 IP 地址的访问次数
-            Integer count = (Integer) redisCacheUtils.get(key);
+            Integer count = (Integer) o;
             // 判断是否超过限制次数
             if (count >= limit.num()) {
                 // 说明超过次数，抛出异常

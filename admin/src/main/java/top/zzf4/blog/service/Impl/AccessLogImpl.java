@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import top.zzf4.blog.entity.model.AccessLog;
 import top.zzf4.blog.entity.model.IpStat;
 import top.zzf4.blog.mapper.AccessLogMapper;
@@ -24,6 +25,7 @@ public class AccessLogImpl {
     /**
      * 向数据库中插入访问日志
      */
+    @Transactional
     public void addAccessLog(HttpServletRequest request) {
         AccessLog accessLog = new AccessLog();
         // 获取客户端 IP 地址

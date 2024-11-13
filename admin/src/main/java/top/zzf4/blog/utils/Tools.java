@@ -50,6 +50,8 @@ public class Tools {
      * 根据ua获取系统和浏览器
      */
     public static String parseUserAgent(String userAgentString) {
+        if (userAgentString.isEmpty()) throw new RuntimeException("异常访问行为！");
+
         String os = "";
         String browser = "";
 
