@@ -1,11 +1,9 @@
 package top.zzf4.blog.entity.model;
 
-import cn.hutool.core.date.DateTime;
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Data
 @TableName("access_logs")

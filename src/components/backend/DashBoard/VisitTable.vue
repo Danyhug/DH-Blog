@@ -21,11 +21,19 @@
 
     <div class="item-table">
       <el-table :data="ipData" max-height="315px">
-        <el-table-column type="index" label="序号" min-width="9%"></el-table-column>
-        <el-table-column prop="city" label="城市" min-width="20%"></el-table-column>
-        <el-table-column prop="ip" label="IP" min-width="22%"></el-table-column>
-        <el-table-column prop="count" label="访问数" min-width="14%"></el-table-column>
-        <el-table-column prop="ban" label="Ban" min-width="10%"></el-table-column>
+        <el-table-column type="index" label="No" min-width="8%"></el-table-column>
+        <el-table-column label="城市" min-width="21%" show-overflow-tooltip>
+          <template #default="scope">
+            <div>
+              <Icon :iconName="getTelecom(scope.row.city)" iconSize="1.8"></Icon>
+
+              <span>{{ getCity(scope.row.city) }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="ipAddress" label="IP" min-width="23%"></el-table-column>
+        <el-table-column prop="accessCount" label="访问" min-width="12%"></el-table-column>
+        <el-table-column prop="bannedCount" label="Ban" min-width="9%"></el-table-column>
       </el-table>
     </div>
   </div>
@@ -43,19 +51,86 @@
 }
 </style>
 
-<script setup>
-const visitRadio = ref('day')
+<script setup lang="ts">
+import { ref, reactive, watch, onMounted } from 'vue';
+import { getOverviewLog } from "@/api/admin";
+import { IpStat } from "@/types/IpStat";
+import { plusDate } from "@/utils/tool";
 
-const ipData = [
-  { city: "河北张家口", ip: "127.0.0.1", count: 8848, ban: 0 },
-  { city: "北京昌平", ip: "192.168.1.1", count: 5672, ban: 1 },
-  { city: "上海浦东区", ip: "10.0.0.1", count: 3456, ban: 0 },
-  { city: "广东东莞", ip: "172.16.0.1", count: 7890, ban: 1 },
-  { city: "江苏镇江", ip: "192.168.0.2", count: 4321, ban: 0 },
-  { city: "浙江杭州", ip: "10.0.0.2", count: 6543, ban: 1 },
-  { city: "山东曹县", ip: "172.16.0.2", count: 9876, ban: 0 },
-  { city: "河南洛阳", ip: "192.168.1.2", count: 2345, ban: 1 },
-  { city: "湖北武汉", ip: "10.0.0.3", count: 5678, ban: 0 },
-  { city: "湖南长沙", ip: "172.16.0.3", count: 1234, ban: 1 },
-];
+const today = new Date();
+const formatDate = (date: Date) => `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+
+// 访问记录
+const visitRadio = ref("day");
+
+// 分页参数
+const page = reactive({
+  page: 1,
+  pageSize: 100,
+  startTime: formatDate(today),
+  endTime: formatDate(plusDate(today, 1))
+});
+
+// 更新时间范围
+const updateTimeRange = (type: string) => {
+  switch (type) {
+    case "day":
+      page.startTime = formatDate(today);
+      page.endTime = formatDate(plusDate(today, 1));
+      break;
+    case "week":
+      page.startTime = formatDate(plusDate(today, -today.getDay()));
+      page.endTime = formatDate(plusDate(today, 1));
+      break;
+    case "month":
+      page.startTime = formatDate(plusDate(today, -today.getDate() + 1));
+      page.endTime = formatDate(plusDate(today, 1));
+      break;
+    case "total":
+      page.startTime = "2020-10-30";
+      page.endTime = "2099-11-14";
+      break;
+  }
+};
+
+// 获取访问记录
+const ipData = ref<IpStat[]>([]);
+const getVisit = async () => {
+  const data = await getOverviewLog(page.page, page.pageSize, page.startTime, page.endTime);
+  ipData.value = data.list.sort((a, b) => b.accessCount - a.accessCount);
+};
+
+// 获取运营商
+const getTelecom = (city: string) => {
+  if (city.includes("/")) {
+    const arr = city.split("/");
+    if (arr[0].includes("联通")) {
+      return "icon-cuc"
+    } else if (arr[0].includes("电信")) {
+      return "icon-dianxinxuke"
+    } else if (arr[0].includes("移动")) {
+      return "icon-mobile"
+    } else {
+      return "icon-weizhi"
+    }
+  }
+  return "icon-weizhi";
+}
+
+const getCity = (city: string) => {
+  if (city.includes("/")) {
+    const arr = city.split("/");
+    return arr[1];
+  }
+  return city.replace(" ", "");
+}
+
+// 监听选项变化
+watch(visitRadio, (newVal) => {
+  updateTimeRange(newVal);
+  getVisit();
+});
+
+// 组件挂载时获取数据
+onMounted(() => getVisit());
 </script>

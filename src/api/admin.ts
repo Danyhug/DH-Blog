@@ -3,6 +3,7 @@ import { Article } from '@/types/Article'
 import { Category } from '@/types/Category'
 import { Page, PageResult } from '@/types/Page'
 import { Tag } from '@/types/Tag'
+import { IpStat } from '@/types/IpStat'
 
 /**
  * 查询文章详情
@@ -109,3 +110,15 @@ export const uploadFile = (data: FormData): Promise<String> => {
     }
   })
 }
+
+/**
+ * 数据总览获取访问记录
+ * @param page 
+ * @param pageSize 
+ * @param startDate 2024-11-11
+ * @param endDate 
+ * @returns 
+ */
+export const getOverviewLog = (page: number, pageSize: number, startDate: string, endDate: string): Promise<PageResult<IpStat>> => {
+  return request.get(`/log/overview/visitLog?page=${page}&pageSize=${pageSize}&startDate=${startDate}&endDate=${endDate}`)
+};

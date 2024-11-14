@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import top.zzf4.blog.entity.AjaxResult;
 import top.zzf4.blog.entity.model.IpStat;
 import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.service.Impl.AccessLogImpl;
@@ -36,13 +37,13 @@ public class LogController {
      */
     @Operation(summary = "获取预览页的访问记录")
     @GetMapping("/overview/visitLog")
-    public PageResult<IpStat> getOverAccessLog(@RequestParam int page, @RequestParam int pageSize,
+    public AjaxResult<PageResult<IpStat>> getOverAccessLog(@RequestParam int page, @RequestParam int pageSize,
                                                @RequestParam String startDate, @RequestParam String endDate) {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             Date start = sdf.parse(startDate);
             Date end = sdf.parse(endDate);
-            return accessLog.getOverAccessLog(page, pageSize, start, end);
+            return AjaxResult.success(accessLog.getOverAccessLog(page, pageSize, start, end));
         } catch (ParseException e) {
             throw new RuntimeException("日期格式不正确，请使用 yyyy-MM-dd 格式", e);
         }
