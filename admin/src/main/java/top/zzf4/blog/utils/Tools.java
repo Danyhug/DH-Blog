@@ -5,6 +5,7 @@ import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.util.ObjectUtils;
 import top.zzf4.blog.utils.ip.Csdn;
 
 import java.util.HashMap;
@@ -50,7 +51,7 @@ public class Tools {
      * 根据ua获取系统和浏览器
      */
     public static String parseUserAgent(String userAgentString) {
-        if (userAgentString.isEmpty()) throw new RuntimeException("异常访问行为！");
+        if (ObjectUtils.isEmpty(userAgentString)) throw new RuntimeException("异常访问行为！");
 
         String os = "";
         String browser = "";

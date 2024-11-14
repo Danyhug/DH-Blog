@@ -24,4 +24,7 @@ public class AccessLog {
 
     @TableField("request_url")
     private String requestUrl;
+
+    @TableField(exist = false)
+    private String city;
 }

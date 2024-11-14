@@ -55,7 +55,7 @@
 
 ## 部署
 
-> `DH-Blog` 使用前后端分离技术，因此前端可以部署到任意地方，直接在 `src/types/Constant.ts` 中更改服务器地址和端口即可
+> `DH-Blog` 使用前后端分离技术，因此前端可以部署到任意地方，直接在 `.env.production` 中更改服务器地址和端口即可
 
 > 后端推荐使用 `docker` 进行部署
 
@@ -63,7 +63,7 @@
 
 1. 下载源代码
 2. 进入根目录
-3. 更改配置中的后端接口地址，执行 `npm build`
+3. 更改配置中的后端接口地址，执行 `npm run build`
 4. 将打包文件部署到 `nginx` 中
 
 ### 后端部分
@@ -71,4 +71,4 @@
 1. 进入 `admin` 目录下
 2. docker 容器开启端口 `8080:8080`
 3. 博客使用 `Swagger` 书写 API 文档，可以访问 `http://localhost:8080/doc.html` 直接打开文档
-4. 后台默认账号密码为 `admin` `admin`，博客为个人设计不提供注册接口，可以去 `admin/src/test/java/top/zzf4/blog/JwtTest.java` 调用 `addUser` 方法手动添加用户
+4. 后台默认账号密码为 `admin` `admin`，博客为个人设计故不提供注册接口，可以去 `admin/src/test/java/top/zzf4/blog/JwtTest.java` 调用 `addUser` 方法手动添加用户
