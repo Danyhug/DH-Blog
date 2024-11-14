@@ -17,7 +17,7 @@
 </template>
 <style lang="less">
 .chart-right {
-  width: 54%;
+  width: 53%;
 
   .chart {
     margin-top: 10px;

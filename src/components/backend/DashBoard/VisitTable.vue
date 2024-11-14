@@ -19,14 +19,13 @@
       </el-radio-group>
     </div>
 
-    <div class="item-table">
-      <el-table :data="ipData" max-height="315px">
+    <div class="item-table" v-loading="loading">
+      <el-table :data="ipData" @scroll.native="loadMore" style="overflow-y: auto; max-height: 315px;" ref="vechart">
         <el-table-column type="index" label="No" min-width="8%"></el-table-column>
         <el-table-column label="城市" min-width="21%" show-overflow-tooltip>
           <template #default="scope">
             <div>
-              <Icon :iconName="getTelecom(scope.row.city)" iconSize="1.8"></Icon>
-
+              <Icon class="tele-icon" :iconName="getTelecom(scope.row.city)" iconSize="1.8"></Icon>
               <span>{{ getCity(scope.row.city) }}</span>
             </div>
           </template>
@@ -41,13 +40,17 @@
 
 <style lang="less">
 .chart-left {
-  width: 44%;
+  width: 45%;
   --el-border-radius-base: 6px;
 
   .item-table {
     margin-top: 15px;
     padding: 0 8px;
   }
+}
+
+.tele-icon {
+  margin-right: 5px;
 }
 </style>
 
@@ -56,8 +59,11 @@ import { ref, reactive, watch, onMounted } from 'vue';
 import { getOverviewLog } from "@/api/admin";
 import { IpStat } from "@/types/IpStat";
 import { plusDate } from "@/utils/tool";
+import { debounce } from '@/utils/tool';
 
 const today = new Date();
+const loading = ref(false)
+const vechart = ref<HTMLElement>();
 const formatDate = (date: Date) => `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 
 // 访问记录
@@ -66,7 +72,7 @@ const visitRadio = ref("day");
 // 分页参数
 const page = reactive({
   page: 1,
-  pageSize: 100,
+  pageSize: 10,
   startTime: formatDate(today),
   endTime: formatDate(plusDate(today, 1))
 });
@@ -96,12 +102,17 @@ const updateTimeRange = (type: string) => {
 // 获取访问记录
 const ipData = ref<IpStat[]>([]);
 const getVisit = async () => {
+  loading.value = true;
   const data = await getOverviewLog(page.page, page.pageSize, page.startTime, page.endTime);
-  ipData.value = data.list.sort((a, b) => b.accessCount - a.accessCount);
+  ipData.value = ipData.value.concat(data.list).sort((a, b) => b.accessCount - a.accessCount);
+  setTimeout(() => loading.value = false, 300)
 };
 
 // 获取运营商
 const getTelecom = (city: string) => {
+  const arr = city.split("/");
+  if (arr.length == 3) { city = arr[1] + '/' + arr[2] }
+  console.log(city)
   if (city.includes("/")) {
     const arr = city.split("/");
     if (arr[0].includes("联通")) {
@@ -111,23 +122,42 @@ const getTelecom = (city: string) => {
     } else if (arr[0].includes("移动")) {
       return "icon-mobile"
     } else {
-      return "icon-weizhi"
+      return "icon-waixingren"
     }
   }
-  return "icon-weizhi";
+  return "icon-waixingren";
 }
 
 const getCity = (city: string) => {
-  if (city.includes("/")) {
-    const arr = city.split("/");
+  const arr = city.split("/");
+
+  if (arr.length == 2) {
     return arr[1];
+  } else if (arr.length == 3) {
+    return arr[2];
+  } else if (city.includes(" ")) {
+    return city.split(' ')[1];
   }
-  return city.replace(" ", "");
+  return city;
 }
+
+const loadMore = debounce((event: Event) => {
+  const target = event.target as HTMLElement;
+  if (target && !loading.value) {
+    const { scrollTop, clientHeight, scrollHeight } = target;
+    if (scrollTop + clientHeight >= scrollHeight - 60) {
+      // 滚动到底部时加载更多数据
+      page.page++;
+      getVisit().then(() => target.scrollTop = scrollTop + 2)
+    }
+  }
+}, 160);
 
 // 监听选项变化
 watch(visitRadio, (newVal) => {
+  page.page = 1;
   updateTimeRange(newVal);
+  ipData.value = []
   getVisit();
 });
 

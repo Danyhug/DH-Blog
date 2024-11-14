@@ -82,20 +82,32 @@ public class AccessLogImpl {
                 new LambdaQueryWrapper<IpStat>().in(IpStat::getIpAddress, uniqueIPs)
         );
 
-        // 构建结果列表
+        // 构建结果列表并排序
         List<IpStat> result = ipStats.stream().map(ipStat -> {
-            Long accessCount = ipAccessCountMap.get(ipStat.getIpAddress());
-            return IpStat.builder()
-                    .ipAddress(ipStat.getIpAddress())
-                    .city(ipStat.getCity())
-                    .accessCount(accessCount == null ? 0 : accessCount.intValue())
-                    .bannedCount(ipStat.getBannedCount())
-                    .build();
-        }).collect(Collectors.toList());
+                    Long accessCount = ipAccessCountMap.get(ipStat.getIpAddress());
+                    return IpStat.builder()
+                            .ipAddress(ipStat.getIpAddress())
+                            .city(ipStat.getCity())
+                            .accessCount(accessCount == null ? 0 : accessCount.intValue())
+                            .bannedCount(ipStat.getBannedCount())
+                            .build();
+                }).sorted(Comparator.comparing(IpStat::getAccessCount, Comparator.reverseOrder())
+                        .thenComparing(IpStat::getIpAddress))
+                .collect(Collectors.toList());
 
         // 分页处理
         int fromIndex = (page - 1) * pageSize;
         int toIndex = Math.min(fromIndex + pageSize, result.size());
+
+        // 如果 fromIndex 超过了 result 的大小，返回一个空的分页结果
+        if (fromIndex >= result.size()) {
+            List<IpStat> emptyResult = Collections.emptyList();
+            PageResult<IpStat> pageResult = new PageResult<>();
+            pageResult.setList(emptyResult);
+            pageResult.setTotal((long) result.size());
+            return pageResult;
+        }
+
         List<IpStat> paginatedResult = result.subList(fromIndex, toIndex);
 
         // 返回分页结果
@@ -104,4 +116,5 @@ public class AccessLogImpl {
         pageResult.setTotal((long) result.size());
         return pageResult;
     }
+
 }

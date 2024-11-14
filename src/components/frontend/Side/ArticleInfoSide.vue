@@ -52,6 +52,7 @@
 <script setup>
 import { useUserStore } from '@/store';
 import { reactive, onMounted, onBeforeUnmount, ref } from 'vue'
+import { debounce } from '@/utils/tool'
 const store = useUserStore()
 
 const scrollElement = document.documentElement
@@ -72,18 +73,6 @@ const customColors = [
 const sideInfo = reactive({
   process: 0
 })
-
-function debounce(func, wait) {
-  let timeout;
-  return function () {
-    const context = this;
-    const args = arguments;
-    clearTimeout(timeout);
-    timeout = setTimeout(function () {
-      func.apply(context, args);
-    }, wait);
-  };
-}
 
 // 计算分钟和秒
 function formatSeconds(seconds) {

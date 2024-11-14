@@ -32,7 +32,7 @@ public class UserController {
     @PostMapping("/check")
     public AjaxResult<String> check() {
         return AjaxResult.success("Success");
-    };
+    }
 
     @Limit
     @Operation(summary = "用户在线状态监测")

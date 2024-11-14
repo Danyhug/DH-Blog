@@ -60,6 +60,7 @@ declare module 'vue' {
     VisitTable: typeof import('./src/components/backend/DashBoard/VisitTable.vue')['default']
   }
   export interface ComponentCustomProperties {
+    vInfiniteScroll: typeof import('element-plus/es')['ElInfiniteScroll']
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']
   }
 }
