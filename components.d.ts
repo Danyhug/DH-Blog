@@ -56,6 +56,8 @@ declare module 'vue' {
     TableDialog: typeof import('./src/components/backend/Table/TableDialog.vue')['default']
     TagTable: typeof import('./src/components/backend/Table/TagTable.vue')['default']
     TotalItem: typeof import('./src/components/backend/DashBoard/TotalItem.vue')['default']
+    VisitChart: typeof import('./src/components/backend/DashBoard/VisitChart.vue')['default']
+    VisitTable: typeof import('./src/components/backend/DashBoard/VisitTable.vue')['default']
   }
   export interface ComponentCustomProperties {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']
