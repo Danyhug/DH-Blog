@@ -20,17 +20,6 @@ CREATE TABLE `articles` (
     PRIMARY KEY (`id`)
 ) ENGINE = InnoDB;
 
--- 创建登录信息表 (`logininfo`)
-DROP TABLE IF EXISTS `logininfo`;
-
-CREATE TABLE `logininfo` (
-    `id` INT NOT NULL AUTO_INCREMENT COMMENT '唯一标识每个登录信息',
-    `login_time` DATETIME NOT NULL COMMENT '登录时间',
-    `ip` VARCHAR(16) NOT NULL COMMENT '登录IP',
-    `city` CHAR(32) NOT NULL COMMENT '登录城市',
-    PRIMARY KEY (`id`)
-) ENGINE = InnoDB;
-
 -- 创建文章标签关联表 (`posttags`)
 DROP TABLE IF EXISTS `posttags`;
 

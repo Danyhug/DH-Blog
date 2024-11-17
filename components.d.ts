@@ -14,7 +14,9 @@ declare module 'vue' {
     ArticleTable: typeof import('./src/components/backend/Table/ArticleTable.vue')['default']
     Banner: typeof import('./src/components/frontend/Banner.vue')['default']
     CategoryTable: typeof import('./src/components/backend/Table/CategoryTable.vue')['default']
+    Comment: typeof import('./src/components/frontend/Comment.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
+    ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCard: typeof import('element-plus/es')['ElCard']
     ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
@@ -51,16 +53,17 @@ declare module 'vue' {
     Icon: typeof import('./src/components/Child/Icon.vue')['default']
     Pagination: typeof import('./src/components/frontend/Pagination.vue')['default']
     Pet: typeof import('./src/components/frontend/Pet.vue')['default']
+    Publish: typeof import('./src/components/frontend/Comment/Publish.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     TableDialog: typeof import('./src/components/backend/Table/TableDialog.vue')['default']
     TagTable: typeof import('./src/components/backend/Table/TagTable.vue')['default']
     TotalItem: typeof import('./src/components/backend/DashBoard/TotalItem.vue')['default']
+    View: typeof import('./src/components/frontend/Comment/View.vue')['default']
     VisitChart: typeof import('./src/components/backend/DashBoard/VisitChart.vue')['default']
     VisitTable: typeof import('./src/components/backend/DashBoard/VisitTable.vue')['default']
   }
   export interface ComponentCustomProperties {
-    vInfiniteScroll: typeof import('element-plus/es')['ElInfiniteScroll']
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']
   }
 }

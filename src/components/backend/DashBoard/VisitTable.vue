@@ -72,7 +72,7 @@ const visitRadio = ref("day");
 // 分页参数
 const page = reactive({
   page: 1,
-  pageSize: 10,
+  pageSize: 30,
   startTime: formatDate(today),
   endTime: formatDate(plusDate(today, 1))
 });
@@ -112,7 +112,6 @@ const getVisit = async () => {
 const getTelecom = (city: string) => {
   const arr = city.split("/");
   if (arr.length == 3) { city = arr[1] + '/' + arr[2] }
-  console.log(city)
   if (city.includes("/")) {
     const arr = city.split("/");
     if (arr[0].includes("联通")) {

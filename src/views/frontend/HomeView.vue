@@ -142,6 +142,9 @@ h3 {
   box-shadow: 0 .5rem .75rem .0625rem rgb(235, 235, 235);
   border-radius: .3125rem;
   margin: 9.6px 0;
-  padding: 16px 0 32px;
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 </style>
