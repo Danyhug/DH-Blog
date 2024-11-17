@@ -31,3 +31,13 @@ export function debounce<T extends (...args: any[]) => any>(
     }, wait);
   };
 }
+
+/**
+ * 格式化日期
+ * @param dateString 格式为2023-01-01T00:00:00.000Z
+ * @returns 格式为2023/1/1 0:0:0
+ */
+export function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${date.getMinutes()}`;
+}

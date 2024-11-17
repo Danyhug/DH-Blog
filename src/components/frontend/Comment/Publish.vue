@@ -75,7 +75,7 @@
 <style scoped lang="less">
 .comment-form {
   position: relative;
-  width: 92%;
+  width: 100%;
   margin: 0 auto;
   padding: 16px 8px;
   background-color: #fff;

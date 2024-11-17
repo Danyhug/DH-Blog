@@ -1,6 +1,10 @@
 <template>
   <div class="box">
-    <Publish />
+    <div style="  width: 92%;
+  margin: 0 auto;">
+      <Publish />
+      <View />
+    </div>
   </div>
 </template>
 
@@ -13,6 +17,6 @@
 </style>
 
 <script setup>
-import View from '@/components/frontend/comment/View.vue'
+import View from '@/components/frontend/Comment/View.vue'
 import Publish from '@/components/frontend/Comment/Publish.vue'
 </script>

@@ -15,6 +15,7 @@ declare module 'vue' {
     Banner: typeof import('./src/components/frontend/Banner.vue')['default']
     CategoryTable: typeof import('./src/components/backend/Table/CategoryTable.vue')['default']
     Comment: typeof import('./src/components/frontend/Comment.vue')['default']
+    CommentItem: typeof import('./src/components/frontend/Comment/CommentItem.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElButton: typeof import('element-plus/es')['ElButton']
