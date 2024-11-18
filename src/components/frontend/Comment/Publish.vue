@@ -2,7 +2,7 @@
   <div class="comment-form">
     <div class="right-top">
       <label class="ui-bookmark">
-        <input type="checkbox" v-model="comment.public" />
+        <input type="checkbox" v-model="comment.isPublic" />
         <div class="bookmark">
           <svg viewBox="0 0 32 32">
             <g>
@@ -19,7 +19,7 @@
       <input class="input" type="email" placeholder="* 邮箱" v-model="comment.email" />
       <div style="color: #666;">
         <span>
-          {{ comment.public ? '评论已公开，任何人均可阅读' : '评论已私密，仅博主可见' }}
+          {{ comment.isPublic ? '评论已公开，任何人均可阅读' : '评论已私密，仅博主可见' }}
         </span>
       </div>
     </div>
@@ -415,6 +415,10 @@ button:hover .play {
 
 <script setup>
 import { emojis } from '@/types/Constant';
+import { useUserStore } from '@/store/index'
+
+const store = useUserStore()
+
 const emit = defineEmits(['comment-submitted']);
 const props = defineProps({
   parentId: {
@@ -428,11 +432,12 @@ const viewState = {
 }
 
 const comment = reactive({
+  articleId: store.homeHeaderInfo.id,
   author: '',
   content: '',
   email: '',
   parentId: props.parentId,
-  public: true
+  isPublic: true
 })
 
 const textarea = ref(null)
@@ -443,7 +448,6 @@ const addEmj = (e) => {
 }
 
 const submitComment = () => {
-  console.log(props)
   emit('comment-submitted', comment);
 };
 </script>

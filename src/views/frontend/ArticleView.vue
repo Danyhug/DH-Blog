@@ -96,6 +96,7 @@ export default {
 
       // 更改pinia内容
       this.store.homeHeaderInfo = {
+        id: this.id,
         title: this.title,
         created: this.created,
         wordNum: article.wordNum || 0,

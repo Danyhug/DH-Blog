@@ -5,6 +5,7 @@ import { Tag } from '@/types/Tag'
 import request from '@/api/axios'
 import { UserLogin } from '@/types/User'
 import { OverView } from '@/types/DashBoard'
+import { Comment } from '@/types/Comment'
 
 /**
  * 查询文章详情
@@ -73,4 +74,11 @@ export const heartBeat = () => {
  */
 export const getOverview = (): Promise<OverView> => {
   return request.get('/article/overview')
+}
+
+/**
+ * 用户评论
+ */
+export const addComment = (comment: Comment) => {
+  return request.post('/comment', comment)
 }

@@ -165,6 +165,7 @@ ul {
 <script setup>
 import { defineProps } from 'vue'
 import { formatDate } from '@/utils/tool'
+import { addComment } from '@/api/user.ts'
 import CommentItem from '@/components/frontend/Comment/CommentItem.vue';
 import Publish from '@/components/frontend/Comment/Publish.vue';
 
@@ -179,7 +180,7 @@ const replyComment = (commentId) => {
 }
 
 const send = (comment) => {
-  console.log(comment)
+  addComment(comment)
 }
 
 defineProps({
