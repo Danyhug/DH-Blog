@@ -22,7 +22,7 @@
 
           <Transition>
             <div class="reply-edit" v-if="replay == comment.id">
-              <Publish />
+              <Publish @comment-submitted="send" :parentId="comment.id" />
             </div>
           </Transition>
         </div>
@@ -51,7 +51,6 @@
 
   100% {
     opacity: 1;
-    -webkit-transform: translateY(0);
     transform: translateY(0);
   }
 }
@@ -177,6 +176,10 @@ const replyComment = (commentId) => {
   } else {
     replay.value = commentId
   }
+}
+
+const send = (comment) => {
+  console.log(comment)
 }
 
 defineProps({

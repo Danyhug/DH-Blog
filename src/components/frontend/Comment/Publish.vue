@@ -37,7 +37,7 @@
         </div>
       </div>
       <div class="action-right">
-        <button @click="console.log(comment)">
+        <button @click="submitComment">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36px" height="36px">
             <rect width="36" height="36" x="0" y="0" fill="#fdd835"></rect>
             <path fill="#e53935"
@@ -121,7 +121,9 @@
 
   .comment-action {
     margin-top: 8px;
+    width: 100%;
     display: flex;
+    justify-content: space-between;
 
     .action-left {
       flex: 1;
@@ -141,7 +143,7 @@
     }
 
     .action-right {
-      padding-left: 150px;
+      margin-left: 30px;
       position: relative;
       left: 10px;
     }
@@ -413,6 +415,14 @@ button:hover .play {
 
 <script setup>
 import { emojis } from '@/types/Constant';
+const emit = defineEmits(['comment-submitted']);
+const props = defineProps({
+  parentId: {
+    type: String,
+    default: null
+  }
+})
+
 const viewState = {
   showEmoji: false,
 }
@@ -421,6 +431,7 @@ const comment = reactive({
   author: '',
   content: '',
   email: '',
+  parentId: props.parentId,
   public: true
 })
 
@@ -430,4 +441,9 @@ const addEmj = (e) => {
   comment.content += e
   textarea.value.focus()
 }
+
+const submitComment = () => {
+  console.log(props)
+  emit('comment-submitted', comment);
+};
 </script>
