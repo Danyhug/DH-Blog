@@ -1,9 +1,11 @@
 package top.zzf4.blog.entity.model;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @TableName("comments")
@@ -38,4 +40,7 @@ public class Comment {
 
     @TableField("admin")
     private Boolean isAdmin;
+
+    @TableField(exist = false)
+    private List<Comment> children;
 }

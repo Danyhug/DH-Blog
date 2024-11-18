@@ -432,7 +432,7 @@ const viewState = {
 }
 
 const comment = reactive({
-  articleId: store.homeHeaderInfo.id,
+  articleId: null,
   author: '',
   content: '',
   email: '',
@@ -448,6 +448,7 @@ const addEmj = (e) => {
 }
 
 const submitComment = () => {
+  comment.articleId = store.homeHeaderInfo.id
   emit('comment-submitted', comment);
 };
 </script>

@@ -1,7 +1,7 @@
 <template>
   <div class="box">
     <div style="width: 92%; margin: 0 auto">
-      <Publish />
+      <Publish @comment-submitted="send" />
       <View />
     </div>
   </div>
@@ -15,7 +15,12 @@
 }
 </style>
 
-<script>
+<script setup>
 import View from "@/components/frontend/Comment/View.vue";
 import Publish from "@/components/frontend/Comment/Publish.vue";
+import { addComment } from '@/api/user.ts'
+
+const send = (comment) => {
+  addComment(comment)
+}
 </script>

@@ -2,12 +2,10 @@ package top.zzf4.blog.controller;
 
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import top.zzf4.blog.entity.AjaxResult;
 import top.zzf4.blog.entity.model.Comment;
+import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.service.CommentService;
 import top.zzf4.blog.utils.Tools;
 
@@ -29,5 +27,11 @@ public class CommentController {
         commentService.addComment(comment);
         System.out.println(comment);
         return AjaxResult.success("评论成功！");
+    }
+
+    @GetMapping("/{articleId}")
+    public AjaxResult<PageResult<Comment>> getCommentList(@PathVariable Long articleId) {
+        PageResult<Comment> commentList = commentService.getCommentList(articleId, 100, 1);
+        return AjaxResult.success(commentList);
     }
 }
