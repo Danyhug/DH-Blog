@@ -9,6 +9,7 @@
         <div class="comment-main-top">
           <div class="comment-meta">
             <div class="comment-author"><a>{{ comment.author }}</a></div>
+            <span v-if="comment.admin" class="admin-tag">博主</span>
             <time class="comment-time"> • {{ formatDate(comment.create_time) }}</time>
           </div>
           <div class="comment-content">
@@ -53,6 +54,19 @@
     -webkit-transform: translateY(0);
     transform: translateY(0);
   }
+}
+
+.admin-tag {
+  margin: 0 3px 0 2px;
+  color: #fff;
+  background: #6b7280;
+  padding: 1px 3px;
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 500;
+  border-radius: 3px;
+  display: inline-block;
+  opacity: .9;
 }
 
 ul,

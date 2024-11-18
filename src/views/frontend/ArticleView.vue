@@ -31,8 +31,6 @@ import { getArticleBg } from '@/utils/tool';
 import { watch } from 'vue';
 import router from '@/router';
 
-import Comment from '@/components/frontend/Comment.vue';
-
 export default {
   name: 'HomeView',
   data() {

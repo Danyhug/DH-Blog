@@ -1,6 +1,6 @@
 <template>
   <div class="comment-list">
-    <div class="count">11 评论</div>
+    <div class="count">{{ commentList.flat(Infinity).length }} 条评论</div>
     <ul>
       <CommentItem :commentList="commentList" />
     </ul>
@@ -57,6 +57,7 @@ const commentList = reactive([
             "email": "cha2rlie@example.com",
             "content": "哦，我已失去了你！",
             "create_time": "2023-10-01T12:36:56Z",
+            "admin": true,
             "parentId": "2",
             "children": []
           }
