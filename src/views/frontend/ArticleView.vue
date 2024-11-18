@@ -18,8 +18,8 @@
     </div>
   </div>
   <div class="comment">
-      <Comment />
-    </div>
+    <Comment />
+  </div>
 </template>
 
 <script lang="ts">

@@ -431,14 +431,15 @@ const viewState = {
   showEmoji: false,
 }
 
-const comment = reactive({
+const def = {
   articleId: null,
   author: '',
   content: '',
   email: '',
   parentId: props.parentId,
   isPublic: true
-})
+}
+const comment = reactive({ ...def })
 
 const textarea = ref(null)
 
@@ -448,7 +449,22 @@ const addEmj = (e) => {
 }
 
 const submitComment = () => {
+  // 严格对名称，邮箱和内容做校验
+  if (comment.author.length < 2 || comment.content.length < 3) {
+    return ElMessage.error('用户名需大于2并且评论内容大于3')
+  }
+  // 校验邮箱
+  if (!/^([a-zA-Z0-9_-])+@([a-zA-Z0-9_-])+((\.[a-zA-Z0-9_-]{2,3}){1,2})$/.test(comment.email)) {
+    return ElMessage.error('邮箱格式不正确')
+  }
+
   comment.articleId = store.homeHeaderInfo.id
   emit('comment-submitted', comment);
+  clear()
 };
+
+const clear = () => {
+  // 还原初始值
+  Object.assign(comment, def)
+}
 </script>

@@ -56,6 +56,7 @@ export const useAdminStore = defineStore("admin", () => {
 
 export const useUserStore = defineStore("user", () => {
   const homeShowComponent = ref("home");
+  const commentKey = ref(true)
 
   // 首页上方展示内容（文章详情上面）
   interface HomeHeaderInfo {
@@ -99,5 +100,6 @@ export const useUserStore = defineStore("user", () => {
     aritcleModel,
     articleList,
     page,
+    commentKey
   };
 });

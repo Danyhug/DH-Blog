@@ -1,42 +1,44 @@
 <template>
-  <li v-for="comment in commentList" :key="comment.id" class="comment-box">
-    <div class="comment-container">
-      <div class="comment-avatar">
-        <img :alt="`${comment.author}'s avatar`" :src="`//cravatar.cn/avatar/${comment.email}?s=256&d=monsterid`"
-          class="avatar">
-      </div>
-      <div class="comment-main">
-        <div class="comment-main-top">
-          <div class="comment-meta">
-            <div class="comment-author"><a>{{ comment.author }}</a></div>
-            <span v-if="comment.admin" class="admin-tag">博主</span>
-            <time class="comment-time"> • {{ formatDate(comment.createTime) }}</time>
-          </div>
-          <div class="comment-content">
-            <p>{{ comment.content }}</p>
-          </div>
+  <TransitionGroup>
+    <li v-for="comment in commentList" :key="comment.id" class="comment-box">
+      <div class="comment-container">
+        <div class="comment-avatar">
+          <img :alt="`${comment.author}'s avatar`" :src="`//cravatar.cn/avatar/${comment.email}?s=256&d=monsterid`"
+            class="avatar">
         </div>
-
-        <div class="reply-button">
-          <span :class="{ 'reply-enter': replay == comment.id }" @click="replyComment(comment.id)">回复</span>
-
-          <Transition>
-            <div class="reply-edit" v-if="replay == comment.id">
-              <Publish @comment-submitted="send" :parentId="comment.id" />
+        <div class="comment-main">
+          <div class="comment-main-top">
+            <div class="comment-meta">
+              <div class="comment-author"><a>{{ comment.author }}</a></div>
+              <span v-if="comment.admin" class="admin-tag">博主</span>
+              <time class="comment-time"> • {{ formatDate(comment.createTime) }}</time>
             </div>
-          </Transition>
+            <div class="comment-content">
+              <p>{{ comment.content }}</p>
+            </div>
+          </div>
+
+          <div class="reply-button">
+            <span :class="{ 'reply-enter': replay == comment.id }" @click="replyComment(comment.id)">回复</span>
+
+            <Transition>
+              <div class="reply-edit" v-if="replay == comment.id">
+                <Publish @comment-submitted="send" :parentId="comment.id" />
+              </div>
+            </Transition>
+          </div>
         </div>
       </div>
-    </div>
-    <ol class="children" v-if="comment.children && comment.children.length > 0">
-      <CommentItem :commentList="comment.children" />
-    </ol>
-  </li>
+      <ol class="children" v-if="comment.children && comment.children.length > 0">
+        <CommentItem :commentList="comment.children" />
+      </ol>
+    </li>
+  </TransitionGroup>
 </template>
 
 <style lang="less" scoped>
 .v-enter-active {
-  animation: bottom .5s ease;
+  animation: bottom .6s ease;
 }
 
 .v-leave-active {
@@ -46,7 +48,7 @@
 @keyframes bottom {
   0% {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(30px);
   }
 
   100% {
@@ -168,7 +170,8 @@ import { formatDate } from '@/utils/tool'
 import { addComment } from '@/api/user.ts'
 import CommentItem from '@/components/frontend/Comment/CommentItem.vue';
 import Publish from '@/components/frontend/Comment/Publish.vue';
-
+import { useUserStore } from '@/store';
+const store = useUserStore()
 const replay = ref(-1)
 
 const replyComment = (commentId) => {
@@ -181,6 +184,7 @@ const replyComment = (commentId) => {
 
 const send = (comment) => {
   addComment(comment)
+  store.commentKey = !store.commentKey
 }
 
 defineProps({

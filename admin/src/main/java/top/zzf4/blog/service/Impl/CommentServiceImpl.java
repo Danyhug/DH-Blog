@@ -9,6 +9,8 @@ import top.zzf4.blog.mapper.CommentMapper;
 import top.zzf4.blog.service.CommentService;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> implements CommentService {
@@ -19,12 +21,28 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
 
     @Override
     public PageResult<Comment> getCommentList(Long articleId, int pageSize, int pageNum) {
+        // 查询评论列表
         List<Comment> list = this.list(new LambdaQueryWrapper<Comment>()
-                .eq(Comment::getArticleId, articleId).eq(Comment::getIsPublic, true)).stream().toList();
+                .eq(Comment::getArticleId, articleId)
+                .eq(Comment::getIsPublic, true));
 
-        // 如果parentId为null，则为一级元素，如果不为null，则添加到对应的id下
-        List<Comment> result = list.stream().filter(comment -> comment.getParentId() == null).toList();
-        result.forEach(comment -> comment.setChildren(list.stream().filter(c -> c.getParentId() != null && c.getParentId().equals(comment.getId())).toList()));
-        return new PageResult<>((long) result.size(), (long) pageNum, result);
+        // 构建评论树
+        Map<Integer, List<Comment>> childrenMap = list.stream()
+                .filter(comment -> comment.getParentId() != null)
+                .collect(Collectors.groupingBy(Comment::getParentId));
+
+        List<Comment> result = list.stream()
+                .filter(comment -> comment.getParentId() == null)
+                .peek(comment -> setChildrenRecursively(comment, childrenMap))
+                .collect(Collectors.toList());
+
+        // 返回分页结果
+        return new PageResult<>((long) list.size(), (long) pageNum, result);
+    }
+
+    private void setChildrenRecursively(Comment parentComment, Map<Integer, List<Comment>> childrenMap) {
+        List<Comment> children = childrenMap.getOrDefault(parentComment.getId(), List.of());
+        parentComment.setChildren(children);
+        children.forEach(child -> setChildrenRecursively(child, childrenMap));
     }
 }

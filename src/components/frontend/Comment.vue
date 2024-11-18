@@ -2,7 +2,7 @@
   <div class="box">
     <div style="width: 92%; margin: 0 auto">
       <Publish @comment-submitted="send" />
-      <View />
+      <View :key="store.commentKey" />
     </div>
   </div>
 </template>
@@ -19,8 +19,12 @@
 import View from "@/components/frontend/Comment/View.vue";
 import Publish from "@/components/frontend/Comment/Publish.vue";
 import { addComment } from '@/api/user.ts'
+import { useUserStore } from "@/store";
+const store = useUserStore()
 
+const key = ref(true)
 const send = (comment) => {
   addComment(comment)
+  store.commentKey = !store.commentKey
 }
 </script>

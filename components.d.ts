@@ -51,6 +51,7 @@ declare module 'vue' {
     Header: typeof import('./src/components/frontend/Header.vue')['default']
     HomeSide: typeof import('./src/components/frontend/Side/HomeSide.vue')['default']
     Icon: typeof import('./src/components/Child/Icon.vue')['default']
+    Loading: typeof import('./src/components/frontend/Loading.vue')['default']
     Pagination: typeof import('./src/components/frontend/Pagination.vue')['default']
     Pet: typeof import('./src/components/frontend/Pet.vue')['default']
     Publish: typeof import('./src/components/frontend/Comment/Publish.vue')['default']
