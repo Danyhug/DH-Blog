@@ -26,7 +26,7 @@
         </el-icon>
         系统配置
       </el-menu-item>
-      <el-menu-item index="/admin/system">
+      <el-menu-item index="/admin/comment">
         <el-icon :size="iconSize">
           <User />
         </el-icon>

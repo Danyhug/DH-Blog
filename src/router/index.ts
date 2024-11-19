@@ -12,6 +12,8 @@ const PublishView = () => import(/* webpackChunkName: "publish" */ '../views/bac
 const ManagerView = () => import(/* webpackChunkName: "manager" */ '../views/backend/ManagerView.vue');
 const LoginView = () => import(/* webpackChunkName: "login" */ '../views/backend/LoginView.vue');
 const DashBoardView = () => import(/* webpackChunkName: "dashboard" */ '../views/backend/DashBoardView.vue');
+const CommentView = () => import(/* webpackChunkName: "comment" */ '../views/backend/CommentView.vue');
+
 
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
@@ -31,9 +33,7 @@ const routes = [
   {
     path: '/view', component: HomeView, children:
       [
-        {
-          path: 'home', component: MainView, name: 'Home', meta: { title: '我的个人纪录' }
-        },
+        { path: 'home', component: MainView, name: 'Home', meta: { title: '我的个人纪录' } },
         { path: 'article/:id', component: ArticleView, name: 'ArticleInfo', meta: { title: '文章详情' } }
       ]
   },
@@ -46,7 +46,9 @@ const routes = [
         // 博客发布
         { path: 'publish', component: PublishView, name: 'publish', meta: { title: '后台 博客发布' } },
         // 博客管理
-        { path: 'manager', component: ManagerView, name: 'manager', meta: { title: '后台 博客管理' } }
+        { path: 'manager', component: ManagerView, name: 'manager', meta: { title: '后台 博客管理' } },
+        // 评论管理
+        { path: 'comment', component: CommentView, name: 'comment', meta: { title: '后台 评论管理' } },
       ]
   },
   // 登录页面
