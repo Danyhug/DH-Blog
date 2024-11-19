@@ -118,4 +118,4 @@ CREATE TABLE comments (
     parent_id INT DEFAULT NULL COMMENT '记录父评论的ID',
     ua VARCHAR(32) NOT NULL COMMENT '记录评论作者的User Agent',
     admin TINYINT DEFAULT 0 COMMENT '表示评论作者是否为管理员'
-) COMMENT='存储文章的评论信息';
+) COMMENT='存储文章的评论信息' CHARACTER SET utf8mb4;

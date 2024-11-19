@@ -1,5 +1,6 @@
 package top.zzf4.blog.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -8,8 +9,6 @@ import top.zzf4.blog.entity.model.Comment;
 import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.service.CommentService;
 import top.zzf4.blog.utils.Tools;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 @Log4j2
 @RestController

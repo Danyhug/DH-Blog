@@ -15,6 +15,7 @@ import top.zzf4.blog.mapper.AccessLogMapper;
 import top.zzf4.blog.mapper.IpStatMapper;
 import top.zzf4.blog.utils.Tools;
 
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -52,11 +53,13 @@ public class AccessLogImpl {
             );
         } else {
             // 否则插入新的
-            ipStatMapper.insert(
+            try {
+                ipStatMapper.insert(
                     IpStat.builder().ipAddress(accessLog.getIpAddress())
                             .accessCount(1).bannedCount(0).city(Tools.getIpCity(accessLog.getIpAddress()))
                             .build()
-            );
+                );
+            } catch (Exception ignored){}
         }
         log.info("IP 统计插入成功：{}", ipStat);
     }

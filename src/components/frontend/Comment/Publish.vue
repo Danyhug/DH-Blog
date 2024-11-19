@@ -15,12 +15,10 @@
       </label>
     </div>
     <div class="author-info">
-      <input class="input" type="text" placeholder="* 昵称" v-model="comment.author" />
-      <input class="input" type="email" placeholder="* 邮箱" v-model="comment.email" />
-      <div style="color: #666;">
-        <span>
-          {{ comment.isPublic ? '评论已公开，任何人均可阅读' : '评论已私密，仅博主可见' }}
-        </span>
+      <input class="input" type="text" placeholder="* 昵称" maxlength="15" v-model="comment.author" />
+      <input class="input" type="email" placeholder="* 邮箱" maxlength="20" v-model="comment.email" />
+      <div style="color: #666; margin-right: 30px;">
+        {{ comment.isPublic ? '评论已公开，任何人均可阅读' : '评论已私密，仅博主可见' }}
       </div>
     </div>
     <div class="comment-content">
@@ -94,6 +92,7 @@
   }
 
   .author-info {
+    width: 100%;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     line-height: 24px;
