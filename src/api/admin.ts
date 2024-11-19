@@ -122,3 +122,7 @@ export const uploadFile = (data: FormData): Promise<String> => {
 export const getOverviewLog = (page: number, pageSize: number, startDate: string, endDate: string): Promise<PageResult<IpStat>> => {
   return request.get(`/log/overview/visitLog?page=${page}&pageSize=${pageSize}&startDate=${startDate}&endDate=${endDate}`)
 };
+
+export const getAllComment = (pageNum: number, pageSize: number): Promise<PageResult<Comment>> => {
+  return request.get(`/admin/comment/${pageSize}/${pageNum}`);
+}

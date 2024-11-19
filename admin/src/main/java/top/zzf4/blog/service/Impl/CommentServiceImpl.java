@@ -20,7 +20,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     }
 
     @Override
-    public PageResult<Comment> getCommentList(Long articleId, int pageSize, int pageNum) {
+    public PageResult<Comment> getCommentListByArticle(Long articleId, int pageSize, int pageNum) {
         // 查询评论列表
         List<Comment> list = this.list(new LambdaQueryWrapper<Comment>()
                 .eq(Comment::getArticleId, articleId)
@@ -38,6 +38,13 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
 
         // 返回分页结果
         return new PageResult<>((long) list.size(), (long) pageNum, result);
+    }
+
+    @Override
+    public PageResult<Comment> getCommentList(int pageSize, int pageNum) {
+        // 查询所有评论
+        List<Comment> list = this.list();
+        return new PageResult<>((long) list.size(), (long) pageNum, list);
     }
 
     private void setChildrenRecursively(Comment parentComment, Map<Integer, List<Comment>> childrenMap) {

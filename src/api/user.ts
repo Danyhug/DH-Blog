@@ -17,6 +17,13 @@ export const getArticleInfo = (id: String): Promise<Article<any>> => {
 };
 
 /**
+ * 根据id查询文章标题
+ */
+export const getArticleTitleById = (id: number): Promise<string> => {
+  return request.get("/article/title/" + id);
+}
+
+/**
  * 查询文章列表（分页查询）
  * @param data
  * @returns

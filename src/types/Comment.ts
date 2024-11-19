@@ -4,9 +4,10 @@ export interface Comment {
   author: string;
   email: string;
   content: string;
-  public: boolean;
-  createTime?: Date;
+  isPublic: boolean;
+  createTime?: Date | String;
   parentId: number | null;
   ua?: string;
-  admin?: boolean;
+  isAdmin?: boolean;
+  children?: Comment[]; // 子评论
 }

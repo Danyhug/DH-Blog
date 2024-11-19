@@ -30,7 +30,7 @@ public class CommentController {
 
     @GetMapping("/{articleId}")
     public AjaxResult<PageResult<Comment>> getCommentList(@PathVariable Long articleId) {
-        PageResult<Comment> commentList = commentService.getCommentList(articleId, 100, 1);
+        PageResult<Comment> commentList = commentService.getCommentListByArticle(articleId, 100, 1);
         return AjaxResult.success(commentList);
     }
 }

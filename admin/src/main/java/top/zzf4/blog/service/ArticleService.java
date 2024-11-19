@@ -22,6 +22,11 @@ public interface ArticleService extends IService<Articles> {
     Articles getArticleById(Long id);
 
     /**
+     * 通过id查询文章标题（评论模块用）
+     */
+    String getArticleTitleById(Long id);
+
+    /**
      * 根据id查询分类
      * @param id 分类id
      * @return 分类数据

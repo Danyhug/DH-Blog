@@ -14,9 +14,11 @@ import top.zzf4.blog.entity.dto.ArticleUpdateDTO;
 import top.zzf4.blog.entity.dto.TagInsertDTO;
 import top.zzf4.blog.entity.model.Articles;
 import top.zzf4.blog.entity.model.Category;
+import top.zzf4.blog.entity.model.Comment;
 import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.service.AdminService;
 import top.zzf4.blog.service.ArticleService;
+import top.zzf4.blog.service.CommentService;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +36,8 @@ public class AdminController {
     private AdminService adminService;
     @Autowired
     private ArticleService service;
+    @Autowired
+    private CommentService commentService;
 
     @Value("${upload.path}")
     private String uploadPath;
@@ -191,5 +195,16 @@ public class AdminController {
     public AjaxResult<PageResult<Articles>> getPage(@RequestBody ArticlePageDTO articlePage) {
         log.info("分页查询 {}", articlePage);
         return AjaxResult.success(adminService.getArticleList(articlePage.getPageSize(), articlePage.getPageNum()));
+    }
+
+    // ******************** 评论相关 ********************
+
+    /**
+     * 查询所有评论
+     */
+    @Operation(summary = "查询所有评论")
+    @GetMapping("/comment/{pageSize}/{pageNum}")
+    public AjaxResult<PageResult<Comment>> getComments(@PathVariable int pageSize, @PathVariable int pageNum) {
+        return AjaxResult.success(commentService.getCommentList(pageSize, pageNum));
     }
 }

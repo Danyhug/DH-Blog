@@ -46,6 +46,16 @@ public class ArticleController {
         return AjaxResult.success(articleById);
     }
 
+    // 获取文章标题
+    @Operation(summary = "获取文章标题")
+    @GetMapping("/title/{id}")
+    public AjaxResult<String> getArticleTitleById(@PathVariable String id) {
+        log.info("获取文章标题 {}", id);
+        String articleTitleById = service.getArticleTitleById(Long.valueOf(id));
+
+        return AjaxResult.success(articleTitleById);
+    }
+
     /**
      * 获取需要解密的文章
      */

@@ -9,5 +9,8 @@ public interface CommentService extends IService<Comment> {
     boolean addComment(Comment comment);
 
     // 查看指定文章的评论
-    PageResult<Comment> getCommentList(Long articleId, int pageSize, int pageNum);
+    PageResult<Comment> getCommentListByArticle(Long articleId, int pageSize, int pageNum);
+
+    // 查看所有文章的评论
+    PageResult<Comment> getCommentList(int pageSize, int pageNum);
 }

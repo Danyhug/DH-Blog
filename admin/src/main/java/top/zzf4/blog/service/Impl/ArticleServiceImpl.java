@@ -117,6 +117,11 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Articles> imp
         return articles;
     }
 
+    @Override
+    public String getArticleTitleById(Long id) {
+        return this.getOne(new LambdaQueryWrapper<Articles>().select(Articles::getTitle).eq(Articles::getId, id)).getTitle();
+    }
+
     /**
      * 保存文章
      *
