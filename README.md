@@ -73,3 +73,5 @@
 2. docker 容器开启端口 `8080:8080`
 3. 博客使用 `Swagger` 书写 API 文档，可以访问 `http://localhost:8080/doc.html` 直接打开文档
 4. 后台默认账号密码为 `admin` `admin`，博客为个人设计故不提供注册接口，可以去 `admin/src/test/java/top/zzf4/blog/JwtTest.java` 调用 `addUser` 方法手动添加用户
+5. 执行 `.\docker-run.bat` 打包镜像（有 WSL 环境可以再用 gzip 压缩一下）
+6. 部署到 `docker` 中
