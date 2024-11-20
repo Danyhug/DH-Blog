@@ -60,10 +60,22 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     @Override
     @Transactional
     public void deleteById(String id) {
-        commentMapper.delete(new LambdaQueryWrapper<Comment>()
-                .eq(Comment::getId, id)
-                .or().eq(Comment::getParentId, id)
-        );
+        // 递归删除指定评论及其所有子评论
+        recursiveDelete(id);
+    }
+
+        private void recursiveDelete(String parentId) {
+        // 查询所有以指定评论为父评论的子评论
+        List<Comment> children = this.list(new LambdaQueryWrapper<Comment>()
+                .eq(Comment::getParentId, parentId));
+
+        // 递归删除每个子评论及其子评论
+        for (Comment child : children) {
+            recursiveDelete(String.valueOf(child.getId()));
+        }
+
+        // 删除当前评论
+        this.removeById(parentId);
     }
 
     private void setChildrenRecursively(Comment parentComment, Map<Integer, List<Comment>> childrenMap) {
