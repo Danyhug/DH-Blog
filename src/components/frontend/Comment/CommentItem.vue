@@ -10,7 +10,7 @@
           <div class="comment-main-top">
             <div class="comment-meta">
               <div class="comment-author"><a>{{ comment.author }}</a></div>
-              <span v-if="comment.admin" class="admin-tag">博主</span>
+              <span v-if="comment.isAdmin" class="admin-tag">博主</span>
               <time class="comment-time"> • {{ formatDate(comment.createTime) }}</time>
             </div>
             <div class="comment-content">
