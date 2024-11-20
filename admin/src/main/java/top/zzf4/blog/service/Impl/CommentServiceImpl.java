@@ -2,7 +2,9 @@ package top.zzf4.blog.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import top.zzf4.blog.entity.model.Comment;
 import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.mapper.CommentMapper;
@@ -14,6 +16,12 @@ import java.util.stream.Collectors;
 
 @Service
 public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> implements CommentService {
+    private final CommentMapper commentMapper;
+
+    public CommentServiceImpl(CommentMapper commentMapper) {
+        this.commentMapper = commentMapper;
+    }
+
     @Override
     public boolean addComment(Comment comment) {
         return this.save(comment);
@@ -22,9 +30,19 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     @Override
     public PageResult<Comment> getCommentListByArticle(Long articleId, int pageSize, int pageNum) {
         // 查询评论列表
-        List<Comment> list = this.list(new LambdaQueryWrapper<Comment>()
+        LambdaQueryWrapper<Comment> eq = new LambdaQueryWrapper<Comment>()
                 .eq(Comment::getArticleId, articleId)
-                .eq(Comment::getIsPublic, true));
+                .eq(Comment::getIsPublic, true);
+
+        // 返回分页结果
+        return getCommentList(pageSize, pageNum, eq);
+    }
+
+    @Override
+    public PageResult<Comment> getCommentList(int pageSize, int pageNum, LambdaQueryWrapper<Comment> queryWrapper) {
+        if (queryWrapper == null) queryWrapper = new LambdaQueryWrapper<>();
+        // 查询所有评论
+        List<Comment> list = this.list(queryWrapper.orderByDesc(Comment::getCreateTime));
 
         // 构建评论树
         Map<Integer, List<Comment>> childrenMap = list.stream()
@@ -35,16 +53,17 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
                 .filter(comment -> comment.getParentId() == null)
                 .peek(comment -> setChildrenRecursively(comment, childrenMap))
                 .collect(Collectors.toList());
-
-        // 返回分页结果
         return new PageResult<>((long) list.size(), (long) pageNum, result);
     }
 
+    @Async
     @Override
-    public PageResult<Comment> getCommentList(int pageSize, int pageNum) {
-        // 查询所有评论
-        List<Comment> list = this.list();
-        return new PageResult<>((long) list.size(), (long) pageNum, list);
+    @Transactional
+    public void deleteById(String id) {
+        commentMapper.delete(new LambdaQueryWrapper<Comment>()
+                .eq(Comment::getId, id)
+                .or().eq(Comment::getParentId, id)
+        );
     }
 
     private void setChildrenRecursively(Comment parentComment, Map<Integer, List<Comment>> childrenMap) {

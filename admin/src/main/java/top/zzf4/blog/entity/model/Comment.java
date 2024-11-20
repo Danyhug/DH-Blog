@@ -1,12 +1,18 @@
 package top.zzf4.blog.entity.model;
 
 import com.baomidou.mybatisplus.annotation.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @TableName("comments")
 public class Comment {
 
@@ -25,7 +31,7 @@ public class Comment {
     @TableField("content")
     private String content;
 
-    @TableField("public")
+    @TableField("is_public")
     private Boolean isPublic;
 
     @TableField(value = "create_time", fill = FieldFill.INSERT)
@@ -37,7 +43,7 @@ public class Comment {
     @TableField("ua")
     private String ua;
 
-    @TableField("admin")
+    @TableField("is_admin")
     private Boolean isAdmin;
 
     @TableField(exist = false)

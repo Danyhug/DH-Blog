@@ -2,6 +2,7 @@ package top.zzf4.blog.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +20,7 @@ import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.service.AdminService;
 import top.zzf4.blog.service.ArticleService;
 import top.zzf4.blog.service.CommentService;
+import top.zzf4.blog.utils.Tools;
 
 import java.io.File;
 import java.io.IOException;
@@ -205,6 +207,49 @@ public class AdminController {
     @Operation(summary = "查询所有评论")
     @GetMapping("/comment/{pageSize}/{pageNum}")
     public AjaxResult<PageResult<Comment>> getComments(@PathVariable int pageSize, @PathVariable int pageNum) {
-        return AjaxResult.success(commentService.getCommentList(pageSize, pageNum));
+        return AjaxResult.success(commentService.getCommentList(pageSize, pageNum, null));
+    }
+
+    /**
+     * 修改评论
+     */
+    @Operation(summary = "修改评论")
+    @PutMapping("/comment")
+    public AjaxResult<String> updateComment(@RequestBody Comment comment) {
+        commentService.updateById(comment);
+        return AjaxResult.success("修改评论成功！");
+    }
+
+    /**
+     * 回复评论
+     */
+    @Operation(summary = "回复评论")
+    @PostMapping("/comment/reply")
+    public AjaxResult<String> addComment(@RequestBody Comment comment, HttpServletRequest request) {
+        String ua = Tools.parseUserAgent(request.getHeader("User-Agent"));
+        System.out.println(comment);
+        commentService.addComment(
+            Comment.builder()
+                .author("Danyhug")
+                .email("danyhug@zzf4.top")
+                .content(comment.getContent())
+                .articleId(comment.getArticleId())
+                .parentId(comment.getParentId())
+                .isPublic(true)
+                .isAdmin(true)
+                .ua(ua)
+                .build()
+        );
+        return AjaxResult.success("已回复");
+    }
+
+    /**
+     * 删除评论
+     */
+    @Operation(summary = "删除评论")
+    @DeleteMapping("/comment/{id}")
+    public AjaxResult<String> deleteComment(@PathVariable String id) {
+        commentService.deleteById(id);
+        return AjaxResult.success("已删除评论");
     }
 }

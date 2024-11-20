@@ -4,6 +4,7 @@ import { Category } from '@/types/Category'
 import { Page, PageResult } from '@/types/Page'
 import { Tag } from '@/types/Tag'
 import { IpStat } from '@/types/IpStat'
+import { Comment } from "@/types/Comment";
 
 /**
  * 查询文章详情
@@ -123,6 +124,33 @@ export const getOverviewLog = (page: number, pageSize: number, startDate: string
   return request.get(`/log/overview/visitLog?page=${page}&pageSize=${pageSize}&startDate=${startDate}&endDate=${endDate}`)
 };
 
+/**
+ * 获取所有评论
+ * @param pageNum 
+ * @param pageSize 
+ * @returns 
+ */
 export const getAllComment = (pageNum: number, pageSize: number): Promise<PageResult<Comment>> => {
   return request.get(`/admin/comment/${pageSize}/${pageNum}`);
+}
+
+/**
+ * 编辑评论
+ */
+export const editComment = (comment: Comment): Promise<string> => {
+  return request.put('/admin/comment', comment)
+}
+
+/**
+ * 回复评论
+ */
+export const replyComment = (content: string, isPublic: boolean, parentId: number, articleId: number): Promise<string> => {
+  return request.post('/admin/comment/reply', { content, isPublic, parentId, articleId })
+}
+
+/**
+ * 删除评论
+ */
+export const deleteComment = (id: number): Promise<string> => {
+  return request.delete(`/admin/comment/${id}`)
 }

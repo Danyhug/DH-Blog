@@ -19,18 +19,31 @@ public class CommentController {
     @Autowired
     private CommentService commentService;
 
+    /**
+     * 添加评论
+     * @param comment
+     * @param request
+     * @return
+     */
     @PostMapping
     public AjaxResult<String> addComment(@RequestBody Comment comment, HttpServletRequest request) {
         String ua = Tools.parseUserAgent(request.getHeader("User-Agent"));
         comment.setUa(ua);
+        comment.setIsAdmin(false);
         commentService.addComment(comment);
         System.out.println(comment);
         return AjaxResult.success("评论成功！");
     }
 
+    /**
+     * 查询评论列表
+     * @param articleId
+     * @return
+     */
     @GetMapping("/{articleId}")
     public AjaxResult<PageResult<Comment>> getCommentList(@PathVariable Long articleId) {
         PageResult<Comment> commentList = commentService.getCommentListByArticle(articleId, 100, 1);
         return AjaxResult.success(commentList);
     }
+
 }

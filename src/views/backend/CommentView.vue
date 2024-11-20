@@ -2,20 +2,19 @@
   <div>
     <div class="btn-group">
       <div class="left">
-        <el-button round type="primary" plain :icon="DArrowRight" class="downTree" />
-        <el-button circle type="primary" plain :icon="Refresh" :loading="isLoading" @click="isLoading = true" />
+        <el-button round :icon="DArrowRight" type="primary" class="downTree" @click="expandAllRows" />
+        <el-button circle plain :icon="Refresh" :loading="isLoading" @click="getData" />
       </div>
 
       <el-button-group class="right">
-        <el-button type="primary" :icon="Edit" @click="edit">编辑</el-button>
-        <el-button type="success" :icon="ChatDotRound" @click="reply">回复</el-button>
-        <el-button type="danger" :icon="Delete" />
+        <el-button :icon="Edit" @click="currentRow && (editVisible = true)" />
+        <el-button :icon="ChatDotRound" @click="currentRow && (replyDialogVisible = true)">回复</el-button>
+        <el-button :icon="Delete" type="danger" @click="currentRow && deleteCom(currentRow.id)" />
       </el-button-group>
     </div>
 
-
-    <el-table :data="commentList" stripe height="80vh" style="width: 100%" row-key="id" highlight-current-row
-      @current-change="handleCurrentChange" border indent="8">
+    <el-table ref="myTable" :data="commentList" stripe height="79vh" class="table" row-key="id" highlight-current-row
+      @current-change="handleCurrentChange" indent="'8'">
       <el-table-column label="ID" prop="id" width="100"></el-table-column>
       <el-table-column label="文章标题" width="85">
         <template #default="scope">
@@ -45,180 +44,95 @@
         </template>
       </el-table-column>
     </el-table>
+
+    <!-- 编辑评论 -->
+    <el-drawer title="评论详情" v-model="editVisible" width="500">
+      <el-form :model="currentRow" label-width="80px">
+        <el-form-item label="作者">
+          <el-input v-model="currentRow.author"></el-input>
+        </el-form-item>
+        <el-form-item label="邮箱">
+          <el-input v-model="currentRow.email"></el-input>
+        </el-form-item>
+        <el-form-item label="内容">
+          <el-input type="textarea" v-model="currentRow.content"></el-input>
+        </el-form-item>
+        <el-form-item label="是否公开">
+          <el-switch v-model="currentRow.isPublic"></el-switch>
+        </el-form-item>
+        <el-form-item label="父评论ID">
+          <el-input v-model="currentRow.parentId"></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="editVisible = false">关闭</el-button>
+          <el-button type="primary" @click="edit">修改</el-button>
+        </span>
+      </template>
+    </el-drawer>
+
+    <!-- 回复评论 -->
+    <el-dialog title="回复评论" v-model="replyDialogVisible">
+      <el-form :model="replyForm" label-width="120px">
+        <el-form-item label="回复内容" prop="content">
+          <el-input type="textarea" v-model="replyForm.content" :rows="4" placeholder="请输入回复内容"></el-input>
+        </el-form-item>
+        <el-form-item label="是否公开" prop="isPublic">
+          <el-switch v-model="replyForm.isPublic"></el-switch>
+        </el-form-item>
+
+        <div class="emoji">
+          <ul>
+            <li v-for="ji in emojis" :key="ji" @click="addEmj(ji)">{{ ji }}</li>
+          </ul>
+        </div>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="replyDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="reply">提交</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { getAllComment } from "@/api/admin";
+import { deleteComment, getAllComment } from "@/api/admin";
 import { Comment } from "@/types/Comment";
-import { Delete, Edit, ChatDotRound, Refresh, DArrowRight } from "@element-plus/icons-vue";
+import { Edit, ChatDotRound, Refresh, DArrowRight, Delete } from "@element-plus/icons-vue";
 import { getArticleTitleById } from "@/api/user";
 import { useRouter } from "vue-router";
+import { emojis } from '@/types/Constant';
+import { editComment, replyComment } from '@/api/admin'
+
 const router = useRouter();
 const isLoading = ref(false)
-const openArticle = (articleId: number) => {
-  // 使用 window.open 方法打开文章页
-  window.open(router.resolve({ name: 'ArticleInfo', params: { id: articleId } }).href);
-};// 定义评论列表数据
-let commentList = ref<Comment[]>([
-  {
-    id: 1,
-    articleId: 23,
-    author: "Faker",
-    email: "faker@qq.com",
-    content: "巅峰的你就连我也得避其锋芒🤡",
-    isPublic: true,
-    createTime: "2024-11-18T20:18:05",
-    parentId: null,
-    ua: "Windows 10; Edge 13.0.0.0",
-    isAdmin: false,
-    children: [
-      {
-        id: 16,
-        articleId: 3,
-        author: "Lovevivi",
-        email: "love@qq.com",
-        content: "菜就多练😅",
-        isPublic: true,
-        createTime: "2024-11-19T14:13:10",
-        parentId: 1,
-        ua: "Windows 10; Chrome 130.0.0.0",
-        isAdmin: false,
-        children: [],
-      },
-    ],
-  },
-  {
-    id: 2,
-    articleId: 3,
-    author: "Bang",
-    email: "bang@qq.com",
-    content: "如果S7你来打ADC，或许SKT能拿下三星👍",
-    isPublic: true,
-    createTime: "2024-11-18T20:21:48",
-    parentId: null,
-    ua: "Windows 10; Edge 13.0.0.0",
-    isAdmin: false,
-    children: [],
-  },
-  {
-    id: 3,
-    articleId: 3,
-    author: "RYL.White",
-    email: "white@qq.com",
-    content: "如果S3让你和飞科对线，或许英雄联盟的历史就会改写了💪",
-    isPublic: true,
-    createTime: "2024-11-18T20:23:11",
-    parentId: null,
-    ua: "Windows 10; Chrome 130.0.0.0",
-    isAdmin: false,
-    children: [],
-  },
-  {
-    id: 4,
-    articleId: 3,
-    author: "RNG.UZI",
-    email: "uzi@qq.com",
-    content: "我愿意称你为世界第一VN🤗",
-    isPublic: true,
-    createTime: "2024-11-18T20:23:45",
-    parentId: null,
-    ua: "Windows 10; Chrome 130.0.0.0",
-    isAdmin: false,
-    children: [],
-  },
-  {
-    id: 5,
-    articleId: 3,
-    author: "IG.Theshy",
-    email: "1457191996@qq.com",
-    content: "如同天上降魔主，真是人间太岁神🤡",
-    isPublic: true,
-    createTime: "2024-11-19T09:06:40",
-    parentId: null,
-    ua: "Windows 10; Chrome 109.0.0.0",
-    isAdmin: false,
-    children: [],
-  },
-  {
-    id: 6,
-    articleId: 3,
-    author: "王多多",
-    email: "1234567890@qq.com",
-    content: "把头埋低，这是就是Thyshy",
-    isPublic: true,
-    createTime: "2024-11-19T09:07:28",
-    parentId: null,
-    ua: "Windows 10; Chrome 109.0.0.0",
-    isAdmin: false,
-    children: [],
-  },
-  {
-    id: 7,
-    articleId: 3,
-    author: "刘备",
-    email: "1111112334@qq.com",
-    content: "穿上草鞋，飞一般的感觉🤔",
-    isPublic: true,
-    createTime: "2024-11-19T09:08:20",
-    parentId: null,
-    ua: "Windows 10; Chrome 109.0.0.0",
-    isAdmin: false,
-    children: [],
-  },
-  {
-    id: 8,
-    articleId: 3,
-    author: "Bin",
-    email: "1233332111@qq.com",
-    content: "我会把你打回原型😘",
-    isPublic: true,
-    createTime: "2024-11-19T09:20:04",
-    parentId: null,
-    ua: "Windows 10; Chrome 109.0.0.0",
-    isAdmin: false,
-    children: [],
-  },
-  {
-    id: 9,
-    articleId: 3,
-    author: "Doinb",
-    email: "1232323@qq.com",
-    content: "洲际赛，将韩国国籍打没的人😉",
-    isPublic: true,
-    createTime: "2024-11-19T09:21:37",
-    parentId: null,
-    ua: "Windows 10; Chrome 109.0.0.0",
-    isAdmin: false,
-    children: [
-      {
-        id: 15,
-        articleId: 3,
-        author: "zhulin",
-        email: "11111111111@qq.com",
-        content: "虚空的神-s1-s14冠军掠夺者------Uzi！",
-        isPublic: true,
-        createTime: "2024-11-19T14:12:38",
-        parentId: 9,
-        ua: "Windows 10; Chrome 130.0.0.0",
-        isAdmin: false,
-        children: [],
-      },
-    ],
-  },
-]);
-
-let page = {
+const myTable = ref<any>()
+// 定义评论列表数据
+const commentList = ref<Comment[]>([]);
+const editVisible = ref(false);
+const replyDialogVisible = ref(false)
+const replyForm = reactive({
+  content: "",
+  isPublic: true,
+  parentId: null,
+  articleId: null,
+})
+let page = reactive({
   pageSize: 10,
   pageNum: 1,
-};
+});
 const currentRow = ref()
 
+const openArticle = (articleId: number) => {
+  window.open(router.resolve({ name: 'ArticleInfo', params: { id: articleId } }).href);
+};
+
 // 文章标题缓存
-const articleTitleCache = reactive<{ [key: number]: string }>({
-  1: "S7和S3谁更厉害",
-})
+const articleTitleCache = reactive<{ [key: number]: string }>({})
 
 const getTitle = (articleId: number) => {
   if (articleId in articleTitleCache) return
@@ -232,14 +146,72 @@ const handleCurrentChange = (val: Comment | undefined) => {
   currentRow.value = val
 }
 
-const edit = () => { }
+const addEmj = (val: string) => {
+  replyForm.content += val
+}
 
-const reply = () => { }
+// 编辑评论
+const edit = () => {
+  editComment(currentRow.value).then(res => {
+    editVisible.value = false
+    ElMessage.success(res)
+    getData()
+  })
+}
+
+// 回复评论
+const reply = () => {
+  replyComment(replyForm.content, replyForm.isPublic, currentRow.value.id, currentRow.value.articleId).then(res => {
+    replyDialogVisible.value = false
+    ElMessage.success(res)
+    getData()
+  })
+}
+
+const getData = () => {
+  isLoading.value = true
+  getAllComment(page.pageSize, page.pageNum).then((res) => {
+    commentList.value = [...res.list];
+    ElNotification.success({
+      title: '提示信息',
+      message: "已刷新评论信息",
+      position: 'bottom-right',
+    })
+
+    isLoading.value = false
+  });
+}
+
+// 展开/收起评论树
+const expand = ref(false)
+const expandAllRows = () => {
+  expand.value = !expand.value
+  console.log(myTable.value.store.states.data._rawValue)
+  myTable.value.store.states.data._rawValue.forEach((row: Comment) => {
+    myTable.value.toggleRowExpansion(row, expand);
+    row.children?.forEach((child: Comment) => {
+      myTable.value.toggleRowExpansion(child, expand);
+    })
+  });
+}
+
+const deleteCom = (id: number) => {
+  // 确定删除吗
+  ElMessageBox.confirm('确定删除吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning',
+  }).then(() => {
+    // 删除评论
+    deleteComment(id).then(res => {
+      ElMessage.success(res)
+      getData()
+    })
+  })
+}
 
 onMounted(() => {
-  getAllComment(page.pageSize, page.pageNum).then((res) => {
-    // commentList.value.push(...res.list);
-  });
+  getData()
 });
 </script>
 
@@ -259,5 +231,27 @@ onMounted(() => {
   }
 
   .right {}
+}
+
+.table {
+  width: 100%;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 4px 20px #00000008;
+}
+
+.emoji {
+  ul {
+    list-style: none;
+    font-size: 18px;
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    grid-gap: 6px;
+
+    li {
+      margin-right: 10px;
+      cursor: pointer;
+    }
+  }
 }
 </style>

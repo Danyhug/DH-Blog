@@ -113,9 +113,9 @@ CREATE TABLE comments (
     author VARCHAR(32) NOT NULL COMMENT '记录评论的作者名',
     email VARCHAR(32) NOT NULL COMMENT '记录评论作者的电子邮件',
     content VARCHAR(255) NOT NULL COMMENT '记录评论内容',
-    public TINYINT NOT NULL DEFAULT 1 COMMENT '表示评论是否公开',
+    is_public TINYINT NOT NULL DEFAULT 1 COMMENT '表示评论是否公开',
     create_time DATETIME NOT NULL COMMENT '记录评论的创建时间',
     parent_id INT DEFAULT NULL COMMENT '记录父评论的ID',
     ua VARCHAR(32) NOT NULL COMMENT '记录评论作者的User Agent',
-    admin TINYINT DEFAULT 0 COMMENT '表示评论作者是否为管理员'
+    is_admin TINYINT DEFAULT 0 COMMENT '表示评论作者是否为管理员'
 ) COMMENT='存储文章的评论信息' CHARACTER SET utf8mb4;
