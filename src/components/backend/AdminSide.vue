@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <h1>DH-Blog</h1>
+    <h1 @click="router.push({ name: 'Home' })">DH-Blog</h1>
     <el-menu router :default-active="$route.path">
       <el-menu-item index="/admin/dashboard">
         <el-icon :size="iconSize">
@@ -32,6 +32,14 @@
         </el-icon>
         评论管理
       </el-menu-item>
+
+      <div class="tool">
+        <div>
+          <el-icon size="26" color="#666">
+            <Fold />
+          </el-icon>
+        </div>
+      </div>
     </el-menu>
   </div>
 </template>
@@ -45,12 +53,14 @@ h1 {
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
   background-color: #FFF;
   text-align: center;
+  cursor: pointer;
 }
 
 .container {
   height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 :deep(.el-menu) {
@@ -76,8 +86,17 @@ h1 {
   background-color: var(--el-menu-bg-color);
   box-shadow: -2px 2px 26px #0000001b;
 }
+
+.tool {
+  height: 60px;
+  position: absolute;
+  bottom: 0px;
+  left: 16px;
+}
 </style>
 <script setup>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+const router = useRouter();
 const iconSize = ref(20);
 </script>

@@ -13,6 +13,7 @@ const ManagerView = () => import(/* webpackChunkName: "manager" */ '../views/bac
 const LoginView = () => import(/* webpackChunkName: "login" */ '../views/backend/LoginView.vue');
 const DashBoardView = () => import(/* webpackChunkName: "dashboard" */ '../views/backend/DashBoardView.vue');
 const CommentView = () => import(/* webpackChunkName: "comment" */ '../views/backend/CommentView.vue');
+const SystemView = () => import(/* webpackChunkName: "system" */ '../views/backend/SystemView.vue');
 
 
 import NProgress from 'nprogress'
@@ -47,6 +48,8 @@ const routes = [
         { path: 'publish', component: PublishView, name: 'publish', meta: { title: '后台 博客发布' } },
         // 博客管理
         { path: 'manager', component: ManagerView, name: 'manager', meta: { title: '后台 博客管理' } },
+        // 系统设置
+        { path: 'system', component: SystemView, name: 'system', meta: { title: '后台 系统设置' } },
         // 评论管理
         { path: 'comment', component: CommentView, name: 'comment', meta: { title: '后台 评论管理' } },
       ]

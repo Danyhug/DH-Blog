@@ -3,7 +3,8 @@
     <li v-for="comment in commentList" :key="comment.id" class="comment-box">
       <div class="comment-container">
         <div class="comment-avatar">
-          <img :alt="`${comment.author}'s avatar`" :src="`//cravatar.cn/avatar/${comment.email}?s=256&d=monsterid`"
+          <img :alt="`${comment.author}'s avatar`"
+            :src="`//cravatar.cn/avatar/${comment.email == 'danyhug@qq.com' ? '4831d466a6ba28c45b70edefc025fa8f' : comment.email}?s=256&d=monsterid`"
             class="avatar">
         </div>
         <div class="comment-main">

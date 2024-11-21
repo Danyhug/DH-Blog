@@ -64,7 +64,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         recursiveDelete(id);
     }
 
-        private void recursiveDelete(String parentId) {
+    private void recursiveDelete(String parentId) {
         // 查询所有以指定评论为父评论的子评论
         List<Comment> children = this.list(new LambdaQueryWrapper<Comment>()
                 .eq(Comment::getParentId, parentId));

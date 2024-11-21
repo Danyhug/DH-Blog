@@ -14,7 +14,7 @@
     </div>
 
     <el-table ref="myTable" :data="commentList" stripe height="79vh" class="table" row-key="id" highlight-current-row
-      @current-change="handleCurrentChange" indent="'8'">
+      @current-change="handleCurrentChange" indent="8">
       <el-table-column label="ID" prop="id" width="100"></el-table-column>
       <el-table-column label="文章标题" width="85">
         <template #default="scope">
