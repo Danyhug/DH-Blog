@@ -30,16 +30,10 @@ import AdminFooter from '@/components/backend/AdminFooter.vue';
   background-color: #fbfbfb;
   box-shadow: 4px 0 10px rgb(248, 248, 248);
   transition: width 0.6s;
+  overflow: hidden;
 }
 
 .el-main {
   background-color: var(--dh-admin-bg);
 }
-
-/* 平板适配 */
-/* @media screen and (max-width: 1024px) {
-  .el-aside {
-    display: none;
-  }
-} */
 </style>

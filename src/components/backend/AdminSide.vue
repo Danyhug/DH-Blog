@@ -52,7 +52,6 @@ h1 {
   line-height: 80px;
   color: #3F8CFF;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-  background-color: #FFF;
   text-align: center;
   cursor: pointer;
   transition: all 0.6s;
@@ -63,6 +62,8 @@ h1 {
   display: flex;
   flex-direction: column;
   position: relative;
+  background-color: #FFF;
+
 
   :deep(.el-menu) {
     padding: 0 12px;
@@ -144,6 +145,7 @@ let previousWidthState = window.innerWidth >= 1200; // 初始状态
 const fold = () => {
   container.value.classList.toggle('fold-container')
   isFold.value = !isFold.value
+
   if (foldFather.value == -1 || isFold.value) {
     foldFather.value = document.querySelector('.el-aside').offsetWidth
     // 折叠
@@ -157,8 +159,15 @@ function resize() {
   const currentWidthState = window.innerWidth >= 1200;
 
   if (currentWidthState !== previousWidthState) {
-    fold();
     previousWidthState = currentWidthState; // 更新状态
+
+    if (window.innerWidth >= 1200 && !isFold.value) {
+      return
+    } else if (window.innerWidth < 1200 && isFold.value) {
+      return
+    }
+
+    fold();
   }
 }
 
