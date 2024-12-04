@@ -1,5 +1,5 @@
 <template>
-  <div class="container">
+  <div ref="container" class="container">
     <h1 @click="router.push({ name: 'Home' })">DH-Blog</h1>
     <el-menu router :default-active="$route.path">
       <el-menu-item index="/admin/dashboard">
@@ -32,19 +32,20 @@
         </el-icon>
         评论管理
       </el-menu-item>
-
-      <div class="tool">
-        <div>
-          <el-icon size="26" color="#666">
-            <Fold />
-          </el-icon>
-        </div>
-      </div>
     </el-menu>
+
+    <div class="tool">
+      <div>
+        <el-icon size="26" color="#666">
+          <Fold @click="fold()" style="cursor: pointer;" />
+        </el-icon>
+      </div>
+    </div>
   </div>
 </template>
 <style scoped lang="less">
 h1 {
+  opacity: 1;
   font-weight: bold;
   font-size: 30px;
   font-style: italic;
@@ -54,6 +55,7 @@ h1 {
   background-color: #FFF;
   text-align: center;
   cursor: pointer;
+  transition: all 0.6s;
 }
 
 .container {
@@ -61,42 +63,116 @@ h1 {
   display: flex;
   flex-direction: column;
   position: relative;
+
+  :deep(.el-menu) {
+    padding: 0 12px;
+    background-color: #fff;
+    flex: 1;
+    border: none;
+  }
+
+  .el-icon {
+    margin-left: 10px;
+    margin-right: 15px;
+  }
+
+  .tool {
+    .el-icon {
+      margin: 0;
+    }
+  }
+
+  .el-menu-item {
+    --el-menu-hover-bg-color: rgb(245, 245, 245);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    transition: all .3s;
+  }
+
+  .is-active {
+    --el-menu-active-color: #3F8CFF;
+    background-color: var(--el-menu-bg-color);
+    box-shadow: -2px 2px 26px #0000001b;
+  }
+
+  .tool {
+    height: 60px;
+    position: absolute;
+    bottom: 20px;
+    left: 12px;
+  }
 }
 
-:deep(.el-menu) {
-  padding: 0 12px;
-  background-color: #fff;
-  flex: 1;
-  border: none;
-}
+.fold-container {
+  h1 {
+    font-size: 0;
+    opacity: 0;
+  }
 
-.el-icon {
-  margin-left: 10px;
-  margin-right: 15px;
-}
+  :deep(.el-menu) {
+    padding: 0 5px;
+  }
 
-.el-menu-item {
-  --el-menu-hover-bg-color: rgb(245, 245, 245);
-  border-radius: 10px;
-  margin-bottom: 10px;
-}
+  .el-icon {
+    margin: 0;
+  }
 
-.is-active {
-  --el-menu-active-color: #3F8CFF;
-  background-color: var(--el-menu-bg-color);
-  box-shadow: -2px 2px 26px #0000001b;
-}
+  .el-menu-item {
+    font-size: 0;
+    --el-menu-base-level-padding: 12px;
+    --el-menu-item-height: 46px;
+  }
 
-.tool {
-  height: 60px;
-  position: absolute;
-  bottom: 0px;
-  left: 16px;
+  .is-active {
+    background-color: var(--el-menu-bg-color);
+    box-shadow: 0 0 16px #eee;
+  }
 }
 </style>
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { debounce } from '@/utils/tool'
 const router = useRouter();
 const iconSize = ref(20);
+const container = ref(null)
+// 折叠元素的宽度
+const foldFather = ref(-1)
+const isFold = ref(false)
+let previousWidthState = window.innerWidth >= 1200; // 初始状态
+
+const fold = () => {
+  container.value.classList.toggle('fold-container')
+  isFold.value = !isFold.value
+  if (foldFather.value == -1 || isFold.value) {
+    foldFather.value = document.querySelector('.el-aside').offsetWidth
+    // 折叠
+    document.querySelector('.el-aside').style.width = '60px'
+  } else {
+    // 展开
+    document.querySelector('.el-aside').style.width = foldFather.value + 'px';
+  }
+}
+function resize() {
+  const currentWidthState = window.innerWidth >= 1200;
+
+  if (currentWidthState !== previousWidthState) {
+    fold();
+    previousWidthState = currentWidthState; // 更新状态
+  }
+}
+
+const debouncedResize = debounce(resize, 100);
+onMounted(() => {
+  // 初始调用一次以确保初始状态正确
+  resize();
+
+  // 使用 addEventListener 添加事件处理程序
+  window.addEventListener('resize', debouncedResize);
+});
+
+onBeforeUnmount(() => {
+  // 移除事件监听器
+  window.removeEventListener('resize', debouncedResize);
+});
 </script>

@@ -29,6 +29,7 @@ import AdminFooter from '@/components/backend/AdminFooter.vue';
   height: 100vh;
   background-color: #fbfbfb;
   box-shadow: 4px 0 10px rgb(248, 248, 248);
+  transition: width 0.6s;
 }
 
 .el-main {
@@ -36,9 +37,9 @@ import AdminFooter from '@/components/backend/AdminFooter.vue';
 }
 
 /* 平板适配 */
-@media screen and (max-width: 1024px) {
+/* @media screen and (max-width: 1024px) {
   .el-aside {
     display: none;
   }
-}
+} */
 </style>
