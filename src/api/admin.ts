@@ -154,3 +154,10 @@ export const replyComment = (content: string, isPublic: boolean, parentId: numbe
 export const deleteComment = (id: number): Promise<string> => {
   return request.delete(`/admin/comment/${id}`)
 }
+
+/**
+ * 封禁ip
+ */
+export const postBanIp = (ip: string, status: number): Promise<string> => {
+  return request.post(`/admin/ip/ban/${ip}/${status}`)
+}

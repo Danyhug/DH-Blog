@@ -92,6 +92,7 @@ public class AccessLogImpl {
                             .city(ipStat.getCity())
                             .accessCount(accessCount == null ? 0 : accessCount.intValue())
                             .bannedCount(ipStat.getBannedCount())
+                            .banStatus(ipStat.getBanStatus())
                             .build();
                 }).sorted(Comparator.comparing(IpStat::getAccessCount, Comparator.reverseOrder())
                         .thenComparing(IpStat::getIpAddress))

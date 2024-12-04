@@ -2,6 +2,7 @@ package top.zzf4.blog.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import top.zzf4.blog.entity.model.Articles;
@@ -15,6 +16,7 @@ import top.zzf4.blog.service.AdminService;
 import java.util.ArrayList;
 import java.util.List;
 
+@Log4j2
 @Service
 public class AdminServiceImpl implements AdminService {
 
@@ -46,8 +48,21 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void banIp(String ip) {
-        ipStatMapper.update(new LambdaUpdateWrapper<IpStat>().eq(IpStat::getIpAddress, ip).set(IpStat::getBanStatus, 1));
+    public void changeBanIpStatus(String ip, int newStatus) {
+        int update = ipStatMapper.update(new LambdaUpdateWrapper<IpStat>().eq(IpStat::getIpAddress, ip).set(IpStat::getBanStatus, newStatus));
+        if (update == 1) {
+            if (newStatus == 1) {
+                // 封禁数+1
+                Integer bannedCount = ipStatMapper.selectOne(new LambdaQueryWrapper<IpStat>().eq(IpStat::getIpAddress, ip).select(IpStat::getBannedCount)).getBannedCount();
+                ipStatMapper.update(
+                        IpStat.builder().bannedCount(bannedCount + 1).build(),
+                        new LambdaUpdateWrapper<IpStat>().eq(IpStat::getIpAddress, ip)
+                );
+            }
+        } else {
+            log.error("需要更改封禁状态的IP不存在：{}", ip);
+            throw new RuntimeException("IP不存在");
+        }
     }
 
     @Override

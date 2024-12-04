@@ -11,9 +11,9 @@ public interface AdminService {
     PageResult<Articles> getArticleList(int pageSize, int currentPage);
 
     /**
-     * 封禁指定IP
+     * 更改IP封禁状态
      */
-    void banIp(String ip);
+    void changeBanIpStatus(String ip, int newStatus);
 
     /**
      * 查询IP是否被封禁

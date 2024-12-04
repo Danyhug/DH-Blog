@@ -17,7 +17,7 @@
       </span>
     </div>
   </div>
-  <div class="comment">
+  <div class="comment" :style="{ display: store.aritcleModel.isFullPreview ? 'none' : '' }">
     <Comment />
   </div>
 </template>
@@ -45,15 +45,6 @@ export default {
       store: useUserStore(),
       system: useSystemStore(),
       scrollElement: document.documentElement,
-    }
-  },
-  created() {
-    const store = this.store
-
-    // 使用ua检测是否是移动端访问，是移动端直接变为全屏浏览
-    const width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
-    if (width <= 768) {
-      store.aritcleModel.isFullPreview = true;
     }
   },
   mounted() {
@@ -181,6 +172,20 @@ export default {
 
   span {
     margin: 0 10px;
+  }
+}
+
+/** 平板移动端适配 */
+@media screen and (max-width: 1024px) {
+  .comment {
+    :deep(.author-info) {
+      grid-template-columns: repeat(1, 1fr);
+      text-align: center;
+      border-bottom: 1px solid #ccc;
+      div {
+        margin-right: 0!important;
+      }
+    }
   }
 }
 </style>

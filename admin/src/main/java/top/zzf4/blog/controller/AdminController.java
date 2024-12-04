@@ -257,9 +257,11 @@ public class AdminController {
      * 封禁IP
      */
     @Operation(summary = "封禁IP")
-    @PostMapping("/ip/ban")
-    public AjaxResult<String> banIp(@RequestBody String ip) {
-        adminService.banIp(ip);
+    @PostMapping("/ip/ban/{ip}/{status}")
+    public AjaxResult<String> banIp(@PathVariable String ip, @PathVariable String status) {
+        if (status == null) return AjaxResult.error("状态不能为空");
+
+        adminService.changeBanIpStatus(ip, status.equals("1") ? 0: 1);
         return AjaxResult.success();
     }
 }
