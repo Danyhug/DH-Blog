@@ -15,6 +15,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
     @Autowired
     private AccessLogInterceptor accessLogInterceptor;
+    @Autowired
+    private BanInterceptor banInterceptor;
 
     @Value("${upload.path}")
     private String uploadPath;
@@ -39,6 +41,8 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        // ip封禁拦截器
+        registry.addInterceptor(banInterceptor);
         // 登录拦截器
         registry.addInterceptor(new LoginInterceptor())
                 .addPathPatterns("/user/**")

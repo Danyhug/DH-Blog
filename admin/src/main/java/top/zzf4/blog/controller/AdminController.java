@@ -252,4 +252,14 @@ public class AdminController {
         commentService.deleteById(id);
         return AjaxResult.success("已删除评论");
     }
+
+    /**
+     * 封禁IP
+     */
+    @Operation(summary = "封禁IP")
+    @PostMapping("/ip/ban")
+    public AjaxResult<String> banIp(@RequestBody String ip) {
+        adminService.banIp(ip);
+        return AjaxResult.success();
+    }
 }

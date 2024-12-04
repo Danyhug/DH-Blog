@@ -5,6 +5,7 @@ const ArticleView = () => import(/* webpackChunkName: "article" */ '../views/fro
 const MainView = () => import(/* webpackChunkName: "main" */ '../views/frontend/MainView.vue');
 const HomeView = () => import(/* webpackChunkName: "home" */ '../views/frontend/HomeView.vue');
 const LockView = () => import(/* webpackChunkName: "lock" */ '../views/frontend/LockView.vue');
+const ErrorView = () => import(/* webpackChunkName: "error" */ '../views/frontend/ErrorView.vue');
 
 // 后端路由组件
 const AdminView = () => import(/* webpackChunkName: "admin" */ '../views/backend/AdminView.vue');
@@ -58,6 +59,8 @@ const routes = [
   { path: '/login', component: LoginView, name: 'Login', meta: { title: '登录' } },
   // 加密页面
   { path: '/lock', component: LockView, name: 'Lock', meta: { title: '私密文章' } },
+  // 错误页面
+  { path: '/error', component: ErrorView, name: 'Error', meta: { title: '错误页面' } },
 ]
 
 const router = createRouter({

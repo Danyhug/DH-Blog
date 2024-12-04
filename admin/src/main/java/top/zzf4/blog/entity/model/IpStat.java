@@ -28,4 +28,7 @@ public class IpStat {
 
     @TableField(value = "banned_count")
     private Integer bannedCount;
+
+    @TableField(value = "ban_status")
+    private Integer banStatus;
 }

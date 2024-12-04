@@ -3,12 +3,17 @@
 </template>
 <script>
 import { heartBeat } from './api/user';
-import { useAdminStore } from './store';
+import { useAdminStore, useUserStore } from './store';
 
-setInterval(() => {
-  heartBeat().then(r => {
-    useAdminStore().online = r.split('~')[2]
-  })
+const timer = setInterval(() => {
+  if (useUserStore().isBan) {
+    // 停止心跳
+    clearInterval(timer)
+  } else {
+    heartBeat().then(r => {
+      useAdminStore().online = r.split('~')[2]
+    })
+  }
 }, 5000);
 </script>
 <style></style>

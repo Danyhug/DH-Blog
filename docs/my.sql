@@ -103,7 +103,8 @@ CREATE TABLE ip_stats (
     ip_address CHAR(15) NOT NULL UNIQUE COMMENT '记录IP地址',
     city CHAR(20) COMMENT '记录IP所在的城市',
     access_count INT NOT NULL DEFAULT 0 COMMENT '记录该IP地址的访问次数',
-    banned_count INT NOT NULL DEFAULT 0 COMMENT '记录该IP地址被封禁的次数'
+    banned_count INT NOT NULL DEFAULT 0 COMMENT '记录该IP地址被封禁的次数',
+    ban_status TINYINT NOT NULL DEFAULT 0 COMMENT '记录该IP地址是否被封禁，0表示未封禁，1表示封禁',
 ) COMMENT='记录每个IP地址的访问次数和被封禁次数';
 
 -- 评论表 (`comments`)

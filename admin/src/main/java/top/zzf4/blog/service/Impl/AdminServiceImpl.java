@@ -1,11 +1,14 @@
 package top.zzf4.blog.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import top.zzf4.blog.entity.model.Articles;
+import top.zzf4.blog.entity.model.IpStat;
 import top.zzf4.blog.entity.vo.PageResult;
 import top.zzf4.blog.mapper.ArticleMapper;
+import top.zzf4.blog.mapper.IpStatMapper;
 import top.zzf4.blog.mapper.TagsMapper;
 import top.zzf4.blog.service.AdminService;
 
@@ -19,6 +22,8 @@ public class AdminServiceImpl implements AdminService {
     private ArticleMapper articleMapper;
     @Autowired
     private TagsMapper tagMapper;
+    @Autowired
+    private IpStatMapper ipStatMapper;
 
     @Override
     public PageResult<Articles> getArticleList(int pageSize, int currentPage) {
@@ -38,5 +43,18 @@ public class AdminServiceImpl implements AdminService {
         result.setCurr((long) currentPage);
         result.setTotal((long) articles.size());
         return result;
+    }
+
+    @Override
+    public void banIp(String ip) {
+        ipStatMapper.update(new LambdaUpdateWrapper<IpStat>().eq(IpStat::getIpAddress, ip).set(IpStat::getBanStatus, 1));
+    }
+
+    @Override
+    public Boolean isBanned(String ip) {
+        if (ip == null) return false;
+
+        IpStat ipStat = ipStatMapper.selectOne(new LambdaQueryWrapper<IpStat>().eq(IpStat::getIpAddress, ip));
+        return ipStat != null && ipStat.getBanStatus() == 1;
     }
 }

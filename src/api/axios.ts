@@ -1,27 +1,28 @@
-import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios"
-import { SERVER_URL } from '@/types/Constant.ts'
-import router from "@/router"
+import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
+import { SERVER_URL } from "@/types/Constant.ts";
+import router from "@/router";
+import { useUserStore } from "@/store";
 
 // 返回值类型
 interface AjaxResult<T> {
-  code: number
-  msg: string
-  data: T
+  code: number;
+  msg: string;
+  data: T;
 }
 
 const request = axios.create({
   baseURL: SERVER_URL,
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json;charset=UTF-8',
+    "Content-Type": "application/json;charset=UTF-8",
   },
-})
+});
 
 // 添加请求拦截器
 request.interceptors.request.use(
   function (config: InternalAxiosRequestConfig) {
     // 在发送请求之前做些什么
-    config.headers.Authorization = localStorage.getItem('token') || '';
+    config.headers.Authorization = localStorage.getItem("token") || "";
     return config;
   },
   function (error) {
@@ -41,17 +42,23 @@ request.interceptors.response.use(
     } else {
       // 如果code不是1，你可以根据需要处理错误，比如抛出异常或返回特定错误信息
       ElMessage.error(response.data.msg);
-      return Promise.reject(new Error(response.data.msg || 'Error'));
+      return Promise.reject(new Error(response.data.msg || "Error"));
     }
   },
   function (error) {
     // 超出 2xx 范围的状态码都会触发该函数。
     // 这里可以处理网络错误、超时等
     if (error.status === 401) {
-      localStorage.removeItem('token')
-      router.replace({ name: 'Login' })
+      localStorage.removeItem("token");
+      router.replace({ name: "Login" });
+    } else if (error.status === 403) {
+      useUserStore().isBan || (useUserStore().isBan = true);
+      router.replace({ name: "Error" });
     }
 
+    ElMessage.error(
+      error.response.data.msg || error.response.data || "未知错误"
+    );
     return Promise.reject(error);
   }
 );

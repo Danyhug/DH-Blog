@@ -9,4 +9,14 @@ public interface AdminService {
      * @return 文章信息列表
      */
     PageResult<Articles> getArticleList(int pageSize, int currentPage);
+
+    /**
+     * 封禁指定IP
+     */
+    void banIp(String ip);
+
+    /**
+     * 查询IP是否被封禁
+     */
+    Boolean isBanned(String ip);
 }
