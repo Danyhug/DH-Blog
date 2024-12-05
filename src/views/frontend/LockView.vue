@@ -15,14 +15,14 @@
 
         <div class="title">已被设为私密文章 / 输入密钥解锁</div>
         <div class="form">
-          <input type="text" autofocus v-model="data.password" @keyup.enter="check" />
+          <input type="text" ref="input" autofocus v-model="data.password" @keyup.enter="check" />
           <el-icon size="2em" style="vertical-align: text-bottom; position: relative; left: -50px; cursor: pointer;"
             @click="check">
             <Unlock />
           </el-icon>
         </div>
 
-        <button @click="goBack">
+        <button @click="goBack" ref="button" style="transform: translateX(-100%);">
           <span class="text">返回</span>
         </button>
       </div>
@@ -36,6 +36,8 @@ import router from '@/router';
 import { useRoute } from 'vue-router';
 import { reactive } from 'vue';
 
+const input = ref<HTMLElement>()
+const button = ref<HTMLElement>()
 const route = useRoute()
 const goBack = () => router.back()
 
@@ -51,6 +53,12 @@ const check = () => {
     router.replace({ name: 'ArticleInfo', params: { id: data.id } })
   })
 }
+
+onMounted(() => {
+  if (button.value && input.value) {
+    button.value.style.left = `${input.value.offsetWidth + input.value.offsetLeft}px`;
+  }
+});
 </script>
 
 <style scoped lang="less">
@@ -61,13 +69,13 @@ const check = () => {
   }
 
   .lock-view .right .logo .logo-text {
-    font-size: 2.4em!important;
+    font-size: 2.4em !important;
   }
 
   .lock-view {
     .right {
       margin-right: 0 !important;
-    font-size: 12px!important;
+      font-size: 12px !important;
 
       justify-content: center;
       align-items: center;
