@@ -7,6 +7,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+import top.zzf4.blog.entity.vo.SendResponseData;
 import top.zzf4.blog.service.AdminService;
 import top.zzf4.blog.utils.Tools;
 
@@ -33,13 +34,7 @@ public class BanInterceptor implements HandlerInterceptor {
             log.error("ip解析失败: {}", e.getMessage(), e);
         }
 
-        sendUnauthorizedResponse(response);
+        Tools.sendResponse(new SendResponseData(403, "您的IP已被封禁，禁止访问", response));
         return false;
-    }
-
-    private void sendUnauthorizedResponse(HttpServletResponse response) throws IOException {
-        response.setStatus(403);
-        response.setContentType("text/plain;charset=utf-8");
-        response.getWriter().write("您的IP已被封禁，禁止访问");
     }
 }

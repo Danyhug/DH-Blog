@@ -59,7 +59,7 @@ onMounted(() => {
   position: relative;
   z-index: -999;
   width: 100%;
-  height: 82vh;
+  height: 80vh;
   background: url('@/assets/images/banner.png') no-repeat;
   background-size: cover;
   background-position: center;
@@ -74,6 +74,5 @@ onMounted(() => {
     line-height: 1.2;
     color: #fff;
     font-family: 'Fredericka the Great', Mulish, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-  }
-}
+  }}
 </style>

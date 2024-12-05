@@ -7,7 +7,9 @@ import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.web.servlet.HandlerInterceptor;
 import top.zzf4.blog.entity.model.User;
+import top.zzf4.blog.entity.vo.SendResponseData;
 import top.zzf4.blog.utils.JwtUtils;
+import top.zzf4.blog.utils.Tools;
 
 import java.io.IOException;
 
@@ -18,7 +20,7 @@ public class LoginInterceptor implements HandlerInterceptor {
         // 获取请求头的token
         String token = request.getHeader("Authorization");
         if (StringUtils.isBlank(token)) {
-            sendUnauthorizedResponse(response);
+            Tools.sendResponse(new SendResponseData(403, "越权访问，非法请求！", response));
             return false;
         }
 
@@ -33,13 +35,7 @@ public class LoginInterceptor implements HandlerInterceptor {
             log.error("Token解析失败: {}", e.getMessage(), e);
         }
 
-        sendUnauthorizedResponse(response);
+        Tools.sendResponse(new SendResponseData(403, "登录状态异常！", response));
         return false;
-    }
-
-    private void sendUnauthorizedResponse(HttpServletResponse response) throws IOException {
-        response.setStatus(401);
-        response.setContentType("text/plain;charset=utf-8");
-        response.getWriter().write("非法请求");
     }
 }

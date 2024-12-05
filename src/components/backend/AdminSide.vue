@@ -36,7 +36,14 @@
 
     <div class="tool">
       <div>
-        <el-icon size="26" color="#666">
+        <el-icon
+          size="26"
+          color="#666"
+          :style="{
+            transform: isFold ? 'rotate(-180deg)' : 'rotate(0deg)',
+            transition: 'all 0.3s',
+          }"
+        >
           <Fold @click="fold()" style="cursor: pointer;" />
         </el-icon>
       </div>
@@ -50,7 +57,7 @@ h1 {
   font-size: 30px;
   font-style: italic;
   line-height: 80px;
-  color: #3F8CFF;
+  color: #3f8cff;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
   text-align: center;
   cursor: pointer;
@@ -62,8 +69,7 @@ h1 {
   display: flex;
   flex-direction: column;
   position: relative;
-  background-color: #FFF;
-
+  background-color: #fff;
 
   :deep(.el-menu) {
     padding: 0 12px;
@@ -87,11 +93,11 @@ h1 {
     --el-menu-hover-bg-color: rgb(245, 245, 245);
     border-radius: 10px;
     margin-bottom: 10px;
-    transition: all .3s;
+    transition: all 0.3s;
   }
 
   .is-active {
-    --el-menu-active-color: #3F8CFF;
+    --el-menu-active-color: #3f8cff;
     background-color: var(--el-menu-bg-color);
     box-shadow: -2px 2px 26px #0000001b;
   }
@@ -131,30 +137,30 @@ h1 {
 }
 </style>
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { debounce } from '@/utils/tool'
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { debounce } from "@/utils/tool";
 const router = useRouter();
 const iconSize = ref(20);
-const container = ref(null)
+const container = ref(null);
 // 折叠元素的宽度
-const foldFather = ref(-1)
-const isFold = ref(false)
+const foldFather = ref(-1);
+const isFold = ref(false);
 let previousWidthState = window.innerWidth >= 1200; // 初始状态
 
 const fold = () => {
-  container.value.classList.toggle('fold-container')
-  isFold.value = !isFold.value
+  container.value.classList.toggle("fold-container");
+  isFold.value = !isFold.value;
 
   if (foldFather.value == -1 || isFold.value) {
-    foldFather.value = document.querySelector('.el-aside').offsetWidth
+    foldFather.value = document.querySelector(".el-aside").offsetWidth;
     // 折叠
-    document.querySelector('.el-aside').style.width = '60px'
+    document.querySelector(".el-aside").style.width = "60px";
   } else {
     // 展开
-    document.querySelector('.el-aside').style.width = foldFather.value + 'px';
+    document.querySelector(".el-aside").style.width = foldFather.value + "px";
   }
-}
+};
 function resize() {
   const currentWidthState = window.innerWidth >= 1200;
 
@@ -162,9 +168,9 @@ function resize() {
     previousWidthState = currentWidthState; // 更新状态
 
     if (window.innerWidth >= 1200 && !isFold.value) {
-      return
+      return;
     } else if (window.innerWidth < 1200 && isFold.value) {
-      return
+      return;
     }
 
     fold();
@@ -177,11 +183,11 @@ onMounted(() => {
   resize();
 
   // 使用 addEventListener 添加事件处理程序
-  window.addEventListener('resize', debouncedResize);
+  window.addEventListener("resize", debouncedResize);
 });
 
 onBeforeUnmount(() => {
   // 移除事件监听器
-  window.removeEventListener('resize', debouncedResize);
+  window.removeEventListener("resize", debouncedResize);
 });
 </script>

@@ -3,10 +3,13 @@ package top.zzf4.blog.utils;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONUtil;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.util.ObjectUtils;
+import top.zzf4.blog.entity.vo.SendResponseData;
 import top.zzf4.blog.utils.ip.Csdn;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -119,5 +122,17 @@ public class Tools {
         }
 
         return "";
+    }
+
+    /**
+     * 返回响应头数据
+     * @param sendResponseData
+     * @throws IOException
+     */
+    public static void sendResponse(SendResponseData sendResponseData) throws IOException {
+        HttpServletResponse response = sendResponseData.getResponse();
+        response.setStatus(403);
+        response.setContentType("text/plain;charset=utf-8");
+        response.getWriter().write("您的IP已被封禁，禁止访问");
     }
 }

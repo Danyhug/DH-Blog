@@ -1,6 +1,7 @@
 package top.zzf4.blog.aop;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -9,7 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import top.zzf4.blog.config.BanInterceptor;
 import top.zzf4.blog.constant.RedisConstant;
+import top.zzf4.blog.entity.vo.SendResponseData;
 import top.zzf4.blog.utils.RedisCacheUtils;
 import top.zzf4.blog.utils.Tools;
 
@@ -49,7 +52,9 @@ public class LimitAop {
             // 判断是否超过限制次数
             if (count >= limit.num()) {
                 // 说明超过次数，抛出异常
-                throw new RuntimeException(limit.msg());
+                HttpServletResponse response = attributes.getResponse();
+                Tools.sendResponse(new SendResponseData(403, "访问次数过多，已被封禁", response));
+                return null;
             } else {
                 // 累加访问次数
                 redisCacheUtils.incr(key);
