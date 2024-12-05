@@ -1,9 +1,6 @@
 <template>
   <div>
     <!-- 这里是文章列表 -->
-    <div class="tip">
-      <p>文章列表</p>
-    </div>
     <div class="posts">
       <ArticleBox v-loading="show" v-for="item in store.articleList" :article="item" :key="item.id"></ArticleBox>
     </div>
@@ -62,23 +59,6 @@ const changePage = (curr: number) => {
 
 </script>
 <style lang="less" scoped>
-.tip {
-  display: block;
-  width: 100%;
-  text-align: center;
-  font-weight: 700;
-
-  p {
-    display: inline-block;
-    transform: translateY(-50%);
-    background-color: #fff;
-    padding: 0 16px;
-    font-weight: 400;
-    color: #606266;
-    font-size: 24px;
-  }
-}
-
 /* 文章父元素 */
 .posts {
   padding: 18px;
