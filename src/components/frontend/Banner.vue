@@ -59,9 +59,10 @@ onMounted(() => {
   position: relative;
   z-index: -999;
   width: 100%;
-  height: 80vh;
+  height: 82vh;
   background: url('@/assets/images/banner.png') no-repeat;
-  background-size: 100% 100%;
+  background-size: cover;
+  background-position: center;
   filter: contrast(88%);
   display: flex;
   justify-content: center;
