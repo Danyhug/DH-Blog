@@ -1,0 +1,220 @@
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-size: 16px;
+  color: #333;
+  background: linear-gradient(
+      to top,
+      var(--body-bg-shadow) 0,
+      var(--grey-1) 20%
+    )
+    no-repeat bottom;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: normal;
+}
+
+a {
+  color: currentColor;
+  text-decoration: none;
+}
+
+:root {
+  --dh-admin-bg: #fdfdfd;
+  --dh-admin-border-radius-small: 12px;
+  --dh-admin-border-radius-normal: 14px;
+  --dh-admin-border-radius-big: 16px;
+  --dh-admin-border-shadow-shallow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  --dh-admin-border-shadow-normal: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --dh-admin-color-success: rgb(82, 196, 26);
+  --dh-admin-color-error: #e9546b;
+  --dh-admin-color-info: #78829d;
+
+  --grey-0: #fff;
+  --grey-1: #fdfdfd;
+  --grey-2: #f7f7f7;
+  --grey-3: #eff2f3;
+  --grey-4: #ccc;
+  --grey-5: #999;
+  --grey-6: #666;
+  --grey-7: #333;
+  --grey-8: #222;
+  --grey-9: #000;
+  --grey-1-a0: rgba(253, 253, 253, 0);
+  --grey-1-a7: rgba(253, 253, 253, 0.7);
+  --grey-1-a5: rgba(253, 253, 253, 0.5);
+  --grey-1-a3: rgba(253, 253, 253, 0.3);
+  --grey-9-a1: rgba(0, 0, 0, 0.1);
+  --grey-9-a5: rgba(0, 0, 0, 0.5);
+  --grey-2-a0: rgba(247, 247, 247, 0);
+  --color-pink-light: #ffe6fa;
+  --color-cyan-light: #e3fdf5;
+  --color-red: #e9546b;
+  --color-pink: #ed6ea0;
+  --color-orange: #ec8c69;
+  --color-yellow: #eab700;
+  --color-green: #0a7426;
+  --color-aqua: #3e999f;
+  --color-blue: #38a1db;
+  --color-purple: #9d5b8b;
+  --color-grey: #869194;
+  --color-red-a1: rgba(233, 84, 107, 0.1);
+  --color-red-a3: rgba(233, 84, 107, 0.3);
+  --color-pink-a3: rgba(237, 110, 160, 0.3);
+  --color-pink-light-a3: rgba(255, 230, 250, 0.3);
+  --color-pink-light-a5: rgba(255, 230, 250, 0.5);
+  --color-pink-light-a7: rgba(255, 230, 250, 0.7);
+  --body-bg-shadow: var(--grey-2);
+  --box-bg-shadow: var(--grey-9-a1);
+  --text-color: var(--grey-7);
+  --header-text-color: var(--grey-0);
+  --primary-color: var(--color-red);
+  --nav-bg: linear-gradient(
+    -225deg,
+    var(--color-cyan-light) 0,
+    var(--color-pink-light) 100%
+  );
+}
+
+.icon {
+  vertical-align: middle;
+  overflow: hidden;
+}
+
+.inner {
+  display: flex;
+  flex-direction: row;
+  width: 92.8%;
+  margin: auto;
+}
+
+/* 适配平板 */
+@media screen and (max-width: 1024px) {
+  .right {
+    padding-top: 0 !important;
+  }
+  
+  .blog-container {
+    padding: 0 !important;
+  }
+
+  #nav {
+    width: 100%;
+  }
+
+  #banner {
+    height: 45vh !important;
+  }
+
+  .inner {
+    width: 100% !important;
+  }
+
+  .md-editor-preview-wrapper {
+    padding: 10px !important;
+  }
+
+  .md-editor-preview ul {
+    padding-left: 1.5em !important;
+  }
+
+  .inner > .left {
+    display: none !important;
+  }
+
+  .inner > .right {
+    width: 100% !important;
+  }
+}
+
+/* 适配手机 */
+@media screen and (max-width: 768px) {
+  #nav {
+    display: none;
+  }
+
+  #banner {
+    height: 26vh !important;
+    font-size: 0.6rem;
+  }
+
+  body .inner .cover {
+    position: relative;
+
+    .left {
+      width: 100%;
+      clip-path: none;
+    }
+
+    .top {
+      width: 100%;
+      justify-content: center !important;
+
+      .date {
+        margin-left: 0 !important;
+      }
+
+      .icon {
+        display: none;
+        color: #333 !important;
+        font-weight: bold;
+      }
+
+      .num-word {
+        display: none;
+      }
+
+      .time-consum {
+        display: none;
+      }
+    }
+
+    .right {
+      position: absolute;
+      top: 8%;
+      left: 8%;
+      width: 84%;
+      height: 84%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(4px) brightness(90%);
+      background-color: rgba(255, 255, 255, 0.5);
+      border-radius: 10px;
+    }
+
+    .bottom {
+      display: none !important;
+    }
+  }
+}
+
+.ProseMirror,
+.toastui-editor-contents {
+  font-size: 18px;
+}
+
+.github-markdown-body p {
+  text-indent: 2rem;
+}
+
+::-webkit-scrollbar {
+  width: 6px; /* 定义滚动条宽度 */
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2); /* 滚动条拇指颜色 */
+}
