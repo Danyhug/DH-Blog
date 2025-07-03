@@ -7,6 +7,7 @@ import (
 // Article 表示数据库中的文章实体。
 type Article struct {
 	gorm.Model          // 嵌入 GORM 的 Model，默认字段包括 ID、CreatedAt、UpdatedAt、DeletedAt
+	ID           int    `gorm:"primaryKey" json:"id"`                            // 自增主键
 	Title        string `gorm:"column:title;not null" json:"title"`              // 文章标题
 	Content      string `gorm:"column:content;not null" json:"content"`          // 文章内容
 	CategoryID   int    `gorm:"column:category_id" json:"category_id"`           // 分类 ID，关联 categories 表
