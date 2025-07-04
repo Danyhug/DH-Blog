@@ -1,19 +1,37 @@
 package database
 
 import (
+	"fmt"
+	"log"
+	"os"
+	"time"
+
 	"dh-blog/internal/config"
 	"dh-blog/internal/model"
-	"github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 // Init 初始化数据库连接并执行自动迁移
-func Init(conf *config.Config) *gorm.DB {
+func Init(conf *config.Config) (*gorm.DB, error) {
+	newLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
+		logger.Config{
+			SlowThreshold:             time.Second, // Slow SQL threshold
+			LogLevel:                  logger.Info, // Log level
+			IgnoreRecordNotFoundError: true,        // Ignore ErrRecordNotFound error for logger
+			Colorful:                  true,        // Disable color
+		},
+	)
+
 	// 初始化数据库连接
-	db, err := gorm.Open(sqlite.Open(conf.DataBase.DBFile), &gorm.Config{}) // 使用 SQLite 驱动并从配置中读取数据库文件路径
+	db, err := gorm.Open(sqlite.Open(conf.DataBase.DBFile), &gorm.Config{
+		Logger: newLogger,
+	})
+	// 使用 SQLite 驱动并从配置中读取数据库文件路径
 	if err != nil {
-		logrus.Fatalf("连接数据库失败: %v", err)
+		return nil, fmt.Errorf("连接数据库失败: %w", err)
 	}
 
 	// 自动迁移模型到数据库表
@@ -29,9 +47,8 @@ func Init(conf *config.Config) *gorm.DB {
 		&model.User{},
 	)
 	if err != nil {
-		logrus.Fatalf("数据库自动迁移失败: %v", err)
+		return nil, fmt.Errorf("数据库自动迁移失败: %w", err)
 	}
 
-	logrus.Info("数据库连接和自动迁移成功")
-	return db
+	return db, nil
 }

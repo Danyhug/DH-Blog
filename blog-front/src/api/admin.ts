@@ -121,7 +121,7 @@ export const uploadFile = (data: FormData): Promise<String> => {
  * @returns 
  */
 export const getOverviewLog = (page: number, pageSize: number, startDate: string, endDate: string): Promise<PageResult<IpStat>> => {
-  return request.get(`/log/overview/visitLog?page=${page}&pageSize=${pageSize}&startDate=${startDate}&endDate=${endDate}`)
+  return request.get(`/admin/log/overview/visitLog?page=${page}&pageSize=${pageSize}&startDate=${startDate}&endDate=${endDate}`)
 };
 
 /**

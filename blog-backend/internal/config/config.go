@@ -24,13 +24,13 @@ func DefaultConfig() *Config {
 	return &Config{
 		Server: Server{
 			Address:   "0.0.0.0",
-			HttpPort:  22222,
+			HttpPort:  2233,
 			HttpsPort: -1,
 		},
 		DataBase: DataBase{
 			Type:   "sqlite3",
-			DBFile: "blog.db", // Default SQLite database file
-			Dsn:    "",        // DSN will be empty for SQLite by default
+			DBFile: "dhblog.db", // Default SQLite database file
+			Dsn:    "",          // DSN will be empty for SQLite by default
 		},
 		JwtSecret: "test",
 	}

@@ -1,0 +1,27 @@
+# .air.toml
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/main ./cmd/blog-backend"
+  bin = "tmp/main"
+  include_ext = ["go", "tpl", "tmpl", "html"]
+  exclude_dir = ["assets", "tmp", "vendor", "node_modules"]
+  follow_symlink = true
+  delay = 1000 # ms
+
+[run]
+  cmd = "./tmp/main"
+  # cmd = "go run ./cmd/blog-backend/main.go" # 也可以直接用 go run，但编译后运行更快
+
+[log]
+  time = false
+
+[color]
+  main = "magenta"
+  watcher = "cyan"
+  build = "yellow"
+  runner = "green"
+
+[misc]
+  clean_on_exit = true

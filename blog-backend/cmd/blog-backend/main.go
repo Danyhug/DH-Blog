@@ -1,23 +1,72 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"dh-blog/internal/config"
+	"dh-blog/internal/database"
+	"dh-blog/internal/model"
+	"dh-blog/internal/repository"
+	"dh-blog/internal/utils"
 	"dh-blog/internal/wire"
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 func main() {
 	conf := config.DefaultConfig()
 
+	// 初始化 JWT 工具
+	utils.InitJwtUtils(conf.JwtSecret)
+
+	// 初始化数据库连接和迁移
+	db, err := database.Init(conf)
+	if err != nil {
+		logrus.Fatalf("数据库初始化失败: %v", err)
+	}
+
+	// 检查用户是否存在，如果不存在则引导创建管理员用户
+	userRepo := repository.NewUserRepository(db)
+	_, err = userRepo.GetUserByUsername("admin") // 尝试获取默认管理员用户
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		logrus.Info("未检测到管理员用户，请创建管理员账户：")
+		reader := bufio.NewReader(os.Stdin)
+
+		fmt.Print("请输入管理员用户名: ")
+		username, _ := reader.ReadString('\n')
+		username = strings.TrimSpace(username)
+
+		fmt.Print("请输入管理员密码: ")
+		password, _ := reader.ReadString('\n')
+		password = strings.TrimSpace(password)
+
+		hashedPassword, hashErr := utils.HashPassword(password)
+		if hashErr != nil {
+			logrus.Fatalf("密码哈希失败: %v", hashErr)
+		}
+
+		adminUser := &model.User{
+			Username: username,
+			Password: hashedPassword,
+		}
+
+		if createErr := userRepo.CreateUser(adminUser); createErr != nil {
+			logrus.Fatalf("创建管理员用户失败: %v", createErr)
+		}
+		logrus.Info("管理员用户创建成功！")
+	} else if err != nil {
+		logrus.Fatalf("查询管理员用户失败: %v", err)
+	}
+
 	// 初始化整个应用程序的依赖并获取 Gin 路由器
-	router := wire.InitApp(conf)
+	router := wire.InitApp(conf, db)
 
 	// 配置 HTTP 服务器
 	server := &http.Server{
@@ -52,7 +101,7 @@ func displayInfo() {
 ███████╔╝██║  ██║    ██████╔╝███████╗╚██████╔╝╚██████╔╝
 ╚══════╝ ╚═╝  ╚══════╝ ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝`)
 	logrus.Info("[ DH-Blog ] 启动成功")
-	logrus.Infof("[ DH-Blog ] 访问地址：%v\n", fmt.Sprintf("http://%s:%d",
+	logrus.Infof("[ DH-Blog ] 访问地址：%v", fmt.Sprintf("http://%s:%d",
 		config.DefaultConfig().Server.Address, config.DefaultConfig().Server.HttpPort))
 	logrus.Info("[ DH-Blog ] 默认用户名：admin")
 	logrus.Info("[ DH-Blog ] 默认密码：admin")

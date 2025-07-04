@@ -1,17 +1,14 @@
 package model
 
-import (
-	"gorm.io/gorm"
-)
-
-// Tag 表示数据库中的标签实体。
+// Tag 对应于数据库中的 `tags` 表
 type Tag struct {
-	gorm.Model        // 嵌入 GORM 的 Model，默认字段包括 ID、CreatedAt、UpdatedAt、DeletedAt
-	Name       string `gorm:"column:name;not null;uniqueIndex" json:"name"` // 标签名，唯一
-	Slug       string `gorm:"column:slug;not null;uniqueIndex" json:"slug"` // URL 友好的别名，唯一
+	BaseModel `gorm:"embedded"`
+	Name      string     `gorm:"column:name;not null;uniqueIndex" json:"name"`      // 标签名，唯一
+	Slug      string     `gorm:"column:slug;not null;uniqueIndex" json:"slug"`      // URL 友好的别名，唯一
+	Articles  []*Article `gorm:"many2many:article_tags;" json:"articles,omitempty"` // 关联的文章
 }
 
-// TableName 指定 Tag 模型对应的表名。
+// TableName 指定 GORM 使用的表名
 func (Tag) TableName() string {
-	return "tags" // 显式设置表名为 'tags'
+	return "tags"
 }
