@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"dh-blog/internal/config"
@@ -25,8 +26,14 @@ func Init(conf *config.Config) (*gorm.DB, error) {
 		},
 	)
 
+	exePath, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+	dbPath := filepath.Join(filepath.Dir(exePath), conf.DataBase.DBFile)
+
 	// 初始化数据库连接
-	db, err := gorm.Open(sqlite.Open(conf.DataBase.DBFile), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
 		Logger: newLogger,
 	})
 	// 使用 SQLite 驱动并从配置中读取数据库文件路径

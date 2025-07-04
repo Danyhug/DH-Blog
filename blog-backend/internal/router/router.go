@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"dh-blog/internal/handler"
+	"dh-blog/internal/middleware"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -47,6 +48,7 @@ func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandl
 
 	// 管理 API 路由组
 	adminAPI := router.Group("/api/admin")
+	adminAPI.Use(middleware.JWTMiddleware())
 	{
 		// 文章管理 API (对应 Java AdminController)
 		adminAPI.GET("/article/:id", articleHandler.GetArticleDetail) // 与公共 API 重复，但路径不同

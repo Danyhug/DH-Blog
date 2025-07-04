@@ -21,7 +21,10 @@ import (
 )
 
 func main() {
-	conf := config.DefaultConfig()
+	conf, err := config.Init()
+	if err != nil {
+		logrus.Fatalf("加载配置失败: %v", err)
+	}
 
 	// 初始化 JWT 工具
 	utils.InitJwtUtils(conf.JwtSecret)
@@ -47,7 +50,7 @@ func main() {
 		password, _ := reader.ReadString('\n')
 		password = strings.TrimSpace(password)
 
-		hashedPassword, hashErr := utils.HashPassword(password)
+		thashedPassword, hashErr := utils.HashPassword(password)
 		if hashErr != nil {
 			logrus.Fatalf("密码哈希失败: %v", hashErr)
 		}
@@ -82,7 +85,7 @@ func main() {
 	}()
 
 	// 显示启动信息
-	displayInfo()
+	displayInfo(conf)
 
 	// 优雅地关闭服务器
 	quit := make(chan os.Signal, 1)
@@ -92,17 +95,17 @@ func main() {
 
 }
 
-func displayInfo() {
+func displayInfo(conf *config.Config) {
 	fmt.Println(`
 ███████╗ ██╗  ██╗    ██████╗ ██╗      ██████╗  ██████╗ 
 ██╔═══██╗██║  ██║    ██╔══██╗██║     ██╔═══██╗██╔════╝ 
 ██║   ██║███████║    ██████╔╝██║     ██║   ██║██║  ███╗
 ██║   ██║██╔══██║    ██╔══██╗██║     ██║   ██║██║   ██║
 ███████╔╝██║  ██║    ██████╔╝███████╗╚██████╔╝╚██████╔╝
-╚══════╝ ╚═╝  ╚══════╝ ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝`)
+╚══════╝ ╚═╝  ╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝  ╚═════╝`)
 	logrus.Info("[ DH-Blog ] 启动成功")
 	logrus.Infof("[ DH-Blog ] 访问地址：%v", fmt.Sprintf("http://%s:%d",
-		config.DefaultConfig().Server.Address, config.DefaultConfig().Server.HttpPort))
+		conf.Server.Address, conf.Server.HttpPort))
 	logrus.Info("[ DH-Blog ] 默认用户名：admin")
 	logrus.Info("[ DH-Blog ] 默认密码：admin")
 }

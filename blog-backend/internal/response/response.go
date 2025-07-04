@@ -1,5 +1,9 @@
 package response
 
+import (
+	"github.com/gin-gonic/gin"
+)
+
 type AjaxResult struct {
 	Code int         `json:"code"`
 	Msg  string      `json:"msg"`
@@ -26,6 +30,13 @@ func Error(msg string) AjaxResult {
 		Code: 0,
 		Msg:  msg,
 	}
+}
+
+func FailWithCode(c *gin.Context, code int, msg string) {
+	c.JSON(code, AjaxResult{
+		Code: 0,
+		Msg:  msg,
+	})
 }
 
 type PageResult struct {
