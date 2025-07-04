@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -21,10 +22,27 @@ type DataBase struct {
 	Dsn    string `yaml:"dsn"`    // For other databases like MySQL, this will be the DSN
 }
 
+type LocalUpload struct {
+	Path string `yaml:"path"` // Local upload base path, e.g., "uploads/article"
+}
+
+type WebdavUpload struct {
+	URL      string `yaml:"url"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	Path     string `yaml:"path"` // WebDAV base path, e.g., "uploads/webdav"
+}
+
+type Upload struct {
+	Local  LocalUpload  `yaml:"local"`
+	Webdav WebdavUpload `yaml:"webdav"`
+}
+
 type Config struct {
 	Server    Server   `yaml:"server"`
 	DataBase  DataBase `yaml:"database"`
 	JwtSecret string   `yaml:"jwtSecret"`
+	Upload    Upload   `yaml:"upload"` // New upload configuration
 }
 
 func DefaultConfig() *Config {
@@ -40,6 +58,17 @@ func DefaultConfig() *Config {
 			Dsn:    "",               // DSN will be empty for SQLite by default
 		},
 		JwtSecret: "test",
+		Upload: Upload{
+			Local: LocalUpload{
+				Path: "uploads/article", // Default local upload path
+			},
+			Webdav: WebdavUpload{
+				URL:      "", // Default empty WebDAV URL
+				Username: "",
+				Password: "",
+				Path:     "uploads/webdav", // Default WebDAV path
+			},
+		},
 	}
 }
 
@@ -61,12 +90,14 @@ func Init() (*Config, error) {
 	v.AddConfigPath(dataDir)
 
 	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configFileNotFoundError) {
 			// Config file not found; create it with default values.
 			defaultConfig := DefaultConfig()
 			v.Set("server", defaultConfig.Server)
 			v.Set("database", defaultConfig.DataBase)
 			v.Set("jwtSecret", defaultConfig.JwtSecret)
+			v.Set("upload", defaultConfig.Upload) // Set new upload config
 			if err := v.WriteConfigAs(filepath.Join(dataDir, "config.yaml")); err != nil {
 				return nil, err
 			}

@@ -50,7 +50,7 @@ func main() {
 		password, _ := reader.ReadString('\n')
 		password = strings.TrimSpace(password)
 
-		thashedPassword, hashErr := utils.HashPassword(password)
+		hashedPassword, hashErr := utils.HashPassword(password)
 		if hashErr != nil {
 			logrus.Fatalf("密码哈希失败: %v", hashErr)
 		}

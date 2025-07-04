@@ -55,7 +55,7 @@ func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandl
 		adminAPI.POST("/article", articleHandler.SaveArticle)
 		adminAPI.PUT("/article", articleHandler.UpdateArticle)
 		adminAPI.POST("/article/list", articleHandler.GetArticleList) // 与公共 API 重复，但路径不同
-		adminAPI.POST("/upload", adminHandler.UploadFile)
+		adminAPI.POST("/upload/:type", adminHandler.UploadFile)
 
 		// 标签管理 API (对应 Java AdminController)
 		adminAPI.POST("/tag", articleHandler.CreateTag)
