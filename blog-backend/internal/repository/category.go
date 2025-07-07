@@ -28,7 +28,7 @@ func (r *CategoryRepository) CreateCategory(category *model.Category) error {
 }
 
 // GetCategoryByID 根据 ID 获取分类
-func (r *CategoryRepository) GetCategoryByID(id uint) (model.Category, error) {
+func (r *CategoryRepository) GetCategoryByID(id int) (model.Category, error) {
 	var category model.Category
 	err := r.DB.First(&category, id).Error
 	if err != nil {
@@ -63,7 +63,7 @@ func (r *CategoryRepository) UpdateCategory(category *model.Category) error {
 }
 
 // DeleteCategory 删除分类
-func (r *CategoryRepository) DeleteCategory(id uint) error {
+func (r *CategoryRepository) DeleteCategory(id int) error {
 	err := r.DB.Delete(&model.Category{}, id).Error
 	if err != nil {
 		return fmt.Errorf("删除分类失败: %w", err)
@@ -82,7 +82,7 @@ func (r *CategoryRepository) GetAllCategories() ([]model.Category, error) {
 }
 
 // SaveCategoryDefaultTags 保存分类默认标签关联
-func (r *CategoryRepository) SaveCategoryDefaultTags(categoryID uint, tagIDs []uint) error {
+func (r *CategoryRepository) SaveCategoryDefaultTags(categoryID int, tagIDs []int) error {
 	return r.DB.Transaction(func(tx *gorm.DB) error {
 		// 删除旧的关联
 		if err := tx.Where("category_id = ?", categoryID).Delete(&model.CategoryDefaultTags{}).Error; err != nil {
@@ -104,13 +104,13 @@ func (r *CategoryRepository) SaveCategoryDefaultTags(categoryID uint, tagIDs []u
 }
 
 // GetCategoryDefaultTagsByID 根据分类ID获取默认标签ID列表
-func (r *CategoryRepository) GetCategoryDefaultTagIDs(categoryID uint) ([]uint, error) {
+func (r *CategoryRepository) GetCategoryDefaultTagIDs(categoryID int) ([]int, error) {
 	var associations []model.CategoryDefaultTags
 	if err := r.DB.Model(&model.CategoryDefaultTags{}).Where("category_id = ?", categoryID).Find(&associations).Error; err != nil {
 		return nil, fmt.Errorf("查询分类默认标签失败: %w", err)
 	}
 
-	var tagIDs []uint
+	var tagIDs []int
 	for _, assoc := range associations {
 		tagIDs = append(tagIDs, assoc.TagID)
 	}

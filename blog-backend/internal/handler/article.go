@@ -89,7 +89,7 @@ func (h *ArticleHandler) DeleteTag(c *gin.Context) {
 		return
 	}
 
-	if err := h.tagRepo.DeleteTag(uint(id)); err != nil {
+	if err := h.tagRepo.DeleteTag(int(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("删除标签失败", err).Error()))
 		return
 	}
@@ -104,7 +104,7 @@ func (h *ArticleHandler) GetCategoryByID(c *gin.Context) {
 		return
 	}
 
-	category, err := h.categoryRepo.GetCategoryByID(uint(id))
+	category, err := h.categoryRepo.GetCategoryByID(int(id))
 	if err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
 			c.JSON(http.StatusNotFound, response.Error(errs.NotFound(err.Error(), nil).Error()))
@@ -149,7 +149,7 @@ func (h *ArticleHandler) GetCategoryDefaultTags(c *gin.Context) {
 		return
 	}
 
-	tagIDs, err := h.categoryRepo.GetCategoryDefaultTagIDs(uint(id))
+	tagIDs, err := h.categoryRepo.GetCategoryDefaultTagIDs(int(id))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("获取分类默认标签失败", err).Error()))
 		return
@@ -198,14 +198,14 @@ func (h *ArticleHandler) SaveCategoryDefaultTags(c *gin.Context) {
 	}
 
 	var req struct {
-		TagIDs []uint `json:"tag_ids"`
+		TagIDs []int `json:"tag_ids"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, response.Error(errs.BadRequest("无效的请求参数", err).Error()))
 		return
 	}
 
-	if err := h.categoryRepo.SaveCategoryDefaultTags(uint(id), req.TagIDs); err != nil {
+	if err := h.categoryRepo.SaveCategoryDefaultTags(int(id), req.TagIDs); err != nil {
 		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("保存分类默认标签失败", err).Error()))
 		return
 	}
@@ -249,7 +249,7 @@ func (h *ArticleHandler) DeleteCategory(c *gin.Context) {
 		return
 	}
 
-	if err := h.categoryRepo.DeleteCategory(uint(id)); err != nil {
+	if err := h.categoryRepo.DeleteCategory(int(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("删除分类失败", err).Error()))
 		return
 	}

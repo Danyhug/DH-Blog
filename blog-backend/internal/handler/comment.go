@@ -70,7 +70,7 @@ func (h *CommentHandler) DeleteComment(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.DeleteComment(uint(id)); err != nil {
+	if err := h.repo.DeleteComment(int(id)); err != nil {
 		if errors.Is(err, errs.ErrCommentNotFound) {
 			c.JSON(http.StatusNotFound, response.Error(errs.NotFound(err.Error(), nil).Error()))
 			return

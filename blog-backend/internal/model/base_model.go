@@ -8,7 +8,7 @@ import (
 
 // BaseModel 包含了所有模型通用的字段和 GORM 钩子
 type BaseModel struct {
-	ID        uint           `gorm:"primarykey" json:"id"`
+	ID        int            `gorm:"primarykey" json:"id"`
 	CreatedAt JSONTime       `json:"createTime"`
 	UpdatedAt JSONTime       `json:"updateTime"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deletedAt,omitempty"`

@@ -29,7 +29,7 @@ func (r *TagRepository) CreateTag(tag *model.Tag) error {
 }
 
 // GetTagByID 根据 ID 获取标签
-func (r *TagRepository) GetTagByID(id uint) (model.Tag, error) {
+func (r *TagRepository) GetTagByID(id int) (model.Tag, error) {
 	var tag model.Tag
 	err := r.DB.First(&tag, id).Error
 	if err != nil {
@@ -77,7 +77,7 @@ func (r *TagRepository) UpdateTag(tag *model.Tag) error {
 }
 
 // DeleteTag 删除标签
-func (r *TagRepository) DeleteTag(id uint) error {
+func (r *TagRepository) DeleteTag(id int) error {
 	err := r.DB.Delete(&model.Tag{}, id).Error
 	if err != nil {
 		return fmt.Errorf("删除标签失败: %w", err)
@@ -96,7 +96,7 @@ func (r *TagRepository) GetAllTags() ([]model.Tag, error) {
 }
 
 // 根据文章id获取标签id
-func (r *TagRepository) GetTagsByArticleID(articleID uint) ([]uint, error) {
+func (r *TagRepository) GetTagsByArticleID(articleID int) ([]int, error) {
 	var article model.Article
 	// 1. 首先，根据文章ID查找对应的文章实体
 	if err := r.DB.First(&article, articleID).Error; err != nil {
@@ -114,7 +114,7 @@ func (r *TagRepository) GetTagsByArticleID(articleID uint) ([]uint, error) {
 		return nil, fmt.Errorf("获取文章关联标签失败: %w", err)
 	}
 
-	var tagIDs []uint
+	var tagIDs []int
 	// 3. 遍历获取到的标签，提取它们的ID
 	for _, tag := range tags {
 		tagIDs = append(tagIDs, tag.ID)
@@ -124,7 +124,7 @@ func (r *TagRepository) GetTagsByArticleID(articleID uint) ([]uint, error) {
 }
 
 // GetTagNamesByIDs 根据标签ID列表获取标签名称列表
-func (r *TagRepository) GetTagNamesByIDs(tagIDs []uint) ([]string, error) {
+func (r *TagRepository) GetTagNamesByIDs(tagIDs []int) ([]string, error) {
 	var tags []model.Tag
 	if len(tagIDs) == 0 {
 		return []string{}, nil

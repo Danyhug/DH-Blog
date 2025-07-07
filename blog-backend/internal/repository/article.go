@@ -21,7 +21,7 @@ func NewArticleRepository(db *gorm.DB, categoryRepo *CategoryRepository, tagRepo
 
 // GetArticleById 根据id获取文章信息
 func (r *ArticleRepository) GetArticleById(id int) (data model.Article, err error) {
-	tx := r.DB.Preload("Tags").Where(&model.Article{BaseModel: model.BaseModel{ID: uint(id)}}).First(&data)
+	tx := r.DB.Preload("Tags").Where(&model.Article{BaseModel: model.BaseModel{ID: int(id)}}).First(&data)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			return model.Article{}, fmt.Errorf("查询文章失败: %w", errs.ErrArticleNotFound)
@@ -30,19 +30,19 @@ func (r *ArticleRepository) GetArticleById(id int) (data model.Article, err erro
 	}
 
 	// 1. 获取文章分类的默认标签id
-	defaultTagIDs, err := r.CategoryRepo.GetCategoryDefaultTagIDs(uint(data.CategoryID))
+	defaultTagIDs, err := r.CategoryRepo.GetCategoryDefaultTagIDs(int(data.CategoryID))
 	if err != nil {
 		return model.Article{}, fmt.Errorf("获取分类默认标签失败: %w", err)
 	}
 
 	// 2. 获取文章的标签id
-	articleTagIDs := make([]uint, 0, len(data.Tags))
+	articleTagIDs := make([]int, 0, len(data.Tags))
 	for _, tag := range data.Tags {
 		articleTagIDs = append(articleTagIDs, tag.ID)
 	}
 
 	// 3. 将默认标签id和文章标签id去重后为一个ids集合
-	uniqueTagIDsMap := make(map[uint]struct{})
+	uniqueTagIDsMap := make(map[int]struct{})
 	for _, id := range defaultTagIDs {
 		uniqueTagIDsMap[id] = struct{}{}
 	}
@@ -50,7 +50,7 @@ func (r *ArticleRepository) GetArticleById(id int) (data model.Article, err erro
 		uniqueTagIDsMap[id] = struct{}{}
 	}
 
-	var allUniqueTagIDs []uint
+	var allUniqueTagIDs []int
 	for id := range uniqueTagIDsMap {
 		allUniqueTagIDs = append(allUniqueTagIDs, id)
 	}
@@ -157,7 +157,7 @@ func (r *ArticleRepository) UpdateArticle(article *model.Article) error {
 func (r *ArticleRepository) DeleteArticle(id int) error {
 	return r.DB.Transaction(func(tx *gorm.DB) error {
 		// 1. 删除文章与标签的关联
-		if err := tx.Model(&model.Article{BaseModel: model.BaseModel{ID: uint(id)}}).Association("Tags").Clear(); err != nil {
+		if err := tx.Model(&model.Article{BaseModel: model.BaseModel{ID: int(id)}}).Association("Tags").Clear(); err != nil {
 			return fmt.Errorf("删除文章标签关联失败: %w", err)
 		}
 		// 2. 删除文章本身

@@ -49,13 +49,13 @@ func (r *CommentRepository) GetCommentsByArticleID(articleID int, page, pageSize
 }
 
 // DeleteComment 递归删除评论及其所有子评论
-func (r *CommentRepository) DeleteComment(id uint) error {
+func (r *CommentRepository) DeleteComment(id int) error {
 	return r.DB.Transaction(func(tx *gorm.DB) error {
 		// 查找所有子评论
 		var commentsToDelete []model.Comment
 		// 递归查询所有子评论的 ID
-		var findChildren func(parentID uint)
-		findChildren = func(parentID uint) {
+		var findChildren func(parentID int)
+		findChildren = func(parentID int) {
 			var children []model.Comment
 			tx.Where("parent_id = ?", parentID).Find(&children)
 			for _, child := range children {
@@ -78,7 +78,7 @@ func (r *CommentRepository) DeleteComment(id uint) error {
 		findChildren(id)
 
 		// 批量删除所有评论
-		var idsToDelete []uint
+		var idsToDelete []int
 		for _, comment := range commentsToDelete {
 			idsToDelete = append(idsToDelete, comment.ID)
 		}
@@ -135,7 +135,7 @@ func (r *CommentRepository) UpdateComment(comment *model.Comment) error {
 
 // buildCommentTreeAndSort 辅助函数，用于构建评论树并进行排序
 func (r *CommentRepository) buildCommentTreeAndSort(allComments []model.Comment) []*model.Comment {
-	commentMap := make(map[uint]*model.Comment)
+	commentMap := make(map[int]*model.Comment)
 	for i := range allComments {
 		commentMap[allComments[i].ID] = &allComments[i]
 	}

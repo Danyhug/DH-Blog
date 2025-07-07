@@ -8,8 +8,8 @@ import (
 
 // CategoryDefaultTags 是分类和默认标签的关联表
 type CategoryDefaultTags struct {
-	CategoryID uint           `gorm:"primaryKey"`
-	TagID      uint           `gorm:"primaryKey"`
+	CategoryID int            `gorm:"primaryKey"`
+	TagID      int            `gorm:"primaryKey"`
 	CreatedAt  JSONTime       `json:"createdAt"`
 	UpdatedAt  JSONTime       `json:"updatedAt"`
 	DeletedAt  gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
