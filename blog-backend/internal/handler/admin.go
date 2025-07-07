@@ -1,10 +1,11 @@
 package handler
 
 import (
+	"net/http"
+
 	"dh-blog/internal/response"
 	"dh-blog/internal/service"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 // AdminHandler 负责处理后台管理相关的请求
@@ -35,5 +36,5 @@ func (h *AdminHandler) UploadFile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.SuccessWithData(gin.H{"url": url}))
+	c.JSON(http.StatusOK, response.SuccessWithData(url))
 }

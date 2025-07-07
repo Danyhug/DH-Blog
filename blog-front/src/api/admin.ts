@@ -105,7 +105,7 @@ export const getTagListByCategoryId = (categoryId: number): Promise<number[]> =>
 
 // ********** 文件上传 **********
 export const uploadFile = (data: FormData): Promise<String> => {
-  return request.post('/admin/upload', data, {
+  return request.post('/admin/upload/blog', data, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }

@@ -54,8 +54,8 @@ func DefaultConfig() *Config {
 		},
 		DataBase: DataBase{
 			Type:   "sqlite3",
-			DBFile: "data/dhblog.db", // Default SQLite database file
-			Dsn:    "",               // DSN will be empty for SQLite by default
+			DBFile: "../blog.db", // Default SQLite database file
+			Dsn:    "",           // DSN will be empty for SQLite by default
 		},
 		JwtSecret: "test",
 		Upload: Upload{

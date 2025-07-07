@@ -142,7 +142,6 @@ func (h *ArticleHandler) UpdateCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, response.SuccessWithData(category))
 }
 
-// GetArticleTitle 获取文章标题
 func (h *ArticleHandler) GetCategoryDefaultTags(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -150,7 +149,7 @@ func (h *ArticleHandler) GetCategoryDefaultTags(c *gin.Context) {
 		return
 	}
 
-	tagIDs, err := h.categoryRepo.GetCategoryDefaultTagsByID(uint(id))
+	tagIDs, err := h.categoryRepo.GetCategoryDefaultTagIDs(uint(id))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("获取分类默认标签失败", err).Error()))
 		return
@@ -159,7 +158,6 @@ func (h *ArticleHandler) GetCategoryDefaultTags(c *gin.Context) {
 	c.JSON(http.StatusOK, response.SuccessWithData(gin.H{"tag_ids": tagIDs}))
 }
 
-// UnlockArticle 获取需要解密的文章
 func (h *ArticleHandler) GetOverview(c *gin.Context) {
 	articleCount, err := h.dailyStatsRepo.CountArticles()
 	if err != nil {
@@ -192,7 +190,6 @@ func (h *ArticleHandler) GetOverview(c *gin.Context) {
 	c.JSON(http.StatusOK, response.SuccessWithData(overview))
 }
 
-// SaveArticle 创建新文章
 func (h *ArticleHandler) SaveCategoryDefaultTags(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -216,7 +213,6 @@ func (h *ArticleHandler) SaveCategoryDefaultTags(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Success())
 }
 
-// UpdateArticle 更新文章
 func (h *ArticleHandler) GetAllCategories(c *gin.Context) {
 	categories, err := h.categoryRepo.GetAllCategories()
 	if err != nil {
@@ -246,7 +242,6 @@ func (h *ArticleHandler) CreateCategory(c *gin.Context) {
 	c.JSON(http.StatusCreated, response.SuccessWithData(category))
 }
 
-// DeleteArticle 删除文章
 func (h *ArticleHandler) DeleteCategory(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -262,7 +257,6 @@ func (h *ArticleHandler) DeleteCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Success())
 }
 
-// GetArticleList 获取文章列表（带分页）
 func (h *ArticleHandler) GetArticleDetail(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

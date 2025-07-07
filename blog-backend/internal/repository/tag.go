@@ -94,3 +94,49 @@ func (r *TagRepository) GetAllTags() ([]model.Tag, error) {
 	}
 	return tags, nil
 }
+
+// 根据文章id获取标签id
+func (r *TagRepository) GetTagsByArticleID(articleID uint) ([]uint, error) {
+	var article model.Article
+	// 1. 首先，根据文章ID查找对应的文章实体
+	if err := r.DB.First(&article, articleID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 如果文章不存在，返回特定的错误
+			return nil, fmt.Errorf("文章不存在: %w", errs.ErrNotFound)
+		}
+		return nil, fmt.Errorf("查询文章失败: %w", err)
+	}
+
+	var tags []model.Tag
+	// 2. 使用 GORM 的 Association 方法加载文章关联的标签
+	// GORM 会根据 Article 模型中 Tags 字段的 many2many 标签自动处理中间表
+	if err := r.DB.Model(&article).Association("Tags").Find(&tags); err != nil {
+		return nil, fmt.Errorf("获取文章关联标签失败: %w", err)
+	}
+
+	var tagIDs []uint
+	// 3. 遍历获取到的标签，提取它们的ID
+	for _, tag := range tags {
+		tagIDs = append(tagIDs, tag.ID)
+	}
+
+	return tagIDs, nil
+}
+
+// GetTagNamesByIDs 根据标签ID列表获取标签名称列表
+func (r *TagRepository) GetTagNamesByIDs(tagIDs []uint) ([]string, error) {
+	var tags []model.Tag
+	if len(tagIDs) == 0 {
+		return []string{}, nil
+	}
+	err := r.DB.Where("id IN (?)", tagIDs).Find(&tags).Error
+	if err != nil {
+		return nil, fmt.Errorf("根据ID获取标签名称失败: %w", err)
+	}
+
+	var tagNames []string
+	for _, tag := range tags {
+		tagNames = append(tagNames, tag.Name)
+	}
+	return tagNames, nil
+}

@@ -10,11 +10,13 @@ import (
 )
 
 type ArticleRepository struct {
-	DB *gorm.DB
+	DB           *gorm.DB
+	CategoryRepo *CategoryRepository
+	TagRepo      *TagRepository
 }
 
-func NewArticleRepository(db *gorm.DB) *ArticleRepository {
-	return &ArticleRepository{DB: db}
+func NewArticleRepository(db *gorm.DB, categoryRepo *CategoryRepository, tagRepo *TagRepository) *ArticleRepository {
+	return &ArticleRepository{DB: db, CategoryRepo: categoryRepo, TagRepo: tagRepo}
 }
 
 // GetArticleById 根据id获取文章信息
@@ -26,6 +28,33 @@ func (r *ArticleRepository) GetArticleById(id int) (data model.Article, err erro
 		}
 		return model.Article{}, fmt.Errorf("数据库查询文章失败: %w", tx.Error)
 	}
+
+	// 1. 获取文章分类的默认标签id
+	defaultTagIDs, err := r.CategoryRepo.GetCategoryDefaultTagIDs(uint(data.CategoryID))
+	if err != nil {
+		return model.Article{}, fmt.Errorf("获取分类默认标签失败: %w", err)
+	}
+
+	// 2. 获取文章的标签id
+	articleTagIDs := make([]uint, 0, len(data.Tags))
+	for _, tag := range data.Tags {
+		articleTagIDs = append(articleTagIDs, tag.ID)
+	}
+
+	// 3. 将默认标签id和文章标签id去重后为一个ids集合
+	uniqueTagIDsMap := make(map[uint]struct{})
+	for _, id := range defaultTagIDs {
+		uniqueTagIDsMap[id] = struct{}{}
+	}
+	for _, id := range articleTagIDs {
+		uniqueTagIDsMap[id] = struct{}{}
+	}
+
+	var allUniqueTagIDs []uint
+	for id := range uniqueTagIDsMap {
+		allUniqueTagIDs = append(allUniqueTagIDs, id)
+	}
+
 	return data, nil
 }
 
@@ -64,6 +93,28 @@ func (r *ArticleRepository) SaveArticle(article *model.Article) error {
 			return fmt.Errorf("保存文章主体失败: %w", err)
 		}
 
+		// 2. 处理标签关联
+		// 在事务内部创建 TagRepository 实例，确保所有操作都在同一个事务中
+		tagRepoTx := NewTagRepository(tx)
+		var tagsToAssociate []*model.Tag
+		for _, tagSlug := range article.TagSlugs {
+			tag, err := tagRepoTx.GetTagBySlug(tagSlug)
+			if err != nil {
+				if errors.Is(err, errs.ErrNotFound) {
+					return fmt.Errorf("标签 slug '%s' 不存在: %w", tagSlug, errs.ErrNotFound)
+				} else {
+					return fmt.Errorf("查询标签失败: %w", err)
+				}
+			} else {
+				tagsToAssociate = append(tagsToAssociate, &tag)
+			}
+		}
+
+		// 3. 建立文章与标签的多对多关联
+		if err := tx.Model(article).Association("Tags").Replace(tagsToAssociate); err != nil {
+			return fmt.Errorf("建立文章标签关联失败: %w", err)
+		}
+
 		return nil
 	})
 }
@@ -74,6 +125,28 @@ func (r *ArticleRepository) UpdateArticle(article *model.Article) error {
 		// 1. 更新文章主体信息
 		if err := tx.Model(&article).Updates(article).Error; err != nil {
 			return fmt.Errorf("更新文章主体失败: %w", err)
+		}
+
+		// 2. 处理标签关联
+		// 在事务内部创建 TagRepository 实例，确保所有操作都在同一个事务中
+		tagRepoTx := NewTagRepository(tx)
+		var tagsToAssociate []*model.Tag
+		for _, tagSlug := range article.TagSlugs {
+			tag, err := tagRepoTx.GetTagBySlug(tagSlug)
+			if err != nil {
+				if errors.Is(err, errs.ErrNotFound) {
+					return fmt.Errorf("标签 slug '%s' 不存在: %w", tagSlug, errs.ErrNotFound)
+				} else {
+					return fmt.Errorf("查询标签失败: %w", err)
+				}
+			} else {
+				tagsToAssociate = append(tagsToAssociate, &tag)
+			}
+		}
+
+		// 3. 更新文章与标签的多对多关联
+		if err := tx.Model(article).Association("Tags").Replace(tagsToAssociate); err != nil {
+			return fmt.Errorf("更新文章标签关联失败: %w", err)
 		}
 
 		return nil

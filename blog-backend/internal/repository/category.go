@@ -104,9 +104,9 @@ func (r *CategoryRepository) SaveCategoryDefaultTags(categoryID uint, tagIDs []u
 }
 
 // GetCategoryDefaultTagsByID 根据分类ID获取默认标签ID列表
-func (r *CategoryRepository) GetCategoryDefaultTagsByID(categoryID uint) ([]uint, error) {
+func (r *CategoryRepository) GetCategoryDefaultTagIDs(categoryID uint) ([]uint, error) {
 	var associations []model.CategoryDefaultTags
-	if err := r.DB.Where("category_id = ?", categoryID).Find(&associations).Error; err != nil {
+	if err := r.DB.Model(&model.CategoryDefaultTags{}).Where("category_id = ?", categoryID).Find(&associations).Error; err != nil {
 		return nil, fmt.Errorf("查询分类默认标签失败: %w", err)
 	}
 

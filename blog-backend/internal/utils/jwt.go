@@ -21,7 +21,7 @@ func InitJwtUtils(secret string) {
 func GenerateToken(username string) (string, error) {
 	claims := jwt.MapClaims{
 		"username": username,
-		"exp":        time.Now().Add(time.Hour * 24).Unix(), // Token 有效期 24 小时
+		"exp":      time.Now().Add(time.Hour * 24).Unix(), // Token 有效期 24 小时
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -30,7 +30,7 @@ func GenerateToken(username string) (string, error) {
 		return "", fmt.Errorf("生成 Token 失败: %w", err)
 	}
 
-	return tokenString, nil
+	return "Bearer " + tokenString, nil
 }
 
 // ParseToken 解析 JWT Token

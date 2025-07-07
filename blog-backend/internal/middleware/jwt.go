@@ -1,11 +1,13 @@
 package middleware
 
 import (
+	"fmt"
+	"net/http"
+	"strings"
+
 	"dh-blog/internal/response"
 	"dh-blog/internal/utils"
 	"github.com/gin-gonic/gin"
-	"net/http"
-	"strings"
 )
 
 func JWTMiddleware() gin.HandlerFunc {
@@ -19,6 +21,7 @@ func JWTMiddleware() gin.HandlerFunc {
 
 		parts := strings.SplitN(authHeader, " ", 2)
 		if !(len(parts) == 2 && parts[0] == "Bearer") {
+			fmt.Println(parts)
 			response.FailWithCode(c, http.StatusUnauthorized, "请求头中auth格式有误")
 			c.Abort()
 			return

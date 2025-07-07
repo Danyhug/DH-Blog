@@ -17,8 +17,8 @@
           </el-checkbox-group>
         </el-tab-pane>
         <el-tab-pane label="附加信息" name="third">
-          <el-upload class="avatar-uploader" :action="SERVER_URL + '/article/upload'" :show-file-list="false"
-            :on-success="handleAvatarSuccess" :before-upload="beforeAvatarUpload">
+          <el-upload class="avatar-uploader" :http-request="handleFileUpload" :show-file-list="false"
+            :before-upload="beforeAvatarUpload">
             <img v-if="imageUrl" :src="imageUrl" class="avatar" />
             <el-icon v-else class="avatar-uploader-icon">
               <Plus />
@@ -299,19 +299,22 @@ onMounted(() => {
 // 上传文件
 const imageUrl = ref('')
 
-const handleAvatarSuccess: UploadProps['onSuccess'] = (
-  response,
-  uploadFile
-) => {
-  imageUrl.value = URL.createObjectURL(uploadFile.raw!)
-  ElMessage.success({
-    message: '上传文件成功',
-    plain: true,
-  })
+const handleFileUpload = async (event: any) => {
+  const file = event.file;
+  const form = new FormData();
+  form.append('file', file);
 
-  // 保存缩略图图片url
-  article.thumbnailUrl = response.data
-}
+  try {
+    const res = await uploadFile(form);
+    imageUrl.value = URL.createObjectURL(file);
+    ElMessage.success('上传文件成功');
+
+    // 保存缩略图图片url
+    article.thumbnailUrl = res.toString();
+  } catch (error) {
+    ElMessage.error('上传文件失败');
+  }
+};
 
 const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
   if (rawFile.size / 1024 / 1024 > 10) {

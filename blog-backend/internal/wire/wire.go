@@ -13,13 +13,13 @@ import (
 // InitApp 初始化整个应用程序的依赖
 func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	// 2. 初始化 Repository 层
-	articleRepo := repository.NewArticleRepository(db)
 	userRepo := repository.NewUserRepository(db)
 	tagRepo := repository.NewTagRepository(db)
 	categoryRepo := repository.NewCategoryRepository(db)
 	commentRepo := repository.NewCommentRepository(db)
 	logRepo := repository.NewLogRepository(db)
 	dailyStatsRepo := repository.NewDailyStatsRepository(db)
+	articleRepo := repository.NewArticleRepository(db, categoryRepo, tagRepo)
 
 	// 初始化 Uploader
 	localUploader := service.NewLocalUploader(conf)

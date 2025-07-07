@@ -14,7 +14,7 @@ type UploadService struct {
 type UploadType string
 
 const (
-	ArticleUpload UploadType = "article"
+	ArticleUpload UploadType = "blog"
 	WebdavUpload  UploadType = "webdav"
 )
 
