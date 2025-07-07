@@ -201,7 +201,7 @@ const onUploadImg = async (files: any[], callback: (arg0: any[]) => void) => {
       });
     })
   ) as string[];
-  callback(res.map(item => `${SERVER_URL}/articleUpload/${item}`))
+  callback(res.map(item => `${SERVER_URL}/${item}`))
 };
 
 // 提交文章
