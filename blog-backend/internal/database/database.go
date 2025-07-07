@@ -31,6 +31,8 @@ func Init(conf *config.Config) (*gorm.DB, error) {
 		return nil, err
 	}
 	dbPath := filepath.Join(filepath.Dir(exePath), conf.DataBase.DBFile)
+	fmt.Printf("可执行文件路径: %s\n", exePath)
+	fmt.Printf("数据库文件路径: %s\n", dbPath)
 
 	// 初始化数据库连接
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{

@@ -3,6 +3,8 @@ package service
 import (
 	"errors"
 	"mime/multipart"
+
+	"dh-blog/internal/config"
 )
 
 // UploadService 是我们的主服务，它管理着所有具体的 Uploader
@@ -20,11 +22,11 @@ const (
 
 // NewUploadService 创建并初始化 UploadService
 // 这里通过依赖注入，传入所有具体的 uploader 实现
-func NewUploadService(localUploader Uploader, webdavUploader Uploader) *UploadService {
+func NewUploadService(cfg *config.Config, dataDir string) *UploadService {
 	return &UploadService{
 		Uploaders: map[UploadType]Uploader{
-			ArticleUpload: localUploader,
-			WebdavUpload:  webdavUploader,
+			ArticleUpload: NewLocalUploader(dataDir, cfg.Upload.Local.Path),
+			WebdavUpload:  NewWebdavUploader(cfg),
 		},
 	}
 }

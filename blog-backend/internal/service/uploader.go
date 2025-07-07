@@ -16,21 +16,19 @@ type Uploader interface {
 
 // LocalUploader 实现了将文件保存到本地的策略
 type LocalUploader struct {
-	Config *config.Config
+	BaseDir string
+	SubPath string
 }
 
-func NewLocalUploader(cfg *config.Config) Uploader {
-	return &LocalUploader{Config: cfg}
+func NewLocalUploader(baseDir, subPath string) Uploader {
+	return &LocalUploader{BaseDir: baseDir, SubPath: subPath}
 }
 
 func (u *LocalUploader) Upload(file *multipart.FileHeader) (string, error) {
-	// 确保上传目录存在
-	exePath, err := os.Executable()
-	if err != nil {
-		return "", fmt.Errorf("获取可执行文件路径失败: %w", err)
-	}
+	// 构建完整的上传目录路径
+	uploadDir := filepath.Join(u.BaseDir, "upload", u.SubPath)
 
-	uploadDir := filepath.Join(filepath.Dir(exePath), u.Config.Upload.Local.Path)
+	// 确保上传目录存在
 	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(uploadDir, 0755); err != nil {
 			return "", fmt.Errorf("创建上传目录失败: %w", err)
@@ -38,6 +36,7 @@ func (u *LocalUploader) Upload(file *multipart.FileHeader) (string, error) {
 	}
 
 	// 构建文件保存路径
+	fmt.Println(uploadDir)
 	dst := filepath.Join(uploadDir, file.Filename)
 
 	// 保存文件
@@ -45,9 +44,9 @@ func (u *LocalUploader) Upload(file *multipart.FileHeader) (string, error) {
 		return "", fmt.Errorf("保存文件失败: %w", err)
 	}
 
-	// 返回文件的可访问 URL。这里假设 /static/ 映射到 uploads 目录
-	// 需要根据实际部署情况调整
-	return "/static/" + filepath.Base(u.Config.Upload.Local.Path) + "/" + file.Filename, nil
+	fmt.Printf("文件将保存到: %s\n", dst)
+	fmt.Printf("返回的 URL: %s\n", "/uploads/"+filepath.Join(u.SubPath, file.Filename))
+	return "uploads/" + filepath.Join(u.SubPath, file.Filename), nil
 }
 
 // WebdavUploader 实现了将文件保存到 WebDAV 的策略

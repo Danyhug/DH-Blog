@@ -1,6 +1,10 @@
 package wire
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+
 	"dh-blog/internal/config"
 	"dh-blog/internal/handler"
 	"dh-blog/internal/repository"
@@ -21,12 +25,15 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	dailyStatsRepo := repository.NewDailyStatsRepository(db)
 	articleRepo := repository.NewArticleRepository(db, categoryRepo, tagRepo)
 
-	// 初始化 Uploader
-	localUploader := service.NewLocalUploader(conf)
-	webdavUploader := service.NewWebdavUploader(conf)
+	// 获取 data 目录的绝对路径
+	exePath, err := os.Executable()
+	if err != nil {
+		panic(fmt.Errorf("获取可执行文件路径失败: %w", err))
+	}
+	dataDir := filepath.Join(filepath.Dir(exePath), "data")
 
 	// 初始化 UploadService
-	uploadService := service.NewUploadService(localUploader, webdavUploader)
+	uploadService := service.NewUploadService(conf, dataDir)
 
 	// 3. 初始化 Handler 层，直接注入 Repository 和缓存
 	articleHandler := handler.NewArticleHandler(articleRepo, tagRepo, categoryRepo, dailyStatsRepo)
@@ -36,7 +43,8 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	adminHandler := handler.NewAdminHandler(uploadService)
 
 	// 4. 初始化路由器并注册路由
-	appRouter := router.Init(articleHandler, userHandler, commentHandler, logHandler, adminHandler)
+	staticFilesAbsPath := filepath.Join(dataDir, "upload")
+	appRouter := router.Init(articleHandler, userHandler, commentHandler, logHandler, adminHandler, staticFilesAbsPath)
 
 	return appRouter
 }
