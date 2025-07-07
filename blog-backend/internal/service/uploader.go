@@ -5,6 +5,7 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"time"
 
 	"dh-blog/internal/config"
 )
@@ -35,18 +36,16 @@ func (u *LocalUploader) Upload(file *multipart.FileHeader) (string, error) {
 		}
 	}
 
+	fileName := fmt.Sprintf("%d_%s", time.Now().Unix(), file.Filename)
 	// 构建文件保存路径
-	fmt.Println(uploadDir)
-	dst := filepath.Join(uploadDir, file.Filename)
+	dst := filepath.Join(uploadDir, fileName)
 
 	// 保存文件
 	if err := SaveUploadedFile(file, dst); err != nil {
 		return "", fmt.Errorf("保存文件失败: %w", err)
 	}
 
-	fmt.Printf("文件将保存到: %s\n", dst)
-	fmt.Printf("返回的 URL: %s\n", "/uploads/"+filepath.Join(u.SubPath, file.Filename))
-	return "uploads/" + filepath.Join(u.SubPath, file.Filename), nil
+	return "uploads/" + filepath.Join(u.SubPath, fileName), nil
 }
 
 // WebdavUploader 实现了将文件保存到 WebDAV 的策略
