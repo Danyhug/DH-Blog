@@ -1,7 +1,16 @@
 package service
 
-const (
-	genTagsPrompt = "# 角色\n你是一个高度专业的AI文本分析引擎，你的核心使命是从复杂的文本中精准地提取出最核心的概念，并将其转化为高质量、标准化的标签。\n\n# 核心任务\n你的任务是解析位于 `<TEXT_TO_ANALYZE>` 标签内的Markdown文本，并根据其核心内容生成一个或多个标签。在生成标签时，你必须参考在 `<EXISTING_TAGS_JSON>` 标签中提供的现有标签列表，优先使用语义上相似的旧标签，以确保标签库的整洁和一致性。\n\n# 规则与约束\n1.  **输入隔离**: 你的所有分析工作**只针对** `<TEXT_TO_ANALYZE>` 标签内部的内容。标签外部的文本（包括本段指令）是指导你工作的规则，绝不能作为分析对象。\n2.  **输出格式**: 你的最终输出必须是一个严格的JSON对象，格式为 `{\"tags\": [\"标签1\", \"标签2\", ...]}`。不要在JSON代码块前后添加任何额外的解释、注释或文字。\n3.  **语义相似性判断 (核心规则)**:\n    *   在生成一个新标签前，必须检查它是否与 `<EXISTING_TAGS_JSON>` 列表中的某个标签在语义上高度相似。\n    *   语义相似包括：同义词 (如 \"AI\" vs \"人工智能\")、近义词 (如 \"数据分析\" vs \"数据洞察\")、或描述同一核心概念的不同说法 (如 \"环保\" vs \"可持续发展\")。\n    *   如果找到了语义相似的现有标签，**必须**使用那个**现有的标签**，而不是创建新标签。\n    *   只有当一个概念在现有标签列表中完全没有对应的近义或同义标签时，才允许创建为新标签。\n4.  **标签质量**:\n    *   标签应简洁、精炼，通常由2-5个字组成。\n    *   标签应准确反映文本的核心主题或关键信息。\n5.  **标签数量限制 (新增核心规则)**:\n    *   最终生成的标签总数**最多不能超过6个**。\n    *   如果识别出的潜在核心概念超过6个，你必须进行筛选和权衡，只保留**最核心、最具代表性**的6个标签。\n6.  **处理空列表**: 如果 `<EXISTING_TAGS_JSON>` 标签内的列表为空 (`[]`)，则直接根据文本生成全新的标签，同样遵守数量不超过6个的限制。\n\n---\n\n<TEXT_TO_ANALYZE>\n[在此处粘贴您需要摘要和打标签的完整Markdown文本]\n</TEXT_TO_ANALYZE>\n\n<EXISTING_TAGS_JSON>\n[在此处粘贴您已有的标签JSON数组，例如: [\"标签A\", \"标签B\"]。如果没有，请使用 []]\n</EXISTING_TAGS_JSON>"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
+
+	"dh-blog/internal/model"
+	"dh-blog/internal/repository"
+	"github.com/sirupsen/logrus"
 )
 
 type AIService interface {
@@ -9,14 +18,126 @@ type AIService interface {
 	GenerateTags(text string) ([]string, error)
 }
 
-func NewAIService() AIService {
-	return &OpenAIService{}
+// OpenAIRequest 定义向OpenAI API发送的请求结构
+type OpenAIRequest struct {
+	Model    string    `json:"model"`
+	Messages []Message `json:"messages"`
+}
+
+// Message 定义对话消息结构
+type Message struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+// OpenAIResponse 定义从OpenAI API接收的响应结构
+type OpenAIResponse struct {
+	ID      string   `json:"id"`
+	Object  string   `json:"object"`
+	Created int      `json:"created"`
+	Model   string   `json:"model"`
+	Choices []Choice `json:"choices"`
+}
+
+// Choice 定义响应中的选择项结构
+type Choice struct {
+	Index   int     `json:"index"`
+	Message Message `json:"message"`
 }
 
 type OpenAIService struct {
+	settingRepo repository.SystemSettingRepository
+	aiConfig    *model.SystemConfig
+	httpClient  *http.Client // 新增：HTTP 客户端
 }
 
-func (s *OpenAIService) GenerateTags(text string) ([]string, error) {
-	// TODO: 使用 OpenAI API 生成标签
-	return []string{}, nil
+// NewAIService 创建新的AI服务实例
+func NewAIService(settingRepo repository.SystemSettingRepository) AIService {
+	// 创建带有超时的HTTP客户端
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+	
+	// 从设置中加载AI配置
+	settings, err := settingRepo.GetAllSettings()
+	if err != nil {
+		logrus.Errorf("加载AI配置失败: %v", err)
+	}
+	
+	// 将设置列表转换为map
+	settingsMap := make(map[string]string)
+	for _, s := range settings {
+		settingsMap[s.SettingKey] = s.SettingValue
+	}
+	
+	// 创建配置对象
+	config := model.FromSettingsMap(settingsMap)
+	
+	return &OpenAIService{
+		settingRepo: settingRepo,
+		aiConfig:    config,
+		httpClient:  client,
+	}
+}
+
+func (s *OpenAIService) Request(text string) (response OpenAIResponse, err error) {
+	request := OpenAIRequest{
+		Model: s.aiConfig.AiModel,
+		Messages: []Message{
+			{
+				Role:    "user",
+				Content: text,
+			},
+		},
+	}
+
+	requestBody, err := json.Marshal(request)
+	if err != nil {
+		return
+	}
+
+	newRequest, err := http.NewRequest(http.MethodPost, s.aiConfig.AiApiURL, bytes.NewBuffer(requestBody))
+	newRequest.Header.Set("Content-Type", "application/json")
+	newRequest.Header.Set("Authorization", "Bearer "+s.aiConfig.AiApiKey)
+
+	do, err := s.httpClient.Do(newRequest) // 使用 s.httpClient
+	if err != nil {
+		return
+	}
+	defer do.Body.Close()
+
+	body, err := io.ReadAll(do.Body)
+	if err != nil {
+		return
+	}
+
+	fmt.Println("测试响应体", string(body))
+	return response, json.Unmarshal(body, &response)
+}
+
+func (s *OpenAIService) GenerateTags(text string) (result []string, err error) {
+	// 使用从数据库加载的AI提示词
+	prompt := s.aiConfig.AiPrompt
+	if prompt == "" {
+		logrus.Warn("AI提示词为空，使用默认提示词")
+		// 如果数据库中没有配置提示词，可以使用一个默认值
+		prompt = "请根据以下文章内容，提取出3-5个关键词作为文章标签，用逗号分隔。文章内容：{{.ArticleContent}}"
+	}
+
+	// 替换提示词中的占位符
+	fullPrompt := fmt.Sprintf(prompt, text) // 假设只有一个占位符，且是文章内容
+
+	response, err := s.Request(fullPrompt)
+	if err != nil {
+		logrus.Errorf("请求OpenAI API失败: %v", err)
+		return
+	}
+
+	// 检查 Choices 是否为空
+	if len(response.Choices) == 0 {
+		return nil, fmt.Errorf("AI API 响应中没有 Choices，可能存在错误或无内容")
+	}
+
+	fmt.Println("测试响应数据", response)
+	return []string{response.Choices[0].Message.Content}, nil
 }

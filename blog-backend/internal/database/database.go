@@ -50,12 +50,11 @@ func Init(conf *config.Config) (*gorm.DB, error) {
 		&model.Article{},
 		&model.Category{},
 		&model.Comment{},
-		&model.DailyStat{},
-		&model.IPStat{},
 		&model.Tag{},
 		&model.User{},
-		&model.CategoryDefaultTags{},
-		&model.SystemConfig{},
+		&model.SystemSetting{},
+		&model.IPBlacklist{},
+		&model.TagRelation{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("数据库自动迁移失败: %w", err)

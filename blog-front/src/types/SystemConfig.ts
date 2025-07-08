@@ -13,5 +13,8 @@ export interface SystemConfig {
     smtp_user?: string;
     smtp_pass?: string;
     smtp_sender?: string;
+    ai_api_url?: string;
+    ai_api_key?: string;
+    ai_model?: string;
     ai_prompt?: string;
 }

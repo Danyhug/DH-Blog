@@ -1,104 +1,68 @@
 package repository
 
 import (
-	"fmt"
-
 	"dh-blog/internal/model"
 	"gorm.io/gorm"
+	"time"
 )
 
+// LogRepository 定义日志仓库
 type LogRepository struct {
-	DB *gorm.DB
+	db *gorm.DB
 }
 
+// NewLogRepository 创建新的日志仓库
 func NewLogRepository(db *gorm.DB) *LogRepository {
-	return &LogRepository{DB: db}
+	return &LogRepository{db: db}
 }
 
-// CreateAccessLog 创建访问日志
-func (r *LogRepository) CreateAccessLog(log *model.AccessLog) error {
-	err := r.DB.Create(log).Error
-	if err != nil {
-		return fmt.Errorf("创建访问日志失败: %w", err)
-	}
-	return nil
+// SaveAccessLog 保存访问日志
+func (r *LogRepository) SaveAccessLog(log *model.AccessLog) error {
+	return r.db.Create(log).Error
 }
 
-// GetAccessLogs 获取访问日志列表（带分页和日期筛选）
-func (r *LogRepository) GetAccessLogs(page, pageSize int, startDate, endDate string) ([]model.AccessLog, int64, error) {
+// GetVisitLogs 获取访问日志（带分页）
+func (r *LogRepository) GetVisitLogs(page, pageSize int) ([]model.AccessLog, int64, error) {
 	var logs []model.AccessLog
 	var total int64
 
-	offset := (page - 1) * pageSize
-	query := r.DB.Model(&model.AccessLog{})
-
-	// 如果提供了日期范围，则添加查询条件
-	if startDate != "" && endDate != "" {
-		// 确保结束日期包含当天所有时间
-		endDate = endDate + " 23:59:59"
-		query = query.Where("created_at BETWEEN ? AND ?", startDate, endDate)
-	}
-
-	// 查询总数
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("查询访问日志总数失败: %w", err)
-	}
-
-	// 查询日志列表
-	if err := query.Offset(offset).Limit(pageSize).Order("created_at desc").Find(&logs).Error; err != nil {
-		return nil, 0, fmt.Errorf("查询访问日志列表失败: %w", err)
-	}
-
-	return logs, total, nil
+	r.db.Model(&model.AccessLog{}).Count(&total)
+	err := r.db.Offset((page - 1) * pageSize).Limit(pageSize).Order("created_at desc").Find(&logs).Error
+	return logs, total, err
 }
 
-// CreateOrUpdateIPStat 创建或更新 IP 统计
-func (r *LogRepository) CreateOrUpdateIPStat(ipStat *model.IPStat) error {
-	var existingStat model.IPStat
-	// 尝试查找现有记录
-	result := r.DB.Where("ip_address = ?", ipStat.IPAddress).First(&existingStat)
-
-	if result.Error == gorm.ErrRecordNotFound {
-		// 记录不存在，创建新记录
-		ipStat.AccessCount = 1
-		return r.DB.Create(ipStat).Error
-	} else if result.Error != nil {
-		// 其他错误
-		return fmt.Errorf("查询 IP 统计失败: %w", result.Error)
-	} else {
-		// 记录存在，更新访问次数
-		existingStat.AccessCount++
-		// 更新城市信息，如果新的不为空
-		if ipStat.City != "" {
-			existingStat.City = ipStat.City
-		}
-		return r.DB.Save(&existingStat).Error
+// BanIP 将IP添加到黑名单
+func (r *LogRepository) BanIP(ip, reason string, expireTime time.Time) error {
+	blacklist := &model.IPBlacklist{
+		IPAddress:  ip,
+		BanReason:  reason,
+		ExpireTime: expireTime,
 	}
+	return r.db.Create(blacklist).Error
 }
 
-// GetIPStats 获取 IP 统计列表（带分页）
-func (r *LogRepository) GetIPStats(page, pageSize int) ([]model.IPStat, int64, error) {
-	var stats []model.IPStat
-	var total int64
-
-	offset := (page - 1) * pageSize
-
-	if err := r.DB.Model(&model.IPStat{}).Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("查询 IP 统计总数失败: %w", err)
-	}
-
-	if err := r.DB.Offset(offset).Limit(pageSize).Order("access_count desc").Find(&stats).Error; err != nil {
-		return nil, 0, fmt.Errorf("查询 IP 统计列表失败: %w", err)
-	}
-
-	return stats, total, nil
+// UnbanIP 从黑名单中移除IP
+func (r *LogRepository) UnbanIP(ip string) error {
+	return r.db.Where("ip_address = ?", ip).Delete(&model.IPBlacklist{}).Error
 }
 
-// UpdateIPBanStatus 更新 IP 封禁状态
-func (r *LogRepository) UpdateIPBanStatus(ipAddress string, status bool) error {
-	err := r.DB.Model(&model.IPStat{}).Where("ip_address = ?", ipAddress).Update("ban_status", status).Error
-	if err != nil {
-		return fmt.Errorf("更新 IP 封禁状态失败: %w", err)
-	}
-	return nil
+// IsIPBanned 检查IP是否在黑名单中
+func (r *LogRepository) IsIPBanned(ip string) (bool, error) {
+	var count int64
+	err := r.db.Model(&model.IPBlacklist{}).
+		Where("ip_address = ? AND (expire_time IS NULL OR expire_time > ?)", ip, time.Now()).
+		Count(&count).Error
+	return count > 0, err
+}
+
+// GetDailyVisitStats 获取每日访问统计
+func (r *LogRepository) GetDailyVisitStats(startDate, endDate time.Time) ([]map[string]interface{}, error) {
+	var stats []map[string]interface{}
+	err := r.db.Model(&model.AccessLog{}).
+		Select("strftime('%Y-%m-%d', access_date) as date, count(*) as visit_count").
+		Where("access_date BETWEEN ? AND ?", startDate, endDate).
+		Group("date").
+		Order("date DESC").
+		Find(&stats).Error
+	return stats, err
 }

@@ -100,7 +100,7 @@ export const deleteCategory = (id: String): Promise<any> => {
  * @param data 
  * @returns 
  */
-export const getTagListByCategoryId = (categoryId: number): Promise<number[]> => {
+export const getTagListByCategoryId = (categoryId: number): Promise<Tag[]> => {
   return request.get(`/admin/category/${categoryId}/tags`)
 }
 

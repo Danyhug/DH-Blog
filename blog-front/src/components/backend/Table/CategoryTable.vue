@@ -67,7 +67,7 @@ const edit = (row: Category) => {
 
   if (category.id) {
     getTagListByCategoryId(category.id).then(res => {
-      bindTags.value = res
+      bindTags.value = res.map(r => r.id!)
     })
   }
 }

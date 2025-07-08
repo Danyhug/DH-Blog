@@ -67,3 +67,11 @@ func (h *UserHandler) Heart(c *gin.Context) {
 	// TODO SSE或者WebSocket实现
 	c.JSON(http.StatusOK, response.SuccessWithData("咚咚咚 ~ 咚咚咚 ~1"))
 }
+
+// RegisterRoutes 注册路由
+func (h *UserHandler) RegisterRoutes(router *gin.RouterGroup) {
+	// 用户公共 API
+	router.POST("/user/login", h.Login)
+	router.POST("/user/check", h.Check)
+	router.GET("/user/heart", h.Heart)
+}

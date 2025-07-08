@@ -69,7 +69,7 @@ func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandl
 		adminAPI.PUT("/category", articleHandler.UpdateCategory)
 		adminAPI.DELETE("/category/:id", articleHandler.DeleteCategory)
 		adminAPI.GET("/category/:id/tags", articleHandler.GetCategoryDefaultTags)
-		adminAPI.POST("/category/:id/default-tags", articleHandler.SaveCategoryDefaultTags)
+		adminAPI.POST("/category/:id/tags", articleHandler.SaveCategoryDefaultTags)
 
 		// 评论管理 API (对应 Java AdminController)
 		adminAPI.GET("/comment/:pageSize/:pageNum", commentHandler.GetAllComments)

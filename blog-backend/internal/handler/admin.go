@@ -11,11 +11,14 @@ import (
 // AdminHandler 负责处理后台管理相关的请求
 type AdminHandler struct {
 	UploadService *service.UploadService
-	// 这里可以注入 AdminService 或其他 Repository
+	AIService     service.AIService // 添加 AIService 依赖
 }
 
-func NewAdminHandler(uploadService *service.UploadService) *AdminHandler {
-	return &AdminHandler{UploadService: uploadService}
+func NewAdminHandler(uploadService *service.UploadService, aiService service.AIService) *AdminHandler {
+	return &AdminHandler{
+		UploadService: uploadService,
+		AIService:     aiService,
+	}
 }
 
 // UploadFile 处理文件上传
@@ -37,4 +40,13 @@ func (h *AdminHandler) UploadFile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response.SuccessWithData(url))
+}
+
+// RegisterRoutes 注册路由
+func (h *AdminHandler) RegisterRoutes(router *gin.RouterGroup) {
+	// 管理员 API
+	adminRouter := router.Group("/admin")
+	{
+		adminRouter.POST("/upload/:type", h.UploadFile)
+	}
 }

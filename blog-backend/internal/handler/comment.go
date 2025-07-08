@@ -132,7 +132,7 @@ func (h *CommentHandler) ReplyComment(c *gin.Context) {
 
 	// 确保 ParentID 被设置
 	if comment.ParentID == nil || *comment.ParentID == 0 {
-		c.JSON(http.StatusBadRequest, response.Error(errs.BadRequest("ParentID is required for reply", nil).Error()))
+		c.JSON(http.StatusBadRequest, response.Error(errs.BadRequest("回复评论需要指定父评论ID", nil).Error()))
 		return
 	}
 
@@ -142,4 +142,20 @@ func (h *CommentHandler) ReplyComment(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, response.Success())
+}
+
+// RegisterRoutes 注册路由
+func (h *CommentHandler) RegisterRoutes(router *gin.RouterGroup) {
+	// 评论公共 API
+	router.POST("/comment", h.AddComment)
+	router.GET("/comment/:articleId", h.GetCommentsByArticleID)
+
+	// 评论管理 API
+	adminRouter := router.Group("/admin")
+	{
+		adminRouter.GET("/comment/:pageSize/:pageNum", h.GetAllComments)
+		adminRouter.PUT("/comment", h.UpdateComment)
+		adminRouter.POST("/comment/reply", h.ReplyComment)
+		adminRouter.DELETE("/comment/:id", h.DeleteComment)
+	}
 }

@@ -179,6 +179,7 @@ const getCategories = async () => {
 // 获取标签列表
 const getTags = async () => {
   const data = await getArticleTagList();
+  console.log(data);
   tags.push(...data);
 };
 

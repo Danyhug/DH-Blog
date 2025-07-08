@@ -14,8 +14,8 @@ type Article struct {
 	IsLocked     bool   `gorm:"column:is_locked;default:false" json:"isLocked"` // 是否锁定
 	LockPassword string `gorm:"column:lock_password" json:"lockPassword"`       // 锁定密码
 
-	Tags     []*Tag   `gorm:"many2many:article_tags;" json:"tags,omitempty"` // 文章关联的标签
-	TagSlugs []string `gorm:"-" json:"tagSlugs,omitempty"`                   // 接收前端传来的标签 slug 数组
+	Tags     []*Tag   `gorm:"many2many:article_tags;" json:"tags"` // 文章关联的标签
+	TagSlugs []string `gorm:"-" json:"tagSlugs,omitempty"`         // 接收前端传来的标签 slug 数组
 }
 
 // UnmarshalJSON 自定义 JSON 反序列化逻辑

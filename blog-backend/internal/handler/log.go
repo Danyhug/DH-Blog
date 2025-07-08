@@ -1,110 +1,128 @@
 package handler
 
 import (
-	"net/http"
-	"strconv"
-	"time"
-
-	"dh-blog/internal/errs"
+	"dh-blog/internal/model"
 	"dh-blog/internal/repository"
-	"dh-blog/internal/response"
 	"github.com/gin-gonic/gin"
+	"net/http"
+	"time"
 )
 
 type LogHandler struct {
-	logRepo       *repository.LogRepository
-	dailyStatRepo *repository.DailyStatsRepository
+	BaseHandler
+	logRepo *repository.LogRepository
 }
 
-func NewLogHandler(logRepo *repository.LogRepository, dailyStatRepo *repository.DailyStatsRepository) *LogHandler {
-	return &LogHandler{logRepo: logRepo, dailyStatRepo: dailyStatRepo}
+func NewLogHandler(logRepo *repository.LogRepository) *LogHandler {
+	return &LogHandler{logRepo: logRepo}
 }
 
-// GetAccessLogs 获取访问日志列表
-func (h *LogHandler) GetAccessLogs(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-	startDate := c.Query("startDate")
-	endDate := c.Query("endDate")
-
-	logs, total, err := h.logRepo.GetAccessLogs(page, pageSize, startDate, endDate)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("获取访问日志失败", err).Error()))
-		return
+func (h *LogHandler) RegisterRoutes(router *gin.RouterGroup) {
+	adminRouter := router.Group("/admin/log")
+	{
+		adminRouter.GET("/visits", h.GetVisitLogs)
+		adminRouter.POST("/ip/ban", h.BanIP)
+		adminRouter.POST("/ip/unban", h.UnbanIP)
+		adminRouter.GET("/stats/daily", h.GetDailyStats)
 	}
-
-	c.JSON(http.StatusOK, response.SuccessWithData(response.Page(total, int64(page), logs)))
 }
 
-// GetIPStats 获取 IP 统计列表
-func (h *LogHandler) GetIPStats(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-
-	stats, total, err := h.logRepo.GetIPStats(page, pageSize)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("获取 IP 统计失败", err).Error()))
-		return
-	}
-
-	c.JSON(http.StatusOK, response.SuccessWithData(response.Page(total, int64(page), stats)))
-}
-
-// BanIP 封禁或解封 IP
-func (h *LogHandler) BanIP(c *gin.Context) {
-	ipAddress := c.Param("ip")
-	statusStr := c.Param("status")
-
-	if statusStr == "" {
-		c.JSON(http.StatusBadRequest, response.Error(errs.BadRequest("状态不能为空", nil).Error()))
-		return
-	}
-
-	status := statusStr == "1"
-
-	if err := h.logRepo.UpdateIPBanStatus(ipAddress, status); err != nil {
-		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("IP 状态更新失败", err).Error()))
-		return
-	}
-
-	c.JSON(http.StatusOK, response.Success())
-}
-
-// GetVisitLogs 获取访问日志概览（每日统计）
 func (h *LogHandler) GetVisitLogs(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "30"))
-
-	var startDate *time.Time
-	var endDate *time.Time
-
-	startDateStr := c.Query("startDate")
-	if startDateStr != "" {
-		parsedDate, err := time.Parse("2006-1-2", startDateStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, response.Error(errs.BadRequest("无效的开始日期格式，应为 YYYY-M-D", err).Error()))
-			return
-		}
-		startDate = &parsedDate
-	}
-
-	endDateStr := c.Query("endDate")
-	if endDateStr != "" {
-		parsedDate, err := time.Parse("2006-1-2", endDateStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, response.Error(errs.BadRequest("无效的结束日期格式，应为 YYYY-M-D", err).Error()))
-			return
-		}
-		// 确保结束日期包含当天所有时间
-		modifiedDate := parsedDate.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
-		endDate = &modifiedDate
-	}
-
-	logs, total, err := h.dailyStatRepo.GetDailyStatsByDateRange(page, pageSize, startDate, endDate)
+	pageReq, err := h.GetPageRequest(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("获取访问日志概览失败", err).Error()))
+		h.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, response.SuccessWithData(response.Page(total, int64(page), logs)))
+	logs, total, err := h.logRepo.GetVisitLogs(pageReq.Page, pageReq.PageSize)
+	if err != nil {
+		h.Error(c, err)
+		return
+	}
+
+	h.SuccessWithPage(c, logs, total, pageReq.Page)
+}
+
+func (h *LogHandler) BanIP(c *gin.Context) {
+	var req struct {
+		IP       string `json:"ip" binding:"required"`
+		Reason   string `json:"reason"`
+		Duration int    `json:"duration"` // in hours
+	}
+	if err := h.BindJSON(c, &req); err != nil {
+		h.Error(c, err)
+		return
+	}
+
+	var expireTime time.Time
+	if req.Duration > 0 {
+		expireTime = time.Now().Add(time.Hour * time.Duration(req.Duration))
+	}
+
+	if err := h.logRepo.BanIP(req.IP, req.Reason, expireTime); err != nil {
+		h.Error(c, err)
+		return
+	}
+	h.Success(c)
+}
+
+func (h *LogHandler) UnbanIP(c *gin.Context) {
+	var req struct {
+		IP string `json:"ip" binding:"required"`
+	}
+	if err := h.BindJSON(c, &req); err != nil {
+		h.Error(c, err)
+		return
+	}
+
+	if err := h.logRepo.UnbanIP(req.IP); err != nil {
+		h.Error(c, err)
+		return
+	}
+	h.Success(c)
+}
+
+func (h *LogHandler) GetDailyStats(c *gin.Context) {
+	var req struct {
+		StartDate string `form:"startDate" binding:"required"`
+		EndDate   string `form:"endDate" binding:"required"`
+	}
+	if err := h.BindQuery(c, &req); err != nil {
+		h.Error(c, err)
+		return
+	}
+
+	startDate, err1 := time.Parse("2006-01-02", req.StartDate)
+	endDate, err2 := time.Parse("2006-01-02", req.EndDate)
+	if err1 != nil || err2 != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format"})
+		return
+	}
+
+	stats, err := h.logRepo.GetDailyVisitStats(startDate, endDate)
+	if err != nil {
+		h.Error(c, err)
+		return
+	}
+	h.SuccessWithData(c, stats)
+}
+
+// SaveAccessLog a middleware to save access log
+func (h *LogHandler) SaveAccessLog() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+
+		log := &model.AccessLog{
+			IPAddress:  c.ClientIP(),
+			AccessDate: time.Now().Truncate(24 * time.Hour),
+			UserAgent:  c.Request.UserAgent(),
+			RequestURL: c.Request.URL.String(),
+		}
+
+		// You can add more logic here to get city, resourceType, resourceId
+
+		if err := h.logRepo.SaveAccessLog(log); err != nil {
+			// Log error
+		}
+	}
 }
