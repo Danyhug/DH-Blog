@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+
 	"gorm.io/gorm"
 )
 
@@ -57,12 +58,12 @@ func (r *GormRepository[T, K]) FindByID(ctx context.Context, id K) (*T, error) {
 func (r *GormRepository[T, K]) FindByIDWithPreload(ctx context.Context, id K, preloads ...string) (*T, error) {
 	var model T
 	db := r.db.WithContext(ctx)
-	
+
 	// 添加所有的预加载关联
 	for _, preload := range preloads {
 		db = db.Preload(preload)
 	}
-	
+
 	err := db.First(&model, id).Error
 	if err != nil {
 		return nil, err
@@ -107,4 +108,4 @@ func (r *GormRepository[T, K]) Count(ctx context.Context) (int64, error) {
 	var count int64
 	err := r.db.WithContext(ctx).Model(new(T)).Count(&count).Error
 	return count, err
-} 
+}

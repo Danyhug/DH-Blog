@@ -1,8 +1,9 @@
 package repository
 
 import (
-	"dh-blog/internal/model"
 	"errors"
+
+	"dh-blog/internal/model"
 	"gorm.io/gorm"
 )
 
@@ -42,4 +43,4 @@ func (r *TagRepository) FindOrCreateBySlugs(tx *gorm.DB, slugs []string) ([]*mod
 		}
 	}
 	return tags, nil
-} 
+}

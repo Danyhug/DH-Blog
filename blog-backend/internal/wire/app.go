@@ -1,18 +1,19 @@
 package wire
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
+
 	"dh-blog/internal/config"
 	"dh-blog/internal/handler"
+	"dh-blog/internal/middleware"
 	"dh-blog/internal/repository"
 	"dh-blog/internal/service"
-	"dh-blog/internal/middleware"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"path/filepath"
-	"os"
-	"fmt"
-	"time"
 )
 
 // App 应用程序
@@ -80,21 +81,21 @@ func (a *App) Init() *gin.Engine {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
-	
+
 	// 注册处理器路由
 	publicAPI := a.Router.Group("/api")
-	
+
 	// 注册所有处理器的公共路由
 	for _, h := range a.Handlers {
 		h.RegisterRoutes(publicAPI)
 	}
-	
+
 	// 开放静态文件服务
 	if a.StaticFilesPath != "" {
 		publicAPI.Static("/uploads", a.StaticFilesPath)
 		fmt.Printf("静态文件服务路径: /uploads -> %s\n", a.StaticFilesPath)
 	}
-	
+
 	return a.Router
 }
 
@@ -107,7 +108,7 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	}
 	dataDir := filepath.Join(filepath.Dir(exePath), "data")
 	staticFilesAbsPath := filepath.Join(dataDir, "upload")
-	
+
 	// 初始化存储库
 	userRepo := repository.NewUserRepository(db)
 	tagRepo := repository.NewTagRepository(db)
@@ -116,11 +117,11 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	logRepo := repository.NewLogRepository(db)
 	articleRepo := repository.NewArticleRepository(db, categoryRepo, tagRepo)
 	systemSettingRepo := repository.NewSystemSettingRepository(db)
-	
+
 	// 初始化服务
 	uploadService := service.NewUploadService(conf, dataDir)
 	aiService := service.NewAIService(systemSettingRepo)
-	
+
 	// 初始化处理器
 	articleHandler := handler.NewArticleHandler(articleRepo, tagRepo, categoryRepo)
 	userHandler := handler.NewUserHandler(userRepo)
@@ -208,6 +209,6 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	// 开放静态文件服务
 	publicAPI.Static("/uploads", staticFilesAbsPath)
 	fmt.Printf("静态文件服务路径: /uploads -> %s\n", staticFilesAbsPath)
-	
+
 	return router
-} 
+}

@@ -6,25 +6,6 @@ import (
 	"net/http"
 )
 
-// 预定义错误码
-const (
-	// 成功
-	CodeSuccess = 200
-
-	// 客户端错误 (4xx)
-	CodeBadRequest          = 400
-	CodeUnauthorized        = 401
-	CodeForbidden           = 403
-	CodeNotFound            = 404
-	CodeMethodNotAllowed    = 405
-	CodeConflict            = 409
-	CodeTooManyRequests     = 429
-	
-	// 服务器错误 (5xx)
-	CodeInternalServerError = 500
-	CodeServiceUnavailable  = 503
-)
-
 // AppError 是一个自定义的错误类型，用于在应用程序中传递带有状态码的错误信息
 type AppError struct {
 	StatusCode int
@@ -96,17 +77,17 @@ func InternalServerError(message string, err error) *AppError {
 
 // 预定义错误
 var (
-	ErrNotFound            = errors.New("资源不存在")
-	ErrBadRequest          = errors.New("无效的请求")
-	ErrUnauthorized        = errors.New("未授权")
-	ErrForbidden           = errors.New("禁止访问")
-	ErrInternalServer      = errors.New("服务器内部错误")
-	ErrTagAlreadyExists    = errors.New("标签已存在")
+	ErrNotFound              = errors.New("资源不存在")
+	ErrBadRequest            = errors.New("无效的请求")
+	ErrUnauthorized          = errors.New("未授权")
+	ErrForbidden             = errors.New("禁止访问")
+	ErrInternalServer        = errors.New("服务器内部错误")
+	ErrTagAlreadyExists      = errors.New("标签已存在")
 	ErrCategoryAlreadyExists = errors.New("分类已存在")
-	ErrArticleNotFound     = errors.New("文章不存在")
-	ErrCommentNotFound     = errors.New("评论不存在")
-	ErrUserNotFound        = errors.New("用户不存在")
-	ErrPasswordMismatch    = errors.New("用户名或密码错误")
+	ErrArticleNotFound       = errors.New("文章不存在")
+	ErrCommentNotFound       = errors.New("评论不存在")
+	ErrUserNotFound          = errors.New("用户不存在")
+	ErrPasswordMismatch      = errors.New("用户名或密码错误")
 )
 
 // IsAppError 检查错误是否为AppError类型
@@ -123,7 +104,7 @@ func GetStatusCode(err error) int {
 	if appErr, ok := IsAppError(err); ok {
 		return appErr.StatusCode
 	}
-	
+
 	// 根据预定义错误类型返回对应的HTTP状态码
 	switch {
 	case errors.Is(err, ErrNotFound), errors.Is(err, ErrArticleNotFound), errors.Is(err, ErrCommentNotFound), errors.Is(err, ErrUserNotFound):

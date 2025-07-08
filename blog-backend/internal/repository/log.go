@@ -1,9 +1,10 @@
 package repository
 
 import (
+	"time"
+
 	"dh-blog/internal/model"
 	"gorm.io/gorm"
-	"time"
 )
 
 // LogRepository 定义日志仓库

@@ -11,7 +11,7 @@ import (
 )
 
 // Init 初始化并配置 Gin 路由器
-func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandler, commentHandler *handler.CommentHandler, logHandler *handler.LogHandler, adminHandler *handler.AdminHandler, systemConfigHandler handler.SystemConfigHandler, staticFilesAbsPath string) *gin.Engine {
+func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandler, commentHandler *handler.CommentHandler, logHandler *handler.LogHandler, adminHandler *handler.AdminHandler, systemConfigHandler *handler.SystemConfigHandler, staticFilesAbsPath string) *gin.Engine {
 	// 初始化 Gin 路由器
 	router := gin.Default()
 
