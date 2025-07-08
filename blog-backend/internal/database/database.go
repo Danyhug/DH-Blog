@@ -55,6 +55,7 @@ func Init(conf *config.Config) (*gorm.DB, error) {
 		&model.Tag{},
 		&model.User{},
 		&model.CategoryDefaultTags{},
+		&model.SystemConfig{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("数据库自动迁移失败: %w", err)

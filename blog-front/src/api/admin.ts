@@ -5,6 +5,7 @@ import { Page, PageResult } from '@/types/Page'
 import { Tag } from '@/types/Tag'
 import { IpStat } from '@/types/IpStat'
 import { Comment } from "@/types/Comment";
+import { SystemConfig } from '@/types/SystemConfig';
 
 /**
  * 查询文章详情
@@ -160,4 +161,14 @@ export const deleteComment = (id: number): Promise<string> => {
  */
 export const postBanIp = (ip: string, status: number): Promise<string> => {
   return request.post(`/admin/ip/ban/${ip}/${status}`)
+}
+
+
+// ********** 系统配置 **********
+export const getSystemConfig = (): Promise<SystemConfig> => {
+  return request.get('/admin/config')
+}
+
+export const updateSystemConfig = (data: SystemConfig): Promise<any> => {
+  return request.put('/admin/config', data)
 }

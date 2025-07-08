@@ -24,6 +24,7 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	logRepo := repository.NewLogRepository(db)
 	dailyStatsRepo := repository.NewDailyStatsRepository(db)
 	articleRepo := repository.NewArticleRepository(db, categoryRepo, tagRepo)
+	systemConfigRepo := repository.NewSystemConfigRepository(db)
 
 	// 获取 data 目录的绝对路径
 	exePath, err := os.Executable()
@@ -41,10 +42,11 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	commentHandler := handler.NewCommentHandler(commentRepo)
 	logHandler := handler.NewLogHandler(logRepo, dailyStatsRepo)
 	adminHandler := handler.NewAdminHandler(uploadService)
+	systemConfigHandler := handler.NewSystemConfigHandler(systemConfigRepo)
 
 	// 4. 初始化路由器并注册路由
 	staticFilesAbsPath := filepath.Join(dataDir, "upload")
-	appRouter := router.Init(articleHandler, userHandler, commentHandler, logHandler, adminHandler, staticFilesAbsPath)
+	appRouter := router.Init(articleHandler, userHandler, commentHandler, logHandler, adminHandler, systemConfigHandler, staticFilesAbsPath)
 
 	return appRouter
 }

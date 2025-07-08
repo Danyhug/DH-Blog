@@ -3,7 +3,7 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/main ./cmd/blog-backend"
+  cmd = "go build -o ./tmp/main ../blog-deploy/backend"
   bin = "tmp/main"
   include_ext = ["go", "tpl", "tmpl", "html"]
   exclude_dir = ["assets", "tmp", "vendor", "node_modules"]
@@ -12,7 +12,7 @@ tmp_dir = "tmp"
 
 [run]
   cmd = "./tmp/main"
-  # cmd = "go run ./cmd/blog-backend/main.go" # 也可以直接用 go run，但编译后运行更快
+  # cmd = "go run ../blog-deploy/backend/main.go" # 也可以直接用 go run，但编译后运行更快
 
 [log]
   time = false

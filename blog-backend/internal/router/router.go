@@ -11,7 +11,7 @@ import (
 )
 
 // Init 初始化并配置 Gin 路由器
-func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandler, commentHandler *handler.CommentHandler, logHandler *handler.LogHandler, adminHandler *handler.AdminHandler, staticFilesAbsPath string) *gin.Engine {
+func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandler, commentHandler *handler.CommentHandler, logHandler *handler.LogHandler, adminHandler *handler.AdminHandler, systemConfigHandler handler.SystemConfigHandler, staticFilesAbsPath string) *gin.Engine {
 	// 初始化 Gin 路由器
 	router := gin.Default()
 
@@ -80,6 +80,10 @@ func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandl
 		// 日志管理 API (对应 Java LogController)
 		adminAPI.GET("/log/overview/visitLog", logHandler.GetVisitLogs)
 		adminAPI.POST("/ip/ban/:ip/:status", logHandler.BanIP)
+
+		// 系统配置 API
+		adminAPI.GET("/config", systemConfigHandler.GetConfigs)
+		adminAPI.PUT("/config", systemConfigHandler.UpdateConfigs)
 	}
 
 	// 开放静态文件服务
