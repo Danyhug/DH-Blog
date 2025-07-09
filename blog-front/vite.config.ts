@@ -12,7 +12,10 @@ export default defineConfig({
 
   plugins: [
     visualizer(), Vue(),
-    AutoImport({ resolvers: [ElementPlusResolver()], imports: ['vue'] }),
+    AutoImport({ 
+      resolvers: [ElementPlusResolver()], 
+      imports: ['vue'] 
+    }),
     Components({
       resolvers: [ElementPlusResolver()],
     }),
@@ -26,7 +29,7 @@ export default defineConfig({
 
   build: {
     sourcemap: false,
-    target: 'es2015',
+    target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'], // 更新target配置，使用现代浏览器列表
     rollupOptions: {
       output: {
         manualChunks: {
@@ -34,5 +37,5 @@ export default defineConfig({
         }
       }
     }
-  },
+  }
 })

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc && vite build",
+    "build": "vite build",
+    "build:type-check": "vue-tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -22,14 +23,15 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
+    "@types/node": "^24.0.12",
     "@types/nprogress": "^0.2.3",
-    "@vitejs/plugin-vue": "^5.2.4",
+    "@vitejs/plugin-vue": "^6.0.0",
     "less": "^4.3.0",
-    "rollup-plugin-visualizer": "^5.14.0",
+    "rollup-plugin-visualizer": "^6.0.3",
     "typescript": "^5.8.3",
-    "unplugin-auto-import": "^0.17.8",
-    "unplugin-vue-components": "^0.26.0",
-    "vite": "^5.4.19",
+    "unplugin-auto-import": "^19.3.0",
+    "unplugin-vue-components": "^28.8.0",
+    "vite": "^7.0.3",
     "vue-tsc": "^2.2.12"
   }
 }
