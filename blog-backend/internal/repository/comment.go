@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"sort"
 
-	"dh-blog/internal/errs"
 	"dh-blog/internal/model"
 	"gorm.io/gorm"
+)
+
+var (
+	ErrCommentNotFound = errors.New("评论不存在")
 )
 
 type CommentRepository struct {
@@ -68,7 +71,7 @@ func (r *CommentRepository) DeleteComment(id int) error {
 		var selfComment model.Comment
 		if err := tx.First(&selfComment, id).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return fmt.Errorf("删除评论失败: %w", errs.ErrCommentNotFound)
+				return fmt.Errorf("删除评论失败: %w", ErrCommentNotFound)
 			}
 			return fmt.Errorf("查询评论失败: %w", err)
 		}

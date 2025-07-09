@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"strings"
 
-	"dh-blog/internal/errs"
 	"dh-blog/internal/model"
 	"gorm.io/gorm"
+)
+
+var (
+	ErrArticleNotFound = errors.New("文章不存在")
 )
 
 // ArticleRepository 封装文章相关的数据库操作
@@ -40,7 +43,7 @@ func (r *ArticleRepository) GetArticleById(id int) (data model.Article, err erro
 	_, err = r.FindByID(context.Background(), id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return model.Article{}, fmt.Errorf("查询文章失败: %w", errs.ErrArticleNotFound)
+			return model.Article{}, fmt.Errorf("查询文章失败: %w", ErrArticleNotFound)
 		}
 		return model.Article{}, fmt.Errorf("数据库查询文章失败: %w", err)
 	}
@@ -63,20 +66,20 @@ func (r *ArticleRepository) SaveArticle(article *model.Article) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		// 计算文章字数
 		article.WordNum = countWords(article.Content)
-		
+
 		// 根据 tagSlugs 查找或创建标签
 		tags, err := r.TagRepo.FindOrCreateBySlugs(tx, article.TagSlugs)
 		if err != nil {
 			return fmt.Errorf("查找或创建标签失败: %w", err)
 		}
-		
+
 		// 如果文章有分类且没有指定标签，则获取分类的默认标签
 		if article.CategoryID > 0 && len(article.TagSlugs) == 0 {
 			defaultTags, err := r.CategoryRepo.GetCategoryDefaultTags(article.CategoryID)
 			if err != nil {
 				return fmt.Errorf("获取分类默认标签失败: %w", err)
 			}
-			
+
 			// 将默认标签添加到文章标签中
 			if len(defaultTags) > 0 {
 				// 将 []model.Tag 转换为 []*model.Tag
@@ -85,7 +88,7 @@ func (r *ArticleRepository) SaveArticle(article *model.Article) error {
 				}
 			}
 		}
-		
+
 		article.Tags = tags
 
 		// 创建文章
@@ -101,20 +104,20 @@ func (r *ArticleRepository) UpdateArticle(article *model.Article) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		// 计算文章字数
 		article.WordNum = countWords(article.Content)
-		
+
 		// 根据 tagSlugs 查找或创建标签
 		tags, err := r.TagRepo.FindOrCreateBySlugs(tx, article.TagSlugs)
 		if err != nil {
 			return fmt.Errorf("查找或创建标签失败: %w", err)
 		}
-		
+
 		// 如果文章有分类且没有指定标签，则获取分类的默认标签
 		if article.CategoryID > 0 && len(article.TagSlugs) == 0 {
 			defaultTags, err := r.CategoryRepo.GetCategoryDefaultTags(article.CategoryID)
 			if err != nil {
 				return fmt.Errorf("获取分类默认标签失败: %w", err)
 			}
-			
+
 			// 将默认标签添加到文章标签中
 			if len(defaultTags) > 0 {
 				// 将 []model.Tag 转换为 []*model.Tag
@@ -123,7 +126,7 @@ func (r *ArticleRepository) UpdateArticle(article *model.Article) error {
 				}
 			}
 		}
-		
+
 		article.Tags = tags
 
 		// 更新文章与标签的关联

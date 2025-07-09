@@ -3,21 +3,50 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
-	"dh-blog/internal/errs"
-	"dh-blog/internal/model"
 	"dh-blog/internal/response"
 	"github.com/gin-gonic/gin"
 )
 
 // Handler 统一的处理器接口
 type Handler interface {
-	// RegisterRoutes 注册路由
 	RegisterRoutes(router *gin.RouterGroup)
 }
 
-// BaseHandler 基础处理器，提供通用方法
+// 通用错误常量，所有处理器可以共用
+var (
+	// 通用错误
+	ErrInvalidID         = errors.New("无效的ID")
+	ErrInvalidParams     = errors.New("无效的请求参数")
+	ErrParamBinding      = errors.New("请求参数绑定失败")
+	ErrPageParamBinding  = errors.New("分页参数绑定失败")
+	ErrPasswordIncorrect = errors.New("密码错误")
+)
+
+// BaseHandler 提供基本的处理器功能
 type BaseHandler struct{}
+
+// Error 统一处理错误响应
+func (h *BaseHandler) Error(c *gin.Context, err error) {
+	// 根据错误类型设置不同的HTTP状态码
+	statusCode := http.StatusInternalServerError
+
+	// 检查特定的错误类型
+	switch {
+	case errors.Is(err, ErrInvalidID) ||
+		errors.Is(err, ErrInvalidParams) ||
+		errors.Is(err, ErrParamBinding) ||
+		errors.Is(err, ErrPageParamBinding):
+		statusCode = http.StatusBadRequest
+	case errors.Is(err, ErrPasswordIncorrect):
+		statusCode = http.StatusForbidden
+	default:
+		statusCode = http.StatusInternalServerError
+	}
+
+	c.JSON(statusCode, gin.H{"error": err.Error()})
+}
 
 // Success 返回成功响应
 func (h *BaseHandler) Success(c *gin.Context) {
@@ -29,57 +58,22 @@ func (h *BaseHandler) SuccessWithData(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, response.SuccessWithData(data))
 }
 
-// Error 返回错误响应
-func (h *BaseHandler) Error(c *gin.Context, err error) {
-	var appErr *errs.AppError
-	if errors.As(err, &appErr) {
-		c.JSON(appErr.StatusCode, gin.H{"error": appErr.Message})
-		return
-	}
-	c.JSON(http.StatusInternalServerError, gin.H{"error": "内部服务器错误"})
+// SuccessWithPage 返回带分页信息的成功响应
+func (h *BaseHandler) SuccessWithPage(c *gin.Context, data interface{}, total int64, page int) {
+	c.JSON(http.StatusOK, response.SuccessWithData(response.Page(total, int64(page), data)))
 }
 
-// BindJSON 绑定JSON请求体
-func (h *BaseHandler) BindJSON(c *gin.Context, obj interface{}) error {
-	if err := c.ShouldBindJSON(obj); err != nil {
-		return errs.BadRequest("无效的请求参数", err)
-	}
-	return nil
-}
-
-// BindQuery 绑定查询参数
-func (h *BaseHandler) BindQuery(c *gin.Context, obj interface{}) error {
-	if err := c.ShouldBindQuery(obj); err != nil {
-		return errs.BadRequest("无效的查询参数", err)
-	}
-	return nil
-}
-
-// GetPageRequest 获取分页请求参数
-func (h *BaseHandler) GetPageRequest(c *gin.Context) (*model.PageRequest, error) {
-	var req model.PageRequest
-	if err := h.BindQuery(c, &req); err != nil {
-		// 如果绑定失败，使用默认值
-		req = model.PageRequest{
-			Page:     1,
-			PageSize: 6, // 设置默认值为6
-		}
-		return &req, nil
+// GetQueryInt 获取查询参数的整数值
+func (h *BaseHandler) GetQueryInt(c *gin.Context, key string, defaultValue int) int {
+	valueStr := c.Query(key)
+	if valueStr == "" {
+		return defaultValue
 	}
 
-	// 如果绑定成功但值为0，设置默认值
-	if req.Page <= 0 {
-		req.Page = 1
-	}
-	if req.PageSize <= 0 {
-		req.PageSize = 6 // 设置默认值为6
+	value, err := strconv.Atoi(valueStr)
+	if err != nil {
+		return defaultValue
 	}
 
-	return &req, nil
-}
-
-// SuccessWithPage 返回分页结果
-func (h *BaseHandler) SuccessWithPage(c *gin.Context, list interface{}, total int64, page int) {
-	result := response.Page(total, int64(page), list)
-	h.SuccessWithData(c, result)
+	return value
 }

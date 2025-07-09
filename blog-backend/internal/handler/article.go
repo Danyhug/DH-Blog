@@ -6,11 +6,18 @@ import (
 	"net/http"
 	"strconv"
 
-	"dh-blog/internal/errs"
 	"dh-blog/internal/model"
 	"dh-blog/internal/repository"
 	"dh-blog/internal/response"
 	"github.com/gin-gonic/gin"
+)
+
+// 文章相关错误常量定义
+var (
+	ErrGetArticleCount  = errors.New("获取文章总数失败")
+	ErrGetTagCount      = errors.New("获取标签总数失败")
+	ErrGetCategoryCount = errors.New("获取分类总数失败")
+	ErrUpdateArticle    = errors.New("更新文章失败")
 )
 
 // ArticleHandler 封装文章相关的处理器方法
@@ -263,7 +270,7 @@ func (h *ArticleHandler) UnlockArticle(c *gin.Context) {
 	}
 
 	if !article.IsLocked || article.LockPassword != password {
-		h.Error(c, errs.Forbidden("密码错误", nil))
+		h.Error(c, ErrPasswordIncorrect)
 		return
 	}
 
@@ -288,12 +295,12 @@ func (h *ArticleHandler) SaveArticle(c *gin.Context) {
 func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 	var article model.Article
 	if err := c.ShouldBindJSON(&article); err != nil {
-		c.JSON(http.StatusBadRequest, response.Error(errs.BadRequest("无效的请求参数", err).Error()))
+		c.JSON(http.StatusBadRequest, response.Error(ErrInvalidParams.Error()))
 		return
 	}
 
 	if err := h.articleRepo.UpdateArticle(&article); err != nil {
-		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("更新文章失败", err).Error()))
+		c.JSON(http.StatusInternalServerError, response.Error(ErrUpdateArticle.Error()))
 		return
 	}
 
@@ -367,19 +374,19 @@ func (h *ArticleHandler) RegisterRoutes(router *gin.RouterGroup) {
 func (h *ArticleHandler) GetOverview(c *gin.Context) {
 	articleCount, err := h.articleRepo.Count(c.Request.Context())
 	if err != nil {
-		h.Error(c, errs.InternalServerError("获取文章总数失败", err))
+		h.Error(c, fmt.Errorf("%w: %v", ErrGetArticleCount, err))
 		return
 	}
 	tagCount, err := h.tagRepo.Count(c.Request.Context())
 	if err != nil {
-		h.Error(c, errs.InternalServerError("获取标签总数失败", err))
+		h.Error(c, fmt.Errorf("%w: %v", ErrGetTagCount, err))
 		return
 	}
 	// Note: Comment count is not available in the new structure
 	commentCount := int64(0)
 	categoryCount, err := h.categoryRepo.Count(c.Request.Context())
 	if err != nil {
-		h.Error(c, errs.InternalServerError("获取分类总数失败", err))
+		h.Error(c, fmt.Errorf("%w: %v", ErrGetCategoryCount, err))
 		return
 	}
 
@@ -397,14 +404,14 @@ func (h *ArticleHandler) getID(c *gin.Context, key string) (int, error) {
 	idStr := c.Param(key)
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		return 0, errs.BadRequest("无效的ID", err)
+		return 0, fmt.Errorf("%w: %v", ErrInvalidID, err)
 	}
 	return id, nil
 }
 
 func (h *ArticleHandler) bindJSON(c *gin.Context, obj interface{}) error {
 	if err := c.ShouldBindJSON(obj); err != nil {
-		return errs.BadRequest("请求参数绑定失败", err)
+		return fmt.Errorf("%w: %v", ErrParamBinding, err)
 	}
 	return nil
 }
@@ -412,7 +419,7 @@ func (h *ArticleHandler) bindJSON(c *gin.Context, obj interface{}) error {
 func (h *ArticleHandler) getPageRequest(c *gin.Context) (*model.PageRequest, error) {
 	var req model.PageRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		return nil, errs.BadRequest("分页参数绑定失败", err)
+		return nil, fmt.Errorf("%w: %v", ErrPageParamBinding, err)
 	}
 	if req.Page == 0 {
 		req.Page = 1
@@ -424,12 +431,22 @@ func (h *ArticleHandler) getPageRequest(c *gin.Context) (*model.PageRequest, err
 }
 
 func (h *ArticleHandler) Error(c *gin.Context, err error) {
-	var appErr *errs.AppError
-	if errors.As(err, &appErr) {
-		c.JSON(appErr.StatusCode, gin.H{"error": appErr.Message})
-		return
+	// 根据错误类型设置不同的HTTP状态码
+	statusCode := http.StatusInternalServerError
+
+	// 检查特定的错误类型
+	switch {
+	case errors.Is(err, ErrInvalidID) ||
+		errors.Is(err, ErrParamBinding) ||
+		errors.Is(err, ErrPageParamBinding):
+		statusCode = http.StatusBadRequest
+	case errors.Is(err, ErrPasswordIncorrect):
+		statusCode = http.StatusForbidden
+	default:
+		statusCode = http.StatusInternalServerError
 	}
-	c.JSON(http.StatusInternalServerError, gin.H{"error": "内部服务器错误"})
+
+	c.JSON(statusCode, gin.H{"error": err.Error()})
 }
 
 func (h *ArticleHandler) Success(c *gin.Context) {

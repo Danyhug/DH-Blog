@@ -12,7 +12,8 @@ import (
 
 // Init 初始化并配置 Gin 路由器
 func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandler, commentHandler *handler.CommentHandler, logHandler *handler.LogHandler, adminHandler *handler.AdminHandler, systemConfigHandler *handler.SystemConfigHandler, staticFilesAbsPath string) *gin.Engine {
-	// 初始化 Gin 路由器
+
+	// 使用原始的路由配置
 	router := gin.Default()
 
 	// 配置 CORS 中间件
@@ -28,21 +29,21 @@ func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandl
 	// 公共 API 路由组
 	publicAPI := router.Group("/api")
 	{
-		// 文章公共 API (对应 Java ArticleController)
+		// 文章公共 API
 		publicAPI.GET("/article/:id", articleHandler.GetArticleDetail)
 		publicAPI.GET("/article/title/:id", articleHandler.GetArticleTitle)
 		publicAPI.GET("/article/unlock/:id/:password", articleHandler.UnlockArticle)
-		publicAPI.POST("/article/list", articleHandler.GetArticleList) // Java 使用 POST /article/list
+		publicAPI.POST("/article/list", articleHandler.GetArticleList)
 		publicAPI.GET("/article/overview", articleHandler.GetOverview)
 		publicAPI.GET("/article/tag", articleHandler.GetAllTags)
 		publicAPI.GET("/article/category", articleHandler.GetAllCategories)
 
-		// 用户公共 API (对应 Java UserController)
+		// 用户公共 API
 		publicAPI.POST("/user/login", userHandler.Login)
 		publicAPI.POST("/user/check", userHandler.Check)
 		publicAPI.GET("/user/heart", userHandler.Heart)
 
-		// 评论公共 API (对应 Java CommentController)
+		// 评论公共 API
 		publicAPI.POST("/comment", commentHandler.AddComment)
 		publicAPI.GET("/comment/:articleId", commentHandler.GetCommentsByArticleID)
 	}
@@ -51,19 +52,19 @@ func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandl
 	adminAPI := router.Group("/api/admin")
 	adminAPI.Use(middleware.JWTMiddleware())
 	{
-		// 文章管理 API (对应 Java AdminController)
-		adminAPI.GET("/article/:id", articleHandler.GetArticleDetail) // 与公共 API 重复，但路径不同
+		// 文章管理 API
+		adminAPI.GET("/article/:id", articleHandler.GetArticleDetail)
 		adminAPI.POST("/article", articleHandler.SaveArticle)
 		adminAPI.PUT("/article", articleHandler.UpdateArticle)
-		adminAPI.POST("/article/list", articleHandler.GetArticleList) // 与公共 API 重复，但路径不同
+		adminAPI.POST("/article/list", articleHandler.GetArticleList)
 		adminAPI.POST("/upload/:type", adminHandler.UploadFile)
 
-		// 标签管理 API (对应 Java AdminController)
+		// 标签管理 API
 		adminAPI.POST("/tag", articleHandler.CreateTag)
 		adminAPI.PUT("/tag", articleHandler.UpdateTag)
 		adminAPI.DELETE("/tag/:id", articleHandler.DeleteTag)
 
-		// 分类管理 API (对应 Java AdminController)
+		// 分类管理 API
 		adminAPI.POST("/category", articleHandler.CreateCategory)
 		adminAPI.GET("/category/:id", articleHandler.GetCategoryByID)
 		adminAPI.PUT("/category", articleHandler.UpdateCategory)
@@ -71,15 +72,17 @@ func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandl
 		adminAPI.GET("/category/:id/tags", articleHandler.GetCategoryDefaultTags)
 		adminAPI.POST("/category/:id/tags", articleHandler.SaveCategoryDefaultTags)
 
-		// 评论管理 API (对应 Java AdminController)
+		// 评论管理 API
 		adminAPI.GET("/comment/:pageSize/:pageNum", commentHandler.GetAllComments)
 		adminAPI.PUT("/comment", commentHandler.UpdateComment)
 		adminAPI.POST("/comment/reply", commentHandler.ReplyComment)
 		adminAPI.DELETE("/comment/:id", commentHandler.DeleteComment)
 
-		// 日志管理 API (对应 Java LogController)
+		// 日志管理 API
 		adminAPI.GET("/log/overview/visitLog", logHandler.GetVisitLogs)
-		adminAPI.POST("/ip/ban/:ip/:status", logHandler.BanIP)
+		adminAPI.POST("/ip/ban", logHandler.BanIP)
+		adminAPI.POST("/ip/unban", logHandler.UnbanIP)
+		adminAPI.GET("/stats/daily", logHandler.GetDailyStats)
 
 		// 系统配置 API
 		adminAPI.GET("/config", systemConfigHandler.GetConfigs)

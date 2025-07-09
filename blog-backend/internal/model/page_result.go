@@ -14,16 +14,6 @@ type PageResult[T any] struct {
 	List     []T   `json:"list"`     // 数据列表
 }
 
-// NewPageResult 创建分页结果
-func NewPageResult[T any](list []T, total int64, page, pageSize int) *PageResult[T] {
-	return &PageResult[T]{
-		Total:    total,
-		Page:     page,
-		PageSize: pageSize,
-		List:     list,
-	}
-}
-
 // HasMore 是否还有更多数据
 func (p *PageResult[T]) HasMore() bool {
 	return p.Total > int64(p.Page*p.PageSize)

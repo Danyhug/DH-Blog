@@ -57,22 +57,22 @@ func NewAIService(settingRepo repository.SystemSettingRepository) AIService {
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
-	
+
 	// 从设置中加载AI配置
 	settings, err := settingRepo.GetAllSettings()
 	if err != nil {
 		logrus.Errorf("加载AI配置失败: %v", err)
 	}
-	
+
 	// 将设置列表转换为map
 	settingsMap := make(map[string]string)
 	for _, s := range settings {
 		settingsMap[s.SettingKey] = s.SettingValue
 	}
-	
+
 	// 创建配置对象
 	config := model.FromSettingsMap(settingsMap)
-	
+
 	return &OpenAIService{
 		settingRepo: settingRepo,
 		aiConfig:    config,
@@ -97,6 +97,10 @@ func (s *OpenAIService) Request(text string) (response OpenAIResponse, err error
 	}
 
 	newRequest, err := http.NewRequest(http.MethodPost, s.aiConfig.AiApiURL, bytes.NewBuffer(requestBody))
+	if err != nil || newRequest == nil {
+		logrus.Error("http请求创建失败", err)
+		return
+	}
 	newRequest.Header.Set("Content-Type", "application/json")
 	newRequest.Header.Set("Authorization", "Bearer "+s.aiConfig.AiApiKey)
 
@@ -104,7 +108,12 @@ func (s *OpenAIService) Request(text string) (response OpenAIResponse, err error
 	if err != nil {
 		return
 	}
-	defer do.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			logrus.Error("响应体关闭失败", err)
+		}
+	}(do.Body)
 
 	body, err := io.ReadAll(do.Body)
 	if err != nil {

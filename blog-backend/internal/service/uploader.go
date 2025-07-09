@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"dh-blog/internal/config"
+	"github.com/sirupsen/logrus"
 )
 
 // Uploader 定义了所有上传方式都必须实现的接口
@@ -70,13 +71,23 @@ func SaveUploadedFile(file *multipart.FileHeader, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer src.Close()
+	defer func(src multipart.File) {
+		err := src.Close()
+		if err != nil {
+			logrus.Error("关闭文件失败: %w", err)
+		}
+	}(src)
 
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func(out *os.File) {
+		err := out.Close()
+		if err != nil {
+			logrus.Error("关闭文件失败: %w", err)
+		}
+	}(out)
 
 	_, err = out.ReadFrom(src)
 	return err

@@ -1,12 +1,19 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	"dh-blog/internal/model"
 	"dh-blog/internal/repository"
+	"dh-blog/internal/response"
 	"github.com/gin-gonic/gin"
+)
+
+// 日志相关错误
+var (
+	ErrInvalidDateFormat = errors.New("无效的日期格式")
 )
 
 type LogHandler struct {
@@ -29,19 +36,16 @@ func (h *LogHandler) RegisterRoutes(router *gin.RouterGroup) {
 }
 
 func (h *LogHandler) GetVisitLogs(c *gin.Context) {
-	pageReq, err := h.GetPageRequest(c)
+	page := h.GetQueryInt(c, "page", 1)
+	pageSize := h.GetQueryInt(c, "pageSize", 10)
+
+	logs, total, err := h.logRepo.GetVisitLogs(page, pageSize)
 	if err != nil {
 		h.Error(c, err)
 		return
 	}
 
-	logs, total, err := h.logRepo.GetVisitLogs(pageReq.Page, pageReq.PageSize)
-	if err != nil {
-		h.Error(c, err)
-		return
-	}
-
-	h.SuccessWithPage(c, logs, total, pageReq.Page)
+	h.SuccessWithPage(c, logs, total, page)
 }
 
 func (h *LogHandler) BanIP(c *gin.Context) {
@@ -50,8 +54,8 @@ func (h *LogHandler) BanIP(c *gin.Context) {
 		Reason   string `json:"reason"`
 		Duration int    `json:"duration"` // in hours
 	}
-	if err := h.BindJSON(c, &req); err != nil {
-		h.Error(c, err)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, response.Error("无效的请求参数: "+err.Error()))
 		return
 	}
 
@@ -71,8 +75,8 @@ func (h *LogHandler) UnbanIP(c *gin.Context) {
 	var req struct {
 		IP string `json:"ip" binding:"required"`
 	}
-	if err := h.BindJSON(c, &req); err != nil {
-		h.Error(c, err)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, response.Error("无效的请求参数: "+err.Error()))
 		return
 	}
 
@@ -88,15 +92,15 @@ func (h *LogHandler) GetDailyStats(c *gin.Context) {
 		StartDate string `form:"startDate" binding:"required"`
 		EndDate   string `form:"endDate" binding:"required"`
 	}
-	if err := h.BindQuery(c, &req); err != nil {
-		h.Error(c, err)
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.JSON(http.StatusBadRequest, response.Error("无效的查询参数: "+err.Error()))
 		return
 	}
 
 	startDate, err1 := time.Parse("2006-01-02", req.StartDate)
 	endDate, err2 := time.Parse("2006-01-02", req.EndDate)
 	if err1 != nil || err2 != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format"})
+		c.JSON(http.StatusBadRequest, response.Error(ErrInvalidDateFormat.Error()))
 		return
 	}
 

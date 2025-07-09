@@ -41,12 +41,3 @@ func (h *AdminHandler) UploadFile(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response.SuccessWithData(url))
 }
-
-// RegisterRoutes 注册路由
-func (h *AdminHandler) RegisterRoutes(router *gin.RouterGroup) {
-	// 管理员 API
-	adminRouter := router.Group("/admin")
-	{
-		adminRouter.POST("/upload/:type", h.UploadFile)
-	}
-}

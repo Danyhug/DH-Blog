@@ -89,13 +89,13 @@ func FromSettingsMap(settings map[string]string) *SystemConfig {
 }
 
 // BeforeSave 钩子，用于在保存前处理数据，例如加密敏感信息
-func (s *SystemSetting) BeforeSave(tx *gorm.DB) (err error) {
+func (s *SystemSetting) BeforeSave(*gorm.DB) (err error) {
 	// 可以在这里添加对敏感信息的加密处理
 	return
 }
 
 // BeforeDelete 钩子，用于在删除前处理数据
-func (s *SystemSetting) BeforeDelete(tx *gorm.DB) (err error) {
+func (s *SystemSetting) BeforeDelete(*gorm.DB) (err error) {
 	// 可以在这里添加删除前的逻辑
 	return
 }

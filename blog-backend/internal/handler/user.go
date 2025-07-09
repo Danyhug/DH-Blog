@@ -2,9 +2,9 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
-	"dh-blog/internal/errs"
 	"dh-blog/internal/model"
 	"dh-blog/internal/repository"
 	"dh-blog/internal/response"
@@ -12,7 +12,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// 用户相关错误常量
+var (
+	ErrUserNotFound     = errors.New("用户不存在")
+	ErrPasswordMismatch = errors.New("用户名或密码错误")
+	ErrLoginFailed      = errors.New("登录失败")
+	ErrGenerateToken    = errors.New("生成 token 失败")
+)
+
 type UserHandler struct {
+	BaseHandler
 	repo *repository.UserRepository
 }
 
@@ -24,32 +33,32 @@ func NewUserHandler(repo *repository.UserRepository) *UserHandler {
 func (h *UserHandler) Login(c *gin.Context) {
 	var user model.User
 	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusOK, response.Error(errs.BadRequest("无效的请求参数", err).Error()))
+		c.JSON(http.StatusBadRequest, response.Error("无效的请求参数: "+err.Error()))
 		return
 	}
 
 	foundUser, err := h.repo.GetUserByUsername(user.Username)
 	if err != nil {
 		// 使用 errors.Is 检查是否是特定的哨兵错误
-		if errors.Is(err, errs.ErrUserNotFound) {
-			c.JSON(http.StatusOK, response.Error(errs.Unauthorized(errs.ErrUserNotFound.Error(), nil).Error()))
+		if errors.Is(err, ErrUserNotFound) {
+			c.JSON(http.StatusUnauthorized, response.Error(ErrUserNotFound.Error()))
 			return
 		}
 		// 如果是其他类型的错误（例如数据库错误），返回通用错误
-		c.JSON(http.StatusOK, response.Error(errs.InternalServerError("登录失败", err).Error()))
+		c.JSON(http.StatusInternalServerError, response.Error(fmt.Sprintf("%s: %v", ErrLoginFailed.Error(), err)))
 		return
 	}
 
 	// 验证密码
 	if !utils.CheckPasswordHash(user.Password, foundUser.Password) {
-		c.JSON(http.StatusOK, response.Error(errs.Unauthorized(errs.ErrPasswordMismatch.Error(), nil).Error()))
+		c.JSON(http.StatusUnauthorized, response.Error(ErrPasswordMismatch.Error()))
 		return
 	}
 
 	// 生成 JWT Token
 	token, err := utils.GenerateJWT(foundUser.Username)
 	if err != nil {
-		c.JSON(http.StatusOK, response.Error(errs.InternalServerError("生成 token 失败", err).Error()))
+		c.JSON(http.StatusInternalServerError, response.Error(fmt.Sprintf("%s: %v", ErrGenerateToken.Error(), err)))
 		return
 	}
 

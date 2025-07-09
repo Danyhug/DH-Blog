@@ -2,10 +2,10 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
-	"dh-blog/internal/errs"
 	"dh-blog/internal/model"
 	"dh-blog/internal/repository"
 	"dh-blog/internal/response"
@@ -13,7 +13,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// 评论相关错误常量
+var (
+	ErrCommentNotFound     = errors.New("评论不存在")
+	ErrInvalidCommentID    = errors.New("无效的评论 ID")
+	ErrInvalidArticleID    = errors.New("无效的文章 ID")
+	ErrAddCommentFailed    = errors.New("添加评论失败")
+	ErrGetCommentsFailed   = errors.New("获取评论列表失败")
+	ErrDeleteCommentFailed = errors.New("删除评论失败")
+	ErrUpdateCommentFailed = errors.New("更新评论失败")
+	ErrReplyCommentFailed  = errors.New("回复评论失败")
+	ErrEmptyCommentID      = errors.New("评论 ID 不能为空")
+	ErrParentIDRequired    = errors.New("回复评论需要指定父评论ID")
+)
+
 type CommentHandler struct {
+	BaseHandler
 	repo *repository.CommentRepository
 }
 
@@ -25,7 +40,7 @@ func NewCommentHandler(repo *repository.CommentRepository) *CommentHandler {
 func (h *CommentHandler) AddComment(c *gin.Context) {
 	var comment model.Comment
 	if err := c.ShouldBindJSON(&comment); err != nil {
-		c.JSON(http.StatusBadRequest, response.Error(errs.BadRequest("无效的请求参数", err).Error()))
+		c.JSON(http.StatusBadRequest, response.Error("无效的请求参数: "+err.Error()))
 		return
 	}
 
@@ -35,7 +50,7 @@ func (h *CommentHandler) AddComment(c *gin.Context) {
 	comment.IsAdmin = false // 默认非管理员评论
 
 	if err := h.repo.AddComment(&comment); err != nil {
-		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("添加评论失败", err).Error()))
+		c.JSON(http.StatusInternalServerError, response.Error(fmt.Sprintf("%s: %v", ErrAddCommentFailed.Error(), err)))
 		return
 	}
 
@@ -46,7 +61,7 @@ func (h *CommentHandler) AddComment(c *gin.Context) {
 func (h *CommentHandler) GetCommentsByArticleID(c *gin.Context) {
 	articleID, err := strconv.ParseInt(c.Param("articleId"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, response.Error(errs.BadRequest("无效的文章 ID", err).Error()))
+		c.JSON(http.StatusBadRequest, response.Error(fmt.Sprintf("%s: %v", ErrInvalidArticleID.Error(), err)))
 		return
 	}
 
@@ -55,7 +70,7 @@ func (h *CommentHandler) GetCommentsByArticleID(c *gin.Context) {
 
 	comments, total, err := h.repo.GetCommentsByArticleID(int(articleID), page, pageSize)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("获取评论列表失败", err).Error()))
+		c.JSON(http.StatusInternalServerError, response.Error(fmt.Sprintf("%s: %v", ErrGetCommentsFailed.Error(), err)))
 		return
 	}
 
@@ -66,16 +81,16 @@ func (h *CommentHandler) GetCommentsByArticleID(c *gin.Context) {
 func (h *CommentHandler) DeleteComment(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, response.Error(errs.BadRequest("无效的评论 ID", err).Error()))
+		c.JSON(http.StatusBadRequest, response.Error(fmt.Sprintf("%s: %v", ErrInvalidCommentID.Error(), err)))
 		return
 	}
 
 	if err := h.repo.DeleteComment(int(id)); err != nil {
-		if errors.Is(err, errs.ErrCommentNotFound) {
-			c.JSON(http.StatusNotFound, response.Error(errs.NotFound(err.Error(), nil).Error()))
+		if errors.Is(err, ErrCommentNotFound) {
+			c.JSON(http.StatusNotFound, response.Error(err.Error()))
 			return
 		}
-		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("删除评论失败", err).Error()))
+		c.JSON(http.StatusInternalServerError, response.Error(fmt.Sprintf("%s: %v", ErrDeleteCommentFailed.Error(), err)))
 		return
 	}
 
@@ -89,7 +104,7 @@ func (h *CommentHandler) GetAllComments(c *gin.Context) {
 
 	comments, total, err := h.repo.GetAllComments(page, pageSize)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("获取评论列表失败", err).Error()))
+		c.JSON(http.StatusInternalServerError, response.Error(fmt.Sprintf("%s: %v", ErrGetCommentsFailed.Error(), err)))
 		return
 	}
 
@@ -100,17 +115,17 @@ func (h *CommentHandler) GetAllComments(c *gin.Context) {
 func (h *CommentHandler) UpdateComment(c *gin.Context) {
 	var comment model.Comment
 	if err := c.ShouldBindJSON(&comment); err != nil {
-		c.JSON(http.StatusBadRequest, response.Error(errs.BadRequest("无效的请求参数", err).Error()))
+		c.JSON(http.StatusBadRequest, response.Error("无效的请求参数: "+err.Error()))
 		return
 	}
 
 	if comment.ID == 0 {
-		c.JSON(http.StatusBadRequest, response.Error(errs.BadRequest("评论 ID 不能为空", nil).Error()))
+		c.JSON(http.StatusBadRequest, response.Error(ErrEmptyCommentID.Error()))
 		return
 	}
 
 	if err := h.repo.UpdateComment(&comment); err != nil {
-		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("更新评论失败", err).Error()))
+		c.JSON(http.StatusInternalServerError, response.Error(fmt.Sprintf("%s: %v", ErrUpdateCommentFailed.Error(), err)))
 		return
 	}
 
@@ -121,7 +136,7 @@ func (h *CommentHandler) UpdateComment(c *gin.Context) {
 func (h *CommentHandler) ReplyComment(c *gin.Context) {
 	var comment model.Comment
 	if err := c.ShouldBindJSON(&comment); err != nil {
-		c.JSON(http.StatusBadRequest, response.Error(errs.BadRequest("无效的请求参数", err).Error()))
+		c.JSON(http.StatusBadRequest, response.Error("无效的请求参数: "+err.Error()))
 		return
 	}
 
@@ -132,12 +147,12 @@ func (h *CommentHandler) ReplyComment(c *gin.Context) {
 
 	// 确保 ParentID 被设置
 	if comment.ParentID == nil || *comment.ParentID == 0 {
-		c.JSON(http.StatusBadRequest, response.Error(errs.BadRequest("回复评论需要指定父评论ID", nil).Error()))
+		c.JSON(http.StatusBadRequest, response.Error(ErrParentIDRequired.Error()))
 		return
 	}
 
 	if err := h.repo.AddComment(&comment); err != nil {
-		c.JSON(http.StatusInternalServerError, response.Error(errs.InternalServerError("回复评论失败", err).Error()))
+		c.JSON(http.StatusInternalServerError, response.Error(fmt.Sprintf("%s: %v", ErrReplyCommentFailed.Error(), err)))
 		return
 	}
 

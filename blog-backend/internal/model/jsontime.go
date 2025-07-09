@@ -13,7 +13,7 @@ type JSONTime struct {
 
 // MarshalJSON 实现了 json.Marshaler 接口。
 // 它将时间格式化为 "年-月-日 时:分:秒" 用于 JSON 输出。
-func (t JSONTime) MarshalJSON() ([]byte, error) {
+func (t *JSONTime) MarshalJSON() ([]byte, error) {
 	if t.IsZero() {
 		return []byte("null"), nil
 	}
@@ -43,7 +43,7 @@ func (t *JSONTime) UnmarshalJSON(data []byte) error {
 
 // Value 实现了 driver.Valuer 接口。
 // 它将 JSONTime 转换为 driver.Value 以便存储到数据库。
-func (t JSONTime) Value() (driver.Value, error) {
+func (t *JSONTime) Value() (driver.Value, error) {
 	if t.IsZero() {
 		return nil, nil
 	}
@@ -62,6 +62,6 @@ func (t *JSONTime) Scan(v interface{}) error {
 }
 
 // GormDataType gorm 通用数据类型
-func (JSONTime) GormDataType() string {
+func (*JSONTime) GormDataType() string {
 	return "datetime"
 }

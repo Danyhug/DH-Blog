@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"errors"
+
 	"dh-blog/internal/model"
 	"gorm.io/gorm"
 )
@@ -31,7 +33,7 @@ func (r *systemSettingRepository) UpdateSetting(key, value string) error {
 	err := r.db.Where("setting_key = ?", key).First(&setting).Error
 
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// 如果未找到，则创建新设置
 			setting = model.SystemSetting{
 				SettingKey:   key,
@@ -55,7 +57,7 @@ func (r *systemSettingRepository) BatchUpdateSettings(settings map[string]string
 			err := tx.Where("setting_key = ?", key).First(&setting).Error
 
 			if err != nil {
-				if err == gorm.ErrRecordNotFound {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
 					setting = model.SystemSetting{
 						SettingKey:   key,
 						SettingValue: value,
