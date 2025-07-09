@@ -9,6 +9,7 @@ import (
 	"dh-blog/internal/repository"
 	"dh-blog/internal/response"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 // 日志相关错误
@@ -28,7 +29,7 @@ func NewLogHandler(logRepo *repository.LogRepository) *LogHandler {
 func (h *LogHandler) RegisterRoutes(router *gin.RouterGroup) {
 	adminRouter := router.Group("/admin/log")
 	{
-		adminRouter.GET("/visits", h.GetVisitLogs)
+		adminRouter.GET("/overview/visitLog", h.GetVisitLogs)
 		adminRouter.POST("/ip/ban", h.BanIP)
 		adminRouter.POST("/ip/unban", h.UnbanIP)
 		adminRouter.GET("/stats/daily", h.GetDailyStats)
@@ -39,13 +40,67 @@ func (h *LogHandler) GetVisitLogs(c *gin.Context) {
 	page := h.GetQueryInt(c, "page", 1)
 	pageSize := h.GetQueryInt(c, "pageSize", 10)
 
-	logs, total, err := h.logRepo.GetVisitLogs(page, pageSize)
+	// 获取日期范围参数
+	startDateStr := c.Query("startDate")
+	endDateStr := c.Query("endDate")
+
+	// 如果没有提供日期范围，默认为过去7天
+	var startDate, endDate time.Time
+	var err error
+
+	if startDateStr == "" || endDateStr == "" {
+		// 默认为过去7天
+		endDate = time.Now()
+		startDate = endDate.AddDate(0, 0, -7)
+	} else {
+		// 尝试多种日期格式解析
+		formats := []string{
+			"2006-1-2",
+			"2006-01-02",
+			"2006/1/2",
+			"2006/01/02",
+		}
+
+		startDateParsed := false
+		for _, format := range formats {
+			startDate, err = time.Parse(format, startDateStr)
+			if err == nil {
+				startDateParsed = true
+				break
+			}
+		}
+
+		if !startDateParsed {
+			logrus.Warnf("解析开始日期失败: %s，使用默认值", startDateStr)
+			startDate = time.Now().AddDate(0, 0, -7)
+		}
+
+		endDateParsed := false
+		for _, format := range formats {
+			endDate, err = time.Parse(format, endDateStr)
+			if err == nil {
+				endDateParsed = true
+				break
+			}
+		}
+
+		if !endDateParsed {
+			logrus.Warnf("解析结束日期失败: %s，使用默认值", endDateStr)
+			endDate = time.Now()
+		}
+
+		// 确保结束日期包含整天
+		endDate = endDate.Add(24*time.Hour - 1*time.Second)
+	}
+
+	// 获取按IP分组的访问统计
+	stats, total, err := h.logRepo.GetIPVisitStats(page, pageSize, startDate, endDate)
 	if err != nil {
 		h.Error(c, err)
 		return
 	}
 
-	h.SuccessWithPage(c, logs, total, page)
+	h.SuccessWithPage(c, stats, total, page)
 }
 
 func (h *LogHandler) BanIP(c *gin.Context) {
