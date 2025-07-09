@@ -145,7 +145,9 @@ API 接口分为公共 API 和管理 API 两大类：
 - 服务器配置（地址、端口等）
 - 数据库配置（类型、文件路径等）
 - JWT 密钥配置
-- 文件上传配置（本地和 WebDAV）
+- 文件上传配置
+  - 本地上传（路径、URL前缀等）
+  - WebDAV上传（服务器URL、用户名、密码、路径等）
 
 配置文件会在应用程序首次启动时自动生成，并在后续启动时进行更新（保留现有值）。
 
@@ -182,6 +184,7 @@ API 接口分为公共 API 和管理 API 两大类：
 #### 2.7.4 服务和处理器
 
 - `internal/service/upload_service.go`：文件上传服务，处理文件上传逻辑
+- `internal/service/uploader.go`：文件上传策略接口和实现，包括本地上传和WebDAV上传
 - `internal/service/ip_service.go`：IP 服务，处理 IP 黑名单和访问日志
 - `internal/service/ai_service.go`：AI 服务，提供 AI 相关功能
 - `internal/handler/article.go`：文章处理器，处理文章相关 HTTP 请求
@@ -282,6 +285,13 @@ blog-front/
 4. **文章加密**
    - 私密文章访问控制
    - 密码验证
+
+5. **WebDAV云盘**
+   - 文件浏览与管理
+   - 文件上传和下载
+   - 文件分享功能
+   - 移动端适配
+   - WebDAV服务器连接配置
 
 #### 3.3.2 后台功能
 
@@ -392,6 +402,8 @@ blog-front/
 - `src/views/frontend/ArticleView.vue`：文章详情页
 - `src/views/frontend/LockView.vue`：加密文章访问页
 - `src/views/frontend/ErrorView.vue`：错误页面
+- `src/views/frontend/webdav/components/WebDriveView.vue`：WebDAV云盘主视图
+- `src/views/frontend/webdav/components/MobileView.vue`：WebDAV移动端视图
 
 #### 3.6.6 后台视图组件
 
@@ -429,6 +441,46 @@ blog-front/
 - `src/utils/tool.ts`：通用工具函数
 - `src/assets/css/style.less`：全局样式
 - `src/assets/iconfont/iconfont.js`：图标字体资源
+
+#### 3.6.9 WebDAV云盘组件
+
+WebDAV组件提供了完整的文件管理和云存储功能，组织结构如下：
+
+```
+webdav/
+├── components/            # 主视图组件
+│   ├── WebDriveView.vue   # WebDAV云盘主视图
+│   └── MobileView.vue     # 移动端适配视图
+├── modals/                # 模态框组件
+│   ├── SettingsModal.vue  # WebDAV配置模态框
+│   ├── ShareLinkPopup.vue # 文件分享链接模态框
+│   └── UploadModal.vue    # 文件上传模态框
+├── utils/                 # 工具和类型
+│   ├── icons.ts           # SVG图标组件
+│   ├── README.md          # 组件使用文档
+│   └── types/             # TypeScript类型定义
+│       └── file.ts        # 文件类型定义
+└── index.ts               # 组件导出入口
+```
+
+1. **主视图组件**
+   - `WebDriveView.vue`：实现了完整的文件浏览、上传、下载、分享等功能
+   - `MobileView.vue`：针对移动设备优化的文件管理界面
+
+2. **模态框组件**
+   - `SettingsModal.vue`：WebDAV服务器连接配置界面
+   - `ShareLinkPopup.vue`：生成和管理文件分享链接
+   - `UploadModal.vue`：文件上传进度和管理
+
+3. **工具和类型**
+   - `icons.ts`：使用Vue 3的defineComponent和h函数定义的SVG图标组件
+   - `file.ts`：定义了FileItem接口，用于表示文件和文件夹
+
+4. **技术特点**
+   - 使用Vue 3 Composition API和TypeScript
+   - 响应式设计，自动适配桌面和移动设备
+   - 模块化组件设计，可单独使用或作为整体
+   - 使用SVG图标实现清晰的视觉反馈
 
 ## 结论
 
