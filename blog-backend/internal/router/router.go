@@ -85,6 +85,9 @@ func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandl
 		// 日志管理 API
 		adminAPI.GET("/log/overview/visitLog", logHandler.GetVisitLogs)
 		adminAPI.GET("/stats/daily", logHandler.GetDailyStats)
+		adminAPI.GET("/log/stats/visits", logHandler.GetVisitStatistics)                 // 添加访问统计接口
+		adminAPI.GET("/log/stats/monthly", logHandler.GetMonthlyVisitStats)              // 添加月度访问统计接口
+		adminAPI.GET("/log/stats/daily-chart", logHandler.GetDailyVisitStatsForLastDays) // 添加每日图表统计接口
 
 		// IP封禁API - 与前端请求格式一致
 		adminAPI.POST("/ip/ban/:ip/:status", logHandler.BanIP)

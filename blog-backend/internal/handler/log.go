@@ -32,6 +32,9 @@ func (h *LogHandler) RegisterRoutes(router *gin.RouterGroup) {
 	{
 		adminRouter.GET("/overview/visitLog", h.GetVisitLogs)
 		adminRouter.GET("/stats/daily", h.GetDailyStats)
+		adminRouter.GET("/stats/visits", h.GetVisitStatistics)                 // 新增访问统计接口
+		adminRouter.GET("/stats/monthly", h.GetMonthlyVisitStats)              // 新增月度统计接口
+		adminRouter.GET("/stats/daily-chart", h.GetDailyVisitStatsForLastDays) // 新增每日图表统计接口
 	}
 
 	// 额外添加IP封禁/解封路由，与前端一致
@@ -39,6 +42,16 @@ func (h *LogHandler) RegisterRoutes(router *gin.RouterGroup) {
 	{
 		ipRouter.POST("/ban/:ip/:status", h.BanIP)
 	}
+}
+
+// GetVisitStatistics 获取访问统计信息
+func (h *LogHandler) GetVisitStatistics(c *gin.Context) {
+	stats, err := h.logRepo.GetVisitStatistics()
+	if err != nil {
+		h.Error(c, err)
+		return
+	}
+	h.SuccessWithData(c, stats)
 }
 
 func (h *LogHandler) GetVisitLogs(c *gin.Context) {
@@ -212,6 +225,48 @@ func (h *LogHandler) GetDailyStats(c *gin.Context) {
 		h.Error(c, err)
 		return
 	}
+	h.SuccessWithData(c, stats)
+}
+
+// GetMonthlyVisitStats 获取月度访问统计数据
+func (h *LogHandler) GetMonthlyVisitStats(c *gin.Context) {
+	yearStr := c.Query("year")
+	var year int
+	var err error
+
+	if yearStr != "" {
+		year, err = strconv.Atoi(yearStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, response.Error("无效的年份格式"))
+			return
+		}
+	} else {
+		year = time.Now().Year()
+	}
+
+	stats, err := h.logRepo.GetMonthlyVisitStats(year)
+	if err != nil {
+		h.Error(c, err)
+		return
+	}
+
+	h.SuccessWithData(c, stats)
+}
+
+// GetDailyVisitStatsForLastDays 获取最近几天的访问统计数据
+func (h *LogHandler) GetDailyVisitStatsForLastDays(c *gin.Context) {
+	daysStr := c.DefaultQuery("days", "30")
+	days, err := strconv.Atoi(daysStr)
+	if err != nil || days <= 0 {
+		days = 30 // 默认获取最近30天的数据
+	}
+
+	stats, err := h.logRepo.GetDailyVisitStatsForLastDays(days)
+	if err != nil {
+		h.Error(c, err)
+		return
+	}
+
 	h.SuccessWithData(c, stats)
 }
 

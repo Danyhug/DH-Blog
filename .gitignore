@@ -4,3 +4,4 @@ blog-backend/tmp/
 blog-backend/dhblog.db
 
 blog-front/node_modules/
+blog-front/dist/

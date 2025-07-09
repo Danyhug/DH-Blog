@@ -5,7 +5,7 @@
         <div class="item-title">访问记录</div>
         <div class="item-sub">
           今日访问次数
-          <span> {{ totalVisits }} </span>
+          <span> {{ visitCountDisplay }} </span>
           <!-- / -->
           <!-- <span class="sub"> -37% </span> -->
         </div>
@@ -74,7 +74,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted, computed } from 'vue';
-import { getOverviewLog, postBanIp } from "@/api/admin";
+import { getOverviewLog, postBanIp, getVisitStatistics } from "@/api/admin";
 import { IpStat } from "@/types/IpStat";
 import { plusDate } from "@/utils/tool";
 import { debounce } from '@/utils/tool';
@@ -90,9 +90,12 @@ const formatDate = (date: Date) => `${date.getFullYear()}-${date.getMonth() + 1}
 // 访问记录
 const visitRadio = ref("day");
 
-// 计算总访问量
-const totalVisits = computed(() => {
-  return ipData.value.reduce((sum, ip) => sum + ip.accessCount, 0);
+// 统计数据
+const visitStats = reactive({
+  todayVisits: 0,
+  weekVisits: 0,
+  monthVisits: 0,
+  totalVisits: 0
 });
 
 // 分页参数
@@ -132,6 +135,37 @@ const getVisit = async () => {
   const data = await getOverviewLog(page.page, page.pageSize, page.startTime, page.endTime);
   ipData.value = ipData.value.concat(data.list).sort((a, b) => b.accessCount - a.accessCount);
   setTimeout(() => loading.value = false, 300)
+};
+
+// 计算总访问量
+const totalVisits = computed(() => {
+  return ipData.value.reduce((sum, ip) => sum + ip.accessCount, 0);
+});
+
+// 根据当前选择的时间范围显示相应的访问次数
+const visitCountDisplay = computed(() => {
+  switch (visitRadio.value) {
+    case "day":
+      return visitStats.todayVisits;
+    case "week":
+      return visitStats.weekVisits;
+    case "month":
+      return visitStats.monthVisits;
+    case "total":
+      return visitStats.totalVisits;
+    default:
+      return 0; // 默认显示0
+  }
+});
+
+// 获取访问统计数据
+const fetchVisitStats = async () => {
+  try {
+    const data = await getVisitStatistics();
+    Object.assign(visitStats, data);
+  } catch (error) {
+    console.error('获取访问统计数据失败:', error);
+  }
 };
 
 // 获取运营商
@@ -187,7 +221,10 @@ watch(visitRadio, (newVal) => {
 });
 
 // 组件挂载时获取数据
-onMounted(() => getVisit());
+onMounted(() => {
+  getVisit();
+  fetchVisitStats();
+});
 
 function handleRowClick(row: any) {
   selectedIp.value = row;

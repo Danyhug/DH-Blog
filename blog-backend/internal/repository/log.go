@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"time"
 
 	"dh-blog/internal/model"
@@ -73,6 +74,56 @@ func (r *LogRepository) GetIPVisitStats(page, pageSize int, startDate, endDate t
 	return result, total, err
 }
 
+// GetVisitStatistics 获取访问统计信息
+func (r *LogRepository) GetVisitStatistics() (map[string]int64, error) {
+	stats := make(map[string]int64)
+
+	// 获取今日访问次数
+	today := time.Now().Truncate(24 * time.Hour)
+	tomorrow := today.Add(24 * time.Hour)
+	var todayVisits int64
+	err := r.db.Model(&model.AccessLog{}).
+		Where("access_date BETWEEN ? AND ?", today, tomorrow).
+		Count(&todayVisits).Error
+	if err != nil {
+		return nil, err
+	}
+	stats["todayVisits"] = todayVisits
+
+	// 获取本周访问次数
+	weekStart := today.AddDate(0, 0, -int(today.Weekday()))
+	var weekVisits int64
+	err = r.db.Model(&model.AccessLog{}).
+		Where("access_date BETWEEN ? AND ?", weekStart, tomorrow).
+		Count(&weekVisits).Error
+	if err != nil {
+		return nil, err
+	}
+	stats["weekVisits"] = weekVisits
+
+	// 获取本月访问次数
+	monthStart := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, today.Location())
+	var monthVisits int64
+	err = r.db.Model(&model.AccessLog{}).
+		Where("access_date BETWEEN ? AND ?", monthStart, tomorrow).
+		Count(&monthVisits).Error
+	if err != nil {
+		return nil, err
+	}
+	stats["monthVisits"] = monthVisits
+
+	// 获取总访问次数
+	var totalVisits int64
+	err = r.db.Model(&model.AccessLog{}).
+		Count(&totalVisits).Error
+	if err != nil {
+		return nil, err
+	}
+	stats["totalVisits"] = totalVisits
+
+	return stats, nil
+}
+
 // BanIP 将IP添加到黑名单
 func (r *LogRepository) BanIP(ip, reason string, expireTime time.Time) error {
 	// 创建新的封禁记录
@@ -110,4 +161,96 @@ func (r *LogRepository) GetDailyVisitStats(startDate, endDate time.Time) ([]map[
 		Order("date DESC").
 		Find(&stats).Error
 	return stats, err
+}
+
+// GetMonthlyVisitStats 获取每月访问统计
+func (r *LogRepository) GetMonthlyVisitStats(year int) ([]map[string]interface{}, error) {
+	if year == 0 {
+		year = time.Now().Year()
+	}
+
+	startDate := time.Date(year, 1, 1, 0, 0, 0, 0, time.Local)
+	endDate := time.Date(year+1, 1, 1, 0, 0, 0, 0, time.Local)
+
+	var stats []map[string]interface{}
+	err := r.db.Model(&model.AccessLog{}).
+		Select("strftime('%m', access_date) as month, count(*) as visit_count").
+		Where("access_date BETWEEN ? AND ?", startDate, endDate).
+		Group("month").
+		Order("month ASC").
+		Find(&stats).Error
+
+	// 确保12个月都有数据，如果某月没有数据，则设置为0
+	result := make([]map[string]interface{}, 12)
+	for i := 0; i < 12; i++ {
+		result[i] = map[string]interface{}{
+			"month":       i + 1,
+			"visit_count": 0,
+		}
+	}
+
+	// 填充实际数据
+	for _, stat := range stats {
+		monthStr, ok := stat["month"].(string)
+		if !ok {
+			continue
+		}
+
+		monthInt := 0
+		_, err := fmt.Sscanf(monthStr, "%d", &monthInt)
+		if err != nil || monthInt < 1 || monthInt > 12 {
+			continue
+		}
+
+		result[monthInt-1]["visit_count"] = stat["visit_count"]
+	}
+
+	return result, err
+}
+
+// GetDailyVisitStatsForLastDays 获取最近n天的每日访问统计
+func (r *LogRepository) GetDailyVisitStatsForLastDays(days int) ([]map[string]interface{}, error) {
+	if days <= 0 {
+		days = 30 // 默认30天
+	}
+
+	endDate := time.Now().Add(24 * time.Hour) // 加一天确保包含今天的数据
+	startDate := endDate.AddDate(0, 0, -days)
+
+	var stats []map[string]interface{}
+	err := r.db.Model(&model.AccessLog{}).
+		Select("strftime('%Y-%m-%d', access_date) as date, count(*) as visit_count").
+		Where("access_date BETWEEN ? AND ?", startDate, endDate).
+		Group("date").
+		Order("date ASC").
+		Find(&stats).Error
+
+	// 确保所有日期都有数据，如果某天没有数据，则设置为0
+	today := time.Now()
+	result := make([]map[string]interface{}, days)
+	for i := 0; i < days; i++ {
+		date := today.AddDate(0, 0, -days+1+i) // 从 (今天-days+1) 到今天
+		dateStr := date.Format("2006-01-02")
+		result[i] = map[string]interface{}{
+			"date":        dateStr,
+			"visit_count": 0,
+		}
+	}
+
+	// 填充实际数据
+	for _, stat := range stats {
+		dateStr, ok := stat["date"].(string)
+		if !ok {
+			continue
+		}
+
+		for i, r := range result {
+			if r["date"] == dateStr {
+				result[i]["visit_count"] = stat["visit_count"]
+				break
+			}
+		}
+	}
+
+	return result, err
 }

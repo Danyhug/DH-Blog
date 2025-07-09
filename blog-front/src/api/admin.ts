@@ -126,6 +126,34 @@ export const getOverviewLog = (page: number, pageSize: number, startDate: string
 };
 
 /**
+ * 获取访问统计数据
+ * @returns 访问统计数据
+ */
+export const getVisitStatistics = (): Promise<{todayVisits: number, weekVisits: number, monthVisits: number, totalVisits: number}> => {
+  return request.get('/admin/log/stats/visits');
+};
+
+/**
+ * 获取月度访问统计数据
+ * @param year 年份，可选，默认为当前年份
+ * @returns 月度访问统计数据
+ */
+export const getMonthlyVisitStats = (year?: number): Promise<{month: number, visit_count: number}[]> => {
+  const url = year ? `/admin/log/stats/monthly?year=${year}` : '/admin/log/stats/monthly';
+  return request.get(url);
+};
+
+/**
+ * 获取每日访问统计数据
+ * @param days 天数，可选，默认为30天
+ * @returns 每日访问统计数据
+ */
+export const getDailyVisitStats = (days?: number): Promise<{date: string, visit_count: number}[]> => {
+  const url = days ? `/admin/log/stats/daily-chart?days=${days}` : '/admin/log/stats/daily-chart';
+  return request.get(url);
+};
+
+/**
  * 获取所有评论
  * @param pageNum 
  * @param pageSize 
