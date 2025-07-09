@@ -32,6 +32,37 @@ func (r *LogRepository) GetVisitLogs(page, pageSize int) ([]model.AccessLog, int
 	return logs, total, err
 }
 
+// GetIPVisitStats 获取按IP分组的访问统计和封禁次数
+func (r *LogRepository) GetIPVisitStats(page, pageSize int, startDate, endDate time.Time) ([]map[string]interface{}, int64, error) {
+	var result []map[string]interface{}
+	var total int64
+
+	// 子查询：获取每个IP的封禁次数
+	banSubQuery := r.db.Model(&model.IPBlacklist{}).
+		Select("ip_address, COUNT(*) as banned_count").
+		Group("ip_address")
+
+	// 主查询：获取每个IP的访问统计
+	query := r.db.Model(&model.AccessLog{}).
+		Select("access_logs.ip_address as ipAddress, MAX(access_logs.city) as city, COUNT(access_logs.id) as accessCount, IFNULL(ban_stats.banned_count, 0) as bannedCount").
+		Joins("LEFT JOIN (?) as ban_stats ON access_logs.ip_address = ban_stats.ip_address", banSubQuery).
+		Where("access_logs.access_date BETWEEN ? AND ?", startDate, endDate).
+		Group("access_logs.ip_address").
+		Order("accessCount DESC")
+
+	// 获取总记录数
+	var countResult []map[string]interface{}
+	err := query.Find(&countResult).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	total = int64(len(countResult))
+
+	// 分页查询
+	err = query.Offset((page - 1) * pageSize).Limit(pageSize).Find(&result).Error
+	return result, total, err
+}
+
 // BanIP 将IP添加到黑名单
 func (r *LogRepository) BanIP(ip, reason string, expireTime time.Time) error {
 	blacklist := &model.IPBlacklist{
