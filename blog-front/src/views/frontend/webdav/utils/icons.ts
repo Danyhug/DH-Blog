@@ -1,4 +1,3 @@
-import type { Component } from 'vue'
 import { defineComponent, h } from 'vue'
 
 // 定义所有图标组件，使用 h 函数渲染 SVG 而不是模板字符串
@@ -13,7 +12,7 @@ export const HomeIcon = defineComponent({
       h('path', { d: 'm3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' }),
       h('polyline', { points: '9,22 9,12 15,12 15,22' })
     ])
-  }
+}
 })
 
 export const ChevronRightIcon = defineComponent({
@@ -74,7 +73,7 @@ export const SettingsIcon = defineComponent({
       h('path', { d: 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z' }),
       h('circle', { cx: '12', cy: '12', r: '3' })
     ])
-  }
+}
 })
 
 export const PlusIcon = defineComponent({
@@ -103,7 +102,7 @@ export const UploadIcon = defineComponent({
       h('polyline', { points: '17,8 12,3 7,8' }),
       h('line', { x1: '12', x2: '12', y1: '3', y2: '15' })
     ])
-  }
+}
 })
 
 export const SearchIcon = defineComponent({
@@ -130,7 +129,7 @@ export const FolderIcon = defineComponent({
     }, [
       h('path', { d: 'M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z' })
     ])
-  }
+}
 })
 
 export const FileIcon = defineComponent({
@@ -144,7 +143,7 @@ export const FileIcon = defineComponent({
       h('path', { d: 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z' }),
       h('path', { d: 'M14 2v4a2 2 0 0 0 2 2h4' })
     ])
-  }
+}
 })
 
 export const FileTextIcon = defineComponent({
@@ -161,7 +160,7 @@ export const FileTextIcon = defineComponent({
       h('line', { x1: '16', x2: '8', y1: '13', y2: '13' }),
       h('line', { x1: '16', x2: '8', y1: '17', y2: '17' })
     ])
-  }
+}
 })
 
 export const ImageIcon = defineComponent({
@@ -176,7 +175,7 @@ export const ImageIcon = defineComponent({
       h('circle', { cx: '9', cy: '9', r: '2' }),
       h('path', { d: 'm21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21' })
     ])
-  }
+}
 })
 
 export const VideoIcon = defineComponent({

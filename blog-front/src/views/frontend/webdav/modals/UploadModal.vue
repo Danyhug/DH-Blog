@@ -61,10 +61,10 @@ interface Props {
   uploadProgress: number
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 const emit = defineEmits(['close'])
 
-import { XIcon, FileTextIcon, ImageIcon, VideoIcon, CheckIcon } from './icons'
+import { XIcon, FileTextIcon, ImageIcon, VideoIcon, CheckIcon } from '../utils/icons'
 </script>
 
 <style scoped>

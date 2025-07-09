@@ -65,7 +65,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { XIcon, ServerIcon } from './icons'
+import { XIcon, ServerIcon } from '../utils/icons'
 
 // 发出事件
 const emit = defineEmits(['close'])

@@ -1,19 +1,28 @@
-import WebDAView from './WebDAView.vue'
-import WebDriveView from './WebDriveView.vue'
-import SettingsModal from './SettingsModal.vue'
-import ShareLinkPopup from './ShareLinkPopup.vue'
-import UploadModal from './UploadModal.vue'
-import MobileView from './MobileView.vue'
-import * as icons from './icons'
-import type { FileItem } from './types/file'
+// 主视图组件
+import WebDriveView from './components/WebDriveView.vue'
+import MobileView from './components/MobileView.vue'
 
+// 模态框组件
+import SettingsModal from './modals/SettingsModal.vue'
+import ShareLinkPopup from './modals/ShareLinkPopup.vue'
+import UploadModal from './modals/UploadModal.vue'
+
+// 工具和类型
+import * as icons from './utils/icons'
+import type { FileItem } from './utils/types/file'
+
+// 分组导出
 export {
-  WebDAView,
+  // 主视图组件
   WebDriveView,
+  MobileView,
+  
+  // 模态框组件
   SettingsModal,
   ShareLinkPopup,
   UploadModal,
-  MobileView,
+  
+  // 工具和类型
   icons,
   type FileItem
 }

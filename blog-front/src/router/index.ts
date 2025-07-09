@@ -7,7 +7,7 @@ const HomeView = () => import(/* webpackChunkName: "home" */ '../views/frontend/
 const LockView = () => import(/* webpackChunkName: "lock" */ '../views/frontend/LockView.vue');
 const ErrorView = () => import(/* webpackChunkName: "error" */ '../views/frontend/ErrorView.vue');
 // WebDAV相关组件
-const WebDriveView = () => import(/* webpackChunkName: "webdrive" */ '../views/frontend/webdav/WebDriveView.vue');
+const WebDriveView = () => import(/* webpackChunkName: "webdrive" */ '../views/frontend/webdav');
 
 // 后端路由组件
 const AdminView = () => import(/* webpackChunkName: "admin" */ '../views/backend/AdminView.vue');

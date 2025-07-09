@@ -1,107 +1,122 @@
 <template>
   <div class="web-drive-container">
-    <div class="browser-header">
-      <div class="header-left">
-        <div class="breadcrumb">
-          <HomeIcon class="icon-sm" />
-          <ChevronRightIcon class="icon-xs" />
-          <span>{{ currentPath || '我的网盘' }}</span>
+    <!-- 移动端视图 -->
+    <MobileView 
+      v-if="isMobile" 
+      :mobile-files="mobileFiles" 
+      @upload="openUploadModal"
+      @open="handleMobileFileOpen"
+      @share="shareFile"
+      @download="downloadFile"
+      @rename="handleMobileRename"
+      @delete="deleteFile"
+    />
+    
+    <!-- 桌面端视图 -->
+    <div v-else>
+      <div class="browser-header">
+        <div class="header-left">
+          <div class="breadcrumb">
+            <HomeIcon class="icon-sm" />
+            <ChevronRightIcon class="icon-xs" />
+            <span>{{ currentPath || '我的网盘' }}</span>
+          </div>
+        </div>
+        <div class="header-right">
+          <button class="icon-btn" @click="viewMode = 'grid'" :class="{ active: viewMode === 'grid' }">
+            <Grid3X3Icon class="icon-sm" />
+          </button>
+          <button class="icon-btn" @click="viewMode = 'list'" :class="{ active: viewMode === 'list' }">
+            <ListIcon class="icon-sm" />
+          </button>
+          <button class="icon-btn" @click="openSettings">
+            <SettingsIcon class="icon-sm" />
+          </button>
         </div>
       </div>
-      <div class="header-right">
-        <button class="icon-btn" @click="viewMode = 'grid'" :class="{ active: viewMode === 'grid' }">
-          <Grid3X3Icon class="icon-sm" />
-        </button>
-        <button class="icon-btn" @click="viewMode = 'list'" :class="{ active: viewMode === 'list' }">
-          <ListIcon class="icon-sm" />
-        </button>
-        <button class="icon-btn" @click="openSettings">
-          <SettingsIcon class="icon-sm" />
-        </button>
-      </div>
-    </div>
 
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <button class="btn-primary" @click="createNewFolder">
-          <PlusIcon class="icon-sm" />
-          新建文件夹
-        </button>
-        <button class="btn-outline" @click="openUploadModal">
-          <UploadIcon class="icon-sm" />
-          上传
-        </button>
-      </div>
-      <div class="toolbar-right">
-        <div class="search-container">
-          <SearchIcon class="search-icon" />
-          <input type="text" v-model="searchQuery" placeholder="搜索文件..." class="search-input" />
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <button class="btn-primary" @click="createNewFolder">
+            <PlusIcon class="icon-sm" />
+            新建文件夹
+          </button>
+          <button class="btn-outline" @click="openUploadModal">
+            <UploadIcon class="icon-sm" />
+            上传
+          </button>
         </div>
-      </div>
-    </div>
-
-    <div class="file-container">
-      <div v-if="viewMode === 'grid'" class="file-grid">
-        <div
-          v-for="(file, index) in filteredFiles"
-          :key="index"
-          class="file-item"
-          @click="handleFileClick(file)"
-          @contextmenu.prevent="showContextMenu($event, file)"
-        >
-          <div class="file-content">
-            <div class="file-icon-container">
-              <FolderIcon v-if="file.type === 'folder'" class="folder-icon" />
-              <component v-else-if="file.icon" :is="file.icon" class="file-icon" />
-              <FileIcon v-else class="file-icon" />
-            </div>
-            <div class="file-info">
-              <p class="file-name">{{ file.name }}</p>
-              <p class="file-size">{{ file.size }}</p>
-              <p class="file-modified" v-if="file.modified">{{ file.modified }}</p>
-            </div>
+        <div class="toolbar-right">
+          <div class="search-container">
+            <SearchIcon class="search-icon" />
+            <input type="text" v-model="searchQuery" placeholder="搜索文件..." class="search-input" />
           </div>
         </div>
       </div>
 
-      <div v-else class="file-list">
-        <table>
-          <thead>
-            <tr>
-              <th>名称</th>
-              <th>大小</th>
-              <th>修改日期</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(file, index) in filteredFiles"
-              :key="index"
-              @click="handleFileClick(file)"
-              @contextmenu.prevent="showContextMenu($event, file)"
-            >
-              <td>
-                <div class="file-row">
-                  <FolderIcon v-if="file.type === 'folder'" class="icon-sm folder-icon" />
-                  <component v-else-if="file.icon" :is="file.icon" class="icon-sm file-icon" />
-                  <FileIcon v-else class="icon-sm file-icon" />
-                  <span>{{ file.name }}</span>
-                </div>
-              </td>
-              <td>{{ file.size }}</td>
-              <td>{{ file.modified || '-' }}</td>
-              <td>
-                <button class="icon-btn" @click.stop="shareFile(file)">
-                  <UploadIcon class="icon-sm" />
-                </button>
-                <button class="icon-btn" @click.stop="showContextMenu($event, file)">
-                  <MoreHorizontalIcon class="icon-sm" />
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="file-container">
+        <div v-if="viewMode === 'grid'" class="file-grid">
+          <div
+            v-for="(file, index) in filteredFiles"
+            :key="index"
+            class="file-item"
+            @click="handleFileClick(file)"
+            @contextmenu.prevent="showContextMenu($event, file)"
+          >
+            <div class="file-content">
+              <div class="file-icon-container">
+                <FolderIcon v-if="file.type === 'folder'" class="folder-icon" />
+                <component v-else-if="file.icon" :is="file.icon" class="file-icon" />
+                <FileIcon v-else class="file-icon" />
+              </div>
+              <div class="file-info">
+                <p class="file-name">{{ file.name }}</p>
+                <p class="file-size">{{ file.size }}</p>
+                <p class="file-modified" v-if="file.modified">{{ file.modified }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="file-list">
+          <table>
+            <thead>
+              <tr>
+                <th>名称</th>
+                <th>大小</th>
+                <th>修改日期</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(file, index) in filteredFiles"
+                :key="index"
+                @click="handleFileClick(file)"
+                @contextmenu.prevent="showContextMenu($event, file)"
+              >
+                <td>
+                  <div class="file-row">
+                    <FolderIcon v-if="file.type === 'folder'" class="icon-sm folder-icon" />
+                    <component v-else-if="file.icon" :is="file.icon" class="icon-sm file-icon" />
+                    <FileIcon v-else class="icon-sm file-icon" />
+                    <span>{{ file.name }}</span>
+                  </div>
+                </td>
+                <td>{{ file.size }}</td>
+                <td>{{ file.modified || '-' }}</td>
+                <td>
+                  <button class="icon-btn" @click.stop="shareFile(file)">
+                    <UploadIcon class="icon-sm" />
+                  </button>
+                  <button class="icon-btn" @click.stop="showContextMenu($event, file)">
+                    <MoreHorizontalIcon class="icon-sm" />
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
     
@@ -129,10 +144,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import type { FileItem } from './types/file'
-import SettingsModal from './SettingsModal.vue'
-import UploadModal from './UploadModal.vue'
-import ShareLinkPopup from './ShareLinkPopup.vue'
+import type { FileItem } from '../utils/types/file'
+import SettingsModal from '../modals/SettingsModal.vue'
+import UploadModal from '../modals/UploadModal.vue'
+import ShareLinkPopup from '../modals/ShareLinkPopup.vue'
+import MobileView from './MobileView.vue'
 import {
   HomeIcon,
   ChevronRightIcon,
@@ -150,7 +166,7 @@ import {
   MusicIcon,
   XIcon,
   MoreHorizontalIcon
-} from './icons'
+} from '../utils/icons'
 
 // 状态变量
 const uploadProgress = ref(65)
@@ -160,13 +176,22 @@ const searchQuery = ref('')
 const showSettingsModal = ref(false)
 const showUploadModal = ref(false)
 const showShareLinkPopup = ref(false)
-const selectedFile = ref<FileItem | null>(null)
+const selectedFile = ref<FileItem>({
+  name: '',
+  type: 'file',
+  size: ''
+})
 const contextMenu = ref({
   show: false,
   x: 0,
   y: 0,
-  file: null as FileItem | null
+  file: {
+    name: '',
+    type: 'file',
+    size: ''
+  } as FileItem
 })
+const isMobile = ref(false)
 
 // 模拟文件数据
 const files = ref<FileItem[]>([
@@ -178,6 +203,14 @@ const files = ref<FileItem[]>([
   { name: "假期照片.jpg", type: "image", size: "1.8 MB", modified: "昨天", icon: ImageIcon },
   { name: "会议记录.mp4", type: "video", size: "45.2 MB", modified: "2 天前", icon: VideoIcon },
   { name: "我的音乐.mp3", type: "audio", size: "3.2 MB", modified: "3 天前", icon: MusicIcon },
+])
+
+// 移动端文件列表（简化版）
+const mobileFiles = ref<FileItem[]>([
+  { name: "文档", type: "folder", size: "12 个项目" },
+  { name: "照片", type: "folder", size: "248 个项目" },
+  { name: "最近文件.pdf", type: "file", size: "1.2 MB" },
+  { name: "笔记.txt", type: "file", size: "0.5 MB" },
 ])
 
 // 过滤文件列表
@@ -197,6 +230,11 @@ const contextMenuStyle = computed(() => {
     left: `${contextMenu.value.x}px`
   }
 })
+
+// 检测移动设备
+function checkMobile() {
+  isMobile.value = window.innerWidth < 768
+}
 
 // 方法
 function openSettings() {
@@ -274,20 +312,45 @@ function hideContextMenu() {
   contextMenu.value.show = false
 }
 
-// 点击外部关闭右键菜单
+function handleMobileFileOpen(file: FileItem) {
+  if (file.type === 'folder') {
+    currentPath.value = file.name
+    // 在实际应用中，这里应该加载该文件夹的内容
+  } else {
+    openFile(file)
+  }
+}
+
+function handleMobileRename(file: FileItem, newName: string) {
+  const index = files.value.findIndex(f => f.name === file.name)
+  if (index !== -1) {
+    files.value[index].name = newName
+  }
+  
+  // 同时更新移动端文件列表
+  const mobileIndex = mobileFiles.value.findIndex(f => f.name === file.name)
+  if (mobileIndex !== -1) {
+    mobileFiles.value[mobileIndex].name = newName
+  }
+}
+
+// 初始化和清理
 onMounted(() => {
   document.addEventListener('click', hideContextMenu)
+  window.addEventListener('resize', checkMobile)
+  checkMobile() // 页面加载时检测一次
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', hideContextMenu)
+  window.removeEventListener('resize', checkMobile)
 })
 </script>
 
 <style scoped>
 .web-drive-container {
   width: 100%;
-  height: 100%;
+  height: 100vh;
   background: white;
   position: relative;
   border-radius: 0.5rem;

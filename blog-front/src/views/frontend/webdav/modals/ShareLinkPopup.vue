@@ -52,8 +52,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { XIcon, FileTextIcon } from './icons'
-import type { FileItem } from './types/file'
+import { XIcon, FileTextIcon } from '../utils/icons'
+import type { FileItem } from '../utils/types/file'
 
 // 定义属性
 interface Props {
@@ -63,7 +63,7 @@ interface Props {
 // 发出事件
 const emit = defineEmits(['close'])
 
-const props = defineProps<Props>()
+defineProps<Props>()
 
 // 状态
 const allowEditing = ref(false)
