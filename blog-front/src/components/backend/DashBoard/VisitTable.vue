@@ -4,10 +4,10 @@
       <div>
         <div class="item-title">访问记录</div>
         <div class="item-sub">
-          今日增长
-          <span> 128 </span>
-          /
-          <span class="sub"> -37% </span>
+          今日访问次数
+          <span> {{ totalVisits }} </span>
+          <!-- / -->
+          <!-- <span class="sub"> -37% </span> -->
         </div>
       </div>
 
@@ -73,7 +73,7 @@
 </style>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue';
+import { ref, reactive, watch, onMounted, computed } from 'vue';
 import { getOverviewLog, postBanIp } from "@/api/admin";
 import { IpStat } from "@/types/IpStat";
 import { plusDate } from "@/utils/tool";
@@ -89,6 +89,11 @@ const formatDate = (date: Date) => `${date.getFullYear()}-${date.getMonth() + 1}
 
 // 访问记录
 const visitRadio = ref("day");
+
+// 计算总访问量
+const totalVisits = computed(() => {
+  return ipData.value.reduce((sum, ip) => sum + ip.accessCount, 0);
+});
 
 // 分页参数
 const page = reactive({
