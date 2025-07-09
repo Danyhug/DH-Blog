@@ -6,6 +6,8 @@ const MainView = () => import(/* webpackChunkName: "main" */ '../views/frontend/
 const HomeView = () => import(/* webpackChunkName: "home" */ '../views/frontend/HomeView.vue');
 const LockView = () => import(/* webpackChunkName: "lock" */ '../views/frontend/LockView.vue');
 const ErrorView = () => import(/* webpackChunkName: "error" */ '../views/frontend/ErrorView.vue');
+// WebDAV相关组件
+const WebDriveView = () => import(/* webpackChunkName: "webdrive" */ '../views/frontend/webdav/WebDriveView.vue');
 
 // 后端路由组件
 const AdminView = () => import(/* webpackChunkName: "admin" */ '../views/backend/AdminView.vue');
@@ -61,6 +63,8 @@ const routes = [
   { path: '/lock', component: LockView, name: 'Lock', meta: { title: '私密文章' } },
   // 错误页面
   { path: '/error', component: ErrorView, name: 'Error', meta: { title: '错误页面' } },
+  // WebDAV 实用页面
+  { path: '/webdav', component: WebDriveView, name: 'WebDAV', meta: { title: '我的网盘' } },
 ]
 
 const router = createRouter({

@@ -21,6 +21,18 @@
           </router-link>
         </li>
         <li class="item">
+          <router-link to="/webdav">
+            <Icon iconName="icon-wenjian"></Icon>
+            我的网盘
+          </router-link>
+        </li>
+        <li class="item">
+          <router-link to="/webdav-demo">
+            <Icon iconName="icon-cangku"></Icon>
+            WebDAV演示
+          </router-link>
+        </li>
+        <li class="item">
           <router-link to="/login">
             <Icon iconName="icon-fenlei"></Icon>
             后台
