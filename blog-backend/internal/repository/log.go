@@ -37,15 +37,25 @@ func (r *LogRepository) GetIPVisitStats(page, pageSize int, startDate, endDate t
 	var result []map[string]interface{}
 	var total int64
 
-	// 子查询：获取每个IP的封禁次数
-	banSubQuery := r.db.Model(&model.IPBlacklist{}).
+	// 子查询：获取每个IP的封禁次数（包括已删除的记录）
+	// 使用Unscoped()来包含软删除的记录，这样能计算总封禁次数
+	banSubQuery := r.db.Unscoped().Model(&model.IPBlacklist{}).
 		Select("ip_address, COUNT(*) as banned_count").
 		Group("ip_address")
 
+	// 子查询：获取每个IP当前是否被封禁
+	currentBanSubQuery := r.db.Model(&model.IPBlacklist{}).
+		Select("ip_address, 1 as ban_status").
+		Where("(expire_time IS NULL OR expire_time > ?)", time.Now())
+
 	// 主查询：获取每个IP的访问统计
 	query := r.db.Model(&model.AccessLog{}).
-		Select("access_logs.ip_address as ipAddress, MAX(access_logs.city) as city, COUNT(access_logs.id) as accessCount, IFNULL(ban_stats.banned_count, 0) as bannedCount").
+		Select("access_logs.ip_address as ipAddress, MAX(access_logs.city) as city, "+
+			"COUNT(access_logs.id) as accessCount, "+
+			"IFNULL(ban_stats.banned_count, 0) as bannedCount, "+
+			"IFNULL(current_ban.ban_status, 0) as banStatus").
 		Joins("LEFT JOIN (?) as ban_stats ON access_logs.ip_address = ban_stats.ip_address", banSubQuery).
+		Joins("LEFT JOIN (?) as current_ban ON access_logs.ip_address = current_ban.ip_address", currentBanSubQuery).
 		Where("access_logs.access_date BETWEEN ? AND ?", startDate, endDate).
 		Group("access_logs.ip_address").
 		Order("accessCount DESC")
@@ -65,6 +75,7 @@ func (r *LogRepository) GetIPVisitStats(page, pageSize int, startDate, endDate t
 
 // BanIP 将IP添加到黑名单
 func (r *LogRepository) BanIP(ip, reason string, expireTime time.Time) error {
+	// 创建新的封禁记录
 	blacklist := &model.IPBlacklist{
 		IPAddress:  ip,
 		BanReason:  reason,
@@ -75,12 +86,14 @@ func (r *LogRepository) BanIP(ip, reason string, expireTime time.Time) error {
 
 // UnbanIP 从黑名单中移除IP
 func (r *LogRepository) UnbanIP(ip string) error {
+	// 将所有与该IP相关的记录标记为已删除（软删除）
 	return r.db.Where("ip_address = ?", ip).Delete(&model.IPBlacklist{}).Error
 }
 
 // IsIPBanned 检查IP是否在黑名单中
 func (r *LogRepository) IsIPBanned(ip string) (bool, error) {
 	var count int64
+	// 检查是否有该IP的有效封禁记录（未过期且未删除）
 	err := r.db.Model(&model.IPBlacklist{}).
 		Where("ip_address = ? AND (expire_time IS NULL OR expire_time > ?)", ip, time.Now()).
 		Count(&count).Error

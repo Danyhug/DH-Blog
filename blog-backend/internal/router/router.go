@@ -84,9 +84,10 @@ func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandl
 
 		// 日志管理 API
 		adminAPI.GET("/log/overview/visitLog", logHandler.GetVisitLogs)
-		adminAPI.POST("/ip/ban", logHandler.BanIP)
-		adminAPI.POST("/ip/unban", logHandler.UnbanIP)
 		adminAPI.GET("/stats/daily", logHandler.GetDailyStats)
+
+		// IP封禁API - 与前端请求格式一致
+		adminAPI.POST("/ip/ban/:ip/:status", logHandler.BanIP)
 
 		// 系统配置 API
 		adminAPI.GET("/config", systemConfigHandler.GetConfigs)

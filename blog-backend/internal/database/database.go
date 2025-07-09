@@ -43,6 +43,14 @@ func Init(conf *config.Config) (*gorm.DB, error) {
 		return nil, fmt.Errorf("连接数据库失败: %w", err)
 	}
 
+	// 处理IP黑名单表的迁移问题
+	// 先删除表（如果存在），然后重新创建
+	if db.Migrator().HasTable(&model.IPBlacklist{}) {
+		if err := db.Migrator().DropTable(&model.IPBlacklist{}); err != nil {
+			return nil, fmt.Errorf("删除IP黑名单表失败: %w", err)
+		}
+	}
+
 	// 自动迁移模型到数据库表
 	// GORM 会根据 model 包中定义的结构体自动创建或更新数据库表
 	err = db.AutoMigrate(

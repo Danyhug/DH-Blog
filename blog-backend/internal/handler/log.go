@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"dh-blog/internal/model"
@@ -30,9 +31,13 @@ func (h *LogHandler) RegisterRoutes(router *gin.RouterGroup) {
 	adminRouter := router.Group("/admin/log")
 	{
 		adminRouter.GET("/overview/visitLog", h.GetVisitLogs)
-		adminRouter.POST("/ip/ban", h.BanIP)
-		adminRouter.POST("/ip/unban", h.UnbanIP)
 		adminRouter.GET("/stats/daily", h.GetDailyStats)
+	}
+
+	// 额外添加IP封禁/解封路由，与前端一致
+	ipRouter := router.Group("/admin/ip")
+	{
+		ipRouter.POST("/ban/:ip/:status", h.BanIP)
 	}
 }
 
@@ -104,41 +109,84 @@ func (h *LogHandler) GetVisitLogs(c *gin.Context) {
 }
 
 func (h *LogHandler) BanIP(c *gin.Context) {
-	var req struct {
-		IP       string `json:"ip" binding:"required"`
-		Reason   string `json:"reason"`
-		Duration int    `json:"duration"` // in hours
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, response.Error("无效的请求参数: "+err.Error()))
+	// 从URL参数获取IP和状态
+	ip := c.Param("ip")
+	statusStr := c.Param("status")
+
+	if ip == "" {
+		c.JSON(http.StatusBadRequest, response.Error("IP参数不能为空"))
 		return
 	}
 
-	var expireTime time.Time
-	if req.Duration > 0 {
-		expireTime = time.Now().Add(time.Hour * time.Duration(req.Duration))
-	}
-
-	if err := h.logRepo.BanIP(req.IP, req.Reason, expireTime); err != nil {
+	// 检查IP当前是否被封禁
+	isBanned, err := h.logRepo.IsIPBanned(ip)
+	if err != nil {
 		h.Error(c, err)
 		return
 	}
-	h.Success(c)
-}
 
-func (h *LogHandler) UnbanIP(c *gin.Context) {
-	var req struct {
-		IP string `json:"ip" binding:"required"`
+	// 如果status是undefined或空字符串，则根据当前状态取反操作
+	if statusStr == "undefined" || statusStr == "" {
+		// 如果当前已封禁，则解封；如果当前未封禁，则封禁
+		if isBanned {
+			// 已封禁，执行解封
+			if err := h.logRepo.UnbanIP(ip); err != nil {
+				h.Error(c, err)
+				return
+			}
+			h.Success(c)
+			return
+		} else {
+			// 未封禁，执行封禁
+			expireTime := time.Now().Add(24 * time.Hour)
+			reason := "管理员操作"
+			if err := h.logRepo.BanIP(ip, reason, expireTime); err != nil {
+				h.Error(c, err)
+				return
+			}
+			h.Success(c)
+			return
+		}
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, response.Error("无效的请求参数: "+err.Error()))
+
+	// 如果提供了明确的status值，则按照status值操作
+	status, err := strconv.Atoi(statusStr)
+	if err != nil {
+		// 无法解析为整数，忽略status参数，根据当前状态取反
+		if isBanned {
+			if err := h.logRepo.UnbanIP(ip); err != nil {
+				h.Error(c, err)
+				return
+			}
+		} else {
+			expireTime := time.Now().Add(24 * time.Hour)
+			reason := "管理员操作"
+			if err := h.logRepo.BanIP(ip, reason, expireTime); err != nil {
+				h.Error(c, err)
+				return
+			}
+		}
+		h.Success(c)
 		return
 	}
 
-	if err := h.logRepo.UnbanIP(req.IP); err != nil {
-		h.Error(c, err)
-		return
+	// 根据status值执行相应操作
+	if status == 1 {
+		// status=1表示当前已封禁，需要解封
+		if err := h.logRepo.UnbanIP(ip); err != nil {
+			h.Error(c, err)
+			return
+		}
+	} else {
+		// status=0或其他值表示当前未封禁，需要封禁
+		expireTime := time.Now().Add(24 * time.Hour)
+		reason := "管理员操作"
+		if err := h.logRepo.BanIP(ip, reason, expireTime); err != nil {
+			h.Error(c, err)
+			return
+		}
 	}
+
 	h.Success(c)
 }
 
