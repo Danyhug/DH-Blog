@@ -6,12 +6,13 @@ import (
 
 	"dh-blog/internal/handler"
 	"dh-blog/internal/middleware"
+	"dh-blog/internal/service"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 // Init 初始化并配置 Gin 路由器
-func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandler, commentHandler *handler.CommentHandler, logHandler *handler.LogHandler, adminHandler *handler.AdminHandler, systemConfigHandler *handler.SystemConfigHandler, staticFilesAbsPath string) *gin.Engine {
+func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandler, commentHandler *handler.CommentHandler, logHandler *handler.LogHandler, adminHandler *handler.AdminHandler, systemConfigHandler *handler.SystemConfigHandler, ipService service.IPService, staticFilesAbsPath string) *gin.Engine {
 
 	// 使用原始的路由配置
 	router := gin.Default()
@@ -25,6 +26,9 @@ func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandl
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+
+	// 添加 IP 中间件
+	router.Use(middleware.IPMiddleware(ipService))
 
 	// 公共 API 路由组
 	publicAPI := router.Group("/api")

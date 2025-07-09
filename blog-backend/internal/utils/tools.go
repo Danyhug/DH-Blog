@@ -64,6 +64,8 @@ func ParseUserAgent(userAgentString string) (os, browser string) {
 		os = "鸿蒙"
 	} else if strings.Contains(userAgentString, "Linux") {
 		os = "Linux"
+	} else {
+		os = userAgentString
 	}
 
 	// 解析浏览器
@@ -75,6 +77,8 @@ func ParseUserAgent(userAgentString string) (os, browser string) {
 		browser = "Firefox"
 	} else if strings.Contains(userAgentString, "Safari/") {
 		browser = "Safari"
+	} else {
+		browser = userAgentString
 	}
 
 	return os, browser

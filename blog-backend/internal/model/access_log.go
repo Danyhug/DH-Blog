@@ -4,14 +4,14 @@ import "time"
 
 // AccessLog 对应于数据库中的 `access_logs` 表
 type AccessLog struct {
-	BaseModel    `gorm:"embedded"`
+	ID           int       `gorm:"column:id;primaryKey;autoIncrement"`
+	CreatedAt    time.Time `gorm:"column:created_at"`
 	IPAddress    string    `gorm:"column:ip_address;not null" json:"ipAddress"` // IP 地址
 	AccessDate   time.Time `gorm:"column:access_date;index" json:"accessDate"`  // 访问日期，用于按日统计
 	UserAgent    string    `gorm:"column:user_agent" json:"userAgent"`          // 用户代理
 	RequestURL   string    `gorm:"column:request_url" json:"requestUrl"`        // 请求 URL
 	City         string    `gorm:"column:city" json:"city"`                     // 城市
 	ResourceType string    `gorm:"column:resource_type" json:"resourceType"`    // 资源类型（article, tag, category等）
-	ResourceID   int       `gorm:"column:resource_id" json:"resourceId"`        // 资源ID
 }
 
 // TableName 指定 GORM 使用的表名

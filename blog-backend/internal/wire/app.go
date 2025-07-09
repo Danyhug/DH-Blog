@@ -79,6 +79,7 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	// 初始化服务
 	uploadService := service.NewUploadService(conf, dataDir)
 	aiService := service.NewAIService(systemSettingRepo)
+	ipService := service.NewIPService(logRepo)
 
 	// 初始化处理器
 	articleHandler := handler.NewArticleHandler(articleRepo, tagRepo, categoryRepo)
@@ -88,5 +89,5 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	adminHandler := handler.NewAdminHandler(uploadService, aiService)
 	systemConfigHandler := handler.NewSystemConfigHandler(systemSettingRepo)
 
-	return router.Init(articleHandler, userHandler, commentHandler, logHandler, adminHandler, systemConfigHandler, staticFilesAbsPath)
+	return router.Init(articleHandler, userHandler, commentHandler, logHandler, adminHandler, systemConfigHandler, ipService, staticFilesAbsPath)
 }
