@@ -29,12 +29,24 @@ type ArticleHandler struct {
 	tagRepo      *repository.TagRepository
 	categoryRepo *repository.CategoryRepository
 	aiService    service.AIService
-	dispatcher   *task.Dispatcher
+	taskManager  *task.TaskManager
 }
 
 // NewArticleHandler 创建文章处理器
-func NewArticleHandler(articleRepo *repository.ArticleRepository, tagRepo *repository.TagRepository, categoryRepo *repository.CategoryRepository, aiService service.AIService, dispatcher *task.Dispatcher) *ArticleHandler {
-	return &ArticleHandler{articleRepo: articleRepo, tagRepo: tagRepo, categoryRepo: categoryRepo, aiService: aiService, dispatcher: dispatcher}
+func NewArticleHandler(
+	articleRepo *repository.ArticleRepository,
+	tagRepo *repository.TagRepository,
+	categoryRepo *repository.CategoryRepository,
+	aiService service.AIService,
+	taskManager *task.TaskManager,
+) *ArticleHandler {
+	return &ArticleHandler{
+		articleRepo:  articleRepo,
+		tagRepo:      tagRepo,
+		categoryRepo: categoryRepo,
+		aiService:    aiService,
+		taskManager:  taskManager,
+	}
 }
 
 func (h *ArticleHandler) GetAllTags(c *gin.Context) {
@@ -297,7 +309,7 @@ func (h *ArticleHandler) SaveArticle(c *gin.Context) {
 	// 创建AI生成标签的异步任务
 	aiTagTask := task.NewAiGenTask(article.ID, article.Content)
 	// 提交到任务队列
-	h.dispatcher.Submit(aiTagTask)
+	h.taskManager.SubmitTask(aiTagTask)
 
 	// 立即返回响应，不等待AI生成标签
 	c.JSON(http.StatusCreated, response.Success())
@@ -367,7 +379,13 @@ func (h *ArticleHandler) GetOverview(c *gin.Context) {
 		return
 	}
 
-	overview := model.OverviewCount{
+	type OverviewCount struct {
+		ArticleCount  int64 `json:"articleCount"`  // 文章总数
+		TagCount      int64 `json:"tagCount"`      // 标签总数
+		CommentCount  int64 `json:"commentCount"`  // 评论总数
+		CategoryCount int64 `json:"categoryCount"` // 分类总数
+	}
+	overview := OverviewCount{
 		ArticleCount:  articleCount,
 		TagCount:      tagCount,
 		CommentCount:  commentCount,

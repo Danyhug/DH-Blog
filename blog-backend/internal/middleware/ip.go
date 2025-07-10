@@ -37,6 +37,9 @@ func IPMiddleware(ipService service.IPService) gin.HandlerFunc {
 		ip := utils.GetClientIP(c.Request)
 
 		go func() {
+			if c.Request.URL.Path == "/api/user/heart" {
+				return
+			}
 			os, browser := utils.ParseUserAgent(c.Request.UserAgent())
 			ua := os + "; " + browser
 
