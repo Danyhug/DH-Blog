@@ -68,5 +68,10 @@ func Init(conf *config.Config) (*gorm.DB, error) {
 		return nil, fmt.Errorf("数据库自动迁移失败: %w", err)
 	}
 
+	// 插入默认数据
+	if err := insertDefaultData(db); err != nil {
+		return nil, fmt.Errorf("插入默认数据失败: %w", err)
+	}
+
 	return db, nil
 }

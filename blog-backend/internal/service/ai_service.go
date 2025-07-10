@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"text/template"
 	"time"
 
 	"dh-blog/internal/model"
@@ -130,13 +131,29 @@ func (s *OpenAIService) GenerateTags(text string) (result []string, err error) {
 	if prompt == "" {
 		logrus.Warn("AI提示词为空，使用默认提示词")
 		// 如果数据库中没有配置提示词，可以使用一个默认值
-		prompt = "请根据以下文章内容，提取出3-5个关键词作为文章标签，用逗号分隔。文章内容：{{.ArticleContent}}"
+		prompt = "请根据以下文章内容，提取出3-5个关键词作为文章标签，用逗号分隔。文章内容：{{.Article}}"
 	}
 
 	// 替换提示词中的占位符
-	fullPrompt := fmt.Sprintf(prompt, text) // 假设只有一个占位符，且是文章内容
+	tmpl, err := template.New("prompt").Parse(prompt)
+	// 准备数据
+	data := struct {
+		Article string
+		Tags    []string
+	}{
+		Article: text,
+		Tags:    []string{"Go", "编程", "技术"},
+	}
 
-	response, err := s.Request(fullPrompt)
+	// 使用Buffer存储填充后的内容
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(buf.String())
+	response, err := s.Request(buf.String())
 	if err != nil {
 		logrus.Errorf("请求OpenAI API失败: %v", err)
 		return
@@ -147,6 +164,12 @@ func (s *OpenAIService) GenerateTags(text string) (result []string, err error) {
 		return nil, fmt.Errorf("AI API 响应中没有 Choices，可能存在错误或无内容")
 	}
 
-	fmt.Println("测试响应数据", response)
-	return []string{response.Choices[0].Message.Content}, nil
+	err = json.Unmarshal([]byte(response.Choices[0].Message.Content), &result)
+	if err != nil {
+		logrus.Errorf("解析AI API响应失败: %v", err)
+		return nil, err
+	}
+
+	fmt.Println("测试响应数据", result)
+	return result, nil
 }

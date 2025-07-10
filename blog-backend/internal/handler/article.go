@@ -9,6 +9,8 @@ import (
 	"dh-blog/internal/model"
 	"dh-blog/internal/repository"
 	"dh-blog/internal/response"
+	"dh-blog/internal/service"
+	"dh-blog/internal/task"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,11 +28,13 @@ type ArticleHandler struct {
 	articleRepo  *repository.ArticleRepository
 	tagRepo      *repository.TagRepository
 	categoryRepo *repository.CategoryRepository
+	aiService    service.AIService
+	dispatcher   *task.Dispatcher
 }
 
 // NewArticleHandler 创建文章处理器
-func NewArticleHandler(articleRepo *repository.ArticleRepository, tagRepo *repository.TagRepository, categoryRepo *repository.CategoryRepository) *ArticleHandler {
-	return &ArticleHandler{articleRepo: articleRepo, tagRepo: tagRepo, categoryRepo: categoryRepo}
+func NewArticleHandler(articleRepo *repository.ArticleRepository, tagRepo *repository.TagRepository, categoryRepo *repository.CategoryRepository, aiService service.AIService, dispatcher *task.Dispatcher) *ArticleHandler {
+	return &ArticleHandler{articleRepo: articleRepo, tagRepo: tagRepo, categoryRepo: categoryRepo, aiService: aiService, dispatcher: dispatcher}
 }
 
 func (h *ArticleHandler) GetAllTags(c *gin.Context) {
@@ -289,6 +293,13 @@ func (h *ArticleHandler) SaveArticle(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, response.Error("保存文章失败"))
 		return
 	}
+
+	// 创建AI生成标签的异步任务
+	aiTagTask := task.NewAiGenTask(article.ID, article.Content)
+	// 提交到任务队列
+	h.dispatcher.Submit(aiTagTask)
+
+	// 立即返回响应，不等待AI生成标签
 	c.JSON(http.StatusCreated, response.Success())
 }
 
@@ -335,40 +346,6 @@ func (h *ArticleHandler) GetArticleList(c *gin.Context) {
 	}
 
 	h.SuccessWithPage(c, articles, total, pageReq.Page)
-}
-
-// RegisterRoutes 注册路由
-func (h *ArticleHandler) RegisterRoutes(router *gin.RouterGroup) {
-	// 文章公共 API
-	router.GET("/article/:id", h.GetArticleDetail)
-	router.GET("/article/title/:id", h.GetArticleTitle)
-	router.GET("/article/unlock/:id/:password", h.UnlockArticle)
-	router.POST("/article/list", h.GetArticleList)
-	router.GET("/article/overview", h.GetOverview)
-	router.GET("/article/tag", h.GetAllTags)
-	router.GET("/article/category", h.GetAllCategories)
-
-	// 管理员 API
-	adminRouter := router.Group("/admin")
-	{
-		adminRouter.GET("/article/:id", h.GetArticleDetail)
-		adminRouter.POST("/article", h.SaveArticle)
-		adminRouter.PUT("/article", h.UpdateArticle)
-		adminRouter.POST("/article/list", h.GetArticleList)
-
-		// 标签管理
-		adminRouter.POST("/tag", h.CreateTag)
-		adminRouter.PUT("/tag", h.UpdateTag)
-		adminRouter.DELETE("/tag/:id", h.DeleteTag)
-
-		// 分类管理
-		adminRouter.POST("/category", h.CreateCategory)
-		adminRouter.GET("/category/:id", h.GetCategoryByID)
-		adminRouter.PUT("/category", h.UpdateCategory)
-		adminRouter.DELETE("/category/:id", h.DeleteCategory)
-		adminRouter.GET("/category/:id/tags", h.GetCategoryDefaultTags)
-		adminRouter.POST("/category/:id/tags", h.SaveCategoryDefaultTags)
-	}
 }
 
 func (h *ArticleHandler) GetOverview(c *gin.Context) {

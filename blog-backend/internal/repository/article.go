@@ -67,14 +67,14 @@ func (r *ArticleRepository) SaveArticle(article *model.Article) error {
 		// 计算文章字数
 		article.WordNum = countWords(article.Content)
 
-		// 根据 tagSlugs 查找或创建标签
-		tags, err := r.TagRepo.FindOrCreateBySlugs(tx, article.TagSlugs)
+		// 根据 tagNames 查找或创建标签
+		tags, err := r.TagRepo.FindOrCreateByNames(tx, article.TagNames)
 		if err != nil {
 			return fmt.Errorf("查找或创建标签失败: %w", err)
 		}
 
 		// 如果文章有分类且没有指定标签，则获取分类的默认标签
-		if article.CategoryID > 0 && len(article.TagSlugs) == 0 {
+		if article.CategoryID > 0 && len(article.TagNames) == 0 {
 			defaultTags, err := r.CategoryRepo.GetCategoryDefaultTags(article.CategoryID)
 			if err != nil {
 				return fmt.Errorf("获取分类默认标签失败: %w", err)
@@ -105,14 +105,14 @@ func (r *ArticleRepository) UpdateArticle(article *model.Article) error {
 		// 计算文章字数
 		article.WordNum = countWords(article.Content)
 
-		// 根据 tagSlugs 查找或创建标签
-		tags, err := r.TagRepo.FindOrCreateBySlugs(tx, article.TagSlugs)
+		// 根据 tagNames 查找或创建标签
+		tags, err := r.TagRepo.FindOrCreateByNames(tx, article.TagNames)
 		if err != nil {
 			return fmt.Errorf("查找或创建标签失败: %w", err)
 		}
 
 		// 如果文章有分类且没有指定标签，则获取分类的默认标签
-		if article.CategoryID > 0 && len(article.TagSlugs) == 0 {
+		if article.CategoryID > 0 && len(article.TagNames) == 0 {
 			defaultTags, err := r.CategoryRepo.GetCategoryDefaultTags(article.CategoryID)
 			if err != nil {
 				return fmt.Errorf("获取分类默认标签失败: %w", err)
@@ -142,11 +142,11 @@ func (r *ArticleRepository) UpdateArticle(article *model.Article) error {
 	})
 }
 
-// GetArticlesByTagSlug 根据标签slug获取文章列表
-func (r *ArticleRepository) GetArticlesByTagSlug(tagSlug string) (data []model.Article, err error) {
+// GetArticlesByTagName 根据标签名获取文章列表
+func (r *ArticleRepository) GetArticlesByTagName(tagName string) (data []model.Article, err error) {
 	err = r.db.Joins("JOIN article_tags ON article_tags.article_id = articles.id").
 		Joins("JOIN tags ON tags.id = article_tags.tag_id").
-		Where("tags.slug = ?", tagSlug).
+		Where("tags.name = ?", tagName).
 		Find(&data).Error
 	return
 }

@@ -15,7 +15,7 @@ type Article struct {
 	LockPassword string `gorm:"column:lock_password" json:"lockPassword"`       // 锁定密码
 
 	Tags     []*Tag   `gorm:"many2many:article_tags;" json:"tags"` // 文章关联的标签
-	TagSlugs []string `gorm:"-" json:"tagSlugs,omitempty"`         // 接收前端传来的标签 slug 数组
+	TagNames []string `gorm:"-" json:"tagNames,omitempty"`         // 接收前端传来的标签名数组
 }
 
 // UnmarshalJSON 自定义 JSON 反序列化逻辑
@@ -23,7 +23,7 @@ func (a *Article) UnmarshalJSON(data []byte) error {
 	type Alias Article // 创建一个别名类型，避免无限递归调用 UnmarshalJSON
 
 	aux := &struct {
-		TagSlugs []string `json:"tags"` // 将传入的 "tags" 字段解析到 TagSlugs
+		TagNames []string `json:"tags"` // 将传入的 "tags" 字段解析到 TagNames
 		*Alias
 	}{
 		Alias: (*Alias)(a),
@@ -33,8 +33,8 @@ func (a *Article) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// 将解析到的 TagSlugs 赋值给 Article 结构体的 TagSlugs 字段
-	a.TagSlugs = aux.TagSlugs
+	// 将解析到的 TagNames 赋值给 Article 结构体的 TagNames 字段
+	a.TagNames = aux.TagNames
 	return nil
 }
 
