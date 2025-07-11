@@ -32,7 +32,7 @@ func insertDefaultData(db *gorm.DB) error {
 			{SettingKey: "blog_title", SettingValue: "DH-Blog"},
 			{SettingKey: "signature", SettingValue: "我们原神玩家是这样的"},
 			{SettingKey: "open_comment", SettingValue: "true"},
-			{SettingKey: "ai_model", SettingValue: "deepseek-v3"},
+			{SettingKey: "ai_model", SettingValue: "gpt-4.1-mini"},
 			{SettingKey: "ai_api_url", SettingValue: "https://tbai.xin/v1/chat/completions"},
 			{SettingKey: "ai_prompt", SettingValue: DefaultTagsPrompt},
 		}

@@ -1,9 +1,11 @@
 package repository
 
 import (
+	"context"
 	"fmt"
 
 	"dh-blog/internal/model"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -78,4 +80,32 @@ func (r *TagRepository) FindOrCreateByNames(tx *gorm.DB, names []string) ([]*mod
 	}
 
 	return result, nil
+}
+
+// GetAllTagNames 获取所有标签的名称列表
+func (r *TagRepository) GetAllTagNames(ctx context.Context) ([]string, error) {
+	var tagNames []string
+
+	// 使用原始SQL查询直接获取标签名称列表
+	err := r.db.WithContext(ctx).
+		Model(&model.Tag{}).
+		Select("name").
+		Order("name").
+		Pluck("name", &tagNames).Error
+
+	if err != nil {
+		logrus.Errorf("获取所有标签名称失败: %v", err)
+		return nil, fmt.Errorf("获取所有标签名称失败: %w", err)
+	}
+
+	return tagNames, nil
+}
+
+// GetAllTagNamesWithCache 获取所有标签的名称列表（带缓存）
+// 在实际项目中，可以添加缓存机制来优化性能
+func (r *TagRepository) GetAllTagNamesWithCache(ctx context.Context) ([]string, error) {
+	// TODO: 实现缓存机制
+	// 这里可以添加Redis或内存缓存，定期刷新
+	// 简单起见，目前直接调用数据库查询
+	return r.GetAllTagNames(ctx)
 }

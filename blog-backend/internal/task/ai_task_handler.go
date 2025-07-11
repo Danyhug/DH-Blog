@@ -3,6 +3,7 @@ package task
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"dh-blog/internal/model"
 	"dh-blog/internal/repository"
@@ -20,27 +21,83 @@ func RegisterAITaskHandlers(
 ) {
 	// 注册AI生成标签任务处理函数
 	dispatcher.Register("AI_Gen_Tags", func(ctx context.Context, payload interface{}) error {
-		return handleAIGenTagsTask(payload, db, aiService, tagRepo)
+		return handleAIGenTagsTask(ctx, payload, db, aiService, tagRepo)
 	})
 }
 
 // handleAIGenTagsTask 处理AI生成标签任务
-func handleAIGenTagsTask(payload interface{}, db *gorm.DB, aiService service.AIService, tagRepo *repository.TagRepository) error {
+func handleAIGenTagsTask(
+	ctx context.Context,
+	payload interface{},
+	db *gorm.DB,
+	aiService service.AIService,
+	tagRepo *repository.TagRepository,
+) error {
+	// 检查上下文是否已取消
+	if ctx.Err() != nil {
+		return fmt.Errorf("任务上下文已取消: %w", ctx.Err())
+	}
+
+	// 转换任务负载
 	aiTask, ok := payload.(*AiGenTagTask)
 	if !ok {
 		return fmt.Errorf("无效的任务负载类型")
 	}
 
-	// 调用AI服务生成标签
-	tagNames, err := aiService.GenerateTags(aiTask.Content)
+	// 记录开始处理时间
+	startTime := time.Now()
+	logrus.Infof("开始处理文章 %d 的AI标签生成任务", aiTask.ArticleID)
+
+	// 获取所有现有标签名称，供AI参考
+	existingTagNames, err := tagRepo.GetAllTagNamesWithCache(ctx)
+	if err != nil {
+		logrus.Warnf("获取现有标签失败: %v，将使用空标签列表", err)
+		existingTagNames = []string{} // 如果获取失败，使用空列表
+	}
+
+	logrus.Infof("获取到 %d 个现有标签供AI参考", len(existingTagNames))
+
+	// 调用AI服务生成标签，使用上下文控制超时
+	var tagNames []string
+
+	// 创建一个通道用于接收结果
+	resultCh := make(chan struct {
+		tags []string
+		err  error
+	}, 1)
+
+	// 在goroutine中执行AI调用，避免阻塞
+	go func() {
+		tags, callErr := aiService.GenerateTags(aiTask.Content, existingTagNames)
+		resultCh <- struct {
+			tags []string
+			err  error
+		}{tags, callErr}
+	}()
+
+	// 等待结果或上下文取消
+	select {
+	case result := <-resultCh:
+		tagNames = result.tags
+		err = result.err
+	case <-ctx.Done():
+		return fmt.Errorf("AI标签生成超时: %w", ctx.Err())
+	}
+
 	if err != nil {
 		return fmt.Errorf("生成标签失败: %w", err)
 	}
 
-	logrus.Infof("为文章 %d 生成标签: %v", aiTask.ArticleID, tagNames)
+	logrus.Infof("为文章 %d 生成标签: %v (耗时: %v)",
+		aiTask.ArticleID, tagNames, time.Since(startTime))
+
+	// 检查上下文是否已取消
+	if ctx.Err() != nil {
+		return fmt.Errorf("任务上下文已取消: %w", ctx.Err())
+	}
 
 	// 开启事务
-	return db.Transaction(func(tx *gorm.DB) error {
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 查找文章
 		var article model.Article
 		if err := tx.First(&article, aiTask.ArticleID).Error; err != nil {
@@ -79,6 +136,11 @@ func handleAIGenTagsTask(payload interface{}, db *gorm.DB, aiService service.AIS
 			return nil
 		}
 
+		// 检查上下文是否已取消
+		if ctx.Err() != nil {
+			return fmt.Errorf("任务上下文已取消: %w", ctx.Err())
+		}
+
 		// 查找或创建新标签
 		newTags, err := tagRepo.FindOrCreateByNames(tx, newTagNames)
 		if err != nil {
@@ -92,7 +154,8 @@ func handleAIGenTagsTask(payload interface{}, db *gorm.DB, aiService service.AIS
 			return fmt.Errorf("添加文章标签关联失败: %w", err)
 		}
 
-		logrus.Infof("成功为文章 %d 添加AI生成的标签", aiTask.ArticleID)
+		logrus.Infof("成功为文章 %d 添加AI生成的标签 (总耗时: %v)",
+			aiTask.ArticleID, time.Since(startTime))
 		return nil
 	})
 }

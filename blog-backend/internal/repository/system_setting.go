@@ -2,6 +2,8 @@ package repository
 
 import (
 	"errors"
+	"fmt"
+	"time"
 
 	"dh-blog/internal/model"
 	"gorm.io/gorm"
@@ -39,7 +41,17 @@ func (r *systemSettingRepository) UpdateSetting(key, value string) error {
 				SettingKey:   key,
 				SettingValue: value,
 			}
-			return r.db.Create(&setting).Error
+
+			// 使用短事务创建新设置
+			var createErr error
+			for i := 0; i < 3; i++ {
+				createErr = r.db.Create(&setting).Error
+				if createErr == nil {
+					return nil
+				}
+				time.Sleep(50 * time.Millisecond)
+			}
+			return createErr
 		} else {
 			return err
 		}
@@ -47,34 +59,39 @@ func (r *systemSettingRepository) UpdateSetting(key, value string) error {
 
 	// 如果找到，则更新现有设置
 	setting.SettingValue = value
-	return r.db.Save(&setting).Error
+
+	// 使用短事务更新设置
+	var saveErr error
+	for i := 0; i < 3; i++ {
+		saveErr = r.db.Save(&setting).Error
+		if saveErr == nil {
+			return nil
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	return saveErr
 }
 
 func (r *systemSettingRepository) BatchUpdateSettings(settings map[string]string) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
-		for key, value := range settings {
-			var setting model.SystemSetting
-			err := tx.Where("setting_key = ?", key).First(&setting).Error
-
-			if err != nil {
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-					setting = model.SystemSetting{
-						SettingKey:   key,
-						SettingValue: value,
-					}
-					if createErr := tx.Create(&setting).Error; createErr != nil {
-						return createErr
-					}
-				} else {
-					return err
-				}
-			} else {
-				setting.SettingValue = value
-				if saveErr := tx.Save(&setting).Error; saveErr != nil {
-					return saveErr
-				}
+	// 对于每个设置项，单独执行更新操作
+	for key, value := range settings {
+		// 添加重试逻辑
+		var retryCount int
+		for retryCount < 3 {
+			err := r.UpdateSetting(key, value)
+			if err == nil {
+				break // 成功则跳出重试循环
 			}
+
+			// 如果失败，增加重试计数并等待一段时间
+			retryCount++
+			if retryCount >= 3 {
+				return fmt.Errorf("更新设置 %s 失败，已重试 %d 次: %w", key, retryCount, err)
+			}
+
+			// 等待 100ms 后重试
+			time.Sleep(100 * time.Millisecond)
 		}
-		return nil
-	})
+	}
+	return nil
 }

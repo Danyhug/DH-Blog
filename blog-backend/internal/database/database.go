@@ -35,7 +35,7 @@ func Init(conf *config.Config) (*gorm.DB, error) {
 	fmt.Printf("数据库文件路径: %s\n", dbPath)
 
 	// 初始化数据库连接
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(dbPath+"?_pragma=journal_mode(WAL)&_pragma=busy_timeout(10000)"), &gorm.Config{
 		Logger: newLogger,
 	})
 	// 使用 SQLite 驱动并从配置中读取数据库文件路径
