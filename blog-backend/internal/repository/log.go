@@ -153,8 +153,11 @@ func (r *LogRepository) BanIP(ip, reason string, expireTime time.Time) error {
 	err := r.db.Create(blacklist).Error
 	if err == nil {
 		// 更新缓存
-		r.cache.Set(getIPBlacklistCacheKey(ip), true, IPBlacklistCacheExpire)
+		cacheKey := getIPBlacklistCacheKey(ip)
+		r.cache.Set(cacheKey, true, IPBlacklistCacheExpire)
 		logrus.Debugf("IP %s 已加入黑名单并缓存", ip)
+	} else {
+		logrus.Errorf("将IP添加到黑名单失败: %s, 错误: %v", ip, err)
 	}
 	return err
 }
@@ -165,8 +168,11 @@ func (r *LogRepository) UnbanIP(ip string) error {
 	err := r.db.Where("ip_address = ?", ip).Delete(&model.IPBlacklist{}).Error
 	if err == nil {
 		// 更新缓存
-		r.cache.Set(getIPBlacklistCacheKey(ip), false, IPBlacklistCacheExpire)
+		cacheKey := getIPBlacklistCacheKey(ip)
+		r.cache.Set(cacheKey, false, IPBlacklistCacheExpire)
 		logrus.Debugf("IP %s 已从黑名单移除并更新缓存", ip)
+	} else {
+		logrus.Errorf("从黑名单移除IP失败: %s, 错误: %v", ip, err)
 	}
 	return err
 }
@@ -180,31 +186,40 @@ func (r *LogRepository) IsIPBanned(ip string) (bool, error) {
 		if banned, ok := cached.(bool); ok {
 			logrus.Debugf("从缓存获取IP %s 的黑名单状态: %v", ip, banned)
 			return banned, nil
+		} else {
+			logrus.Warnf("IP黑名单状态缓存类型转换失败: %s, 将从数据库重新获取", ip)
 		}
 	}
 
-	// 缓存未命中，从数据库查询
+	// 缓存未命中或类型转换失败，从数据库查询
 	var count int64
 	// 检查是否有该IP的有效封禁记录（未过期且未删除）
 	err := r.db.Model(&model.IPBlacklist{}).
 		Where("ip_address = ? AND (expire_time IS NULL OR expire_time > ?)", ip, time.Now()).
 		Count(&count).Error
 
+	if err != nil {
+		logrus.Errorf("查询IP黑名单状态失败: %s, 错误: %v", ip, err)
+		return false, fmt.Errorf("查询IP黑名单状态失败: %w", err)
+	}
+
 	isBanned := count > 0
 
 	// 将结果存入缓存
-	if err == nil {
-		r.cache.Set(cacheKey, isBanned, IPBlacklistCacheExpire)
-		logrus.Debugf("IP %s 的黑名单状态已缓存: %v", ip, isBanned)
-	}
+	r.cache.Set(cacheKey, isBanned, IPBlacklistCacheExpire)
+	logrus.Debugf("IP %s 的黑名单状态已缓存: %v", ip, isBanned)
 
-	return isBanned, err
+	return isBanned, nil
 }
 
 // ClearIPBlacklistCache 清除指定IP的黑名单缓存
 func (r *LogRepository) ClearIPBlacklistCache(ip string) {
-	r.cache.Delete(getIPBlacklistCacheKey(ip))
-	logrus.Debugf("已清除IP %s 的黑名单缓存", ip)
+	cacheKey := getIPBlacklistCacheKey(ip)
+	if deleted := r.cache.Delete(cacheKey); !deleted {
+		logrus.Warnf("清除IP黑名单缓存失败: %s, 缓存中未找到", ip)
+	} else {
+		logrus.Debugf("已清除IP %s 的黑名单缓存", ip)
+	}
 }
 
 // GetDailyVisitStats 获取每日访问统计

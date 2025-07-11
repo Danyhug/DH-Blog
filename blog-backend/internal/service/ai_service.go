@@ -82,8 +82,11 @@ func NewAIService(settingRepo repository.SystemSettingRepository, cache dhcache.
 
 // ClearConfigCache 清除AI配置缓存
 func (s *OpenAIService) ClearConfigCache() {
-	s.cache.Delete(AiConfigCacheKey)
-	logrus.Debug("AI配置缓存已清除")
+	if deleted := s.cache.Delete(AiConfigCacheKey); !deleted {
+		logrus.Warnf("清除AI配置缓存失败: 缓存中未找到")
+	} else {
+		logrus.Debug("AI配置缓存已清除")
+	}
 }
 
 // getLatestConfig 获取最新的AI配置，优先从缓存获取
@@ -93,6 +96,8 @@ func (s *OpenAIService) getLatestConfig() (*model.SystemConfig, error) {
 		if config, ok := cached.(*model.SystemConfig); ok {
 			logrus.Debug("从缓存获取AI配置")
 			return config, nil
+		} else {
+			logrus.Warn("AI配置缓存类型转换失败，将从数据库重新获取")
 		}
 	}
 
@@ -188,6 +193,8 @@ func (s *OpenAIService) GenerateTags(text string, existingTags []string) (result
 		if tags, ok := cached.([]string); ok {
 			logrus.Debug("从缓存获取AI生成的标签")
 			return tags, nil
+		} else {
+			logrus.Warn("AI生成的标签缓存类型转换失败，将重新生成")
 		}
 	}
 

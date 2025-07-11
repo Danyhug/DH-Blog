@@ -42,10 +42,12 @@ func (r *TagRepository) GetAllTagNamesWithCache(ctx context.Context) ([]string, 
 		if names, ok := cached.([]string); ok {
 			logrus.Debug("从缓存获取标签名称列表")
 			return names, nil
+		} else {
+			logrus.Warn("标签名称列表缓存类型转换失败，将从数据库重新获取")
 		}
 	}
 
-	// 缓存未命中，从数据库获取
+	// 缓存未命中或类型转换失败，从数据库获取
 	var tags []model.Tag
 	if err := r.db.WithContext(ctx).Find(&tags).Error; err != nil {
 		return nil, fmt.Errorf("获取标签列表失败: %w", err)
@@ -71,10 +73,12 @@ func (r *TagRepository) GetAllTagsWithCache(ctx context.Context) ([]model.Tag, e
 		if tags, ok := cached.([]model.Tag); ok {
 			logrus.Debug("从缓存获取标签列表")
 			return tags, nil
+		} else {
+			logrus.Warn("标签列表缓存类型转换失败，将从数据库重新获取")
 		}
 	}
 
-	// 缓存未命中，从数据库获取
+	// 缓存未命中或类型转换失败，从数据库获取
 	var tags []model.Tag
 	if err := r.db.WithContext(ctx).Find(&tags).Error; err != nil {
 		return nil, fmt.Errorf("获取标签列表失败: %w", err)
@@ -89,9 +93,15 @@ func (r *TagRepository) GetAllTagsWithCache(ctx context.Context) ([]model.Tag, e
 
 // ClearTagCache 清除标签缓存
 func (r *TagRepository) ClearTagCache() {
-	r.cache.Delete(TagsListCacheKey)
-	r.cache.Delete(TagsNamesCacheKey)
-	logrus.Debug("标签缓存已清除")
+	if deleted := r.cache.Delete(TagsListCacheKey); !deleted {
+		logrus.Warnf("清除标签列表缓存失败: 缓存中未找到")
+	}
+
+	if deleted := r.cache.Delete(TagsNamesCacheKey); !deleted {
+		logrus.Warnf("清除标签名称列表缓存失败: 缓存中未找到")
+	} else {
+		logrus.Debug("标签缓存已清除")
+	}
 }
 
 // FindOrCreateByNames finds or creates tags by their names

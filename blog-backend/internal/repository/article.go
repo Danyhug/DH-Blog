@@ -58,6 +58,9 @@ func (r *ArticleRepository) GetArticleById(id int) (data model.Article, err erro
 		if article, ok := cached.(model.Article); ok {
 			logrus.Debugf("从缓存获取文章: %d", id)
 			return article, nil
+		} else {
+			// 缓存类型转换失败
+			logrus.Warnf("文章缓存类型转换失败: %d, 将从数据库重新获取", id)
 		}
 	}
 
@@ -127,6 +130,8 @@ func (r *ArticleRepository) SaveArticle(article *model.Article) error {
 	// 清除文章列表缓存
 	if err == nil {
 		r.clearArticleListCache()
+	} else {
+		logrus.Errorf("保存文章失败: %v", err)
 	}
 
 	return err
@@ -135,8 +140,12 @@ func (r *ArticleRepository) SaveArticle(article *model.Article) error {
 // clearArticleListCache 清除文章列表相关的所有缓存
 func (r *ArticleRepository) clearArticleListCache() {
 	// 由于无法精确删除所有分页缓存，这里使用一个标记键来表示缓存已失效
-	r.cache.Delete(fmt.Sprintf("%scount", PrefixArticleList))
-	logrus.Debug("已清除文章列表缓存")
+	cacheKey := fmt.Sprintf("%scount", PrefixArticleList)
+	if deleted := r.cache.Delete(cacheKey); !deleted {
+		logrus.Warnf("清除文章列表缓存失败: 缓存中未找到")
+	} else {
+		logrus.Debug("已清除文章列表缓存")
+	}
 }
 
 // UpdateArticle 更新文章
@@ -185,10 +194,15 @@ func (r *ArticleRepository) UpdateArticle(article *model.Article) error {
 	if err == nil {
 		// 清除文章详情缓存
 		cacheKey := fmt.Sprintf("%s%d", PrefixArticle, article.ID)
-		r.cache.Delete(cacheKey)
+		if deleted := r.cache.Delete(cacheKey); !deleted {
+			logrus.Warnf("清除文章缓存失败: %d, 缓存中未找到", article.ID)
+		}
+
 		// 清除文章列表缓存
 		r.clearArticleListCache()
 		logrus.Debugf("已清除文章缓存: %d", article.ID)
+	} else {
+		logrus.Errorf("更新文章失败: %d, 错误: %v", article.ID, err)
 	}
 
 	return err
@@ -204,6 +218,8 @@ func (r *ArticleRepository) GetArticlesByTagName(tagName string) (data []model.A
 		if articles, ok := cached.([]model.Article); ok {
 			logrus.Debugf("从缓存获取标签文章列表: %s", tagName)
 			return articles, nil
+		} else {
+			logrus.Warnf("标签文章列表缓存类型转换失败: %s, 将从数据库重新获取", tagName)
 		}
 	}
 
@@ -213,19 +229,24 @@ func (r *ArticleRepository) GetArticlesByTagName(tagName string) (data []model.A
 		Where("tags.name = ?", tagName).
 		Find(&data).Error
 
-	// 存入缓存
-	if err == nil {
-		r.cache.Set(cacheKey, data, ExpireShort)
-		logrus.Debugf("标签文章列表已缓存: %s", tagName)
+	if err != nil {
+		return nil, fmt.Errorf("获取标签文章列表失败: %s, 错误: %w", tagName, err)
 	}
 
-	return
+	// 存入缓存
+	r.cache.Set(cacheKey, data, ExpireShort)
+	logrus.Debugf("标签文章列表已缓存: %s", tagName)
+
+	return data, nil
 }
 
 // UpdateArticleViewCount 更新文章浏览次数
 func (r *ArticleRepository) UpdateArticleViewCount(id int) {
 	// 更新数据库中的浏览次数
-	r.db.Model(&model.Article{}).Where("id = ?", id).Update("views", gorm.Expr("views + 1"))
+	if err := r.db.Model(&model.Article{}).Where("id = ?", id).Update("views", gorm.Expr("views + 1")).Error; err != nil {
+		logrus.Errorf("更新文章浏览次数失败: %d, 错误: %v", id, err)
+		return
+	}
 
 	// 缓存键
 	cacheKey := fmt.Sprintf("%s%d", PrefixArticle, id)
@@ -239,7 +260,12 @@ func (r *ArticleRepository) UpdateArticleViewCount(id int) {
 			r.cache.Set(cacheKey, article, ExpireShort)
 			logrus.Debugf("更新缓存中的文章浏览次数: %d, 新浏览次数: %d", id, article.Views)
 			return
+		} else {
+			// 缓存类型转换失败
+			logrus.Warnf("文章缓存类型转换失败: %d, 无法更新缓存中的浏览次数", id)
 		}
+	} else {
+		logrus.Debugf("缓存中未找到文章: %d, 跳过缓存更新", id)
 	}
 
 	// 如果缓存中没有，不做任何操作
@@ -265,21 +291,27 @@ func (r *ArticleRepository) FindPage(ctx context.Context, page, pageSize int) ([
 				if cachedCount, ok := cachedTotal.(int64); ok {
 					logrus.Debugf("从缓存获取文章分页: %d, %d", page, pageSize)
 					return articles, cachedCount, nil
+				} else {
+					logrus.Warnf("文章总数缓存类型转换失败，将从数据库重新获取")
 				}
+			} else {
+				logrus.Debugf("缓存中未找到文章总数，将从数据库获取")
 			}
+		} else {
+			logrus.Warnf("文章列表缓存类型转换失败，将从数据库重新获取")
 		}
 	}
 
-	// 缓存未命中，从数据库获取
+	// 缓存未命中或类型转换失败，从数据库获取
 	var err error
 	articles, total, err = r.GormRepository.FindPage(ctx, page, pageSize)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("获取文章分页失败: %w", err)
 	}
 
 	// 存入缓存
 	r.cache.Set(cacheKey, articles, ExpireShort)
-	r.cache.Set(cacheCountKey, total, ExpireLong) // Changed from ExpireMedium to ExpireLong
+	r.cache.Set(cacheCountKey, total, ExpireLong)
 	logrus.Debugf("文章分页已缓存: %d, %d", page, pageSize)
 
 	return articles, total, nil
@@ -293,10 +325,15 @@ func (r *ArticleRepository) Delete(ctx context.Context, id int) error {
 	if err == nil {
 		// 清除文章详情缓存
 		cacheKey := fmt.Sprintf("%s%d", PrefixArticle, id)
-		r.cache.Delete(cacheKey)
+		if deleted := r.cache.Delete(cacheKey); !deleted {
+			logrus.Warnf("清除文章缓存失败: %d, 错误: 缓存中未找到", id)
+		}
+
 		// 清除文章列表缓存
 		r.clearArticleListCache()
 		logrus.Debugf("已清除已删除文章的缓存: %d", id)
+	} else {
+		logrus.Errorf("删除文章失败: %d, 错误: %v", id, err)
 	}
 
 	return err
