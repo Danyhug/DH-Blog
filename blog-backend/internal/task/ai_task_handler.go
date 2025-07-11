@@ -20,18 +20,12 @@ func RegisterAITaskHandlers(
 ) {
 	// 注册AI生成标签任务处理函数
 	dispatcher.Register("AI_Gen_Tags", func(ctx context.Context, payload interface{}) error {
-		return handleAIGenTagsTask(ctx, payload, db, aiService, tagRepo)
+		return handleAIGenTagsTask(payload, db, aiService, tagRepo)
 	})
 }
 
 // handleAIGenTagsTask 处理AI生成标签任务
-func handleAIGenTagsTask(
-	ctx context.Context,
-	payload interface{},
-	db *gorm.DB,
-	aiService service.AIService,
-	tagRepo *repository.TagRepository,
-) error {
+func handleAIGenTagsTask(payload interface{}, db *gorm.DB, aiService service.AIService, tagRepo *repository.TagRepository) error {
 	aiTask, ok := payload.(*AiGenTagTask)
 	if !ok {
 		return fmt.Errorf("无效的任务负载类型")
