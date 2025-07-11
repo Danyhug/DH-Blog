@@ -1,6 +1,4 @@
-# 将所有 .vue 文件强制识别为 Vue
-*.vue linguist-language=Vue
-
+*.html linguist-language=plaintext
 # 排除非代码目录（减少 HTML 干扰）
 docs/ linguist-detectable=false
 .idea/ linguist-detectable=false
