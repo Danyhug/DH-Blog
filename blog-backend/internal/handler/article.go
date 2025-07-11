@@ -243,15 +243,15 @@ func (h *ArticleHandler) GetArticleDetail(c *gin.Context) {
 		return
 	}
 
-	// 异步增加文章浏览次数
-	go h.articleRepo.UpdateArticleViewCount(id)
-
 	// 使用预加载获取文章及其标签
 	article, err := h.articleRepo.GetArticleById(id)
 	if err != nil {
 		h.Error(c, err)
 		return
 	}
+
+	// 异步增加文章浏览次数
+	go h.articleRepo.UpdateArticleViewCount(id)
 
 	h.SuccessWithData(c, article)
 }

@@ -5,9 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
+	"dh-blog/internal/dhcache"
 	"dh-blog/internal/model"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+)
+
+// 缓存键前缀
+const (
+	PrefixArticle     = "article:"
+	PrefixArticleList = "article:list:"
+	ExpireShort       = time.Minute * 5 // 短期缓存，5分钟
+	ExpireLong        = time.Hour * 24  // 长期缓存，24小时
 )
 
 var (
@@ -20,15 +31,17 @@ type ArticleRepository struct {
 	db           *gorm.DB
 	CategoryRepo *CategoryRepository
 	TagRepo      *TagRepository
+	cache        dhcache.Cache
 }
 
 // NewArticleRepository 创建文章仓库
-func NewArticleRepository(db *gorm.DB, categoryRepo *CategoryRepository, tagRepo *TagRepository) *ArticleRepository {
+func NewArticleRepository(db *gorm.DB, categoryRepo *CategoryRepository, tagRepo *TagRepository, cache dhcache.Cache) *ArticleRepository {
 	return &ArticleRepository{
 		GormRepository: NewGormRepository[model.Article, int](db),
 		db:             db,
 		CategoryRepo:   categoryRepo,
 		TagRepo:        tagRepo,
+		cache:          cache,
 	}
 }
 
@@ -39,6 +52,15 @@ func (r *ArticleRepository) FindByIDWithPreload(ctx context.Context, id int, pre
 
 // GetArticleById 根据id获取文章信息（保留原方法名以兼容现有代码）
 func (r *ArticleRepository) GetArticleById(id int) (data model.Article, err error) {
+	// 尝试从缓存获取
+	cacheKey := fmt.Sprintf("%s%d", PrefixArticle, id)
+	if cached, found := r.cache.Get(cacheKey); found {
+		if article, ok := cached.(model.Article); ok {
+			logrus.Debugf("从缓存获取文章: %d", id)
+			return article, nil
+		}
+	}
+
 	// 使用 FindByID 获取文章，但忽略返回值，因为我们需要使用 Preload 加载关联
 	_, err = r.FindByID(context.Background(), id)
 	if err != nil {
@@ -58,12 +80,16 @@ func (r *ArticleRepository) GetArticleById(id int) (data model.Article, err erro
 		data.Tags = []*model.Tag{}
 	}
 
+	// 存入缓存
+	r.cache.Set(cacheKey, data, ExpireShort)
+	logrus.Debugf("文章已缓存: %d", id)
+
 	return data, nil
 }
 
 // SaveArticle 保存文章
 func (r *ArticleRepository) SaveArticle(article *model.Article) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
 		// 计算文章字数
 		article.WordNum = countWords(article.Content)
 
@@ -97,11 +123,25 @@ func (r *ArticleRepository) SaveArticle(article *model.Article) error {
 		}
 		return nil
 	})
+
+	// 清除文章列表缓存
+	if err == nil {
+		r.clearArticleListCache()
+	}
+
+	return err
+}
+
+// clearArticleListCache 清除文章列表相关的所有缓存
+func (r *ArticleRepository) clearArticleListCache() {
+	// 由于无法精确删除所有分页缓存，这里使用一个标记键来表示缓存已失效
+	r.cache.Delete(fmt.Sprintf("%scount", PrefixArticleList))
+	logrus.Debug("已清除文章列表缓存")
 }
 
 // UpdateArticle 更新文章
 func (r *ArticleRepository) UpdateArticle(article *model.Article) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
 		// 计算文章字数
 		article.WordNum = countWords(article.Content)
 
@@ -140,20 +180,126 @@ func (r *ArticleRepository) UpdateArticle(article *model.Article) error {
 		}
 		return nil
 	})
+
+	// 清除文章缓存
+	if err == nil {
+		// 清除文章详情缓存
+		cacheKey := fmt.Sprintf("%s%d", PrefixArticle, article.ID)
+		r.cache.Delete(cacheKey)
+		// 清除文章列表缓存
+		r.clearArticleListCache()
+		logrus.Debugf("已清除文章缓存: %d", article.ID)
+	}
+
+	return err
 }
 
 // GetArticlesByTagName 根据标签名获取文章列表
 func (r *ArticleRepository) GetArticlesByTagName(tagName string) (data []model.Article, err error) {
+	// 缓存键
+	cacheKey := fmt.Sprintf("%stag:%s", PrefixArticleList, tagName)
+
+	// 尝试从缓存获取
+	if cached, found := r.cache.Get(cacheKey); found {
+		if articles, ok := cached.([]model.Article); ok {
+			logrus.Debugf("从缓存获取标签文章列表: %s", tagName)
+			return articles, nil
+		}
+	}
+
+	// 从数据库获取
 	err = r.db.Joins("JOIN article_tags ON article_tags.article_id = articles.id").
 		Joins("JOIN tags ON tags.id = article_tags.tag_id").
 		Where("tags.name = ?", tagName).
 		Find(&data).Error
+
+	// 存入缓存
+	if err == nil {
+		r.cache.Set(cacheKey, data, ExpireShort)
+		logrus.Debugf("标签文章列表已缓存: %s", tagName)
+	}
+
 	return
 }
 
 // UpdateArticleViewCount 更新文章浏览次数
 func (r *ArticleRepository) UpdateArticleViewCount(id int) {
+	// 更新数据库中的浏览次数
 	r.db.Model(&model.Article{}).Where("id = ?", id).Update("views", gorm.Expr("views + 1"))
+
+	// 缓存键
+	cacheKey := fmt.Sprintf("%s%d", PrefixArticle, id)
+
+	// 尝试从缓存获取
+	if cached, found := r.cache.Get(cacheKey); found {
+		if article, ok := cached.(model.Article); ok {
+			// 更新缓存中的浏览次数
+			article.Views++
+			// 更新缓存
+			r.cache.Set(cacheKey, article, ExpireShort)
+			logrus.Debugf("更新缓存中的文章浏览次数: %d, 新浏览次数: %d", id, article.Views)
+			return
+		}
+	}
+
+	// 如果缓存中没有，不做任何操作
+	// 下次获取文章时会从数据库中获取最新的浏览次数
+}
+
+// FindPage 重写分页查询方法，添加缓存支持
+func (r *ArticleRepository) FindPage(ctx context.Context, page, pageSize int) ([]model.Article, int64, error) {
+	// 缓存键
+	cacheKey := fmt.Sprintf("%spage:%d:%d", PrefixArticleList, page, pageSize)
+	cacheCountKey := fmt.Sprintf("%scount", PrefixArticleList)
+
+	// 尝试从缓存获取文章列表
+	var articles []model.Article
+	var total int64
+
+	if cached, found := r.cache.Get(cacheKey); found {
+		if cachedArticles, ok := cached.([]model.Article); ok {
+			articles = cachedArticles
+
+			// 尝试从缓存获取总数
+			if cachedTotal, foundTotal := r.cache.Get(cacheCountKey); foundTotal {
+				if cachedCount, ok := cachedTotal.(int64); ok {
+					logrus.Debugf("从缓存获取文章分页: %d, %d", page, pageSize)
+					return articles, cachedCount, nil
+				}
+			}
+		}
+	}
+
+	// 缓存未命中，从数据库获取
+	var err error
+	articles, total, err = r.GormRepository.FindPage(ctx, page, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 存入缓存
+	r.cache.Set(cacheKey, articles, ExpireShort)
+	r.cache.Set(cacheCountKey, total, ExpireLong) // Changed from ExpireMedium to ExpireLong
+	logrus.Debugf("文章分页已缓存: %d, %d", page, pageSize)
+
+	return articles, total, nil
+}
+
+// Delete 重写删除方法，添加缓存清理
+func (r *ArticleRepository) Delete(ctx context.Context, id int) error {
+	err := r.GormRepository.Delete(ctx, id)
+
+	// 清除缓存
+	if err == nil {
+		// 清除文章详情缓存
+		cacheKey := fmt.Sprintf("%s%d", PrefixArticle, id)
+		r.cache.Delete(cacheKey)
+		// 清除文章列表缓存
+		r.clearArticleListCache()
+		logrus.Debugf("已清除已删除文章的缓存: %d", id)
+	}
+
+	return err
 }
 
 // countWords 计算字符串中的单词数量

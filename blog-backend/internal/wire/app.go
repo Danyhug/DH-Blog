@@ -51,7 +51,7 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	categoryRepo := repository.NewCategoryRepository(db)
 	commentRepo := repository.NewCommentRepository(db)
 	logRepo := repository.NewLogRepository(db, cache)
-	articleRepo := repository.NewArticleRepository(db, categoryRepo, tagRepo)
+	articleRepo := repository.NewArticleRepository(db, categoryRepo, tagRepo, cache)
 	systemSettingRepo := repository.NewSystemSettingRepository(db, cache)
 
 	// 初始化服务
