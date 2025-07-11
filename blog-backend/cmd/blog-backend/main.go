@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,11 +10,13 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"dh-blog/internal/config"
 	"dh-blog/internal/database"
 	"dh-blog/internal/model"
 	"dh-blog/internal/repository"
+	"dh-blog/internal/service"
 	"dh-blog/internal/utils"
 	"dh-blog/internal/wire"
 	"github.com/sirupsen/logrus"
@@ -68,6 +71,9 @@ func main() {
 		logrus.Fatalf("查询管理员用户失败: %v", err)
 	}
 
+	// 初始化缓存服务
+	cacheService := service.NewCacheService()
+
 	// 初始化整个应用程序的依赖并获取 Gin 路由器
 	router := wire.InitApp(conf, db)
 
@@ -93,6 +99,20 @@ func main() {
 	<-quit                                               // 阻塞直到接收到信号
 	logrus.Info("服务器正在关闭...")
 
+	// 关闭缓存服务
+	cacheService.Shutdown()
+	logrus.Info("缓存服务已关闭")
+
+	// 设置关闭超时
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// 优雅地关闭HTTP服务器
+	if err := server.Shutdown(ctx); err != nil {
+		logrus.Fatalf("服务器关闭失败: %v", err)
+	}
+
+	logrus.Info("服务器已成功关闭")
 }
 
 func displayInfo(conf *config.Config) {

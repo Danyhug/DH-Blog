@@ -4,18 +4,30 @@ import (
 	"fmt"
 	"time"
 
+	"dh-blog/internal/dhcache"
 	"dh-blog/internal/model"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+)
+
+// 缓存相关常量
+const (
+	IPBlacklistCacheKeyPrefix = "ip:blacklist:"
+	IPBlacklistCacheExpire    = time.Minute * 10 // 10分钟过期
 )
 
 // LogRepository 定义日志仓库
 type LogRepository struct {
-	db *gorm.DB
+	db    *gorm.DB
+	cache dhcache.Cache
 }
 
 // NewLogRepository 创建新的日志仓库
-func NewLogRepository(db *gorm.DB) *LogRepository {
-	return &LogRepository{db: db}
+func NewLogRepository(db *gorm.DB, cache dhcache.Cache) *LogRepository {
+	return &LogRepository{
+		db:    db,
+		cache: cache,
+	}
 }
 
 // SaveAccessLog 保存访问日志
@@ -124,6 +136,11 @@ func (r *LogRepository) GetVisitStatistics() (map[string]int64, error) {
 	return stats, nil
 }
 
+// 生成IP黑名单缓存键
+func getIPBlacklistCacheKey(ip string) string {
+	return IPBlacklistCacheKeyPrefix + ip
+}
+
 // BanIP 将IP添加到黑名单
 func (r *LogRepository) BanIP(ip, reason string, expireTime time.Time) error {
 	// 创建新的封禁记录
@@ -132,23 +149,62 @@ func (r *LogRepository) BanIP(ip, reason string, expireTime time.Time) error {
 		BanReason:  reason,
 		ExpireTime: expireTime,
 	}
-	return r.db.Create(blacklist).Error
+
+	err := r.db.Create(blacklist).Error
+	if err == nil {
+		// 更新缓存
+		r.cache.Set(getIPBlacklistCacheKey(ip), true, IPBlacklistCacheExpire)
+		logrus.Debugf("IP %s 已加入黑名单并缓存", ip)
+	}
+	return err
 }
 
 // UnbanIP 从黑名单中移除IP
 func (r *LogRepository) UnbanIP(ip string) error {
 	// 将所有与该IP相关的记录标记为已删除（软删除）
-	return r.db.Where("ip_address = ?", ip).Delete(&model.IPBlacklist{}).Error
+	err := r.db.Where("ip_address = ?", ip).Delete(&model.IPBlacklist{}).Error
+	if err == nil {
+		// 更新缓存
+		r.cache.Set(getIPBlacklistCacheKey(ip), false, IPBlacklistCacheExpire)
+		logrus.Debugf("IP %s 已从黑名单移除并更新缓存", ip)
+	}
+	return err
 }
 
-// IsIPBanned 检查IP是否在黑名单中
+// IsIPBanned 检查IP是否在黑名单中，优先从缓存获取
 func (r *LogRepository) IsIPBanned(ip string) (bool, error) {
+	cacheKey := getIPBlacklistCacheKey(ip)
+
+	// 尝试从缓存获取
+	if cached, found := r.cache.Get(cacheKey); found {
+		if banned, ok := cached.(bool); ok {
+			logrus.Debugf("从缓存获取IP %s 的黑名单状态: %v", ip, banned)
+			return banned, nil
+		}
+	}
+
+	// 缓存未命中，从数据库查询
 	var count int64
 	// 检查是否有该IP的有效封禁记录（未过期且未删除）
 	err := r.db.Model(&model.IPBlacklist{}).
 		Where("ip_address = ? AND (expire_time IS NULL OR expire_time > ?)", ip, time.Now()).
 		Count(&count).Error
-	return count > 0, err
+
+	isBanned := count > 0
+
+	// 将结果存入缓存
+	if err == nil {
+		r.cache.Set(cacheKey, isBanned, IPBlacklistCacheExpire)
+		logrus.Debugf("IP %s 的黑名单状态已缓存: %v", ip, isBanned)
+	}
+
+	return isBanned, err
+}
+
+// ClearIPBlacklistCache 清除指定IP的黑名单缓存
+func (r *LogRepository) ClearIPBlacklistCache(ip string) {
+	r.cache.Delete(getIPBlacklistCacheKey(ip))
+	logrus.Debugf("已清除IP %s 的黑名单缓存", ip)
 }
 
 // GetDailyVisitStats 获取每日访问统计

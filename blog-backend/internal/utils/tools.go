@@ -126,7 +126,9 @@ func GetIPLocation(ip string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("请求IP地理位置API失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
 
 	// 读取响应内容
 	body, err := io.ReadAll(resp.Body)

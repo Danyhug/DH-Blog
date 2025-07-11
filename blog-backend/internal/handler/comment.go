@@ -65,16 +65,13 @@ func (h *CommentHandler) GetCommentsByArticleID(c *gin.Context) {
 		return
 	}
 
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-
-	comments, total, err := h.repo.GetCommentsByArticleID(int(articleID), page, pageSize)
+	comments, total, err := h.repo.GetCommentsByArticleID(int(articleID))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Error(fmt.Sprintf("%s: %v", ErrGetCommentsFailed.Error(), err)))
 		return
 	}
 
-	c.JSON(http.StatusOK, response.SuccessWithData(response.Page(total, int64(page), comments)))
+	c.JSON(http.StatusOK, response.SuccessWithData(response.Page(total, int64(10), comments)))
 }
 
 // DeleteComment 删除评论

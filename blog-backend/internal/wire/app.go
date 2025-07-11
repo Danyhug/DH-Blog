@@ -24,6 +24,7 @@ type App struct {
 	Handlers        []handler.Handler
 	StaticFilesPath string
 	TaskManager     *task.TaskManager
+	CacheService    *service.CacheService // 新增：缓存服务
 }
 
 // AppOption 应用程序选项
@@ -39,18 +40,23 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	dataDir := filepath.Join(filepath.Dir(exePath), "data")
 	staticFilesAbsPath := filepath.Join(dataDir, "upload")
 
+	// 初始化缓存服务
+	cacheService := service.NewCacheService()
+	cache := cacheService.GetCache()
+	logrus.Info("缓存服务初始化完成")
+
 	// 初始化存储库
 	userRepo := repository.NewUserRepository(db)
-	tagRepo := repository.NewTagRepository(db)
+	tagRepo := repository.NewTagRepository(db, cache)
 	categoryRepo := repository.NewCategoryRepository(db)
 	commentRepo := repository.NewCommentRepository(db)
-	logRepo := repository.NewLogRepository(db)
+	logRepo := repository.NewLogRepository(db, cache)
 	articleRepo := repository.NewArticleRepository(db, categoryRepo, tagRepo)
-	systemSettingRepo := repository.NewSystemSettingRepository(db)
+	systemSettingRepo := repository.NewSystemSettingRepository(db, cache)
 
 	// 初始化服务
 	uploadService := service.NewUploadService(conf, dataDir)
-	aiService := service.NewAIService(systemSettingRepo)
+	aiService := service.NewAIService(systemSettingRepo, cacheService.GetCache())
 	ipService := service.NewIPService(logRepo)
 
 	// 初始化任务管理器

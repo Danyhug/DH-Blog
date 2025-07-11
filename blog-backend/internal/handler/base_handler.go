@@ -16,7 +16,6 @@ type Handler interface {
 
 // 通用错误常量，所有处理器可以共用
 var (
-	// 通用错误
 	ErrInvalidID         = errors.New("无效的ID")
 	ErrInvalidParams     = errors.New("无效的请求参数")
 	ErrParamBinding      = errors.New("请求参数绑定失败")

@@ -10,12 +10,13 @@ import (
 const (
 	// 默认缓存过期时间为两分钟
 	defaultExpire = time.Second * 60 * 2
-	gcTime        = time.Second * 15
+	gcTime        = time.Second * 60
 )
 
 type Cache interface {
 	Set(key string, value interface{}, duration ...time.Duration) error
 	Get(key string) (interface{}, bool)
+	Delete(key string) bool
 	SetNx(key string, value interface{}, duration ...time.Duration) bool
 	Shutdown()
 }
@@ -106,6 +107,18 @@ func (d *DHCache) janitor() {
 			return
 		}
 	}
+}
+
+func (d *DHCache) Delete(key string) bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	_, ok := d.items[key]
+	if ok {
+		delete(d.items, key)
+		return true
+	}
+	return false
 }
 
 func (d *DHCache) Shutdown() {

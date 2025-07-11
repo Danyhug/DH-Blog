@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	// 最大重试次数
+	// MaxRetries 最大重试次数
 	MaxRetries = 10
-	// 重试间隔（秒）
+	// RetryInterval 重试间隔（秒）
 	RetryInterval = 5
 )
 

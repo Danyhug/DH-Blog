@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// 日志相关错误
+// ErrInvalidDateFormat 日志相关错误
 var (
 	ErrInvalidDateFormat = errors.New("无效的日期格式")
 )

@@ -3,24 +3,95 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"dh-blog/internal/dhcache"
 	"dh-blog/internal/model"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
+// 缓存相关常量
+const (
+	TagsListCacheKey  = "tag:all_tags"
+	TagsNamesCacheKey = "tag:all_names"
+	// TagCacheExpireMedium 缓存过期时间
+	TagCacheExpireMedium = time.Minute * 30 // 中期缓存，30分钟
+)
+
 // TagRepository 封装标签相关的数据库操作
 type TagRepository struct {
 	*GormRepository[model.Tag, int]
-	db *gorm.DB
+	db    *gorm.DB
+	cache dhcache.Cache
 }
 
 // NewTagRepository 创建标签仓库
-func NewTagRepository(db *gorm.DB) *TagRepository {
+func NewTagRepository(db *gorm.DB, cache dhcache.Cache) *TagRepository {
 	return &TagRepository{
 		GormRepository: NewGormRepository[model.Tag, int](db),
 		db:             db,
+		cache:          cache,
 	}
+}
+
+// GetAllTagNamesWithCache 获取所有标签名称，优先从缓存获取
+func (r *TagRepository) GetAllTagNamesWithCache(ctx context.Context) ([]string, error) {
+	// 尝试从缓存获取
+	if cached, found := r.cache.Get(TagsNamesCacheKey); found {
+		if names, ok := cached.([]string); ok {
+			logrus.Debug("从缓存获取标签名称列表")
+			return names, nil
+		}
+	}
+
+	// 缓存未命中，从数据库获取
+	var tags []model.Tag
+	if err := r.db.WithContext(ctx).Find(&tags).Error; err != nil {
+		return nil, fmt.Errorf("获取标签列表失败: %w", err)
+	}
+
+	// 提取标签名称
+	names := make([]string, len(tags))
+	for i, tag := range tags {
+		names[i] = tag.Name
+	}
+
+	// 存入缓存，设置30分钟过期
+	r.cache.Set(TagsNamesCacheKey, names, TagCacheExpireMedium)
+	logrus.Debug("标签名称列表已缓存")
+
+	return names, nil
+}
+
+// GetAllTagsWithCache 获取所有标签，优先从缓存获取
+func (r *TagRepository) GetAllTagsWithCache(ctx context.Context) ([]model.Tag, error) {
+	// 尝试从缓存获取
+	if cached, found := r.cache.Get(TagsListCacheKey); found {
+		if tags, ok := cached.([]model.Tag); ok {
+			logrus.Debug("从缓存获取标签列表")
+			return tags, nil
+		}
+	}
+
+	// 缓存未命中，从数据库获取
+	var tags []model.Tag
+	if err := r.db.WithContext(ctx).Find(&tags).Error; err != nil {
+		return nil, fmt.Errorf("获取标签列表失败: %w", err)
+	}
+
+	// 存入缓存，设置30分钟过期
+	r.cache.Set(TagsListCacheKey, tags, TagCacheExpireMedium)
+	logrus.Debug("标签列表已缓存")
+
+	return tags, nil
+}
+
+// ClearTagCache 清除标签缓存
+func (r *TagRepository) ClearTagCache() {
+	r.cache.Delete(TagsListCacheKey)
+	r.cache.Delete(TagsNamesCacheKey)
+	logrus.Debug("标签缓存已清除")
 }
 
 // FindOrCreateByNames finds or creates tags by their names
@@ -64,6 +135,9 @@ func (r *TagRepository) FindOrCreateByNames(tx *gorm.DB, names []string) ([]*mod
 
 		// 将新创建的标签添加到结果中
 		existingTags = append(existingTags, newTags...)
+
+		// 清除标签缓存
+		r.ClearTagCache()
 	}
 
 	// 按照原始顺序排列结果
@@ -82,30 +156,31 @@ func (r *TagRepository) FindOrCreateByNames(tx *gorm.DB, names []string) ([]*mod
 	return result, nil
 }
 
-// GetAllTagNames 获取所有标签的名称列表
-func (r *TagRepository) GetAllTagNames(ctx context.Context) ([]string, error) {
-	var tagNames []string
+// 重写基础方法，添加缓存清除逻辑
 
-	// 使用原始SQL查询直接获取标签名称列表
-	err := r.db.WithContext(ctx).
-		Model(&model.Tag{}).
-		Select("name").
-		Order("name").
-		Pluck("name", &tagNames).Error
-
-	if err != nil {
-		logrus.Errorf("获取所有标签名称失败: %v", err)
-		return nil, fmt.Errorf("获取所有标签名称失败: %w", err)
+// Create 创建标签，并清除缓存
+func (r *TagRepository) Create(ctx context.Context, tag *model.Tag) error {
+	err := r.GormRepository.Create(ctx, tag)
+	if err == nil {
+		r.ClearTagCache()
 	}
-
-	return tagNames, nil
+	return err
 }
 
-// GetAllTagNamesWithCache 获取所有标签的名称列表（带缓存）
-// 在实际项目中，可以添加缓存机制来优化性能
-func (r *TagRepository) GetAllTagNamesWithCache(ctx context.Context) ([]string, error) {
-	// TODO: 实现缓存机制
-	// 这里可以添加Redis或内存缓存，定期刷新
-	// 简单起见，目前直接调用数据库查询
-	return r.GetAllTagNames(ctx)
+// Update 更新标签，并清除缓存
+func (r *TagRepository) Update(ctx context.Context, tag *model.Tag) error {
+	err := r.GormRepository.Update(ctx, tag)
+	if err == nil {
+		r.ClearTagCache()
+	}
+	return err
+}
+
+// Delete 删除标签，并清除缓存
+func (r *TagRepository) Delete(ctx context.Context, id int) error {
+	err := r.GormRepository.Delete(ctx, id)
+	if err == nil {
+		r.ClearTagCache()
+	}
+	return err
 }

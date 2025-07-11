@@ -30,8 +30,8 @@ func (r *CommentRepository) AddComment(comment *model.Comment) error {
 	return nil
 }
 
-// GetCommentsByArticleID 根据文章 ID 获取评论列表（包含子评论，带分页）
-func (r *CommentRepository) GetCommentsByArticleID(articleID int, page, pageSize int) ([]*model.Comment, int64, error) {
+// GetCommentsByArticleID 根据文章 ID 获取评论列表
+func (r *CommentRepository) GetCommentsByArticleID(articleID int) ([]*model.Comment, int64, error) {
 	var allComments []model.Comment
 	var total int64
 

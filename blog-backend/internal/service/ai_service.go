@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"dh-blog/internal/database"
+	"dh-blog/internal/dhcache"
 	"dh-blog/internal/model"
 	"dh-blog/internal/repository"
 	"github.com/sirupsen/logrus"
@@ -20,6 +21,8 @@ type AIService interface {
 	// GenerateTags 生成文章标签总结
 	// existingTags 参数是系统中所有已存在的标签，用于AI参考
 	GenerateTags(text string, existingTags []string) ([]string, error)
+	// ClearConfigCache 清除AI配置缓存
+	ClearConfigCache()
 }
 
 // OpenAIRequest 定义向OpenAI API发送的请求结构
@@ -51,11 +54,20 @@ type Choice struct {
 
 type OpenAIService struct {
 	settingRepo repository.SystemSettingRepository
-	httpClient  *http.Client // 新增：HTTP 客户端
+	httpClient  *http.Client  // HTTP 客户端
+	cache       dhcache.Cache // 缓存实例
 }
 
+const (
+	// AiConfigCacheKey AI配置缓存键
+	AiConfigCacheKey = "ai:config"
+	// ExpireShort AI缓存过期时间
+	ExpireShort = time.Minute * 5 // 短期缓存，5分钟
+	ExpireLong  = time.Hour * 2   // 长期缓存，2小时
+)
+
 // NewAIService 创建新的AI服务实例
-func NewAIService(settingRepo repository.SystemSettingRepository) AIService {
+func NewAIService(settingRepo repository.SystemSettingRepository, cache dhcache.Cache) AIService {
 	// 创建带有超时的HTTP客户端
 	client := &http.Client{
 		Timeout: 30 * time.Second,
@@ -64,11 +76,26 @@ func NewAIService(settingRepo repository.SystemSettingRepository) AIService {
 	return &OpenAIService{
 		settingRepo: settingRepo,
 		httpClient:  client,
+		cache:       cache,
 	}
 }
 
-// getLatestConfig 获取最新的AI配置
+// ClearConfigCache 清除AI配置缓存
+func (s *OpenAIService) ClearConfigCache() {
+	s.cache.Delete(AiConfigCacheKey)
+	logrus.Debug("AI配置缓存已清除")
+}
+
+// getLatestConfig 获取最新的AI配置，优先从缓存获取
 func (s *OpenAIService) getLatestConfig() (*model.SystemConfig, error) {
+	// 尝试从缓存获取
+	if cached, found := s.cache.Get(AiConfigCacheKey); found {
+		if config, ok := cached.(*model.SystemConfig); ok {
+			logrus.Debug("从缓存获取AI配置")
+			return config, nil
+		}
+	}
+
 	// 从设置中加载AI配置
 	settings, err := s.settingRepo.GetAllSettings()
 	if err != nil {
@@ -84,6 +111,11 @@ func (s *OpenAIService) getLatestConfig() (*model.SystemConfig, error) {
 
 	// 创建配置对象
 	config := model.FromSettingsMap(settingsMap)
+
+	// 存入缓存，设置5分钟过期
+	s.cache.Set(AiConfigCacheKey, config, ExpireShort)
+	logrus.Debug("AI配置已缓存")
+
 	return config, nil
 }
 
@@ -137,7 +169,28 @@ func (s *OpenAIService) Request(text string) (response OpenAIResponse, err error
 	return response, json.Unmarshal(body, &response)
 }
 
+// 为AI生成的标签创建缓存键
+func generateTagsCacheKey(text string) string {
+	// 使用文本的前50个字符作为键的一部分
+	shortText := text
+	if len(shortText) > 50 {
+		shortText = shortText[:50]
+	}
+	return "ai:tags:" + shortText
+}
+
 func (s *OpenAIService) GenerateTags(text string, existingTags []string) (result []string, err error) {
+	// 生成缓存键
+	cacheKey := generateTagsCacheKey(text)
+
+	// 尝试从缓存获取
+	if cached, found := s.cache.Get(cacheKey); found {
+		if tags, ok := cached.([]string); ok {
+			logrus.Debug("从缓存获取AI生成的标签")
+			return tags, nil
+		}
+	}
+
 	// 获取最新配置
 	config, err := s.getLatestConfig()
 	if err != nil {
@@ -233,5 +286,10 @@ func (s *OpenAIService) GenerateTags(text string, existingTags []string) (result
 	}
 
 	logrus.Infof("AI生成的标签: %v", cleanTags)
+
+	// 将结果存入缓存，设置1小时过期
+	s.cache.Set(cacheKey, cleanTags, ExpireLong)
+	logrus.Debug("AI生成的标签已缓存")
+
 	return cleanTags, nil
 }
