@@ -60,7 +60,7 @@ func (r *TagRepository) GetAllTagNamesWithCache(ctx context.Context) ([]string, 
 	}
 
 	// 存入缓存，设置30分钟过期
-	r.cache.Set(TagsNamesCacheKey, names, TagCacheExpireMedium)
+	_ = r.cache.Set(TagsNamesCacheKey, names, TagCacheExpireMedium)
 	logrus.Debug("标签名称列表已缓存")
 
 	return names, nil
@@ -85,7 +85,7 @@ func (r *TagRepository) GetAllTagsWithCache(ctx context.Context) ([]model.Tag, e
 	}
 
 	// 存入缓存，设置30分钟过期
-	r.cache.Set(TagsListCacheKey, tags, TagCacheExpireMedium)
+	_ = r.cache.Set(TagsListCacheKey, tags, TagCacheExpireMedium)
 	logrus.Debug("标签列表已缓存")
 
 	return tags, nil

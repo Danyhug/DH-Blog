@@ -118,7 +118,7 @@ func (s *OpenAIService) getLatestConfig() (*model.SystemConfig, error) {
 	config := model.FromSettingsMap(settingsMap)
 
 	// 存入缓存，设置5分钟过期
-	s.cache.Set(AiConfigCacheKey, config, ExpireShort)
+	_ = s.cache.Set(AiConfigCacheKey, config, ExpireShort)
 	logrus.Debug("AI配置已缓存")
 
 	return config, nil
@@ -295,7 +295,7 @@ func (s *OpenAIService) GenerateTags(text string, existingTags []string) (result
 	logrus.Infof("AI生成的标签: %v", cleanTags)
 
 	// 将结果存入缓存，设置1小时过期
-	s.cache.Set(cacheKey, cleanTags, ExpireLong)
+	_ = s.cache.Set(cacheKey, cleanTags, ExpireLong)
 	logrus.Debug("AI生成的标签已缓存")
 
 	return cleanTags, nil

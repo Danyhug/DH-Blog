@@ -59,7 +59,7 @@ func (r *systemSettingRepository) GetAllSettings() ([]model.SystemSetting, error
 	}
 
 	// 存入缓存，设置10分钟过期
-	r.cache.Set(settingsCacheKey, settings, time.Minute*10)
+	_ = r.cache.Set(settingsCacheKey, settings, time.Minute*10)
 	logrus.Debug("系统设置已缓存")
 
 	return settings, nil
@@ -88,7 +88,7 @@ func (r *systemSettingRepository) GetSetting(key string) (string, error) {
 	}
 
 	// 存入缓存
-	r.cache.Set(cacheKey, setting.SettingValue, ExpireMedium)
+	_ = r.cache.Set(cacheKey, setting.SettingValue, ExpireMedium)
 
 	return setting.SettingValue, nil
 }

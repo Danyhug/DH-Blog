@@ -84,7 +84,7 @@ func (r *ArticleRepository) GetArticleById(id int) (data model.Article, err erro
 	}
 
 	// 存入缓存
-	r.cache.Set(cacheKey, data, ExpireShort)
+	_ = r.cache.Set(cacheKey, data, ExpireShort)
 	logrus.Debugf("文章已缓存: %d", id)
 
 	return data, nil
@@ -234,7 +234,7 @@ func (r *ArticleRepository) GetArticlesByTagName(tagName string) (data []model.A
 	}
 
 	// 存入缓存
-	r.cache.Set(cacheKey, data, ExpireShort)
+	_ = r.cache.Set(cacheKey, data, ExpireShort)
 	logrus.Debugf("标签文章列表已缓存: %s", tagName)
 
 	return data, nil
@@ -257,7 +257,7 @@ func (r *ArticleRepository) UpdateArticleViewCount(id int) {
 			// 更新缓存中的浏览次数
 			article.Views++
 			// 更新缓存
-			r.cache.Set(cacheKey, article, ExpireShort)
+			_ = r.cache.Set(cacheKey, article, ExpireShort)
 			logrus.Debugf("更新缓存中的文章浏览次数: %d, 新浏览次数: %d", id, article.Views)
 			return
 		} else {
@@ -310,8 +310,8 @@ func (r *ArticleRepository) FindPage(ctx context.Context, page, pageSize int) ([
 	}
 
 	// 存入缓存
-	r.cache.Set(cacheKey, articles, ExpireShort)
-	r.cache.Set(cacheCountKey, total, ExpireLong)
+	_ = r.cache.Set(cacheKey, articles, ExpireShort)
+	_ = r.cache.Set(cacheCountKey, total, ExpireLong)
 	logrus.Debugf("文章分页已缓存: %d, %d", page, pageSize)
 
 	return articles, total, nil

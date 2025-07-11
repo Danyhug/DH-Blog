@@ -154,7 +154,7 @@ func (r *LogRepository) BanIP(ip, reason string, expireTime time.Time) error {
 	if err == nil {
 		// 更新缓存
 		cacheKey := getIPBlacklistCacheKey(ip)
-		r.cache.Set(cacheKey, true, IPBlacklistCacheExpire)
+		_ = r.cache.Set(cacheKey, true, IPBlacklistCacheExpire)
 		logrus.Debugf("IP %s 已加入黑名单并缓存", ip)
 	} else {
 		logrus.Errorf("将IP添加到黑名单失败: %s, 错误: %v", ip, err)
@@ -169,7 +169,7 @@ func (r *LogRepository) UnbanIP(ip string) error {
 	if err == nil {
 		// 更新缓存
 		cacheKey := getIPBlacklistCacheKey(ip)
-		r.cache.Set(cacheKey, false, IPBlacklistCacheExpire)
+		_ = r.cache.Set(cacheKey, false, IPBlacklistCacheExpire)
 		logrus.Debugf("IP %s 已从黑名单移除并更新缓存", ip)
 	} else {
 		logrus.Errorf("从黑名单移除IP失败: %s, 错误: %v", ip, err)
@@ -206,7 +206,7 @@ func (r *LogRepository) IsIPBanned(ip string) (bool, error) {
 	isBanned := count > 0
 
 	// 将结果存入缓存
-	r.cache.Set(cacheKey, isBanned, IPBlacklistCacheExpire)
+	_ = r.cache.Set(cacheKey, isBanned, IPBlacklistCacheExpire)
 	logrus.Debugf("IP %s 的黑名单状态已缓存: %v", ip, isBanned)
 
 	return isBanned, nil
