@@ -14,102 +14,111 @@
     
     <!-- 桌面端视图 -->
     <div v-else class="desktop-view">
-      <div class="browser-header">
-        <div class="header-left">
-          <div class="breadcrumb">
-            <HomeIcon class="icon-sm" @click="navigateToRoot" />
-            <template v-if="pathSegments.length > 0">
-              <ChevronRightIcon class="icon-xs" />
-              <template v-for="(segment, index) in pathSegments" :key="index">
-                <span 
-                  class="path-segment" 
-                  @click="navigateToPathSegment(index)"
-                >{{ segment.name }}</span>
-                <ChevronRightIcon v-if="index < pathSegments.length - 1" class="icon-xs" />
+      <!-- 文件预览组件 -->
+      <FilePreview
+        v-if="showFilePreview"
+        :file="selectedFile"
+        @close="closeFilePreview"
+      />
+      
+      <template v-else>
+        <div class="browser-header">
+          <div class="header-left">
+            <div class="breadcrumb">
+              <HomeIcon class="icon-sm" @click="navigateToRoot" />
+              <template v-if="pathSegments.length > 0">
+                <ChevronRightIcon class="icon-xs" />
+                <template v-for="(segment, index) in pathSegments" :key="index">
+                  <span 
+                    class="path-segment" 
+                    @click="navigateToPathSegment(index)"
+                  >{{ segment.name }}</span>
+                  <ChevronRightIcon v-if="index < pathSegments.length - 1" class="icon-xs" />
+                </template>
               </template>
-            </template>
-            <span v-else>我的网盘</span>
+              <span v-else>我的网盘</span>
+            </div>
+          </div>
+          <div class="header-right">
+            <button class="icon-btn" @click="openSettings">
+              <SettingsIcon class="icon-sm" />
+            </button>
           </div>
         </div>
-        <div class="header-right">
-          <button class="icon-btn" @click="openSettings">
-            <SettingsIcon class="icon-sm" />
-          </button>
-        </div>
-      </div>
 
-      <div class="toolbar">
-        <div class="toolbar-left">
-          <button v-if="currentParentId" class="btn-outline" @click="navigateToParent">
-            <ArrowLeftIcon class="icon-sm" />
-            返回上级
-          </button>
-          <button class="btn-primary" @click="createNewFolder">
-            <PlusIcon class="icon-sm" />
-            新建文件夹
-          </button>
-          <button class="btn-outline" @click="openUploadModal">
-            <UploadIcon class="icon-sm" />
-            上传
-          </button>
-        </div>
-        <div class="toolbar-right">
-          <div class="search-container">
-            <SearchIcon class="search-icon" />
-            <input type="text" v-model="searchQuery" placeholder="搜索文件..." class="search-input" />
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <button v-if="currentParentId" class="btn-outline" @click="navigateToParent">
+              <ArrowLeftIcon class="icon-sm" />
+              返回上级
+            </button>
+            <button class="btn-primary" @click="createNewFolder">
+              <PlusIcon class="icon-sm" />
+              新建文件夹
+            </button>
+            <button class="btn-outline" @click="openUploadModal">
+              <UploadIcon class="icon-sm" />
+              上传
+            </button>
+          </div>
+          <div class="toolbar-right">
+            <div class="search-container">
+              <SearchIcon class="search-icon" />
+              <input type="text" v-model="searchQuery" placeholder="搜索文件..." class="search-input" />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="file-container">
-        <transition name="simple-fade" mode="out-in">
-          <div v-if="isLoading" class="loading-container">
-            <div class="loading-spinner"></div>
-            <p>加载中...</p>
-          </div>
-          <div v-else :key="currentParentId || 'root'" class="file-container-inner">
-            <div class="file-grid">
-              <div
-                v-for="(file, index) in filteredFiles"
-                :key="file.id || index"
-                class="file-item"
-                :class="{ 'folder-item': file.type === 'folder' }"
-                @click="handleFileClick(file)"
-                @contextmenu.prevent="showContextMenu($event, file)"
-              >
-                <div class="file-content">
-                  <div class="file-icon-container">
-                    <FolderIcon v-if="file.type === 'folder'" class="folder-icon" />
-                    <component 
-                      v-else-if="file.icon" 
-                      :is="file.icon" 
-                      :class="[
-                        'file-icon', 
-                        file.type === 'image' ? 'image-icon' : '',
-                        file.type === 'video' ? 'video-icon' : '',
-                        file.type === 'audio' ? 'audio-icon' : '',
-                        file.type === 'code' ? 'code-icon' : '',
-                        file.type === 'pdf' ? 'pdf-icon' : '',
-                        file.type === 'archive' ? 'archive-icon' : '',
-                        file.type === 'spreadsheet' ? 'spreadsheet-icon' : '',
-                        file.type === 'presentation' ? 'presentation-icon' : ''
-                      ]"
-                    />
-                    <FileIcon v-else class="file-icon" />
-                  </div>
-                  <div class="file-info">
-                    <p class="file-name" :title="file.name">{{ file.name }}</p>
-                    <div class="file-details">
-                      <p class="file-size">{{ file.size }}</p>
-                      <p class="file-modified" v-if="file.modified">{{ file.modified }}</p>
+        <div class="file-container">
+          <transition name="simple-fade" mode="out-in">
+            <div v-if="isLoading" class="loading-container">
+              <div class="loading-spinner"></div>
+              <p>加载中...</p>
+            </div>
+            <div v-else :key="currentParentId || 'root'" class="file-container-inner">
+              <div class="file-grid">
+                <div
+                  v-for="(file, index) in filteredFiles"
+                  :key="file.id || index"
+                  class="file-item"
+                  :class="{ 'folder-item': file.type === 'folder' }"
+                  @click="handleFileClick(file)"
+                  @contextmenu.prevent="showContextMenu($event, file)"
+                >
+                  <div class="file-content">
+                    <div class="file-icon-container">
+                      <FolderIcon v-if="file.type === 'folder'" class="folder-icon" />
+                      <component 
+                        v-else-if="file.icon" 
+                        :is="file.icon" 
+                        :class="[
+                          'file-icon', 
+                          file.type === 'image' ? 'image-icon' : '',
+                          file.type === 'video' ? 'video-icon' : '',
+                          file.type === 'audio' ? 'audio-icon' : '',
+                          file.type === 'code' ? 'code-icon' : '',
+                          file.type === 'pdf' ? 'pdf-icon' : '',
+                          file.type === 'archive' ? 'archive-icon' : '',
+                          file.type === 'spreadsheet' ? 'spreadsheet-icon' : '',
+                          file.type === 'presentation' ? 'presentation-icon' : ''
+                        ]"
+                      />
+                      <FileIcon v-else class="file-icon" />
+                    </div>
+                    <div class="file-info">
+                      <p class="file-name" :title="file.name">{{ file.name }}</p>
+                      <div class="file-details">
+                        <p class="file-size">{{ file.size }}</p>
+                        <p class="file-modified" v-if="file.modified">{{ file.modified }}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </transition>
-      </div>
+          </transition>
+        </div>
+      </template>
     </div>
     
     <!-- 设置弹窗 - 按需显示 -->
@@ -224,12 +233,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, provide } from 'vue'
 import type { FileItem } from '../utils/types/file'
 import SettingsModal from '../modals/SettingsModal.vue'
 import UploadModal from '../modals/UploadModal.vue'
 import ShareLinkPopup from '../modals/ShareLinkPopup.vue'
 import MobileView from './MobileView.vue'
+import FilePreview from './FilePreview.vue'
 import {
   HomeIcon,
   ChevronRightIcon,
@@ -271,6 +281,7 @@ const selectedFile = ref<FileItem>({
   type: 'file',
   size: ''
 })
+const showFilePreview = ref(false)
 const contextMenu = ref({
   show: false,
   x: 0,
@@ -301,6 +312,11 @@ interface PathSegment {
 }
 const pathSegments = ref<PathSegment[]>([])
 
+// 为FilePreview组件提供路径导航功能
+provide('pathSegments', pathSegments.value)
+provide('navigateToRoot', navigateToRoot)
+provide('navigateToPathSegment', navigateToPathSegment)
+
 // 文件数据
 const files = ref<FileItem[]>([])
 const apiFiles = ref<FileInfo[]>([])
@@ -310,6 +326,8 @@ const mobileFiles = ref<FileItem[]>([])
 
 // 将API返回的文件数据转换为组件使用的格式
 const convertedFiles = computed<FileItem[]>(() => {
+  console.log('WebDriveView - API返回的文件数据:', apiFiles.value);
+  
   return apiFiles.value.map(file => {
     // 确定文件图标
     let icon;
@@ -424,8 +442,12 @@ const convertedFiles = computed<FileItem[]>(() => {
       });
     };
 
+    // 确保文件ID存在且转换为字符串
+    const fileId = file.id ? file.id.toString() : '';
+    console.log('WebDriveView - 处理文件:', file.name, '原始ID:', file.id, '转换后ID:', fileId);
+
     return {
-      id: file.id.toString(), // 转换为字符串，保持与前端接口一致
+      id: fileId, // 确保ID存在且为字符串
       name: file.name,
       type: fileType,
       size: formatSize(file.size),
@@ -662,6 +684,8 @@ function cancelDialog() {
 
 // 处理文件点击
 function handleFileClick(file: FileItem) {
+  console.log('WebDriveView - 点击文件:', file.name, '文件ID:', file.id, '文件类型:', file.type);
+  
   if (file.type === 'folder') {
     // 如果是文件夹，进入该文件夹
     const folderId = file.id as string;
@@ -679,9 +703,16 @@ function handleFileClick(file: FileItem) {
     // 获取文件列表
     fetchFiles(folderId);
   } else {
-    // 如果是文件，预览或下载
-    downloadFile(file);
+    // 如果是文件，打开预览
+    console.log('WebDriveView - 准备预览文件:', file);
+    selectedFile.value = file;
+    showFilePreview.value = true;
   }
+}
+
+// 关闭文件预览
+function closeFilePreview() {
+  showFilePreview.value = false;
 }
 
 // 处理移动端文件打开
