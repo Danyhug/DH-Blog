@@ -11,6 +11,7 @@ import (
 	"dh-blog/internal/router"
 	"dh-blog/internal/service"
 	"dh-blog/internal/task"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -53,11 +54,18 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	logRepo := repository.NewLogRepository(db, cache)
 	articleRepo := repository.NewArticleRepository(db, categoryRepo, tagRepo, cache)
 	systemSettingRepo := repository.NewSystemSettingRepository(db, cache)
+	// 添加文件存储库
+	fileRepo := repository.NewFileRepository(db)
+
+	// 文件存储根目录
+	fileStoragePath := filepath.Join(dataDir, "files")
 
 	// 初始化服务
 	uploadService := service.NewUploadService(conf, dataDir)
 	aiService := service.NewAIService(systemSettingRepo, cacheService.GetCache())
 	ipService := service.NewIPService(logRepo)
+	// 添加文件服务
+	fileService := service.NewFileService(fileRepo, fileStoragePath)
 
 	// 初始化任务管理器
 	taskManager := task.NewTaskManager(db, aiService, tagRepo)
@@ -75,6 +83,18 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	logHandler := handler.NewLogHandler(logRepo)
 	adminHandler := handler.NewAdminHandler(uploadService, aiService)
 	systemConfigHandler := handler.NewSystemConfigHandler(systemSettingRepo)
+	// 添加文件处理器
+	fileHandler := handler.NewFileHandler(fileService)
 
-	return router.Init(articleHandler, userHandler, commentHandler, logHandler, adminHandler, systemConfigHandler, ipService, staticFilesAbsPath)
+	return router.Init(
+		articleHandler,
+		userHandler,
+		commentHandler,
+		logHandler,
+		adminHandler,
+		systemConfigHandler,
+		fileHandler,
+		ipService,
+		staticFilesAbsPath,
+	)
 }

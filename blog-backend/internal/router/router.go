@@ -7,12 +7,23 @@ import (
 	"dh-blog/internal/handler"
 	"dh-blog/internal/middleware"
 	"dh-blog/internal/service"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 // Init 初始化并配置 Gin 路由器
-func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandler, commentHandler *handler.CommentHandler, logHandler *handler.LogHandler, adminHandler *handler.AdminHandler, systemConfigHandler *handler.SystemConfigHandler, ipService service.IPService, staticFilesAbsPath string) *gin.Engine {
+func Init(
+	articleHandler *handler.ArticleHandler,
+	userHandler *handler.UserHandler,
+	commentHandler *handler.CommentHandler,
+	logHandler *handler.LogHandler,
+	adminHandler *handler.AdminHandler,
+	systemConfigHandler *handler.SystemConfigHandler,
+	fileHandler *handler.FileHandler,
+	ipService service.IPService,
+	staticFilesAbsPath string,
+) *gin.Engine {
 
 	// 使用原始的路由配置
 	router := gin.Default()
@@ -95,6 +106,17 @@ func Init(articleHandler *handler.ArticleHandler, userHandler *handler.UserHandl
 		// 系统配置 API
 		adminAPI.GET("/config", systemConfigHandler.GetConfigs)
 		adminAPI.PUT("/config", systemConfigHandler.UpdateConfigs)
+	}
+
+	fileApi := router.Group("/api/files")
+	fileApi.Use(middleware.JWTMiddleware())
+	{
+		fileApi.GET("/list", fileHandler.ListFiles)
+		fileApi.POST("/upload", fileHandler.UploadFile)
+		fileApi.POST("/folder", fileHandler.CreateFolder)
+		fileApi.GET("/download/:id", fileHandler.DownloadFile)
+		fileApi.PUT("/rename/:id", fileHandler.RenameFile)
+		fileApi.DELETE("/:id", fileHandler.DeleteFile)
 	}
 
 	// 开放静态文件服务

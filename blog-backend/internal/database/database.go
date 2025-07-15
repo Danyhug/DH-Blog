@@ -9,6 +9,7 @@ import (
 
 	"dh-blog/internal/config"
 	"dh-blog/internal/model"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -63,6 +64,7 @@ func Init(conf *config.Config) (*gorm.DB, error) {
 		&model.SystemSetting{},
 		&model.IPBlacklist{},
 		&model.TagRelation{},
+		&model.File{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("数据库自动迁移失败: %w", err)

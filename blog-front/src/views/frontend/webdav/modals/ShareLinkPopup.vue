@@ -54,6 +54,8 @@
 import { ref, computed } from 'vue'
 import { XIcon, FileTextIcon } from '../utils/icons'
 import type { FileItem } from '../utils/types/file'
+import { getDownloadUrl } from '@/api/file'
+import { SERVER_URL } from '@/types/Constant'
 
 // 定义属性
 interface Props {
@@ -63,16 +65,21 @@ interface Props {
 // 发出事件
 const emit = defineEmits(['close'])
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 // 状态
 const allowEditing = ref(false)
 const expiryDays = ref(7)
 const urlInput = ref<HTMLInputElement | null>(null)
+const copySuccess = ref(false)
 
 // 计算属性
 const shareUrl = computed(() => {
-  return `https://drive.example.com/s/${generateRandomId()}`
+  if (props.file && props.file.id) {
+    // 返回实际的下载链接
+    return `${SERVER_URL}${getDownloadUrl(props.file.id)}`;
+  }
+  return `${SERVER_URL}/files/download/not-found`;
 })
 
 const expiryText = computed(() => {
@@ -87,8 +94,23 @@ function generateRandomId() {
 function copyUrl() {
   if (urlInput.value) {
     urlInput.value.select()
+    try {
+      navigator.clipboard.writeText(shareUrl.value).then(() => {
+        copySuccess.value = true
+        ElMessage.success('链接已复制到剪贴板')
+        setTimeout(() => {
+          copySuccess.value = false
+        }, 2000)
+      })
+    } catch (err) {
+      // 降级方案
     document.execCommand('copy')
-    alert('链接已复制到剪贴板')
+      copySuccess.value = true
+      ElMessage.success('链接已复制到剪贴板')
+      setTimeout(() => {
+        copySuccess.value = false
+      }, 2000)
+    }
   }
 }
 

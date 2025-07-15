@@ -127,7 +127,7 @@ export const FolderIcon = defineComponent({
       stroke: 'currentColor',
       'stroke-width': '2'
     }, [
-      h('path', { d: 'M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z' })
+      h('path', { d: 'M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z' })
     ])
 }
 })
@@ -273,7 +273,7 @@ export const XIcon = defineComponent({
       stroke: 'currentColor',
       'stroke-width': '2'
     }, [
-      h('path', { d: 'M18 6 6 18' }),
+      h('path', { d: 'm18 6-12 12' }),
       h('path', { d: 'm6 6 12 12' })
     ])
   }
@@ -316,6 +316,102 @@ export const StarIcon = defineComponent({
       'stroke-width': '2'
     }, [
       h('polygon', { points: '12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26' })
+    ])
+  }
+})
+
+export const ArrowLeftIcon = defineComponent({
+  render() {
+    return h('svg', {
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-width': '2'
+    }, [
+      h('path', { d: 'm15 18-6-6 6-6' })
+    ])
+  }
+})
+
+export const FileCodeIcon = defineComponent({
+  render() {
+    return h('svg', {
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-width': '2'
+    }, [
+      h('path', { d: 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z' }),
+      h('path', { d: 'M14 2v4a2 2 0 0 0 2 2h4' }),
+      h('path', { d: 'm9 15-2-2 2-2' }),
+      h('path', { d: 'm15 11 2 2-2 2' })
+    ])
+  }
+})
+
+export const FileZipIcon = defineComponent({
+  render() {
+    return h('svg', {
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-width': '2'
+    }, [
+      h('path', { d: 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z' }),
+      h('path', { d: 'M14 2v4a2 2 0 0 0 2 2h4' }),
+      h('path', { d: 'M12 18v-6' }),
+      h('path', { d: 'M10 12h4' }),
+      h('path', { d: 'M10 18h4' })
+    ])
+  }
+})
+
+export const FilePdfIcon = defineComponent({
+  render() {
+    return h('svg', {
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-width': '2'
+    }, [
+      h('path', { d: 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z' }),
+      h('path', { d: 'M14 2v4a2 2 0 0 0 2 2h4' }),
+      h('path', { d: 'M10 10.3c.2-.4.5-.8.9-1a2.1 2.1 0 0 1 2.6.4c.3.4.5.8.5 1.3 0 1.3-2 2-2 2' }),
+      h('path', { d: 'M12 17v-5' })
+    ])
+  }
+})
+
+export const FileSpreadsheetIcon = defineComponent({
+  render() {
+    return h('svg', {
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-width': '2'
+    }, [
+      h('path', { d: 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z' }),
+      h('path', { d: 'M14 2v4a2 2 0 0 0 2 2h4' }),
+      h('path', { d: 'M8 13h2' }),
+      h('path', { d: 'M14 13h2' }),
+      h('path', { d: 'M8 17h2' }),
+      h('path', { d: 'M14 17h2' })
+    ])
+  }
+})
+
+export const FilePresentationIcon = defineComponent({
+  render() {
+    return h('svg', {
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-width': '2'
+    }, [
+      h('path', { d: 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z' }),
+      h('path', { d: 'M14 2v4a2 2 0 0 0 2 2h4' }),
+      h('rect', { x: '8', y: '12', width: '8', height: '6', rx: '1' }),
+      h('path', { d: 'M10 12v-2a2 2 0 0 1 4 0v2' })
     ])
   }
 })

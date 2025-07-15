@@ -1,9 +1,12 @@
 import type { Component } from 'vue'
+import type { FileInfo } from '@/api/file'
 
 export interface FileItem {
-  name: string
-  type: 'file' | 'folder' | 'image' | 'video' | 'audio'
-  size: string
-  modified?: string
-  icon?: Component
+  id?: string;
+  name: string;
+  type: 'file' | 'folder' | 'image' | 'video' | 'audio' | 'code' | 'pdf' | 'archive' | 'spreadsheet' | 'presentation';
+  size: string;
+  modified?: string;
+  icon?: Component;
+  originalFile?: FileInfo;
 } 
