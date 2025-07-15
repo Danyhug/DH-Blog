@@ -326,8 +326,6 @@ const mobileFiles = ref<FileItem[]>([])
 
 // 将API返回的文件数据转换为组件使用的格式
 const convertedFiles = computed<FileItem[]>(() => {
-  console.log('WebDriveView - API返回的文件数据:', apiFiles.value);
-  
   return apiFiles.value.map(file => {
     // 确定文件图标
     let icon;
@@ -444,8 +442,7 @@ const convertedFiles = computed<FileItem[]>(() => {
 
     // 确保文件ID存在且转换为字符串
     const fileId = file.id ? file.id.toString() : '';
-    console.log('WebDriveView - 处理文件:', file.name, '原始ID:', file.id, '转换后ID:', fileId);
-
+    
     return {
       id: fileId, // 确保ID存在且为字符串
       name: file.name,
@@ -635,8 +632,6 @@ function enableExtensionEdit(event: MouseEvent) {
   // 阻止事件冒泡，防止触发其他点击事件
   event.stopPropagation();
   
-  console.log('Double click detected!'); // 调试信息
-  
   if (!editingExtension.value) {
     editingExtension.value = true;
     
@@ -646,9 +641,6 @@ function enableExtensionEdit(event: MouseEvent) {
         extensionInput.value.disabled = false;
         extensionInput.value.focus();
         extensionInput.value.select();
-        console.log('Extension input focused'); // 调试信息
-      } else {
-        console.log('Extension input not found'); // 调试信息
       }
     });
   }
@@ -684,8 +676,6 @@ function cancelDialog() {
 
 // 处理文件点击
 function handleFileClick(file: FileItem) {
-  console.log('WebDriveView - 点击文件:', file.name, '文件ID:', file.id, '文件类型:', file.type);
-  
   if (file.type === 'folder') {
     // 如果是文件夹，进入该文件夹
     const folderId = file.id as string;
@@ -704,7 +694,6 @@ function handleFileClick(file: FileItem) {
     fetchFiles(folderId);
   } else {
     // 如果是文件，打开预览
-    console.log('WebDriveView - 准备预览文件:', file);
     selectedFile.value = file;
     showFilePreview.value = true;
   }

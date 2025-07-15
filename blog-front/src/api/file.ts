@@ -1,9 +1,6 @@
 import request from '@/api/axios'
 import { SERVER_URL } from "@/types/Constant";
 
-// 输出SERVER_URL的值，用于调试
-console.log('文件API - SERVER_URL的值:', SERVER_URL);
-
 /**
  * 文件类型定义
  */
@@ -66,7 +63,6 @@ export const getDownloadUrl = (fileId: string): string => {
   // 检查token是否已经包含Bearer前缀，如果包含则直接使用，否则不添加前缀
   const tokenParam = token.startsWith("Bearer ") ? token.substring(7) : token;
   const url = `${SERVER_URL}/files/download/${fileId}?token=${tokenParam}`;
-  console.log('生成下载URL:', url, '文件ID:', fileId, 'SERVER_URL:', SERVER_URL);
   return url;
 };
 
