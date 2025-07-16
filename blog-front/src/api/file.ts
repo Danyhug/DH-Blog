@@ -18,41 +18,100 @@ export interface FileInfo {
 }
 
 /**
- * 列出文件
- * @param parentId 父目录ID，空表示根目录
+ * 获取系统目录树
+ * @param rootPath 根目录路径，为空则使用系统根目录
+ * @param maxDepth 最大深度，默认为2
+ * @returns 目录树结构
  */
-export const listFiles = (parentId?: string): Promise<FileInfo[]> => {
-  return request.get(`/files/list${parentId ? `?parentId=${parentId}` : ''}`);
-};
+export const getDirectoryTree = (rootPath?: string, maxDepth?: number): Promise<any> => {
+  let url = '/files/directory-tree'
+  const params: Record<string, string> = {}
+  
+  if (rootPath) {
+    params.rootPath = rootPath
+  }
+  
+  if (maxDepth !== undefined) {
+    params.maxDepth = maxDepth.toString()
+  }
+  
+  return request.get(url, { params })
+}
 
 /**
- * 创建文件夹
- * @param parentId 父目录ID，空表示根目录
- * @param folderName 文件夹名称
+ * 列出文件
+ * @param parentId 父目录ID，为空则获取根目录
+ * @returns 文件列表
  */
-export const createFolder = (parentId: string, folderName: string): Promise<FileInfo> => {
-  return request.post("/files/folder", {
-    parentId,
-    folderName
-  });
-};
+export const listFiles = (parentId?: string): Promise<any> => {
+  return request.get('/files/list', {
+    params: { parentId }
+  })
+}
 
 /**
  * 上传文件
- * @param parentId 父目录ID，空表示根目录
  * @param file 文件对象
+ * @param parentId 父目录ID，为空则上传到根目录
+ * @returns 上传结果
  */
-export const uploadFile = (parentId: string, file: File): Promise<FileInfo> => {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("parentId", parentId);
+export const uploadFile = (file: File, parentId?: string): Promise<any> => {
+  const formData = new FormData()
+  formData.append('file', file)
   
-  return request.post("/files/upload", formData, {
+  if (parentId) {
+    formData.append('parentId', parentId)
+  }
+  
+  return request.post('/files/upload', formData, {
     headers: {
-      "Content-Type": "multipart/form-data"
+      'Content-Type': 'multipart/form-data'
     }
-  });
-};
+  })
+}
+
+/**
+ * 创建文件夹
+ * @param folderName 文件夹名称
+ * @param parentId 父目录ID，为空则创建在根目录
+ * @returns 创建结果
+ */
+export const createFolder = (folderName: string, parentId?: string): Promise<any> => {
+  return request.post('/files/folder', {
+    folderName,
+    parentId: parentId || ''
+  })
+}
+
+/**
+ * 重命名文件或文件夹
+ * @param fileId 文件ID
+ * @param newName 新名称
+ * @returns 重命名结果
+ */
+export const renameFile = (fileId: string, newName: string): Promise<any> => {
+  return request.put(`/files/rename/${fileId}`, {
+    newName
+  })
+}
+
+/**
+ * 删除文件或文件夹
+ * @param fileId 文件ID
+ * @returns 删除结果
+ */
+export const deleteFile = (fileId: string): Promise<any> => {
+  return request.delete(`/files/${fileId}`)
+}
+
+/**
+ * 更新存储路径
+ * @param path 新的存储路径
+ * @returns 更新结果
+ */
+export const updateStoragePath = (path: string): Promise<any> => {
+  return request.put('/files/storage-path', { path })
+}
 
 /**
  * 获取文件下载链接
@@ -64,21 +123,4 @@ export const getDownloadUrl = (fileId: string): string => {
   const tokenParam = token.startsWith("Bearer ") ? token.substring(7) : token;
   const url = `${SERVER_URL}/files/download/${fileId}?token=${tokenParam}`;
   return url;
-};
-
-/**
- * 重命名文件或文件夹
- * @param fileId 文件ID
- * @param newName 新名称
- */
-export const renameFile = (fileId: string, newName: string): Promise<void> => {
-  return request.put(`/files/rename/${fileId}`, { newName });
-};
-
-/**
- * 删除文件或文件夹
- * @param fileId 文件ID
- */
-export const deleteFile = (fileId: string): Promise<void> => {
-  return request.delete(`/files/${fileId}`);
 }; 

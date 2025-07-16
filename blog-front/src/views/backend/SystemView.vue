@@ -60,17 +60,67 @@
                             placeholder="/path/to/your/storage/directory"
                         >
                             <template #append>
-                                <el-button @click="testStoragePath">测试路径</el-button>
+                                <el-button @click="openDirectorySelector">选择路径</el-button>
                             </template>
                         </el-input>
                         <div class="el-form-item__extra" style="color: #909399; font-size: 12px; margin-top: 5px;">
-                            请设置一个服务器上有读写权限的绝对路径，用于存储上传的文件。修改后即时生效，不需要重启服务器。
+                            请设置一个服务器上有读写权限的绝对路径，用于存储上传的文件。保存后即时生效，不需要重启服务器。
                         </div>
                         <div class="el-form-item__extra" style="color: #F56C6C; font-size: 12px; margin-top: 5px; font-weight: bold;">
-                            警告：更改存储路径会清空文件表，所有文件记录将被删除！请确保已备份重要文件。
+                            注意：更改存储路径会清空文件表，所有文件记录将被删除并重新扫描！
                         </div>
                     </el-form-item>
                 </el-form>
+                
+                <!-- 目录选择对话框 -->
+                <el-dialog
+                    v-model="directoryDialogVisible"
+                    title="选择存储路径"
+                    width="60%"
+                >
+                    <div class="directory-selector">
+                        <div class="directory-path">
+                            <span>当前路径: {{ currentPath || '/' }}</span>
+                            <el-button size="small" @click="loadParentDirectory" :disabled="!currentPath">上一级</el-button>
+                        </div>
+                        
+                        <el-tree
+                            :data="directoryTree"
+                            node-key="path"
+                            :props="{
+                                label: 'name',
+                                children: 'children',
+                                isLeaf: (data: any) => !data.isDir
+                            }"
+                            @node-click="handleNodeClick"
+                            :load="loadNode"
+                            lazy
+                            :default-expanded-keys="expandedKeys"
+                        >
+                            <template #default="{ node, data }">
+                                <span class="custom-tree-node">
+                                    <span>{{ node.label }}</span>
+                                    <el-button
+                                        v-if="data.isDir"
+                                        size="small"
+                                        text
+                                        @click.stop="selectDirectory(data.path)"
+                                    >
+                                        选择
+                                    </el-button>
+                                </span>
+                            </template>
+                        </el-tree>
+                    </div>
+                    <template #footer>
+                        <span class="dialog-footer">
+                            <el-button @click="directoryDialogVisible = false">取消</el-button>
+                            <el-button type="primary" @click="confirmDirectorySelection">
+                                确认
+                            </el-button>
+                        </span>
+                    </template>
+                </el-dialog>
             </el-tab-pane>
             <el-tab-pane label="AI设置" name="ai">
                 <el-form :model="aiConfig" label-width="120px">
@@ -138,8 +188,8 @@ import {
     getEmailConfig, updateEmailConfig,
     getAIConfig, updateAIConfig,
     getStorageConfig, updateStorageConfig,
-    updateStoragePath 
 } from '@/api/admin';
+import { getDirectoryTree } from '@/api/file';
 import type { SystemConfig, BlogConfig, EmailConfig, AIConfig, StorageConfig } from '@/types/SystemConfig';
 import { ElMessage, ElMessageBox } from 'element-plus';
 
@@ -160,6 +210,13 @@ const emailConfig = ref<EmailConfig>({});
 const aiConfig = ref<AIConfig>({});
 const storageConfig = ref<StorageConfig>({});
 const isEditingPrompt = ref(false);
+
+// 目录选择相关
+const directoryDialogVisible = ref(false);
+const directoryTree = ref<any[]>([]);
+const currentPath = ref('');
+const selectedPath = ref('');
+const expandedKeys = ref<string[]>([]);
 
 const promptTags = ref([
     {
@@ -195,6 +252,75 @@ const stopEditing = () => {
 const selectPrompt = (prompt: string) => {
     aiConfig.value.ai_prompt = prompt;
     isEditingPrompt.value = false; // Switch back to display mode after selecting
+};
+
+// 打开目录选择器
+const openDirectorySelector = async () => {
+    directoryDialogVisible.value = true;
+    currentPath.value = '';
+    selectedPath.value = '';
+    expandedKeys.value = [];
+    
+    try {
+        const res = await getDirectoryTree();
+        directoryTree.value = [res];
+    } catch (error) {
+        ElMessage.error('获取目录树失败');
+    }
+};
+
+// 加载节点的子节点
+const loadNode = async (node: any, resolve: (data: any[]) => void) => {
+    if (node.level === 0) {
+        resolve(directoryTree.value);
+        return;
+    }
+    
+    try {
+        const res = await getDirectoryTree(node.data.path, 1);
+        if (res && res.children) {
+            resolve(res.children);
+        } else {
+            resolve([]);
+        }
+    } catch (error) {
+        ElMessage.error('加载子目录失败');
+        resolve([]);
+    }
+};
+
+// 处理节点点击
+const handleNodeClick = (data: { isDir: boolean, path: string }) => {
+    if (data.isDir) {
+        currentPath.value = data.path;
+    }
+};
+
+// 加载父目录
+const loadParentDirectory = async () => {
+    if (!currentPath.value) return;
+    
+    const parentPath = currentPath.value.substring(0, currentPath.value.lastIndexOf('/'));
+    try {
+        const res = await getDirectoryTree(parentPath, 1);
+        directoryTree.value = [res];
+        currentPath.value = parentPath || '';
+    } catch (error) {
+        ElMessage.error('加载父目录失败');
+    }
+};
+
+// 选择目录
+const selectDirectory = (path: string) => {
+    selectedPath.value = path;
+};
+
+// 确认目录选择
+const confirmDirectorySelection = () => {
+    if (selectedPath.value) {
+        storageConfig.value.file_storage_path = selectedPath.value;
+    }
+    directoryDialogVisible.value = false;
 };
 
 // 监听选项卡变化，按需加载不同类型的配置
@@ -250,36 +376,22 @@ const loadStorageConfig = async () => {
     }
 };
 
-// 测试存储路径是否可用
-const testStoragePath = async () => {
-    if (!storageConfig.value.file_storage_path) {
-        ElMessage.warning('请先输入存储路径');
-        return;
-    }
-
+// 保存配置
+const saveConfig = async () => {
     try {
-        // 添加确认对话框
-        await ElMessageBox.confirm(
-            '警告：更改存储路径会清空文件表，所有文件记录将被删除！请确保已备份重要文件。',
-            '确认更改存储路径',
-            {
-                confirmButtonText: '确认修改',
-                cancelButtonText: '取消',
-                type: 'warning',
-            }
-        );
-        
-        // 用户点击确认，执行路径更新
-        try {
+        if (activeTab.value === 'site') {
+            await updateBlogConfig(blogConfig.value);
+        } else if (activeTab.value === 'email') {
+            await updateEmailConfig(emailConfig.value);
+        } else if (activeTab.value === 'storage') {
+            // 直接更新存储配置，不显示确认弹窗
             await updateStorageConfig(storageConfig.value);
-            ElMessage.success('存储路径已更新，文件表已清空');
-        } catch (error) {
-            const errMsg = error instanceof Error ? error.message : '无法访问或写入该路径';
-            ElMessage.error(`存储路径更新失败: ${errMsg}`);
+        } else if (activeTab.value === 'ai') {
+            await updateAIConfig(aiConfig.value);
         }
-    } catch {
-        // 用户取消，不执行任何操作
-        ElMessage.info('已取消更改存储路径');
+        ElMessage.success('保存成功');
+    } catch (error) {
+        ElMessage.error('保存失败');
     }
 };
 
@@ -330,24 +442,6 @@ onMounted(async () => {
         await loadAIConfig();
     }
 });
-
-// 保存配置
-const saveConfig = async () => {
-    try {
-        if (activeTab.value === 'site') {
-            await updateBlogConfig(blogConfig.value);
-        } else if (activeTab.value === 'email') {
-            await updateEmailConfig(emailConfig.value);
-        } else if (activeTab.value === 'storage') {
-            await updateStorageConfig(storageConfig.value);
-        } else if (activeTab.value === 'ai') {
-            await updateAIConfig(aiConfig.value);
-        }
-        ElMessage.success('保存成功');
-    } catch (error) {
-        ElMessage.error('保存失败');
-    }
-};
 </script>
 
 <style scoped lang="less">
@@ -386,5 +480,28 @@ const saveConfig = async () => {
 
 .prompt-tag {
     cursor: pointer;
+}
+
+.directory-selector {
+    height: 400px;
+    overflow-y: auto;
+}
+
+.directory-path {
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 10px;
+    background-color: #f5f7fa;
+    border-radius: 4px;
+}
+
+.custom-tree-node {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: 8px;
 }
 </style>

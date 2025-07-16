@@ -272,21 +272,11 @@ func (h *SystemConfigHandler) UpdateStorageConfig(c *gin.Context) {
 		return
 	}
 
-	// 验证路径是否存在或可创建
-	if err := os.MkdirAll(storageConfig.FileStoragePath, os.ModePerm); err != nil {
-		h.ErrorWithMessage(c, "创建存储路径失败: "+err.Error())
+	// 验证路径是否存在
+	if _, err := os.Stat(storageConfig.FileStoragePath); os.IsNotExist(err) {
+		h.ErrorWithMessage(c, "存储路径不存在: "+err.Error())
 		return
 	}
-
-	// 测试路径可写性
-	testFile := storageConfig.FileStoragePath + "/.write_test"
-	f, err := os.Create(testFile)
-	if err != nil {
-		h.ErrorWithMessage(c, "存储路径不可写: "+err.Error())
-		return
-	}
-	f.Close()
-	os.Remove(testFile)
 
 	// 使用文件服务更新存储路径
 	if err := h.fileService.UpdateStoragePath(storageConfig.FileStoragePath); err != nil {
@@ -334,21 +324,11 @@ func (h *SystemConfigHandler) UpdateStoragePath(c *gin.Context) {
 		return
 	}
 
-	// 验证路径是否存在或可创建
-	if err := os.MkdirAll(req.Path, os.ModePerm); err != nil {
-		h.ErrorWithMessage(c, "创建存储路径失败: "+err.Error())
+	// 验证路径是否存在
+	if _, err := os.Stat(req.Path); os.IsNotExist(err) {
+		h.ErrorWithMessage(c, "存储路径不存在: "+err.Error())
 		return
 	}
-
-	// 测试路径可写性
-	testFile := req.Path + "/.write_test"
-	f, err := os.Create(testFile)
-	if err != nil {
-		h.ErrorWithMessage(c, "存储路径不可写: "+err.Error())
-		return
-	}
-	f.Close()
-	os.Remove(testFile)
 
 	// 使用文件服务更新存储路径
 	if err := h.fileService.UpdateStoragePath(req.Path); err != nil {

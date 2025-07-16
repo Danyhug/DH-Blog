@@ -227,3 +227,37 @@ a {
     border-radius: 3px;
     display: inline-block; /* 确保 padding 和 background 正常显示 */
 }
+
+/* 存储路径确认对话框样式 */
+.storage-path-confirm-dialog {
+  .el-message-box__header {
+    padding-bottom: 15px;
+    border-bottom: 1px solid #EBEEF5;
+  }
+  
+  .el-message-box__content {
+    padding: 20px;
+    
+    .el-message-box__message {
+      p {
+        line-height: 1.6;
+        margin: 8px 0;
+      }
+    }
+  }
+  
+  .el-message-box__btns {
+    padding: 12px 20px;
+    border-top: 1px solid #EBEEF5;
+    
+    .el-button--primary {
+      background-color: #F56C6C;
+      border-color: #F56C6C;
+      
+      &:hover, &:focus {
+        background-color: #f78989;
+        border-color: #f78989;
+      }
+    }
+  }
+}

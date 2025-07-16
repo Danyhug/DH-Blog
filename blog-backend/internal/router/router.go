@@ -145,7 +145,8 @@ func Init(
 		fileApi.GET("/download/:id", fileHandler.DownloadFile)
 		fileApi.PUT("/rename/:id", fileHandler.RenameFile)
 		fileApi.DELETE("/:id", fileHandler.DeleteFile)
-		fileApi.PUT("/storage-path", fileHandler.UpdateStoragePath) // 添加更新存储路径路由
+		fileApi.PUT("/storage-path", fileHandler.UpdateStoragePath)  // 添加更新存储路径路由
+		fileApi.GET("/directory-tree", fileHandler.GetDirectoryTree) // 添加获取目录树的路由
 	}
 
 	// 开放静态文件服务

@@ -3,36 +3,36 @@
     <!-- 顶部导航栏 -->
     <div class="preview-header">
       <div class="header-content">
-        <div class="header-left">
-          <div class="breadcrumb">
-            <HomeIcon class="icon-sm" @click="handleNavigateToRoot" />
-            <template v-if="pathSegments.length > 0">
-              <ChevronRightIcon class="icon-xs" />
-              <template v-for="(segment, index) in pathSegments" :key="index">
-                <span 
-                  class="path-segment" 
-                  @click="handleNavigateToPathSegment(index)"
-                >{{ segment.name }}</span>
-                <ChevronRightIcon v-if="index < pathSegments.length - 1" class="icon-xs" />
-              </template>
+      <div class="header-left">
+        <div class="breadcrumb">
+          <HomeIcon class="icon-sm" @click="handleNavigateToRoot" />
+          <template v-if="pathSegments.length > 0">
+            <ChevronRightIcon class="icon-xs" />
+            <template v-for="(segment, index) in pathSegments" :key="index">
+              <span 
+                class="path-segment" 
+                @click="handleNavigateToPathSegment(index)"
+              >{{ segment.name }}</span>
+              <ChevronRightIcon v-if="index < pathSegments.length - 1" class="icon-xs" />
             </template>
-            <span v-else class="path-segment" @click="handleNavigateToRoot">我的网盘</span>
-          </div>
+          </template>
+          <span v-else class="path-segment" @click="handleNavigateToRoot">我的网盘</span>
         </div>
+      </div>
         
         <div class="header-center">
           <h2 class="file-title">{{ file.name }}</h2>
         </div>
         
-        <div class="header-right">
+      <div class="header-right">
           <button class="action-btn back-btn" @click="$emit('close')">
-            <ArrowLeftIcon class="icon-sm" />
-            返回
-          </button>
+          <ArrowLeftIcon class="icon-sm" />
+          返回
+        </button>
           <button class="action-btn download-btn" @click="downloadFile">
-            <DownloadIcon class="icon-sm" />
-            下载
-          </button>
+          <DownloadIcon class="icon-sm" />
+          下载
+        </button>
         </div>
       </div>
     </div>
@@ -81,7 +81,7 @@
       <div v-else-if="file.type === 'audio'" class="audio-preview">
         <div class="audio-card">
           <div class="audio-icon-container">
-            <MusicIcon class="audio-icon" />
+          <MusicIcon class="audio-icon" />
           </div>
           <div class="audio-info">
             <div class="audio-name">{{ file.name }}</div>
@@ -110,13 +110,13 @@
       <!-- 不支持预览的文件类型 -->
       <div v-else class="unsupported-preview">
         <div class="unsupported-card">
-          <div class="unsupported-icon">
-            <component :is="file.icon || FileIcon" class="file-icon" :class="getIconClass(file.type)" />
-          </div>
-          <div class="unsupported-message">
-            <h3>无法预览此文件</h3>
-            <p>该文件类型不支持在线预览，请下载后查看。</p>
-            <button class="btn-primary" @click="downloadFile">下载文件</button>
+        <div class="unsupported-icon">
+          <component :is="file.icon || FileIcon" class="file-icon" :class="getIconClass(file.type)" />
+        </div>
+        <div class="unsupported-message">
+          <h3>无法预览此文件</h3>
+          <p>该文件类型不支持在线预览，请下载后查看。</p>
+          <button class="btn-primary" @click="downloadFile">下载文件</button>
           </div>
         </div>
       </div>
@@ -327,9 +327,9 @@ onMounted(() => {
     .header-content {
       max-width: 1400px;
       margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
       padding: 12px 24px;
     }
     
@@ -538,8 +538,8 @@ onMounted(() => {
         button {
           padding: 10px 18px;
           border-radius: 8px;
-          cursor: pointer;
-          font-size: 14px;
+        cursor: pointer;
+        font-size: 14px;
           font-weight: 500;
           transition: all 0.2s ease;
           
@@ -547,13 +547,13 @@ onMounted(() => {
             background-color: var(--color-blue);
             color: white;
             border: none;
-            
-            &:hover {
+        
+        &:hover {
               background-color: #2c91c8;
               transform: translateY(-2px);
               box-shadow: 0 4px 8px rgba(56, 161, 219, 0.2);
-            }
-          }
+        }
+      }
           
           &.btn-outline {
             background-color: white;
@@ -592,8 +592,8 @@ onMounted(() => {
         
         &:hover {
           transform: scale(1.01);
-        }
       }
+    }
     }
     
     // 视频预览
@@ -642,8 +642,8 @@ onMounted(() => {
           background: linear-gradient(135deg, #e3fdf5 0%, #ffe6fa 100%);
           border-radius: 50%;
           box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-          
-          .audio-icon {
+        
+        .audio-icon {
             width: 40px;
             height: 40px;
             color: var(--color-blue);
@@ -694,17 +694,17 @@ onMounted(() => {
       
       .unsupported-card {
         display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
         background-color: white;
-        padding: 40px;
+      padding: 40px;
         border-radius: 16px;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
         max-width: 400px;
-        text-align: center;
-        
-        .unsupported-icon {
+      text-align: center;
+      
+      .unsupported-icon {
           margin-bottom: 24px;
           background: linear-gradient(135deg, #e3fdf5 0%, #ffe6fa 100%);
           width: 100px;
@@ -715,11 +715,11 @@ onMounted(() => {
           align-items: center;
           box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
           
-          .file-icon {
+        .file-icon {
             width: 50px;
             height: 50px;
-            color: #999;
-            
+          color: #999;
+          
             &.image-icon { color: var(--color-blue); }
             &.video-icon { color: #f50; }
             &.audio-icon { color: #73d13d; }
@@ -728,35 +728,35 @@ onMounted(() => {
             &.archive-icon { color: #fa8c16; }
             &.spreadsheet-icon { color: #52c41a; }
             &.presentation-icon { color: #eb2f96; }
-          }
         }
-        
-        .unsupported-message {
-          h3 {
+      }
+      
+      .unsupported-message {
+        h3 {
             font-size: 20px;
-            color: #333;
+          color: #333;
             margin-bottom: 12px;
             font-weight: 600;
-          }
-          
-          p {
-            color: #666;
+        }
+        
+        p {
+          color: #666;
             margin-bottom: 24px;
             line-height: 1.6;
-          }
-          
+        }
+        
           button {
             background-color: var(--color-blue);
-            color: white;
-            border: none;
+          color: white;
+          border: none;
             padding: 10px 20px;
             border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
+          cursor: pointer;
+          font-size: 14px;
             font-weight: 500;
             transition: all 0.2s ease;
-            
-            &:hover {
+          
+          &:hover {
               background-color: #2c91c8;
               transform: translateY(-2px);
               box-shadow: 0 4px 8px rgba(56, 161, 219, 0.2);

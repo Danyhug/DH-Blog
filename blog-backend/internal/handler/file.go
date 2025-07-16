@@ -34,7 +34,8 @@ func (h *FileHandler) RegisterRoutes(router *gin.RouterGroup) {
 		fileGroup.GET("/download/:id", h.DownloadFile)
 		fileGroup.PUT("/rename/:id", h.RenameFile)
 		fileGroup.DELETE("/:id", h.DeleteFile)
-		fileGroup.PUT("/storage-path", h.UpdateStoragePath) // 添加更新存储路径的路由
+		fileGroup.PUT("/storage-path", h.UpdateStoragePath)  // 添加更新存储路径的路由
+		fileGroup.GET("/directory-tree", h.GetDirectoryTree) // 添加获取目录树的路由
 	}
 }
 
@@ -332,8 +333,49 @@ func (h *FileHandler) UpdateStoragePath(c *gin.Context) {
 	// 使用自定义消息的响应
 	c.JSON(http.StatusOK, response.AjaxResult{
 		Code: 1,
-		Msg:  "存储路径已更新，文件表已清空，所有文件需要重新上传",
+		Msg:  "存储路径已更新，文件表已清空并重新扫描",
 	})
+}
+
+// GetDirectoryTree 获取系统目录树
+// @Summary 获取系统目录树
+// @Description 获取系统目录结构，用于前端选择存储路径
+// @Tags 文件
+// @Accept json
+// @Produce json
+// @Param rootPath query string false "根目录路径，为空则使用系统根目录"
+// @Param maxDepth query int false "最大深度，默认为2"
+// @Success 200 {object} service.DirectoryNode "目录树结构"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器错误"
+// @Router /api/files/directory-tree [get]
+func (h *FileHandler) GetDirectoryTree(c *gin.Context) {
+	// 检查权限（仅允许管理员操作）
+	userID := h.getCurrentUserID(c)
+	if userID != 1 { // 假设ID为1的用户是管理员
+		response.FailWithCode(c, http.StatusUnauthorized, "只有管理员可以查看系统目录")
+		return
+	}
+
+	// 获取请求参数
+	rootPath := c.Query("rootPath")
+	maxDepthStr := c.DefaultQuery("maxDepth", "2")
+
+	maxDepth, err := strconv.Atoi(maxDepthStr)
+	if err != nil || maxDepth < 0 {
+		maxDepth = 2 // 默认深度为2
+	}
+
+	// 调用服务获取目录树
+	directoryTree, err := h.fileService.GetSystemDirectoryTree(c.Request.Context(), rootPath, maxDepth)
+	if err != nil {
+		logrus.Errorf("获取目录树失败: %v", err)
+		response.FailWithCode(c, http.StatusInternalServerError, "获取目录树失败: "+err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, response.SuccessWithData(directoryTree))
 }
 
 // requireAuth 验证用户是否已登录

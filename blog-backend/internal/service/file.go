@@ -7,6 +7,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
+	"sort"
 	"strings"
 
 	"dh-blog/internal/model"
@@ -59,6 +61,10 @@ type IFileService interface {
 	// UpdateStoragePath 7. 更新文件存储路径
 	// 更新系统的文件存储路径，并迁移现有文件
 	UpdateStoragePath(newPath string) error
+
+	// GetSystemDirectoryTree 8. 获取系统目录树
+	// 获取系统目录结构，用于前端选择存储路径
+	GetSystemDirectoryTree(ctx context.Context, rootPath string, maxDepth int) (*DirectoryNode, error)
 }
 
 // NewFileService 创建新的文件服务
@@ -593,6 +599,133 @@ func (s *fileService) scanAndAddFiles(ctx context.Context) error {
 	}
 
 	logrus.Infof("扫描完成，共添加 %d 个文件夹和 %d 个文件", folderCount, fileCount)
+	return nil
+}
+
+// DirectoryNode 表示目录树中的一个节点
+type DirectoryNode struct {
+	Path     string           `json:"path"`     // 路径
+	Name     string           `json:"name"`     // 目录名称
+	IsDir    bool             `json:"isDir"`    // 是否是目录
+	Children []*DirectoryNode `json:"children"` // 子目录
+}
+
+// GetSystemDirectoryTree 获取系统目录树
+func (s *fileService) GetSystemDirectoryTree(ctx context.Context, rootPath string, maxDepth int) (*DirectoryNode, error) {
+	// 如果没有指定根路径，使用系统根目录
+	if rootPath == "" {
+		if runtime.GOOS == "windows" {
+			// Windows系统使用驱动器列表作为根目录
+			return s.getWindowsDrives(ctx)
+		} else {
+			// Unix系统使用根目录
+			rootPath = "/"
+		}
+	}
+
+	// 检查路径是否存在
+	info, err := os.Stat(rootPath)
+	if err != nil {
+		return nil, fmt.Errorf("访问路径失败: %v", err)
+	}
+
+	if !info.IsDir() {
+		return nil, fmt.Errorf("指定路径不是目录")
+	}
+
+	// 创建根节点
+	root := &DirectoryNode{
+		Path:  rootPath,
+		Name:  filepath.Base(rootPath),
+		IsDir: true,
+	}
+
+	// 递归构建目录树
+	err = s.buildDirectoryTree(ctx, root, 0, maxDepth)
+	if err != nil {
+		return nil, err
+	}
+
+	return root, nil
+}
+
+// getWindowsDrives 获取Windows系统的驱动器列表
+func (s *fileService) getWindowsDrives(ctx context.Context) (*DirectoryNode, error) {
+	root := &DirectoryNode{
+		Path:  "",
+		Name:  "计算机",
+		IsDir: true,
+	}
+
+	// 获取可用的驱动器
+	for _, drive := range "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {
+		drivePath := string(drive) + ":\\"
+		_, err := os.Stat(drivePath)
+		if err == nil {
+			driveNode := &DirectoryNode{
+				Path:  drivePath,
+				Name:  drivePath,
+				IsDir: true,
+			}
+			root.Children = append(root.Children, driveNode)
+		}
+	}
+
+	return root, nil
+}
+
+// buildDirectoryTree 递归构建目录树
+func (s *fileService) buildDirectoryTree(ctx context.Context, node *DirectoryNode, currentDepth, maxDepth int) error {
+	// 如果达到最大深度，不再继续
+	if maxDepth > 0 && currentDepth >= maxDepth {
+		return nil
+	}
+
+	// 读取目录内容
+	entries, err := os.ReadDir(node.Path)
+	if err != nil {
+		return fmt.Errorf("读取目录失败: %v", err)
+	}
+
+	// 只保留目录
+	var dirs []fs.DirEntry
+	for _, entry := range entries {
+		// 跳过隐藏文件和目录
+		if strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+
+		// 只处理目录
+		if entry.IsDir() {
+			dirs = append(dirs, entry)
+		}
+	}
+
+	// 按名称排序
+	sort.Slice(dirs, func(i, j int) bool {
+		return dirs[i].Name() < dirs[j].Name()
+	})
+
+	// 添加子目录
+	for _, dir := range dirs {
+		childPath := filepath.Join(node.Path, dir.Name())
+		childNode := &DirectoryNode{
+			Path:  childPath,
+			Name:  dir.Name(),
+			IsDir: true,
+		}
+
+		// 添加到当前节点的子节点
+		node.Children = append(node.Children, childNode)
+
+		// 递归处理子目录
+		err := s.buildDirectoryTree(ctx, childNode, currentDepth+1, maxDepth)
+		if err != nil {
+			logrus.Warnf("处理子目录失败: %s, 错误: %v", childPath, err)
+			// 继续处理其他目录
+		}
+	}
+
 	return nil
 }
 
