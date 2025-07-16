@@ -26,97 +26,167 @@
         
       <div class="header-right">
           <button class="action-btn back-btn" @click="$emit('close')">
-          <ArrowLeftIcon class="icon-sm" />
-          返回
-        </button>
-          <button class="action-btn download-btn" @click="downloadFile">
-          <DownloadIcon class="icon-sm" />
-          下载
-        </button>
+            <ArrowLeftIcon class="icon-sm" />
+            返回
+          </button>
+          <a class="action-btn download-btn" :href="fileUrl" download :title="'下载' + file.name">
+            <DownloadIcon class="icon-sm" />
+            下载
+          </a>
         </div>
       </div>
     </div>
     
     <div class="preview-content">
-      <!-- 加载状态 -->
-      <div v-if="isLoading" class="loading-container">
-        <div class="loading-spinner"></div>
-        <p>正在加载预览...</p>
-      </div>
-      
-      <!-- 错误状态 -->
-      <div v-else-if="hasError" class="error-container">
-        <div class="error-icon">!</div>
-        <h3>预览失败</h3>
-        <p>{{ errorMessage }}</p>
-        <div class="error-actions">
-          <button class="btn-primary" @click="retryPreview">重试</button>
-          <button class="btn-outline" @click="downloadFile">下载文件</button>
+      <!-- 判断文件类型是否支持预览 -->
+      <template v-if="isSupportedPreviewType">
+        <!-- 加载状态 -->
+        <div v-if="isLoading" class="loading-container">
+          <div class="loading-spinner"></div>
+          <p>正在加载预览...</p>
         </div>
-      </div>
-      
-      <!-- 图片预览 -->
-      <div v-else-if="file.type === 'image'" class="image-preview">
-        <img 
-          :src="fileUrl" 
-          :alt="file.name" 
-          @load="onPreviewLoaded" 
-          @error="onPreviewError('图片加载失败')" 
-        />
-      </div>
-      
-      <!-- 视频预览 -->
-      <div v-else-if="file.type === 'video'" class="video-preview">
-        <video 
-          controls 
-          :src="fileUrl"
-          @loadeddata="onPreviewLoaded"
-          @error="onPreviewError('视频加载失败')"
-        >
-          您的浏览器不支持视频播放
-        </video>
-      </div>
-      
-      <!-- 音频预览 -->
-      <div v-else-if="file.type === 'audio'" class="audio-preview">
-        <div class="audio-card">
-          <div class="audio-icon-container">
-          <MusicIcon class="audio-icon" />
-          </div>
-          <div class="audio-info">
-            <div class="audio-name">{{ file.name }}</div>
-            <audio 
-              controls 
-              :src="fileUrl"
-              @loadeddata="onPreviewLoaded"
-              @error="onPreviewError('音频加载失败')"
-            >
-              您的浏览器不支持音频播放
-            </audio>
+        
+        <!-- 错误状态 -->
+        <div v-else-if="hasError" class="error-container">
+          <div class="error-icon">!</div>
+          <h3>预览失败</h3>
+          <p>{{ errorMessage }}</p>
+          <div class="error-actions">
+            <button class="btn-primary" @click="retryPreview">重试</button>
+            <button class="btn-outline" @click="downloadFile">下载文件</button>
           </div>
         </div>
-      </div>
-      
-      <!-- PDF预览 -->
-      <div v-else-if="file.type === 'pdf'" class="pdf-preview">
-        <iframe 
-          :src="fileUrl" 
-          frameborder="0"
-          @load="onPreviewLoaded"
-          @error="onPreviewError('PDF加载失败')"
-        ></iframe>
-      </div>
+        
+        <!-- 图片预览 -->
+        <div v-else-if="file.type === 'image'" class="image-preview">
+          <img 
+            :src="fileUrl" 
+            :alt="file.name" 
+            @load="onPreviewLoaded" 
+            @error="onPreviewError('图片加载失败')" 
+          />
+        </div>
+        
+        <!-- 视频预览 -->
+        <div v-else-if="file.type === 'video'" class="video-preview">
+          <video 
+            controls 
+            :src="fileUrl"
+            @loadeddata="onPreviewLoaded"
+            @error="onPreviewError('视频加载失败')"
+          >
+            您的浏览器不支持视频播放
+          </video>
+        </div>
+        
+        <!-- 音频预览 -->
+        <div v-else-if="file.type === 'audio'" class="audio-preview">
+          <div class="audio-card">
+            <div class="audio-icon-container">
+            <MusicIcon class="audio-icon" />
+            </div>
+            <div class="audio-info">
+              <div class="audio-name">{{ file.name }}</div>
+              <audio 
+                controls 
+                :src="fileUrl"
+                @loadeddata="onPreviewLoaded"
+                @error="onPreviewError('音频加载失败')"
+              >
+                您的浏览器不支持音频播放
+              </audio>
+            </div>
+          </div>
+        </div>
+        
+        <!-- PDF预览 -->
+        <div v-else-if="file.type === 'pdf'" class="pdf-preview">
+          <iframe 
+            :src="fileUrl" 
+            frameborder="0"
+            @load="onPreviewLoaded"
+            @error="onPreviewError('PDF加载失败')"
+          ></iframe>
+        </div>
+
+        <!-- 文本文件预览 -->
+        <div v-else-if="file.type === 'text'" class="text-preview">
+          <div v-if="isMarkdown" class="markdown-content">
+            <div v-html="renderedMarkdown"></div>
+          </div>
+          <div v-else-if="isHtmlFile" class="html-preview-container">
+            <div class="preview-controls">
+              <button 
+                class="preview-toggle-btn"
+                @click="toggleHtmlPreview"
+                :class="{ active: showHtmlPreview }"
+              >
+                {{ showHtmlPreview ? '查看源码' : '预览HTML' }}
+              </button>
+              <button 
+                class="open-new-window-btn"
+                @click="openHtmlInNewWindow"
+                title="在新窗口中打开"
+              >
+                <span>打开新窗口</span>
+              </button>
+            </div>
+            
+            <div v-if="showHtmlPreview" class="html-render">
+              <iframe 
+                :src="htmlPreviewUrl" 
+                sandbox="allow-scripts allow-same-origin"
+                class="html-iframe"
+              ></iframe>
+            </div>
+            <div v-else class="code-content">
+              <div v-html="highlightedCode"></div>
+            </div>
+          </div>
+          <div v-else-if="isVueFile || isCodeFile" class="code-content">
+            <div v-html="highlightedCode"></div>
+          </div>
+          <div v-else class="text-content">
+            <pre>{{ textContent }}</pre>
+          </div>
+        </div>
+      </template>
       
       <!-- 不支持预览的文件类型 -->
       <div v-else class="unsupported-preview">
         <div class="unsupported-card">
-        <div class="unsupported-icon">
-          <component :is="file.icon || FileIcon" class="file-icon" :class="getIconClass(file.type)" />
-        </div>
-        <div class="unsupported-message">
-          <h3>无法预览此文件</h3>
-          <p>该文件类型不支持在线预览，请下载后查看。</p>
-          <button class="btn-primary" @click="downloadFile">下载文件</button>
+          <div class="unsupported-icon">
+            <component :is="file.icon || FileIcon" class="file-icon" :class="getIconClass(file.type)" />
+          </div>
+          <div class="unsupported-message">
+            <h3>无法预览此文件</h3>
+            <p>该文件类型暂不支持在线预览，您可以下载后在本地查看。</p>
+            <div class="file-info">
+              <div class="file-info-item">
+                <span class="label">文件名</span>
+                <span class="value">{{ file.name }}</span>
+              </div>
+              <div class="file-info-item" v-if="file.originalFile && file.originalFile.size !== undefined">
+                <span class="label">大小</span>
+                <span class="value">{{ formatFileSize(file.originalFile.size) }}</span>
+              </div>
+              <div class="file-info-item" v-else-if="file.size">
+                <span class="label">大小</span>
+                <span class="value">{{ formatFileSize(file.size) }}</span>
+              </div>
+              <div class="file-info-item" v-if="file.originalFile && file.originalFile.createTime">
+                <span class="label">创建时间</span>
+                <span class="value">{{ formatDate(file.originalFile.createTime) }}</span>
+              </div>
+            </div>
+            <div class="button-container">
+              <a class="download-button" :href="fileUrl" download :title="'下载' + file.name">
+                <div class="download-button-icon">
+                  <DownloadIcon class="icon" />
+                </div>
+                <span class="download-button-text">下载文件</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -125,7 +195,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, nextTick, ref, onMounted } from 'vue'
+import { ref, computed, inject, nextTick, onMounted, watch } from 'vue'
 import request from '@/api/axios'
 import type { FileItem } from '../utils/types/file'
 import { getDownloadUrl } from '@/api/file'
@@ -139,6 +209,10 @@ import {
   FileIcon
 } from '../utils/icons'
 import axios from 'axios'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github.css' // 引入GitHub样式的高亮CSS
 
 // 定义路径段接口
 interface PathSegment {
@@ -164,6 +238,114 @@ const isLoading = ref(true)
 const hasError = ref(false)
 const errorMessage = ref('')
 const fileContent = ref<Blob | null>(null)
+const textContent = ref('') // 添加textContent变量
+
+// 使用ref存储渲染后的Markdown内容
+const renderedMarkdown = ref('')
+
+// 高亮代码
+const highlightedCode = ref('')
+
+// 根据文件扩展名获取语言
+function getLanguage(fileName: string): string {
+  const extension = fileName.split('.').pop()?.toLowerCase();
+  if (!extension) return 'plaintext';
+  
+  // 映射常见的文件扩展名到highlight.js支持的语言
+  const langMap: Record<string, string> = {
+    js: 'javascript',
+    ts: 'typescript',
+    html: 'html',
+    htm: 'html',
+    vue: 'vue',
+    css: 'css',
+    xml: 'xml',
+    json: 'json',
+    py: 'python',
+    java: 'java',
+    c: 'c',
+    cpp: 'cpp',
+    go: 'go',
+    php: 'php',
+    rb: 'ruby',
+    sh: 'bash',
+    sql: 'sql',
+    yaml: 'yaml',
+    yml: 'yaml',
+    md: 'markdown',
+    markdown: 'markdown',
+    jsx: 'javascript',
+    tsx: 'typescript'
+  };
+  
+  return langMap[extension] || 'plaintext';
+}
+
+// 监听textContent变化，处理代码高亮
+watch([textContent, () => props.file], async ([newContent, file]) => {
+  if (!newContent || !file) return;
+  
+  // 处理Markdown
+  if (isMarkdown.value) {
+    try {
+      const parsed = await marked.parse(newContent);
+      renderedMarkdown.value = DOMPurify.sanitize(parsed);
+    } catch (error) {
+      console.error('Markdown渲染失败:', error);
+      renderedMarkdown.value = `<p class="error">Markdown渲染失败: ${error}</p>`;
+    }
+    return;
+  }
+  
+  // 处理代码文件，包括HTML和Vue
+  if (isHtmlFile.value || isVueFile.value || isCodeFile.value) {
+    try {
+      const language = getLanguage(file.name);
+      const highlighted = hljs.highlight(newContent, { language }).value;
+      highlightedCode.value = `<pre class="hljs"><code>${highlighted}</code></pre>`;
+    } catch (error) {
+      console.error('代码高亮失败:', error);
+      highlightedCode.value = `<pre class="error">${newContent}</pre>`;
+    }
+  }
+}, { immediate: true });
+
+// 计算属性：是否支持预览的文件类型
+const isSupportedPreviewType = computed(() => {
+  const supportedTypes = ['image', 'video', 'audio', 'pdf', 'text'];
+  return supportedTypes.includes(props.file.type);
+});
+
+// 添加isMarkdown和isCodeFile计算属性
+const isMarkdown = computed(() => {
+  if (!props.file.name) return false;
+  const extension = props.file.name.split('.').pop()?.toLowerCase();
+  return extension === 'md' || extension === 'markdown';
+});
+
+const isCodeFile = computed(() => {
+  if (!props.file.name) return false;
+  const extension = props.file.name.split('.').pop()?.toLowerCase();
+  return ['js', 'ts', 'html', 'css', 'xml', 'json', 'py', 'java', 'c', 'cpp', 'go', 'php', 'rb', 'sh', 'sql', 'yaml', 'yml'].includes(extension || '');
+});
+
+// 添加isHtmlFile计算属性
+const isHtmlFile = computed(() => {
+  if (!props.file.name) return false;
+  const extension = props.file.name.split('.').pop()?.toLowerCase();
+  return extension === 'html' || extension === 'htm';
+});
+
+// 添加isVueFile计算属性
+const isVueFile = computed(() => {
+  if (!props.file.name) return false;
+  const extension = props.file.name.split('.').pop()?.toLowerCase();
+  return extension === 'vue';
+});
+
+// 控制HTML预览的状态
+const showHtmlPreview = ref(false);
+const htmlPreviewUrl = ref('');
 
 // 处理根目录导航
 const handleNavigateToRoot = () => {
@@ -208,6 +390,13 @@ const fetchFileContent = async () => {
     onPreviewError('文件ID不存在，无法获取文件内容');
     return;
   }
+  
+  // 检查文件类型是否支持预览
+  if (!isSupportedPreviewType.value) {
+    // 不支持预览的文件类型，直接显示不支持预览界面
+    isLoading.value = false;
+    return;
+  }
 
   try {
     isLoading.value = true;
@@ -222,33 +411,38 @@ const fetchFileContent = async () => {
         Authorization: localStorage.getItem("token") || ""
       }
     }).get(url, {
-      responseType: 'blob'
+      responseType: props.file.type === 'text' ? 'text' : 'blob'
     });
     
-    // 创建Blob URL
-    fileContent.value = response.data;
-    const blobUrl = URL.createObjectURL(response.data);
-    
     // 根据文件类型处理预览
-    if (props.file.type === 'image') {
-      const imgElement = document.querySelector('.image-preview img') as HTMLImageElement;
-      if (imgElement) {
-        imgElement.src = blobUrl;
-      }
-    } else if (props.file.type === 'video') {
-      const videoElement = document.querySelector('.video-preview video') as HTMLVideoElement;
-      if (videoElement) {
-        videoElement.src = blobUrl;
-      }
-    } else if (props.file.type === 'audio') {
-      const audioElement = document.querySelector('.audio-preview audio') as HTMLAudioElement;
-      if (audioElement) {
-        audioElement.src = blobUrl;
-      }
-    } else if (props.file.type === 'pdf') {
-      const iframeElement = document.querySelector('.pdf-preview iframe') as HTMLIFrameElement;
-      if (iframeElement) {
-        iframeElement.src = blobUrl;
+    if (props.file.type === 'text') {
+      // 文本文件直接显示内容
+      textContent.value = response.data;
+    } else {
+      // 创建Blob URL
+      fileContent.value = response.data;
+      const blobUrl = URL.createObjectURL(response.data);
+      
+      if (props.file.type === 'image') {
+        const imgElement = document.querySelector('.image-preview img') as HTMLImageElement;
+        if (imgElement) {
+          imgElement.src = blobUrl;
+        }
+      } else if (props.file.type === 'video') {
+        const videoElement = document.querySelector('.video-preview video') as HTMLVideoElement;
+        if (videoElement) {
+          videoElement.src = blobUrl;
+        }
+      } else if (props.file.type === 'audio') {
+        const audioElement = document.querySelector('.audio-preview audio') as HTMLAudioElement;
+        if (audioElement) {
+          audioElement.src = blobUrl;
+        }
+      } else if (props.file.type === 'pdf') {
+        const iframeElement = document.querySelector('.pdf-preview iframe') as HTMLIFrameElement;
+        if (iframeElement) {
+          iframeElement.src = blobUrl;
+        }
       }
     }
     
@@ -297,10 +491,72 @@ const getIconClass = (fileType: string) => {
   return typeClassMap[fileType as keyof typeof typeClassMap] || ''
 }
 
+// 格式化文件大小
+const formatFileSize = (bytes: number | string) => {
+  if (typeof bytes === 'string') {
+    // 尝试将字符串转换为数字
+    bytes = parseInt(bytes, 10);
+    if (isNaN(bytes)) return 'Unknown';
+  }
+  
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// 格式化日期
+const formatDate = (timestamp: string) => {
+  if (!timestamp) return '未知';
+  
+  try {
+    // 尝试解析日期，支持多种格式
+    const date = new Date(timestamp);
+    
+    // 检查日期是否有效
+    if (isNaN(date.getTime())) {
+      return '未知';
+    }
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+  } catch (error) {
+    return '未知';
+  }
+}
+
+// 添加切换HTML预览的函数
+function toggleHtmlPreview() {
+  if (!showHtmlPreview.value) {
+    // 创建HTML预览URL
+    const htmlBlob = new Blob([textContent.value], { type: 'text/html' });
+    htmlPreviewUrl.value = URL.createObjectURL(htmlBlob);
+  }
+  showHtmlPreview.value = !showHtmlPreview.value;
+}
+
+// 在新窗口中打开HTML
+function openHtmlInNewWindow() {
+  const htmlBlob = new Blob([textContent.value], { type: 'text/html' });
+  const url = URL.createObjectURL(htmlBlob);
+  window.open(url, '_blank');
+}
+
 // 组件挂载时尝试加载预览
 onMounted(() => {
-  // 尝试直接请求文件内容
-  fetchFileContent();
+  // 只有支持预览的文件类型才需要加载内容
+  if (isSupportedPreviewType.value) {
+    fetchFileContent();
+  } else {
+    // 对于不支持预览的文件类型，直接结束加载状态
+    isLoading.value = false;
+  }
 })
 </script>
 
@@ -310,7 +566,7 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: #fafafa;
+  background-color: #f8f9fa;
   animation: fade-in 0.3s ease;
   position: relative;
   
@@ -318,18 +574,18 @@ onMounted(() => {
     position: sticky;
     top: 0;
     z-index: 10;
-    backdrop-filter: blur(10px);
-    background-color: rgba(255, 255, 255, 0.85);
-    border-radius: 0 0 16px 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    padding: 8px 0;
+    backdrop-filter: blur(20px);
+    background-color: rgba(255, 255, 255, 0.9);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    padding: 10px 0;
     
     .header-content {
       max-width: 1400px;
       margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       padding: 12px 24px;
     }
     
@@ -341,10 +597,10 @@ onMounted(() => {
         align-items: center;
         gap: 8px;
         font-size: 14px;
-        background-color: rgba(248, 249, 250, 0.7);
+        background-color: rgba(248, 249, 250, 0.9);
         padding: 10px 16px;
         border-radius: 50px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
         backdrop-filter: blur(4px);
         
         .icon-sm {
@@ -397,11 +653,11 @@ onMounted(() => {
         text-overflow: ellipsis;
         max-width: 400px;
         display: inline-block;
-        padding: 6px 12px;
+        padding: 8px 16px;
         border-radius: 8px;
-        background-color: rgba(255, 255, 255, 0.7);
+        background-color: rgba(255, 255, 255, 0.8);
         backdrop-filter: blur(4px);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
       }
     }
     
@@ -414,12 +670,12 @@ onMounted(() => {
       .action-btn {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
         border-radius: 8px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 500;
-        padding: 10px 16px;
+        padding: 10px 18px;
         transition: all 0.3s ease;
         
         .icon-sm {
@@ -429,12 +685,12 @@ onMounted(() => {
         
         &:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
       }
       
       .back-btn {
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.9);
         border: 1px solid #eee;
         color: #555;
         
@@ -445,12 +701,14 @@ onMounted(() => {
       }
       
       .download-btn {
-        background-color: var(--color-blue);
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         color: white;
         border: none;
+        box-shadow: 0 4px 10px rgba(79, 172, 254, 0.2);
         
         &:hover {
-          background-color: #2c91c8;
+          background: linear-gradient(135deg, #4facfe 0%, #00c6fb 100%);
+          box-shadow: 0 6px 15px rgba(79, 172, 254, 0.3);
         }
       }
     }
@@ -462,7 +720,7 @@ onMounted(() => {
     justify-content: center;
     align-items: center;
     overflow: auto;
-    padding: 24px;
+    padding: 32px;
     
     // 加载状态
     .loading-container {
@@ -498,62 +756,73 @@ onMounted(() => {
       height: 100%;
       max-width: 450px;
       background-color: white;
-      padding: 36px;
+      padding: 40px;
       border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
       
       .error-icon {
-        width: 64px;
-        height: 64px;
+        width: 70px;
+        height: 70px;
         border-radius: 50%;
-        background-color: #ff4d4f;
+        background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 32px;
         font-weight: bold;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
+        margin-bottom: 24px;
+        box-shadow: 0 8px 20px rgba(255, 77, 79, 0.2);
       }
       
       h3 {
-        font-size: 20px;
+        font-size: 22px;
         color: #333;
-        margin-bottom: 12px;
+        margin-bottom: 16px;
         font-weight: 600;
       }
       
       p {
         color: #666;
-        margin-bottom: 24px;
+        margin-bottom: 28px;
         text-align: center;
         line-height: 1.6;
+        font-size: 15px;
       }
       
       .error-actions {
         display: flex;
-        gap: 12px;
+        gap: 16px;
         
         button {
-          padding: 10px 18px;
-          border-radius: 8px;
-        cursor: pointer;
-        font-size: 14px;
+          padding: 12px 24px;
+          border-radius: 10px;
+          cursor: pointer;
+          font-size: 15px;
           font-weight: 500;
-          transition: all 0.2s ease;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
           
           &.btn-primary {
-            background-color: var(--color-blue);
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             color: white;
             border: none;
-        
-        &:hover {
-              background-color: #2c91c8;
+            box-shadow: 0 4px 10px rgba(79, 172, 254, 0.3);
+            
+            &:hover {
               transform: translateY(-2px);
-              box-shadow: 0 4px 8px rgba(56, 161, 219, 0.2);
-        }
-      }
+              box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
+              background: linear-gradient(135deg, #4facfe 0%, #00c6fb 100%);
+            }
+            
+            &:active {
+              transform: translateY(-1px);
+              box-shadow: 0 4px 8px rgba(79, 172, 254, 0.4);
+            }
+          }
           
           &.btn-outline {
             background-color: white;
@@ -564,7 +833,7 @@ onMounted(() => {
               background-color: #f9f9f9;
               border-color: #ccc;
               transform: translateY(-2px);
-              box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             }
           }
         }
@@ -581,7 +850,7 @@ onMounted(() => {
       background-color: #f5f5f5;
       border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
       
       img {
         max-width: 100%;
@@ -591,9 +860,9 @@ onMounted(() => {
         transition: transform 0.3s ease;
         
         &:hover {
-          transform: scale(1.01);
+          transform: scale(1.02);
+        }
       }
-    }
     }
     
     // 视频预览
@@ -606,7 +875,7 @@ onMounted(() => {
       background-color: #000;
       border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
       
       video {
         max-width: 100%;
@@ -625,27 +894,27 @@ onMounted(() => {
       .audio-card {
         display: flex;
         align-items: center;
-        gap: 24px;
-        background-color: white;
-        padding: 30px;
-        border-radius: 16px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-        max-width: 600px;
+        gap: 30px;
+        background: linear-gradient(145deg, #fff, #f8f9fa);
+        padding: 40px;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        max-width: 650px;
         width: 100%;
         
         .audio-icon-container {
           display: flex;
           justify-content: center;
           align-items: center;
-          width: 80px;
-          height: 80px;
+          width: 90px;
+          height: 90px;
           background: linear-gradient(135deg, #e3fdf5 0%, #ffe6fa 100%);
           border-radius: 50%;
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-        
-        .audio-icon {
-            width: 40px;
-            height: 40px;
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+          
+          .audio-icon {
+            width: 45px;
+            height: 45px;
             color: var(--color-blue);
           }
         }
@@ -654,10 +923,10 @@ onMounted(() => {
           flex: 1;
           
           .audio-name {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 600;
             color: #333;
-            margin-bottom: 16px;
+            margin-bottom: 20px;
           }
           
           audio {
@@ -676,12 +945,218 @@ onMounted(() => {
       background-color: white;
       border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
       
       iframe {
         width: 100%;
         height: 100%;
         border: none;
+      }
+    }
+
+    // 文本文件预览
+    .text-preview {
+      width: 100%;
+      height: 100%;
+      background-color: white;
+      border-radius: 12px;
+      overflow: auto;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      padding: 20px;
+      
+      .text-content {
+        width: 100%;
+        height: 100%;
+        
+        pre {
+          font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+          font-size: 14px;
+          line-height: 1.6;
+          white-space: pre-wrap;
+          word-break: break-all;
+          color: #333;
+          padding: 20px;
+          margin: 0;
+          overflow: auto;
+          max-height: 70vh;
+          
+          &.code-content {
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            padding: 16px;
+          }
+        }
+      }
+      
+      .markdown-content {
+        padding: 20px;
+        line-height: 1.6;
+        color: #333;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        
+        h1, h2, h3, h4, h5, h6 {
+          margin-top: 24px;
+          margin-bottom: 16px;
+          font-weight: 600;
+          line-height: 1.25;
+        }
+        
+        h1 {
+          font-size: 2em;
+          border-bottom: 1px solid #eaecef;
+          padding-bottom: 0.3em;
+        }
+        
+        h2 {
+          font-size: 1.5em;
+          border-bottom: 1px solid #eaecef;
+          padding-bottom: 0.3em;
+        }
+        
+        h3 {
+          font-size: 1.25em;
+        }
+        
+        p, blockquote, ul, ol, dl, table, pre {
+          margin-top: 0;
+          margin-bottom: 16px;
+        }
+        
+        blockquote {
+          padding: 0 1em;
+          color: #6a737d;
+          border-left: 0.25em solid #dfe2e5;
+        }
+        
+        code {
+          padding: 0.2em 0.4em;
+          margin: 0;
+          font-size: 85%;
+          background-color: rgba(27, 31, 35, 0.05);
+          border-radius: 3px;
+          font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+        
+        pre {
+          padding: 16px;
+          overflow: auto;
+          font-size: 85%;
+          line-height: 1.45;
+          background-color: #f6f8fa;
+          border-radius: 3px;
+          
+          code {
+            padding: 0;
+            margin: 0;
+            font-size: 100%;
+            background-color: transparent;
+            border-radius: 0;
+          }
+        }
+        
+        table {
+          display: block;
+          width: 100%;
+          overflow: auto;
+          border-spacing: 0;
+          border-collapse: collapse;
+          
+          th, td {
+            padding: 6px 13px;
+            border: 1px solid #dfe2e5;
+          }
+          
+          tr {
+            background-color: #fff;
+            border-top: 1px solid #c6cbd1;
+            
+            &:nth-child(2n) {
+              background-color: #f6f8fa;
+            }
+          }
+        }
+        
+        img {
+          max-width: 100%;
+          box-sizing: content-box;
+          background-color: #fff;
+        }
+        
+        .error {
+          color: #e53e3e;
+          padding: 10px;
+          background-color: #fff5f5;
+          border-left: 4px solid #e53e3e;
+          margin-bottom: 16px;
+        }
+      }
+
+      .html-preview-container {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        
+        .preview-controls {
+          display: flex;
+          gap: 12px;
+          padding: 10px 20px;
+          background-color: #f9f9fa;
+          border-bottom: 1px solid #eee;
+          
+          button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: none;
+            
+            &.preview-toggle-btn {
+              background-color: #e5e7eb;
+              color: #374151;
+              
+              &:hover {
+                background-color: #d1d5db;
+              }
+              
+              &.active {
+                background-color: #3b82f6;
+                color: white;
+              }
+            }
+            
+            &.open-new-window-btn {
+              background-color: white;
+              border: 1px solid #d1d5db;
+              color: #4b5563;
+              
+              &:hover {
+                background-color: #f9fafb;
+                border-color: #9ca3af;
+              }
+            }
+          }
+        }
+        
+        .html-render {
+          flex: 1;
+          padding: 0;
+          
+          .html-iframe {
+            width: 100%;
+            height: 100%;
+            min-height: 70vh;
+            border: none;
+            background-color: white;
+          }
+        }
       }
     }
     
@@ -694,32 +1169,32 @@ onMounted(() => {
       
       .unsupported-card {
         display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-        background-color: white;
-      padding: 40px;
-        border-radius: 16px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-        max-width: 400px;
-      text-align: center;
-      
-      .unsupported-icon {
-          margin-bottom: 24px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(145deg, #fff, #f8f9fa);
+        padding: 50px;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        max-width: 440px;
+        text-align: center;
+        
+        .unsupported-icon {
+          margin-bottom: 30px;
           background: linear-gradient(135deg, #e3fdf5 0%, #ffe6fa 100%);
-          width: 100px;
-          height: 100px;
+          width: 110px;
+          height: 110px;
           border-radius: 50%;
           display: flex;
           justify-content: center;
           align-items: center;
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
           
-        .file-icon {
-            width: 50px;
-            height: 50px;
-          color: #999;
-          
+          .file-icon {
+            width: 55px;
+            height: 55px;
+            color: #999;
+            
             &.image-icon { color: var(--color-blue); }
             &.video-icon { color: #f50; }
             &.audio-icon { color: #73d13d; }
@@ -728,39 +1203,119 @@ onMounted(() => {
             &.archive-icon { color: #fa8c16; }
             &.spreadsheet-icon { color: #52c41a; }
             &.presentation-icon { color: #eb2f96; }
+          }
         }
-      }
-      
-      .unsupported-message {
-        h3 {
-            font-size: 20px;
-          color: #333;
-            margin-bottom: 12px;
+        
+        .unsupported-message {
+          h3 {
+            font-size: 22px;
+            color: #333;
+            margin-bottom: 16px;
             font-weight: 600;
-        }
-        
-        p {
-          color: #666;
-            margin-bottom: 24px;
-            line-height: 1.6;
-        }
-        
-          button {
-            background-color: var(--color-blue);
-          color: white;
-          border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-          cursor: pointer;
-          font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s ease;
+          }
           
-          &:hover {
-              background-color: #2c91c8;
-              transform: translateY(-2px);
-              box-shadow: 0 4px 8px rgba(56, 161, 219, 0.2);
+          p {
+            color: #666;
+            margin-bottom: 28px;
+            line-height: 1.6;
+            font-size: 15px;
+          }
+          
+          .file-info {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 28px;
+            background-color: rgba(245, 247, 250, 0.5);
+            border-radius: 10px;
+            padding: 16px 20px;
+            font-size: 14px;
+            color: #555;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            
+            .file-info-item {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-bottom: 1px dashed rgba(0, 0, 0, 0.05);
+              padding-bottom: 8px;
+              
+              &:last-child {
+                border-bottom: none;
+                padding-bottom: 0;
+              }
+              
+              .label {
+                font-weight: 500;
+                color: #333;
+              }
+              
+              .value {
+                font-weight: 400;
+                color: #666;
+                max-width: 250px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
             }
+          }
+          
+          .button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+          }
+          
+          .download-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            
+            &:hover {
+              transform: translateY(-3px);
+              
+              .download-button-icon {
+                box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
+                background: linear-gradient(135deg, #4facfe 0%, #00c6fb 100%);
+              }
+              
+              .download-button-text {
+                color: #4facfe;
+              }
+            }
+            
+            .download-button-icon {
+              width: 60px;
+              height: 60px;
+              background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+              border-radius: 50%;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              margin-bottom: 12px;
+              box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3);
+              transition: all 0.3s ease;
+              
+              .icon {
+                width: 28px;
+                height: 28px;
+                color: white;
+              }
+            }
+            
+            .download-button-text {
+              font-size: 15px;
+              font-weight: 500;
+              color: #666;
+              transition: color 0.3s ease;
+            }
+          }
+          
+          button {
+            display: none; /* 隐藏旧按钮 */
           }
         }
       }
@@ -784,7 +1339,7 @@ onMounted(() => {
     .preview-header {
       .header-content {
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
         padding: 12px;
         
         .header-left {
@@ -802,23 +1357,57 @@ onMounted(() => {
         
         .header-right {
           width: 100%;
-          justify-content: center;
+          justify-content: space-between;
         }
       }
     }
     
     .preview-content {
-      padding: 12px;
+      padding: 16px;
       
       .audio-preview .audio-card {
         flex-direction: column;
-        padding: 20px;
+        padding: 30px;
         
         .audio-icon-container {
           margin-bottom: 20px;
         }
       }
+
+      .html-preview-container .preview-controls {
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px 16px;
+      }
+      
+      .unsupported-preview .unsupported-card {
+        padding: 30px;
+      }
     }
+  }
+}
+
+.code-content {
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  overflow: auto;
+  
+  pre.hljs {
+    margin: 0;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    max-height: 70vh;
+    overflow: auto;
+  }
+  
+  pre.error {
+    background-color: #fff5f5;
+    color: #e53e3e;
+    padding: 16px;
+    border-radius: 8px;
+    border-left: 4px solid #e53e3e;
   }
 }
 </style> 

@@ -51,18 +51,22 @@ export const listFiles = (parentId?: string): Promise<any> => {
 
 /**
  * 上传文件
- * @param file 文件对象
  * @param parentId 父目录ID，为空则上传到根目录
+ * @param file 文件对象
  * @returns 上传结果
  */
-export const uploadFile = (file: File, parentId?: string): Promise<any> => {
+export const uploadFile = (parentId: string | undefined, file: File): Promise<any> => {
   const formData = new FormData()
+  
+  // 将文件添加到FormData
   formData.append('file', file)
   
+  // 如果有父目录ID，添加到请求中
   if (parentId) {
     formData.append('parentId', parentId)
   }
   
+  // 使用封装好的request发送请求，让拦截器处理错误和响应
   return request.post('/files/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'

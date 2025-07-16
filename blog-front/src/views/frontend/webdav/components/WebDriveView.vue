@@ -1,26 +1,14 @@
 <template>
   <div class="web-drive-container">
     <!-- 移动端视图 -->
-    <MobileView 
-      v-if="isMobile" 
-      :mobile-files="convertedFiles" 
-      @upload="openUploadModal"
-      @open="handleMobileFileOpen"
-      @share="shareFile"
-      @download="downloadFile"
-      @rename="handleMobileRename"
-      @delete="deleteFile"
-    />
-    
+    <MobileView v-if="isMobile" :mobile-files="convertedFiles" @upload="openUploadModal" @open="handleMobileFileOpen"
+      @share="shareFile" @download="downloadFile" @rename="handleMobileRename" @delete="deleteFile" />
+
     <!-- 桌面端视图 -->
     <div v-else class="desktop-view">
       <!-- 文件预览组件 -->
-      <FilePreview
-        v-if="showFilePreview"
-        :file="selectedFile"
-        @close="closeFilePreview"
-      />
-      
+      <FilePreview v-if="showFilePreview" :file="selectedFile" @close="closeFilePreview" />
+
       <template v-else>
         <div class="browser-header">
           <div class="header-left">
@@ -29,10 +17,7 @@
               <template v-if="pathSegments.length > 0">
                 <ChevronRightIcon class="icon-xs" />
                 <template v-for="(segment, index) in pathSegments" :key="index">
-                  <span 
-                    class="path-segment" 
-                    @click="navigateToPathSegment(index)"
-                  >{{ segment.name }}</span>
+                  <span class="path-segment" @click="navigateToPathSegment(index)">{{ segment.name }}</span>
                   <ChevronRightIcon v-if="index < pathSegments.length - 1" class="icon-xs" />
                 </template>
               </template>
@@ -77,32 +62,27 @@
             </div>
             <div v-else :key="currentParentId || 'root'" class="file-container-inner">
               <div class="file-grid">
-                <div
-                  v-for="(file, index) in filteredFiles"
-                  :key="file.id || index"
-                  class="file-item"
-                  :class="{ 'folder-item': file.type === 'folder' }"
+                <div v-for="(file, index) in filteredFiles" :key="file.id || index" class="file-item"
+                  :class="{ 
+                    'folder-item': file.type === 'folder',
+                    'new-uploaded-file': newUploadedFileIds.includes(file.id || '')
+                  }" 
                   @click="handleFileClick(file)"
-                  @contextmenu.prevent="showContextMenu($event, file)"
-                >
+                  @contextmenu.prevent="showContextMenu($event, file)">
                   <div class="file-content">
                     <div class="file-icon-container">
                       <FolderIcon v-if="file.type === 'folder'" class="folder-icon" />
-                      <component 
-                        v-else-if="file.icon" 
-                        :is="file.icon" 
-                        :class="[
-                          'file-icon', 
-                          file.type === 'image' ? 'image-icon' : '',
-                          file.type === 'video' ? 'video-icon' : '',
-                          file.type === 'audio' ? 'audio-icon' : '',
-                          file.type === 'code' ? 'code-icon' : '',
-                          file.type === 'pdf' ? 'pdf-icon' : '',
-                          file.type === 'archive' ? 'archive-icon' : '',
-                          file.type === 'spreadsheet' ? 'spreadsheet-icon' : '',
-                          file.type === 'presentation' ? 'presentation-icon' : ''
-                        ]"
-                      />
+                      <component v-else-if="file.icon" :is="file.icon" :class="[
+                        'file-icon',
+                        file.type === 'image' ? 'image-icon' : '',
+                        file.type === 'video' ? 'video-icon' : '',
+                        file.type === 'audio' ? 'audio-icon' : '',
+                        file.type === 'code' ? 'code-icon' : '',
+                        file.type === 'pdf' ? 'pdf-icon' : '',
+                        file.type === 'archive' ? 'archive-icon' : '',
+                        file.type === 'spreadsheet' ? 'spreadsheet-icon' : '',
+                        file.type === 'presentation' ? 'presentation-icon' : ''
+                      ]" />
                       <FileIcon v-else class="file-icon" />
                     </div>
                     <div class="file-info">
@@ -120,21 +100,20 @@
         </div>
       </template>
     </div>
-    
+
     <!-- 设置弹窗 - 按需显示 -->
     <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
-    
+
     <!-- 上传弹窗 - 按需显示 -->
-    <UploadModal 
-      v-if="showUploadModal" 
-      :upload-progress="uploadProgress" 
-      @close="showUploadModal = false" 
-      @upload="handleUploadFiles"
-    />
-    
+    <div v-if="showUploadModal" class="upload-modal-container">
+      <div class="upload-modal-overlay" @click="closeUploadModal"></div>
+      <UploadModal ref="uploadModalRef" :upload-progress="uploadProgress" @close="closeUploadModal"
+        @upload="handleUploadFiles" @retry="handleRetryUpload" />
+    </div>
+
     <!-- 分享链接弹窗 - 按需显示 -->
     <ShareLinkPopup v-if="showShareLinkPopup" :file="selectedFile" @close="showShareLinkPopup = false" />
-    
+
     <!-- 新建文件夹弹窗 -->
     <div v-if="showNewFolderDialog" class="dialog-overlay" @click.self="cancelDialog">
       <div class="dialog-box">
@@ -143,14 +122,8 @@
           <button class="close-btn" @click="cancelDialog">×</button>
         </div>
         <div class="dialog-body">
-          <input 
-            type="text" 
-            v-model="newFolderName" 
-            placeholder="请输入文件夹名称" 
-            class="dialog-input"
-            ref="folderNameInput"
-            @keyup.enter="confirmNewFolder"
-          />
+          <input type="text" v-model="newFolderName" placeholder="请输入文件夹名称" class="dialog-input" ref="folderNameInput"
+            @keyup.enter="confirmNewFolder" />
         </div>
         <div class="dialog-footer">
           <button class="btn-outline" @click="cancelDialog">取消</button>
@@ -158,7 +131,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 重命名弹窗 -->
     <div v-if="showRenameDialog" class="dialog-overlay" @click.self="cancelDialog">
       <div class="dialog-box">
@@ -168,49 +141,22 @@
         </div>
         <div class="dialog-body">
           <div v-if="fileToRename && !fileToRename.type.includes('folder')" class="filename-container">
-            <input 
-              type="text" 
-              v-model="fileNameWithoutExt" 
-              placeholder="文件名" 
-              class="dialog-input filename-input"
-              ref="fileNameInput"
-              @keyup.enter="confirmRename"
-            />
+            <input type="text" v-model="fileNameWithoutExt" placeholder="文件名" class="dialog-input filename-input"
+              ref="fileNameInput" @keyup.enter="confirmRename" />
             <div class="extension-container">
-              <div 
-                class="extension-wrapper"
-                @dblclick="enableExtensionEdit"
-                :title="editingExtension ? '' : '双击编辑后缀名'"
-              >
-                <input 
-                  type="text" 
-                  v-model="fileExtension" 
-                  class="dialog-input extension-input"
-                  :disabled="!editingExtension"
-                  @keyup.enter="confirmRename"
-                  ref="extensionInput"
-                />
+              <div class="extension-wrapper" @dblclick="enableExtensionEdit" :title="editingExtension ? '' : '双击编辑后缀名'">
+                <input type="text" v-model="fileExtension" class="dialog-input extension-input"
+                  :disabled="!editingExtension" @keyup.enter="confirmRename" ref="extensionInput" />
               </div>
-              <button 
-                class="extension-edit-btn" 
-                :class="{ 'active': editingExtension }"
-                @click="toggleExtensionEdit"
-                :title="editingExtension ? '锁定后缀名' : '编辑后缀名'"
-              >
+              <button class="extension-edit-btn" :class="{ 'active': editingExtension }" @click="toggleExtensionEdit"
+                :title="editingExtension ? '锁定后缀名' : '编辑后缀名'">
                 <span v-if="editingExtension">🔓</span>
                 <span v-else>🔒</span>
               </button>
             </div>
           </div>
-          <input 
-            v-else
-            type="text" 
-            v-model="newFileName" 
-            placeholder="请输入新名称" 
-            class="dialog-input"
-            ref="folderNameInput"
-            @keyup.enter="confirmRename"
-          />
+          <input v-else type="text" v-model="newFileName" placeholder="请输入新名称" class="dialog-input"
+            ref="folderNameInput" @keyup.enter="confirmRename" />
         </div>
         <div class="dialog-footer">
           <button class="btn-outline" @click="cancelDialog">取消</button>
@@ -218,22 +164,32 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 右键菜单 -->
     <div v-if="contextMenu.show" class="context-menu" :style="contextMenuStyle">
       <ul>
-        <li @click="openFile(contextMenu.file)"><FileIcon class="icon-xs" /> 打开</li>
-        <li @click="shareFile(contextMenu.file)"><UploadIcon class="icon-xs" /> 分享</li>
-        <li @click="downloadFile(contextMenu.file)"><UploadIcon class="icon-xs" transform="rotate(180)" /> 下载</li>
-        <li @click="renameFile(contextMenu.file)"><FileTextIcon class="icon-xs" /> 重命名</li>
-        <li @click="deleteFile(contextMenu.file)" class="danger"><XIcon class="icon-xs" /> 删除</li>
+        <li @click="openFile(contextMenu.file)">
+          <FileIcon class="icon-xs" /> 打开
+        </li>
+        <li @click="shareFile(contextMenu.file)">
+          <UploadIcon class="icon-xs" /> 分享
+        </li>
+        <li @click="downloadFile(contextMenu.file)">
+          <UploadIcon class="icon-xs" transform="rotate(180)" /> 下载
+        </li>
+        <li @click="renameFile(contextMenu.file)">
+          <FileTextIcon class="icon-xs" /> 重命名
+        </li>
+        <li @click="deleteFile(contextMenu.file)" class="danger">
+          <XIcon class="icon-xs" /> 删除
+        </li>
       </ul>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, provide } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, provide, type ComponentPublicInstance } from 'vue'
 import type { FileItem } from '../utils/types/file'
 import SettingsModal from '../modals/SettingsModal.vue'
 import UploadModal from '../modals/UploadModal.vue'
@@ -276,6 +232,12 @@ const showSettingsModal = ref(false)
 const showUploadModal = ref(false)
 const showShareLinkPopup = ref(false)
 const isLoading = ref(false)
+// 定义UploadModalInstance类型
+type UploadModalInstance = ComponentPublicInstance & {
+  updateFileStatus: (fileIndex: number, status: 'success' | 'error', error?: string) => void
+}
+// 使用正确的类型
+const uploadModalRef = ref<UploadModalInstance | null>(null)
 const selectedFile = ref<FileItem>({
   name: '',
   type: 'file',
@@ -305,6 +267,9 @@ const folderNameInput = ref<HTMLInputElement | null>(null)
 const fileNameInput = ref<HTMLInputElement | null>(null)
 const extensionInput = ref<HTMLInputElement | null>(null)
 
+// 添加一个新的状态来跟踪新上传的文件ID
+const newUploadedFileIds = ref<string[]>([]);
+
 // 路径导航历史
 interface PathSegment {
   id: string;
@@ -329,8 +294,8 @@ const convertedFiles = computed<FileItem[]>(() => {
   return apiFiles.value.map(file => {
     // 确定文件图标
     let icon;
-    let fileType: 'file' | 'folder' | 'image' | 'video' | 'audio' | 'code' | 'pdf' | 'archive' | 'spreadsheet' | 'presentation' = file.is_folder ? 'folder' : 'file';
-    
+    let fileType: 'file' | 'folder' | 'image' | 'video' | 'audio' | 'code' | 'pdf' | 'archive' | 'spreadsheet' | 'presentation' | 'text' = file.is_folder ? 'folder' : 'file';
+
     if (file.is_folder) {
       icon = FolderIcon;
     } else if (file.mimeType) {
@@ -348,8 +313,8 @@ const convertedFiles = computed<FileItem[]>(() => {
         icon = FilePdfIcon;
         fileType = 'pdf';
       } else if (
-        file.mimeType.includes('zip') || 
-        file.mimeType.includes('compressed') || 
+        file.mimeType.includes('zip') ||
+        file.mimeType.includes('compressed') ||
         file.mimeType.includes('archive') ||
         file.mimeType.includes('x-tar') ||
         file.mimeType.includes('x-rar')
@@ -357,28 +322,31 @@ const convertedFiles = computed<FileItem[]>(() => {
         icon = FileZipIcon;
         fileType = 'archive';
       } else if (
-        file.mimeType.includes('excel') || 
+        file.mimeType.includes('excel') ||
         file.mimeType.includes('spreadsheet') ||
         file.mimeType.includes('csv')
       ) {
         icon = FileSpreadsheetIcon;
         fileType = 'spreadsheet';
       } else if (
-        file.mimeType.includes('powerpoint') || 
+        file.mimeType.includes('powerpoint') ||
         file.mimeType.includes('presentation')
       ) {
         icon = FilePresentationIcon;
         fileType = 'presentation';
       } else if (
-        file.mimeType.includes('javascript') || 
-        file.mimeType.includes('json') || 
-        file.mimeType.includes('html') || 
+        file.mimeType.includes('javascript') ||
+        file.mimeType.includes('json') ||
+        file.mimeType.includes('html') ||
         file.mimeType.includes('css') ||
         file.mimeType.includes('xml') ||
-        file.mimeType.includes('text/plain')
+        file.mimeType.includes('text/plain') ||
+        file.mimeType.includes('text/markdown') ||
+        file.mimeType.includes('text/')
       ) {
+        // 所有文本类型文件都归为text类型，以支持预览
         icon = FileCodeIcon;
-        fileType = 'code';
+        fileType = 'text';
       } else {
         icon = FileTextIcon;
       }
@@ -407,9 +375,17 @@ const convertedFiles = computed<FileItem[]>(() => {
         } else if (['ppt', 'pptx', 'odp'].includes(extension)) {
           icon = FilePresentationIcon;
           fileType = 'presentation';
-        } else if (['js', 'ts', 'html', 'css', 'xml', 'json', 'txt', 'md', 'py', 'java', 'c', 'cpp', 'go', 'php', 'rb'].includes(extension)) {
-          icon = FileCodeIcon;
-          fileType = 'code';
+        } else if (
+          // 所有文本类型文件和编程语言文件都归为text类型，以支持预览
+          ['txt', 'md', 'markdown', 'text', 'log', 'rtf', 'js', 'ts', 'html', 'css', 'xml', 'json', 'py', 'java', 'c', 'cpp', 'go', 'php', 'rb', 'sh', 'bat', 'ps1', 'sql', 'yaml', 'yml', 'toml', 'ini', 'conf', 'config'].includes(extension)
+        ) {
+          // 根据文件类型使用不同的图标，但都归为text类型以支持预览
+          if (['js', 'ts', 'html', 'css', 'xml', 'json', 'py', 'java', 'c', 'cpp', 'go', 'php', 'rb', 'sh', 'sql', 'yaml', 'yml'].includes(extension)) {
+            icon = FileCodeIcon;
+          } else {
+            icon = FileTextIcon;
+          }
+          fileType = 'text';
         } else {
           icon = FileTextIcon;
         }
@@ -431,9 +407,9 @@ const convertedFiles = computed<FileItem[]>(() => {
     const formatDate = (dateStr: string): string => {
       if (!dateStr) return '-';
       const date = new Date(dateStr);
-      return date.toLocaleString('zh-CN', { 
-        year: 'numeric', 
-        month: 'long', 
+      return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: 'long',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
@@ -442,7 +418,7 @@ const convertedFiles = computed<FileItem[]>(() => {
 
     // 确保文件ID存在且转换为字符串
     const fileId = file.id ? file.id.toString() : '';
-    
+
     return {
       id: fileId, // 确保ID存在且为字符串
       name: file.name,
@@ -458,9 +434,9 @@ const convertedFiles = computed<FileItem[]>(() => {
 // 过滤文件列表
 const filteredFiles = computed(() => {
   if (!searchQuery.value) return convertedFiles.value;
-  
+
   const query = searchQuery.value.toLowerCase();
-  return convertedFiles.value.filter(file => 
+  return convertedFiles.value.filter(file =>
     file.name.toLowerCase().includes(query)
   );
 })
@@ -505,19 +481,19 @@ function navigateToRoot() {
 // 导航到特定路径段
 function navigateToPathSegment(index: number) {
   if (index < 0 || index >= pathSegments.value.length) return;
-  
+
   // 获取目标路径段
   const targetSegment = pathSegments.value[index];
-  
+
   // 更新当前路径和父ID
   currentParentId.value = targetSegment.id;
-  
+
   // 更新路径段历史（保留到当前点击的段）
   pathSegments.value = pathSegments.value.slice(0, index + 1);
-  
+
   // 重新构建当前路径
   currentPath.value = pathSegments.value.map(segment => segment.name).join('/');
-  
+
   // 获取文件列表
   fetchFiles(targetSegment.id);
 }
@@ -548,7 +524,7 @@ function openUploadModal() {
 function createNewFolder() {
   showNewFolderDialog.value = true;
   newFolderName.value = '新建文件夹';
-  
+
   // 在下一个DOM更新周期后聚焦输入框并选中文本
   nextTick(() => {
     if (folderNameInput.value) {
@@ -577,9 +553,9 @@ async function confirmNewFolder() {
 // 重命名文件
 function renameFile(file: FileItem) {
   if (!file.id) return;
-  
+
   fileToRename.value = file;
-  
+
   if (file.type !== 'folder') {
     // 分离文件名和扩展名
     const lastDotIndex = file.name.lastIndexOf('.');
@@ -595,10 +571,10 @@ function renameFile(file: FileItem) {
   } else {
     newFileName.value = file.name;
   }
-  
+
   showRenameDialog.value = true;
   closeContextMenu();
-  
+
   // 在下一个DOM更新周期后聚焦输入框并选中文本
   nextTick(() => {
     if (file.type !== 'folder' && fileNameInput.value) {
@@ -614,7 +590,7 @@ function renameFile(file: FileItem) {
 // 切换扩展名编辑状态
 function toggleExtensionEdit() {
   editingExtension.value = !editingExtension.value;
-  
+
   // 如果启用了扩展名编辑，聚焦到扩展名输入框
   if (editingExtension.value) {
     nextTick(() => {
@@ -631,10 +607,10 @@ function toggleExtensionEdit() {
 function enableExtensionEdit(event: MouseEvent) {
   // 阻止事件冒泡，防止触发其他点击事件
   event.stopPropagation();
-  
+
   if (!editingExtension.value) {
     editingExtension.value = true;
-    
+
     // 延迟一下再聚焦，确保禁用状态已经解除
     nextTick(() => {
       if (extensionInput.value) {
@@ -652,7 +628,7 @@ async function confirmRename() {
   if (fileToRename.value && fileToRename.value.type !== 'folder') {
     newFileName.value = fileNameWithoutExt.value + fileExtension.value;
   }
-  
+
   if (fileToRename.value && fileToRename.value.id && newFileName.value.trim() && newFileName.value !== fileToRename.value.name) {
     try {
       await apiRenameFile(fileToRename.value.id, newFileName.value);
@@ -680,16 +656,16 @@ function handleFileClick(file: FileItem) {
     // 如果是文件夹，进入该文件夹
     const folderId = file.id as string;
     currentParentId.value = folderId;
-    
+
     // 更新路径导航历史
     pathSegments.value.push({
       id: folderId,
       name: file.name
     });
-    
+
     // 更新当前路径
     currentPath.value = pathSegments.value.map(segment => segment.name).join('/');
-    
+
     // 获取文件列表
     fetchFiles(folderId);
   } else {
@@ -739,7 +715,7 @@ function downloadFile(file: FileItem) {
 // 删除文件
 function deleteFile(file: FileItem) {
   if (!file.id) return;
-  
+
   if (confirm(`确定要删除 ${file.name} 吗？`)) {
     apiDeleteFile(file.id)
       .then(() => {
@@ -776,22 +752,68 @@ function closeContextMenu() {
 async function handleUploadFiles(files: File[]) {
   if (!files.length) return;
 
-  try {
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      uploadProgress.value = Math.round((i / files.length) * 100);
+  let successCount = 0;
+  let failCount = 0;
+  const totalFiles = files.length;
+  // 清空新上传文件ID列表
+  newUploadedFileIds.value = [];
+
+  // 显示上传进度
+  uploadProgress.value = 0;
+  
+  for (let i = 0; i < totalFiles; i++) {
+    const file = files[i];
+    
+    try {
+      // 调用修改后的API函数，单独处理每个文件的上传
+      const response = await uploadFile(currentParentId.value, file);
+      // 更新文件状态为成功
+      uploadModalRef.value?.updateFileStatus(i, 'success');
+      successCount++;
       
-      await uploadFile(currentParentId.value, file);
+      // 如果上传成功，记录文件ID
+      if (response && response.id) {
+        newUploadedFileIds.value.push(response.id.toString());
+      }
+    } catch (error) {
+      // 单个文件上传失败，记录但不中断其他文件上传
+      console.error(`文件 "${file.name}" 上传失败:`, error);
+      // 更新文件状态为失败
+      uploadModalRef.value?.updateFileStatus(i, 'error', error instanceof Error ? error.message : '上传失败');
+      failCount++;
     }
     
-    uploadProgress.value = 100;
-    ElMessage.success('上传完成');
-    showUploadModal.value = false;
-    fetchFiles(currentParentId.value);
-  } catch (error) {
-    console.error('上传失败:', error);
-    ElMessage.error('上传失败');
+    // 更新总进度
+    uploadProgress.value = Math.round(((i + 1) / totalFiles) * 100);
   }
+
+  // 所有文件上传完成后，只显示一个总结提示
+  if (failCount === 0) {
+    ElMessage.success(`全部 ${successCount} 个文件上传成功`);
+  } else if (successCount === 0) {
+    ElMessage.error(`全部 ${failCount} 个文件上传失败`);
+  } else {
+    ElMessage.warning(`上传完成: ${successCount} 个成功, ${failCount} 个失败`);
+  }
+
+  // 重新获取文件列表
+  fetchFiles(currentParentId.value);
+  
+  // 不再自动清除高亮效果
+  // 用户可以通过刷新页面或导航到其他目录来清除高亮
+}
+
+// 处理重试上传
+async function handleRetryUpload(failedFiles: File[]) {
+  if (!failedFiles.length) return;
+  
+  await handleUploadFiles(failedFiles);
+}
+
+// 修改closeUploadModal函数
+function closeUploadModal() {
+  // 始终允许关闭上传弹窗
+  showUploadModal.value = false;
 }
 
 onMounted(() => {
@@ -812,9 +834,10 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 40px); /* 减去padding的高度 */
+  min-height: calc(100vh - 40px);
+  /* 减去padding的高度 */
   background-color: #ffffff;
-  
+
   .desktop-view {
     display: flex;
     flex-direction: column;
@@ -822,14 +845,14 @@ onUnmounted(() => {
     flex: 1;
     background-color: #ffffff;
   }
-  
+
   .browser-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
     flex-shrink: 0;
-    
+
     .header-left {
       .breadcrumb {
         display: flex;
@@ -840,16 +863,16 @@ onUnmounted(() => {
         padding: 10px 16px;
         border-radius: 50px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-        
+
         .icon-sm {
           cursor: pointer;
           color: #666;
-          
+
           &:hover {
             color: #2a8aff;
           }
         }
-        
+
         .path-segment {
           cursor: pointer;
           color: #666;
@@ -857,24 +880,24 @@ onUnmounted(() => {
           padding: 2px 8px;
           border-radius: 4px;
           transition: all 0.2s ease;
-          
+
           &:hover {
             color: #2a8aff;
             background-color: rgba(42, 138, 255, 0.1);
             text-decoration: none;
           }
         }
-        
+
         .icon-xs {
           color: #aaa;
         }
       }
     }
-    
+
     .header-right {
       display: flex;
       gap: 10px;
-      
+
       .icon-btn {
         background: none;
         border: none;
@@ -882,17 +905,17 @@ onUnmounted(() => {
         cursor: pointer;
         border-radius: 50%;
         transition: all 0.2s ease;
-        
+
         &.active {
           background-color: #e6f0ff;
           color: #2a8aff;
         }
-        
+
         &:hover {
           background-color: #f0f5ff;
           transform: translateY(-2px);
         }
-        
+
         .icon-sm {
           width: 20px;
           height: 20px;
@@ -900,17 +923,17 @@ onUnmounted(() => {
       }
     }
   }
-  
+
   .toolbar {
     display: flex;
     justify-content: space-between;
     margin-bottom: 20px;
     flex-shrink: 0;
-    
+
     .toolbar-left {
       display: flex;
       gap: 10px;
-      
+
       button {
         display: flex;
         align-items: center;
@@ -919,38 +942,38 @@ onUnmounted(() => {
         border-radius: 4px;
         cursor: pointer;
         font-size: 14px;
-        
+
         .icon-sm {
           width: 16px;
           height: 16px;
         }
       }
-      
+
       .btn-primary {
         background-color: #2a8aff;
         color: white;
         border: none;
-        
+
         &:hover {
           background-color: #1a7aef;
         }
       }
-      
+
       .btn-outline {
         background-color: white;
         color: #666;
         border: 1px solid #ddd;
-        
+
         &:hover {
           background-color: #f5f5f5;
         }
       }
     }
-    
+
     .toolbar-right {
       .search-container {
         position: relative;
-        
+
         .search-icon {
           position: absolute;
           left: 10px;
@@ -960,14 +983,14 @@ onUnmounted(() => {
           height: 16px;
           color: #999;
         }
-        
+
         .search-input {
           padding: 8px 10px 8px 35px;
           border: 1px solid #ddd;
           border-radius: 4px;
           width: 250px;
           font-size: 14px;
-          
+
           &:focus {
             outline: none;
             border-color: #2a8aff;
@@ -976,20 +999,21 @@ onUnmounted(() => {
       }
     }
   }
-  
+
   .file-container {
     flex: 1;
     overflow: auto;
     display: flex;
     flex-direction: column;
-    min-height: 400px; /* 最小高度，确保在内容少时也有一定高度 */
+    min-height: 400px;
+    /* 最小高度，确保在内容少时也有一定高度 */
     background-color: #ffffff;
-    
+
     .file-container-inner {
       display: flex;
       flex-direction: column;
     }
-    
+
     .loading-container {
       flex: 1;
       display: flex;
@@ -997,14 +1021,14 @@ onUnmounted(() => {
       align-items: center;
       justify-content: center;
     }
-    
+
     .file-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
       gap: 10px;
       flex: 1;
       background-color: #ffffff;
-      
+
       .file-item {
         cursor: pointer;
         border-radius: 8px;
@@ -1012,16 +1036,17 @@ onUnmounted(() => {
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
-        height: 140px; /* 固定高度 */
+        height: 140px;
+        /* 固定高度 */
         display: flex;
         background-color: #ffffff;
-        
+
         &:hover {
           background-color: #f5f5f5;
           transform: translateY(-3px);
           box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
         }
-        
+
         &.folder-item {
           &:hover {
             .file-icon-container {
@@ -1031,75 +1056,91 @@ onUnmounted(() => {
             }
           }
         }
-        
+
+        &.new-uploaded-file {
+          animation: highlight-pulse 2s ease-in-out infinite;
+          background-color: rgba(59, 130, 246, 0.1);
+          border: 1px solid rgba(59, 130, 246, 0.4);
+          box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+        }
+
         .file-content {
           display: flex;
           flex-direction: column;
           align-items: center;
           height: 100%;
           width: 100%;
-          
+
           .file-icon-container {
             width: 60px;
             height: 60px;
             display: flex;
             align-items: center;
             justify-content: center;
-            
-            .folder-icon, .file-icon {
+
+            .folder-icon,
+            .file-icon {
               width: 40px;
               height: 40px;
               transition: transform 0.3s ease;
             }
-            
+
             .folder-icon {
               color: #2a8aff;
             }
-            
+
             .file-icon {
               color: #2a8aff;
-              
+
               &.image-icon {
-                color: #4CAF50; /* 绿色 */
+                color: #4CAF50;
+                /* 绿色 */
               }
-              
+
               &.video-icon {
-                color: #FF5722; /* 橙红色 */
+                color: #FF5722;
+                /* 橙红色 */
               }
-              
+
               &.audio-icon {
-                color: #9C27B0; /* 紫色 */
+                color: #9C27B0;
+                /* 紫色 */
               }
-              
+
               &.code-icon {
-                color: #607D8B; /* 蓝灰色 */
+                color: #607D8B;
+                /* 蓝灰色 */
               }
-              
+
               &.pdf-icon {
-                color: #F44336; /* 红色 */
+                color: #F44336;
+                /* 红色 */
               }
-              
+
               &.archive-icon {
-                color: #795548; /* 棕色 */
+                color: #795548;
+                /* 棕色 */
               }
-              
+
               &.spreadsheet-icon {
-                color: #4CAF50; /* 绿色 */
+                color: #4CAF50;
+                /* 绿色 */
               }
-              
+
               &.presentation-icon {
-                color: #FF9800; /* 橙色 */
+                color: #FF9800;
+                /* 橙色 */
               }
             }
           }
-          
+
           .file-info {
             text-align: center;
             width: 100%;
             display: flex;
             flex-direction: column;
             height: 50px;
-            
+
             .file-name {
               font-size: 14px;
               margin: 0 0 3px 0;
@@ -1109,11 +1150,12 @@ onUnmounted(() => {
               max-width: 100%;
               line-height: 1.2;
             }
-            
+
             .file-details {
               height: 30px;
-              
-              .file-size, .file-modified {
+
+              .file-size,
+              .file-modified {
                 font-size: 12px;
                 color: #999;
                 margin: 0;
@@ -1125,34 +1167,34 @@ onUnmounted(() => {
       }
     }
   }
-  
+
   .context-menu {
     position: fixed;
     background: white;
     border-radius: 4px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     z-index: 1000;
-    
+
     ul {
       list-style: none;
       padding: 0;
       margin: 0;
-      
+
       li {
         padding: 10px 15px;
         display: flex;
         align-items: center;
         gap: 10px;
         cursor: pointer;
-        
+
         &:hover {
           background-color: #f5f5f5;
         }
-        
+
         &.danger {
           color: #ff4d4f;
         }
-        
+
         .icon-xs {
           width: 14px;
           height: 14px;
@@ -1193,7 +1235,7 @@ onUnmounted(() => {
   height: 100%;
   min-height: 300px;
   flex: 1;
-  
+
   .loading-spinner {
     width: 40px;
     height: 40px;
@@ -1203,7 +1245,7 @@ onUnmounted(() => {
     animation: spin 1s linear infinite;
     margin-bottom: 15px;
   }
-  
+
   p {
     color: #666;
     font-size: 14px;
@@ -1211,8 +1253,13 @@ onUnmounted(() => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 // 对话框样式
@@ -1237,21 +1284,21 @@ onUnmounted(() => {
   max-width: 90%;
   overflow: hidden;
   animation: dialog-appear 0.2s ease-out;
-  
+
   .dialog-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 16px 20px;
     border-bottom: 1px solid #eee;
-    
+
     h3 {
       margin: 0;
       font-size: 18px;
       font-weight: 500;
       color: #333;
     }
-    
+
     .close-btn {
       background: none;
       border: none;
@@ -1259,53 +1306,55 @@ onUnmounted(() => {
       color: #999;
       cursor: pointer;
       padding: 0;
-      
+
       &:hover {
         color: #666;
       }
     }
   }
-  
+
   .dialog-body {
     padding: 20px;
-    
+
     .filename-container {
       display: flex;
       align-items: center;
       gap: 5px;
       width: 100%;
-      
+
       .filename-input {
         flex: 1;
       }
-      
+
       .extension-container {
         display: flex;
         align-items: center;
         position: relative;
-        
+
         .extension-wrapper {
           width: 80px;
           cursor: pointer;
         }
-        
+
         .extension-input {
           width: 100%;
           background-color: #f8f8f8;
           color: #666;
-          
+
           &:disabled {
-            cursor: pointer; /* 改为指针，提示可以交互 */
+            cursor: pointer;
+            /* 改为指针，提示可以交互 */
             opacity: 0.8;
-            pointer-events: none; /* 禁用事件，让父元素处理双击 */
+            pointer-events: none;
+            /* 禁用事件，让父元素处理双击 */
           }
-          
+
           &:not(:disabled) {
             background-color: #fff;
             color: #333;
           }
         }
-        
+
         .extension-edit-btn {
           position: absolute;
           right: 8px;
@@ -1318,25 +1367,25 @@ onUnmounted(() => {
           display: flex;
           align-items: center;
           justify-content: center;
-          
+
           &.active {
             color: #2a8aff;
           }
-          
+
           &:hover {
             color: #666;
           }
         }
       }
     }
-    
+
     .dialog-input {
       width: 100%;
       padding: 10px 12px;
       border: 1px solid #ddd;
       border-radius: 4px;
       font-size: 14px;
-      
+
       &:focus {
         outline: none;
         border-color: #2a8aff;
@@ -1344,35 +1393,35 @@ onUnmounted(() => {
       }
     }
   }
-  
+
   .dialog-footer {
     padding: 16px 20px;
     border-top: 1px solid #eee;
     display: flex;
     justify-content: flex-end;
     gap: 10px;
-    
+
     button {
       padding: 8px 16px;
       border-radius: 4px;
       cursor: pointer;
       font-size: 14px;
-      
+
       &.btn-outline {
         background-color: white;
         color: #666;
         border: 1px solid #ddd;
-        
+
         &:hover {
           background-color: #f5f5f5;
         }
       }
-      
+
       &.btn-primary {
         background-color: #2a8aff;
         color: white;
         border: none;
-        
+
         &:hover {
           background-color: #1a7aef;
         }
@@ -1386,9 +1435,73 @@ onUnmounted(() => {
     opacity: 0;
     transform: translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-</style> 
+
+@keyframes highlight-pulse {
+  0% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+  }
+}
+
+// 修改高亮样式，使其更适合长时间显示
+.file-item.new-uploaded-file {
+  background-color: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.1);
+  position: relative;
+  
+  &::after {
+    content: "新";
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background-color: #3b82f6;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+// 添加上传弹窗样式
+.upload-modal-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none; /* 防止容器本身阻止点击事件 */
+}
+
+.upload-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 1101;
+  pointer-events: auto; /* 允许蒙版接收点击事件 */
+}
+</style>

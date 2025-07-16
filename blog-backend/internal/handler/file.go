@@ -95,7 +95,7 @@ func (h *FileHandler) UploadFile(c *gin.Context) {
 	// 获取文件
 	file, fileHeader, err := c.Request.FormFile("file")
 	if err != nil {
-		response.FailWithCode(c, http.StatusBadRequest, "获取文件失败")
+		response.FailWithCode(c, http.StatusOK, "获取文件失败")
 		return
 	}
 	defer file.Close()
@@ -112,7 +112,7 @@ func (h *FileHandler) UploadFile(c *gin.Context) {
 
 	if err != nil {
 		logrus.Errorf("上传文件失败: %v", err)
-		response.FailWithCode(c, http.StatusInternalServerError, fmt.Sprintf("上传失败: %v", err))
+		response.FailWithCode(c, http.StatusOK, fmt.Sprintf("上传失败: %v", err))
 		return
 	}
 

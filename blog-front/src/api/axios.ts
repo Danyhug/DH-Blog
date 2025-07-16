@@ -21,8 +21,15 @@ const request = axios.create({
 // 添加请求拦截器
 request.interceptors.request.use(
   function (config: InternalAxiosRequestConfig) {
-    // 在发送请求之前做些什么
+    // 添加token到请求头
     config.headers.Authorization = localStorage.getItem("token") || "";
+    
+    // 如果是文件上传请求，不要设置默认的Content-Type
+    if (config.headers["Content-Type"] === "multipart/form-data") {
+      // 删除Content-Type，让浏览器自动设置正确的Content-Type和boundary
+      delete config.headers["Content-Type"];
+    }
+    
     return config;
   },
   function (error) {
