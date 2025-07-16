@@ -24,6 +24,7 @@ type IFileRepository interface {
 	BatchDelete(ctx context.Context, ids []int) error                                            // 批量删除文件
 	CountByUserID(ctx context.Context, userID uint64) (int64, error)                             // 统计用户的文件总数
 	CountByUserIDAndParentID(ctx context.Context, userID uint64, parentID string) (int64, error) // 统计用户在特定目录下的文件数量
+	TruncateFiles(ctx context.Context) error                                                     // 清空文件表
 }
 
 // FileRepository 文件存储的GORM实现
@@ -173,4 +174,16 @@ func (r *FileRepository) CountByUserIDAndParentID(ctx context.Context, userID ui
 	}
 
 	return count, nil
+}
+
+// TruncateFiles 清空文件表
+// 在更改存储路径时使用，会删除所有文件记录
+// 参数:
+//   - ctx: 上下文
+//
+// 返回:
+//   - error: 错误信息
+func (r *FileRepository) TruncateFiles(ctx context.Context) error {
+	// 使用原始SQL执行清空表操作，因为GORM的Delete不会清空表
+	return r.db.WithContext(ctx).Exec("DELETE FROM files").Error
 }

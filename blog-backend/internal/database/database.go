@@ -75,5 +75,58 @@ func Init(conf *config.Config) (*gorm.DB, error) {
 		return nil, fmt.Errorf("插入默认数据失败: %w", err)
 	}
 
+	// 分类现有的系统设置
+	if err := updateSystemSettingsType(db); err != nil {
+		return nil, fmt.Errorf("更新系统设置类型失败: %w", err)
+	}
+
 	return db, nil
+}
+
+// updateSystemSettingsType 更新系统设置的配置类型
+func updateSystemSettingsType(db *gorm.DB) error {
+	// 博客基本配置相关键
+	blogKeys := []string{"blog_title", "signature", "avatar", "github_link", "bilibili_link", "open_blog", "open_comment"}
+	// 邮件配置相关键
+	emailKeys := []string{"comment_email_notify", "smtp_host", "smtp_port", "smtp_user", "smtp_pass", "smtp_sender"}
+	// AI配置相关键
+	aiKeys := []string{"ai_api_url", "ai_api_key", "ai_model", "ai_prompt"}
+	// 存储配置相关键
+	storageKeys := []string{"file_storage_path"}
+
+	// 更新博客基本配置类型
+	for _, key := range blogKeys {
+		err := db.Exec("UPDATE system_settings SET config_type = ? WHERE setting_key = ?", model.ConfigTypeBlog, key).Error
+		if err != nil {
+			return fmt.Errorf("更新博客配置类型失败: %w", err)
+		}
+	}
+
+	// 更新邮件配置类型
+	for _, key := range emailKeys {
+		err := db.Exec("UPDATE system_settings SET config_type = ? WHERE setting_key = ?", model.ConfigTypeEmail, key).Error
+		if err != nil {
+			return fmt.Errorf("更新邮件配置类型失败: %w", err)
+		}
+	}
+
+	// 更新AI配置类型
+	for _, key := range aiKeys {
+		err := db.Exec("UPDATE system_settings SET config_type = ? WHERE setting_key = ?", model.ConfigTypeAI, key).Error
+		if err != nil {
+			return fmt.Errorf("更新AI配置类型失败: %w", err)
+		}
+	}
+
+	// 更新存储配置类型
+	for _, key := range storageKeys {
+		err := db.Exec("UPDATE system_settings SET config_type = ? WHERE setting_key = ?", model.ConfigTypeStorage, key).Error
+		if err != nil {
+			return fmt.Errorf("更新存储配置类型失败: %w", err)
+		}
+	}
+
+	// 记录更新完成
+	fmt.Println("系统设置配置类型更新完成")
+	return nil
 }

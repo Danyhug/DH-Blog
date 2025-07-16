@@ -24,16 +24,17 @@ func NewFileHandler(fileService service.IFileService) *FileHandler {
 	}
 }
 
-// Register 注册路由
-func (h *FileHandler) Register(router *gin.Engine) {
-	fileGroup := router.Group("/api/files")
+// RegisterRoutes 注册路由
+func (h *FileHandler) RegisterRoutes(router *gin.RouterGroup) {
+	fileGroup := router.Group("/files")
 	{
-		fileGroup.GET("/list", h.requireAuth(), h.ListFiles)
-		fileGroup.POST("/upload", h.requireAuth(), h.UploadFile)
-		fileGroup.POST("/folder", h.requireAuth(), h.CreateFolder)
-		fileGroup.GET("/download/:id", h.requireAuth(), h.DownloadFile)
-		fileGroup.PUT("/rename/:id", h.requireAuth(), h.RenameFile)
-		fileGroup.DELETE("/:id", h.requireAuth(), h.DeleteFile)
+		fileGroup.GET("/list", h.ListFiles)
+		fileGroup.POST("/upload", h.UploadFile)
+		fileGroup.POST("/folder", h.CreateFolder)
+		fileGroup.GET("/download/:id", h.DownloadFile)
+		fileGroup.PUT("/rename/:id", h.RenameFile)
+		fileGroup.DELETE("/:id", h.DeleteFile)
+		fileGroup.PUT("/storage-path", h.UpdateStoragePath) // 添加更新存储路径的路由
 	}
 }
 
@@ -295,6 +296,44 @@ func (h *FileHandler) DeleteFile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response.Success())
+}
+
+// UpdateStoragePath 更新文件存储路径
+func (h *FileHandler) UpdateStoragePath(c *gin.Context) {
+	// 检查权限（仅允许管理员操作）
+	userID := h.getCurrentUserID(c)
+	if userID != 1 { // 假设ID为1的用户是管理员
+		response.FailWithCode(c, http.StatusUnauthorized, "只有管理员可以更新存储路径")
+		return
+	}
+
+	var req struct {
+		Path string `json:"path" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailWithCode(c, http.StatusBadRequest, "请求参数无效: "+err.Error())
+		return
+	}
+
+	if req.Path == "" {
+		response.FailWithCode(c, http.StatusBadRequest, "存储路径不能为空")
+		return
+	}
+
+	// 调用文件服务更新存储路径并清空文件表
+	err := h.fileService.UpdateStoragePath(req.Path)
+	if err != nil {
+		logrus.Errorf("更新存储路径失败: %v", err)
+		response.FailWithCode(c, http.StatusInternalServerError, "更新存储路径失败: "+err.Error())
+		return
+	}
+
+	// 使用自定义消息的响应
+	c.JSON(http.StatusOK, response.AjaxResult{
+		Code: 1,
+		Msg:  "存储路径已更新，文件表已清空，所有文件需要重新上传",
+	})
 }
 
 // requireAuth 验证用户是否已登录

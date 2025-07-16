@@ -5,7 +5,7 @@ import { Page, PageResult } from '@/types/Page'
 import { Tag } from '@/types/Tag'
 import { IpStat } from '@/types/IpStat'
 import { Comment } from "@/types/Comment";
-import { SystemConfig } from '@/types/SystemConfig';
+import { SystemConfig, BlogConfig, EmailConfig, AIConfig, StorageConfig } from '@/types/SystemConfig';
 
 /**
  * 查询文章详情
@@ -193,10 +193,57 @@ export const postBanIp = (ip: string, status: number): Promise<string> => {
 
 
 // ********** 系统配置 **********
+// 获取所有配置
 export const getSystemConfig = (): Promise<SystemConfig> => {
   return request.get('/admin/config')
 }
 
+// 更新所有配置
 export const updateSystemConfig = (data: SystemConfig): Promise<any> => {
   return request.put('/admin/config', data)
+}
+
+// ********** 博客基本配置 **********
+export const getBlogConfig = (): Promise<BlogConfig> => {
+  return request.get('/admin/config/blog')
+}
+
+export const updateBlogConfig = (data: BlogConfig): Promise<any> => {
+  return request.put('/admin/config/blog', data)
+}
+
+// ********** 邮件配置 **********
+export const getEmailConfig = (): Promise<EmailConfig> => {
+  return request.get('/admin/config/email')
+}
+
+export const updateEmailConfig = (data: EmailConfig): Promise<any> => {
+  return request.put('/admin/config/email', data)
+}
+
+// ********** AI配置 **********
+export const getAIConfig = (): Promise<AIConfig> => {
+  return request.get('/admin/config/ai')
+}
+
+export const updateAIConfig = (data: AIConfig): Promise<any> => {
+  return request.put('/admin/config/ai', data)
+}
+
+// ********** 存储配置 **********
+export const getStorageConfig = (): Promise<StorageConfig> => {
+  return request.get('/admin/config/storage')
+}
+
+export const updateStorageConfig = (data: StorageConfig): Promise<any> => {
+  return request.put('/admin/config/storage', data)
+}
+
+// ********** 文件存储路径配置（兼容旧版） **********
+export const getStoragePath = (): Promise<{path: string}> => {
+  return request.get('/admin/config/storage-path')
+}
+
+export const updateStoragePath = (path: string): Promise<any> => {
+  return request.put('/admin/config/storage-path', {path})
 }

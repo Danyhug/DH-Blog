@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,12 +16,15 @@ import (
 )
 
 type fileService struct {
-	repo     repository.IFileRepository // 文件存储库
-	filePath string                     // 实际存储文件的基础路径
+	repo        repository.IFileRepository         // 文件存储库
+	settingRepo repository.SystemSettingRepository // 系统设置仓库
+	filePath    string                             // 实际存储文件的基础路径
+	defaultPath string                             // 默认存储路径，当数据库未配置时使用
 }
 
 const (
-	defaultFilePath = `/Users/danyhug/GolandProjects/DH-Blog/blog-deploy/backend`
+	defaultFilePath    = `/Users/danyhug/GolandProjects/DH-Blog/blog-deploy/backend`
+	filePathSettingKey = "file_storage_path" // 文件存储路径在数据库中的键名
 )
 
 // IFileService 定义了网盘核心功能的业务逻辑合同 (MVP版本)
@@ -51,29 +55,68 @@ type IFileService interface {
 	// DeleteFile 6. 删除文件或文件夹 (简化版)
 	// 先实现直接删除（硬删除），回收站功能作为未来的增强项。
 	DeleteFile(ctx context.Context, userID uint64, fileID string) error
+
+	// UpdateStoragePath 7. 更新文件存储路径
+	// 更新系统的文件存储路径，并迁移现有文件
+	UpdateStoragePath(newPath string) error
 }
 
 // NewFileService 创建新的文件服务
 // 参数:
 //   - repo: 文件存储库接口
-//   - filePath: 可选，实际文件存储路径
+//   - settingRepo: 系统设置仓库接口
+//   - defaultPath: 可选，默认文件存储路径，当数据库中未配置时使用
 //
 // 返回:
 //   - IFileService: 文件服务接口
-func NewFileService(repo repository.IFileRepository, filePath ...string) IFileService {
-	storagePath := defaultFilePath
-	if len(filePath) > 0 && filePath[0] != "" {
-		storagePath = filePath[0]
+func NewFileService(repo repository.IFileRepository, settingRepo repository.SystemSettingRepository, defaultPath ...string) IFileService {
+	// 设置默认路径
+	defPath := defaultFilePath
+	if len(defaultPath) > 0 && defaultPath[0] != "" {
+		defPath = defaultPath[0]
 	}
+
+	service := &fileService{
+		repo:        repo,
+		settingRepo: settingRepo,
+		defaultPath: defPath,
+		filePath:    defPath, // 初始值设为默认路径，后续会从数据库更新
+	}
+
+	// 尝试从数据库加载存储路径
+	service.loadStoragePathFromDB()
+
+	return service
+}
+
+// loadStoragePathFromDB 从数据库加载文件存储路径
+func (s *fileService) loadStoragePathFromDB() {
+	// 尝试从系统设置获取存储路径
+	pathFromDB, err := s.settingRepo.GetSetting(filePathSettingKey)
+	if err != nil {
+		logrus.Warnf("从数据库获取文件存储路径失败: %v，将使用默认路径: %s", err, s.defaultPath)
+
+		// 如果设置不存在，尝试创建该设置项
+		err = s.settingRepo.UpdateSetting(filePathSettingKey, s.defaultPath)
+		if err != nil {
+			logrus.Errorf("创建文件存储路径设置失败: %v", err)
+		}
+		return
+	}
+
+	// 如果获取到了路径，但是为空，仍使用默认路径
+	if pathFromDB == "" {
+		logrus.Warn("数据库中文件存储路径为空，将使用默认路径")
+		return
+	}
+
+	// 使用从数据库获取的路径
+	s.filePath = pathFromDB
+	logrus.Infof("已从数据库加载文件存储路径: %s", s.filePath)
 
 	// 确保存储路径存在
-	if err := os.MkdirAll(storagePath, os.ModePerm); err != nil {
-		logrus.Warnf("创建文件存储路径失败: %v，将使用默认路径", err)
-	}
-
-	return &fileService{
-		repo:     repo,
-		filePath: storagePath,
+	if err := os.MkdirAll(s.filePath, os.ModePerm); err != nil {
+		logrus.Warnf("创建文件存储路径失败: %v，可能影响文件上传", err)
 	}
 }
 
@@ -98,6 +141,9 @@ func (s *fileService) getStoragePath(userID uint64, parentID string, fileName st
 }
 
 func (s *fileService) ListFiles(ctx context.Context, userID uint64, parentID string) ([]*model.File, error) {
+	// 先刷新存储路径设置
+	s.loadStoragePathFromDB()
+
 	// 使用存储库查询数据库
 	files, err := s.repo.ListByParentID(ctx, userID, parentID)
 	if err != nil {
@@ -109,6 +155,9 @@ func (s *fileService) ListFiles(ctx context.Context, userID uint64, parentID str
 }
 
 func (s *fileService) CreateFolder(ctx context.Context, userID uint64, parentID string, folderName string) (*model.File, error) {
+	// 先刷新存储路径设置
+	s.loadStoragePathFromDB()
+
 	// 检查是否已存在同名文件夹
 	existing, err := s.repo.FindByUserIDAndName(ctx, userID, parentID, folderName)
 	if err == nil && existing != nil {
@@ -143,6 +192,9 @@ func (s *fileService) CreateFolder(ctx context.Context, userID uint64, parentID 
 }
 
 func (s *fileService) UploadFile(ctx context.Context, userID uint64, parentID string, fileName string, fileSize int64, fileContent io.Reader) (*model.File, error) {
+	// 先刷新存储路径设置
+	s.loadStoragePathFromDB()
+
 	// 检查是否已存在同名文件
 	existing, err := s.repo.FindByUserIDAndName(ctx, userID, parentID, fileName)
 	if err == nil && existing != nil {
@@ -195,6 +247,9 @@ func (s *fileService) UploadFile(ctx context.Context, userID uint64, parentID st
 }
 
 func (s *fileService) GetDownloadInfo(ctx context.Context, userID uint64, fileID string) (*model.File, error) {
+	// 先刷新存储路径设置
+	s.loadStoragePathFromDB()
+
 	// 解析fileID，在MVP版本中fileID可以是文件记录ID或文件路径
 	var file *model.File
 	var err error
@@ -239,6 +294,9 @@ func (s *fileService) GetDownloadInfo(ctx context.Context, userID uint64, fileID
 }
 
 func (s *fileService) RenameFile(ctx context.Context, userID uint64, fileID string, newName string) error {
+	// 先刷新存储路径设置
+	s.loadStoragePathFromDB()
+
 	// 解析fileID
 	id, err := parseFileID(fileID)
 	if err != nil {
@@ -296,6 +354,9 @@ func (s *fileService) RenameFile(ctx context.Context, userID uint64, fileID stri
 }
 
 func (s *fileService) DeleteFile(ctx context.Context, userID uint64, fileID string) error {
+	// 先刷新存储路径设置
+	s.loadStoragePathFromDB()
+
 	// 解析fileID
 	id, err := parseFileID(fileID)
 	if err != nil {
@@ -336,6 +397,202 @@ func (s *fileService) DeleteFile(ctx context.Context, userID uint64, fileID stri
 		return fmt.Errorf("删除文件记录失败")
 	}
 
+	return nil
+}
+
+// UpdateStoragePath 更新文件存储路径
+func (s *fileService) UpdateStoragePath(newPath string) error {
+	// 1. 更新系统设置中的存储路径
+	err := s.settingRepo.UpdateSetting(filePathSettingKey, newPath)
+	if err != nil {
+		logrus.Errorf("更新文件存储路径设置失败: %v", err)
+		return fmt.Errorf("更新文件存储路径失败")
+	}
+	logrus.Infof("文件存储路径已更新为: %s", newPath)
+
+	// 2. 清空文件表，因为不同路径存储的数据不同
+	ctx := context.Background()
+	if err := s.repo.TruncateFiles(ctx); err != nil {
+		logrus.Errorf("清空文件表失败: %v", err)
+		return fmt.Errorf("清空文件表失败")
+	}
+	logrus.Info("文件表已清空")
+
+	// 3. 确保新的存储路径存在
+	if err := os.MkdirAll(newPath, os.ModePerm); err != nil {
+		logrus.Errorf("创建新文件存储路径失败: %v", err)
+		return fmt.Errorf("创建新文件存储路径失败")
+	}
+	logrus.Infof("新文件存储路径已创建: %s", newPath)
+
+	// 4. 更新服务实例中的filePath
+	s.filePath = newPath
+	logrus.Infof("服务实例中的filePath已更新为: %s", s.filePath)
+
+	// 5. 扫描目录并添加文件记录
+	if err := s.scanAndAddFiles(ctx); err != nil {
+		logrus.Warnf("扫描并添加文件记录失败: %v", err)
+		return fmt.Errorf("扫描并添加文件记录失败: %v", err)
+	}
+
+	return nil
+}
+
+// scanAndAddFiles 扫描存储目录并将文件添加到数据库
+func (s *fileService) scanAndAddFiles(ctx context.Context) error {
+	logrus.Infof("开始扫描目录: %s", s.filePath)
+
+	// 统计扫描结果
+	var folderCount, fileCount int
+
+	// 存储目录ID映射，用于建立父子关系
+	// 键为目录的相对路径，值为目录在数据库中的ID
+	dirIDMap := make(map[string]string)
+	// 根目录的ID为空字符串
+	dirIDMap[""] = ""
+
+	// 第一次遍历：创建所有目录
+	err := filepath.Walk(s.filePath, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			logrus.Warnf("访问路径失败: %s, 错误: %v", path, err)
+			return nil // 继续遍历
+		}
+
+		// 跳过根目录本身
+		if path == s.filePath {
+			return nil
+		}
+
+		// 跳过隐藏文件
+		if strings.HasPrefix(filepath.Base(path), ".") {
+			if info.IsDir() {
+				return filepath.SkipDir // 跳过整个目录
+			}
+			return nil
+		}
+
+		// 只处理目录
+		if !info.IsDir() {
+			return nil
+		}
+
+		// 获取相对路径
+		relPath, err := filepath.Rel(s.filePath, path)
+		if err != nil {
+			logrus.Warnf("获取相对路径失败: %s, 错误: %v", path, err)
+			return nil
+		}
+
+		// 获取父目录路径
+		parentPath := filepath.Dir(relPath)
+		if parentPath == "." {
+			parentPath = "" // 根目录
+		}
+
+		// 检查父目录ID是否存在
+		parentID, exists := dirIDMap[parentPath]
+		if !exists {
+			logrus.Warnf("父目录ID不存在: %s", parentPath)
+			return nil
+		}
+
+		// 创建目录记录
+		folder := &model.File{
+			UserID:   1, // 默认用户ID为1，表示系统用户
+			ParentID: parentID,
+			Name:     filepath.Base(path),
+			IsFolder: true,
+			Size:     0,
+		}
+
+		// 保存到数据库
+		if err := s.repo.Create(ctx, folder); err != nil {
+			logrus.Warnf("添加目录记录失败: %s, 错误: %v", path, err)
+			return nil
+		}
+
+		// 保存目录ID到映射
+		dirIDMap[relPath] = fmt.Sprintf("%d", folder.ID)
+		folderCount++
+
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("遍历目录失败: %v", err)
+	}
+
+	// 第二次遍历：添加所有文件
+	err = filepath.Walk(s.filePath, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			logrus.Warnf("访问路径失败: %s, 错误: %v", path, err)
+			return nil // 继续遍历
+		}
+
+		// 跳过根目录本身
+		if path == s.filePath {
+			return nil
+		}
+
+		// 跳过隐藏文件
+		if strings.HasPrefix(filepath.Base(path), ".") {
+			if info.IsDir() {
+				return filepath.SkipDir // 跳过整个目录
+			}
+			return nil
+		}
+
+		// 只处理文件
+		if info.IsDir() {
+			return nil
+		}
+
+		// 获取相对路径
+		relPath, err := filepath.Rel(s.filePath, path)
+		if err != nil {
+			logrus.Warnf("获取相对路径失败: %s, 错误: %v", path, err)
+			return nil
+		}
+
+		// 获取父目录路径
+		parentPath := filepath.Dir(relPath)
+		if parentPath == "." {
+			parentPath = "" // 根目录
+		}
+
+		// 检查父目录ID是否存在
+		parentID, exists := dirIDMap[parentPath]
+		if !exists {
+			logrus.Warnf("父目录ID不存在: %s", parentPath)
+			return nil
+		}
+
+		// 创建文件记录
+		file := &model.File{
+			UserID:      1, // 默认用户ID为1，表示系统用户
+			ParentID:    parentID,
+			Name:        filepath.Base(path),
+			IsFolder:    false,
+			Size:        info.Size(),
+			StoragePath: relPath,
+			MimeType:    getMimeType(filepath.Base(path)),
+		}
+
+		// 保存到数据库
+		if err := s.repo.Create(ctx, file); err != nil {
+			logrus.Warnf("添加文件记录失败: %s, 错误: %v", path, err)
+			return nil
+		}
+
+		fileCount++
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("遍历目录失败: %v", err)
+	}
+
+	logrus.Infof("扫描完成，共添加 %d 个文件夹和 %d 个文件", folderCount, fileCount)
 	return nil
 }
 

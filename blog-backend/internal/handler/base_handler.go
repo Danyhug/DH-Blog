@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"dh-blog/internal/response"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -55,6 +56,24 @@ func (h *BaseHandler) Success(c *gin.Context) {
 // SuccessWithData 返回带数据的成功响应
 func (h *BaseHandler) SuccessWithData(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, response.SuccessWithData(data))
+}
+
+// SuccessWithMessage 返回带自定义消息的成功响应
+func (h *BaseHandler) SuccessWithMessage(c *gin.Context, message string) {
+	c.JSON(http.StatusOK, gin.H{
+		"code": 1,
+		"msg":  message,
+		"data": nil,
+	})
+}
+
+// ErrorWithMessage 返回带自定义消息的错误响应
+func (h *BaseHandler) ErrorWithMessage(c *gin.Context, message string) {
+	c.JSON(http.StatusBadRequest, gin.H{
+		"code": 0,
+		"msg":  message,
+		"data": nil,
+	})
 }
 
 // SuccessWithPage 返回带分页信息的成功响应

@@ -65,7 +65,7 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	aiService := service.NewAIService(systemSettingRepo, cacheService.GetCache())
 	ipService := service.NewIPService(logRepo)
 	// 添加文件服务
-	fileService := service.NewFileService(fileRepo, fileStoragePath)
+	fileService := service.NewFileService(fileRepo, systemSettingRepo, fileStoragePath)
 
 	// 初始化任务管理器
 	taskManager := task.NewTaskManager(db, aiService, tagRepo)
@@ -82,7 +82,7 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	commentHandler := handler.NewCommentHandler(commentRepo)
 	logHandler := handler.NewLogHandler(logRepo)
 	adminHandler := handler.NewAdminHandler(uploadService, aiService)
-	systemConfigHandler := handler.NewSystemConfigHandler(systemSettingRepo)
+	systemConfigHandler := handler.NewSystemConfigHandler(systemSettingRepo, db, fileService)
 	// 添加文件处理器
 	fileHandler := handler.NewFileHandler(fileService)
 

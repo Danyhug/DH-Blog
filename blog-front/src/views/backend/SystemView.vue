@@ -2,21 +2,21 @@
     <div class="system-view">
         <el-tabs v-model="activeTab" class="system-tabs">
             <el-tab-pane label="站点设置" name="site">
-                <el-form :model="config" label-width="120px">
+                <el-form :model="blogConfig" label-width="120px">
                     <el-form-item label="博客标题">
-                        <el-input v-model="config.blog_title"></el-input>
+                        <el-input v-model="blogConfig.blog_title"></el-input>
                     </el-form-item>
                     <el-form-item label="个人签名">
-                        <el-input v-model="config.signature"></el-input>
+                        <el-input v-model="blogConfig.signature"></el-input>
                     </el-form-item>
                     <el-form-item label="个人头像">
-                        <el-input v-model="config.avatar"></el-input>
+                        <el-input v-model="blogConfig.avatar"></el-input>
                     </el-form-item>
                     <el-form-item label="GitHub链接">
-                        <el-input v-model="config.github_link"></el-input>
+                        <el-input v-model="blogConfig.github_link"></el-input>
                     </el-form-item>
                     <el-form-item label="Bilibili链接">
-                        <el-input v-model="config.bilibili_link"></el-input>
+                        <el-input v-model="blogConfig.bilibili_link"></el-input>
                     </el-form-item>
                 </el-form>
             </el-tab-pane>
@@ -34,40 +34,60 @@
                 </el-form>
             </el-tab-pane>
             <el-tab-pane label="邮箱设置" name="email">
-                <el-form :model="config" label-width="120px">
+                <el-form :model="emailConfig" label-width="120px">
                     <el-form-item label="SMTP主机">
-                        <el-input v-model="config.smtp_host"></el-input>
+                        <el-input v-model="emailConfig.smtp_host"></el-input>
                     </el-form-item>
                     <el-form-item label="SMTP端口">
-                        <el-input v-model.number="config.smtp_port"></el-input>
+                        <el-input v-model.number="emailConfig.smtp_port"></el-input>
                     </el-form-item>
                     <el-form-item label="SMTP用户">
-                        <el-input v-model="config.smtp_user"></el-input>
+                        <el-input v-model="emailConfig.smtp_user"></el-input>
                     </el-form-item>
                     <el-form-item label="SMTP密码">
-                        <el-input v-model="config.smtp_pass" type="password"></el-input>
+                        <el-input v-model="emailConfig.smtp_pass" type="password"></el-input>
                     </el-form-item>
                     <el-form-item label="SMTP发送者">
-                        <el-input v-model="config.smtp_sender"></el-input>
+                        <el-input v-model="emailConfig.smtp_sender"></el-input>
+                    </el-form-item>
+                </el-form>
+            </el-tab-pane>
+            <el-tab-pane label="文件存储" name="storage">
+                <el-form :model="storageConfig" label-width="120px">
+                    <el-form-item label="存储路径">
+                        <el-input 
+                            v-model="storageConfig.file_storage_path" 
+                            placeholder="/path/to/your/storage/directory"
+                        >
+                            <template #append>
+                                <el-button @click="testStoragePath">测试路径</el-button>
+                            </template>
+                        </el-input>
+                        <div class="el-form-item__extra" style="color: #909399; font-size: 12px; margin-top: 5px;">
+                            请设置一个服务器上有读写权限的绝对路径，用于存储上传的文件。修改后即时生效，不需要重启服务器。
+                        </div>
+                        <div class="el-form-item__extra" style="color: #F56C6C; font-size: 12px; margin-top: 5px; font-weight: bold;">
+                            警告：更改存储路径会清空文件表，所有文件记录将被删除！请确保已备份重要文件。
+                        </div>
                     </el-form-item>
                 </el-form>
             </el-tab-pane>
             <el-tab-pane label="AI设置" name="ai">
-                <el-form :model="config" label-width="120px">
+                <el-form :model="aiConfig" label-width="120px">
                     <el-row>
                         <el-col :span="8">
                             <el-form-item label="API 地址">
-                                <el-input v-model="config.ai_api_url" placeholder="https://xxx.xin/v1/chat/completions"></el-input>
+                                <el-input v-model="aiConfig.ai_api_url" placeholder="https://xxx.xin/v1/chat/completions"></el-input>
                             </el-form-item>
                         </el-col>
                         <el-col :span="10">
                             <el-form-item label="API 秘钥">
-                                <el-input v-model="config.ai_api_key"></el-input>
+                                <el-input v-model="aiConfig.ai_api_key"></el-input>
                             </el-form-item>
                         </el-col>
                         <el-col :span="6">
                             <el-form-item label="模型">
-                                <el-input v-model="config.ai_model" placeholder="gpt-3.5-turbo"></el-input>
+                                <el-input v-model="aiConfig.ai_model" placeholder="gpt-3.5-turbo"></el-input>
                             </el-form-item>
                         </el-col>
                     </el-row>
@@ -92,7 +112,7 @@
                         <div v-if="!isEditingPrompt" class="ai-prompt-display" @click="startEditing" v-html="highlightedPrompt"></div>
                         <el-input
                             v-else
-                            v-model="config.ai_prompt"
+                            v-model="aiConfig.ai_prompt"
                             type="textarea"
                             autosize
                             @blur="stopEditing"
@@ -111,10 +131,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
-import { getSystemConfig, updateSystemConfig } from '@/api/admin';
-import type { SystemConfig } from '@/types/SystemConfig';
-import { ElMessage } from 'element-plus';
+import { ref, onMounted, computed, watch } from 'vue';
+import { 
+    getSystemConfig, updateSystemConfig, 
+    getBlogConfig, updateBlogConfig,
+    getEmailConfig, updateEmailConfig,
+    getAIConfig, updateAIConfig,
+    getStorageConfig, updateStorageConfig,
+    updateStoragePath 
+} from '@/api/admin';
+import type { SystemConfig, BlogConfig, EmailConfig, AIConfig, StorageConfig } from '@/types/SystemConfig';
+import { ElMessage, ElMessageBox } from 'element-plus';
 
 // HTML 转义函数
 const escapeHtml = (unsafe: string) => {
@@ -128,6 +155,10 @@ const escapeHtml = (unsafe: string) => {
 
 const activeTab = ref('site');
 const config = ref<SystemConfig>({});
+const blogConfig = ref<BlogConfig>({});
+const emailConfig = ref<EmailConfig>({});
+const aiConfig = ref<AIConfig>({});
+const storageConfig = ref<StorageConfig>({});
 const isEditingPrompt = ref(false);
 
 const promptTags = ref([
@@ -146,10 +177,10 @@ const promptTags = ref([
 ]);
 
 const highlightedPrompt = computed(() => {
-    if (!config.value.ai_prompt) {
+    if (!aiConfig.value.ai_prompt) {
         return '<span style="color: #909399;">点击此处输入AI提示词，填充符格式为 &lbrace;&lbrace;.变量名&rbrace;&rbrace;</span>';
     }
-    let processedPrompt = escapeHtml(config.value.ai_prompt);
+    let processedPrompt = escapeHtml(aiConfig.value.ai_prompt);
     return processedPrompt.replace(/\{\{\.[a-zA-Z0-9_]+\}\}/g, '<span class="text-highlight">$&</span>');
 });
 
@@ -162,19 +193,160 @@ const stopEditing = () => {
 };
 
 const selectPrompt = (prompt: string) => {
-    config.value.ai_prompt = prompt;
+    aiConfig.value.ai_prompt = prompt;
     isEditingPrompt.value = false; // Switch back to display mode after selecting
 };
 
-onMounted(async () => {
-    const res = await getSystemConfig();
-    config.value = res;
-    console.log("Highlighted Prompt HTML:", highlightedPrompt.value); // Add console.log here
+// 监听选项卡变化，按需加载不同类型的配置
+watch(activeTab, async (newTab) => {
+    if (newTab === 'site') {
+        await loadBlogConfig();
+    } else if (newTab === 'email') {
+        await loadEmailConfig();
+    } else if (newTab === 'storage') {
+        await loadStorageConfig();
+    } else if (newTab === 'ai') {
+        await loadAIConfig();
+    }
 });
 
+// 加载博客基本配置
+const loadBlogConfig = async () => {
+    try {
+        const res = await getBlogConfig();
+        blogConfig.value = res;
+    } catch (error) {
+        ElMessage.error('加载博客配置失败');
+    }
+};
+
+// 加载邮件配置
+const loadEmailConfig = async () => {
+    try {
+        const res = await getEmailConfig();
+        emailConfig.value = res;
+    } catch (error) {
+        ElMessage.error('加载邮件配置失败');
+    }
+};
+
+// 加载AI配置
+const loadAIConfig = async () => {
+    try {
+        const res = await getAIConfig();
+        aiConfig.value = res;
+    } catch (error) {
+        ElMessage.error('加载AI配置失败');
+    }
+};
+
+// 加载存储配置
+const loadStorageConfig = async () => {
+    try {
+        const res = await getStorageConfig();
+        storageConfig.value = res;
+    } catch (error) {
+        ElMessage.error('加载存储配置失败');
+    }
+};
+
+// 测试存储路径是否可用
+const testStoragePath = async () => {
+    if (!storageConfig.value.file_storage_path) {
+        ElMessage.warning('请先输入存储路径');
+        return;
+    }
+
+    try {
+        // 添加确认对话框
+        await ElMessageBox.confirm(
+            '警告：更改存储路径会清空文件表，所有文件记录将被删除！请确保已备份重要文件。',
+            '确认更改存储路径',
+            {
+                confirmButtonText: '确认修改',
+                cancelButtonText: '取消',
+                type: 'warning',
+            }
+        );
+        
+        // 用户点击确认，执行路径更新
+        try {
+            await updateStorageConfig(storageConfig.value);
+            ElMessage.success('存储路径已更新，文件表已清空');
+        } catch (error) {
+            const errMsg = error instanceof Error ? error.message : '无法访问或写入该路径';
+            ElMessage.error(`存储路径更新失败: ${errMsg}`);
+        }
+    } catch {
+        // 用户取消，不执行任何操作
+        ElMessage.info('已取消更改存储路径');
+    }
+};
+
+onMounted(async () => {
+    // 首先加载全局配置
+    const res = await getSystemConfig();
+    config.value = res;
+    
+    // 初始化各个分类配置
+    blogConfig.value = {
+        blog_title: res.blog_title,
+        signature: res.signature,
+        avatar: res.avatar,
+        github_link: res.github_link,
+        bilibili_link: res.bilibili_link,
+        open_blog: res.open_blog,
+        open_comment: res.open_comment
+    };
+    
+    emailConfig.value = {
+        comment_email_notify: res.comment_email_notify,
+        smtp_host: res.smtp_host,
+        smtp_port: res.smtp_port,
+        smtp_user: res.smtp_user,
+        smtp_pass: res.smtp_pass,
+        smtp_sender: res.smtp_sender
+    };
+    
+    aiConfig.value = {
+        ai_api_url: res.ai_api_url,
+        ai_api_key: res.ai_api_key,
+        ai_model: res.ai_model,
+        ai_prompt: res.ai_prompt
+    };
+    
+    storageConfig.value = {
+        file_storage_path: res.file_storage_path
+    };
+    
+    // 根据当前选项卡加载对应配置
+    if (activeTab.value === 'site') {
+        await loadBlogConfig();
+    } else if (activeTab.value === 'email') {
+        await loadEmailConfig();
+    } else if (activeTab.value === 'storage') {
+        await loadStorageConfig();
+    } else if (activeTab.value === 'ai') {
+        await loadAIConfig();
+    }
+});
+
+// 保存配置
 const saveConfig = async () => {
-    await updateSystemConfig(config.value);
-    ElMessage.success('保存成功');
+    try {
+        if (activeTab.value === 'site') {
+            await updateBlogConfig(blogConfig.value);
+        } else if (activeTab.value === 'email') {
+            await updateEmailConfig(emailConfig.value);
+        } else if (activeTab.value === 'storage') {
+            await updateStorageConfig(storageConfig.value);
+        } else if (activeTab.value === 'ai') {
+            await updateAIConfig(aiConfig.value);
+        }
+        ElMessage.success('保存成功');
+    } catch (error) {
+        ElMessage.error('保存失败');
+    }
 };
 </script>
 

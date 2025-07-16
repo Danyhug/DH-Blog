@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 // Init 初始化并配置 Gin 路由器
@@ -103,9 +104,36 @@ func Init(
 		// IP封禁API - 与前端请求格式一致
 		adminAPI.POST("/ip/ban/:ip/:status", logHandler.BanIP)
 
-		// 系统配置 API
-		adminAPI.GET("/config", systemConfigHandler.GetConfigs)
-		adminAPI.PUT("/config", systemConfigHandler.UpdateConfigs)
+		// 使用SystemConfigHandler的RegisterRoutes方法注册系统配置相关路由
+		logrus.Info("注册系统配置路由")
+
+		// 添加系统配置路由
+		configGroup := adminAPI.Group("/config")
+		{
+			// 全局配置接口
+			configGroup.GET("", systemConfigHandler.GetConfigs)
+			configGroup.PUT("", systemConfigHandler.UpdateConfigs)
+
+			// 博客基本配置接口
+			configGroup.GET("/blog", systemConfigHandler.GetBlogConfig)
+			configGroup.PUT("/blog", systemConfigHandler.UpdateBlogConfig)
+
+			// 邮件配置接口
+			configGroup.GET("/email", systemConfigHandler.GetEmailConfig)
+			configGroup.PUT("/email", systemConfigHandler.UpdateEmailConfig)
+
+			// AI配置接口
+			configGroup.GET("/ai", systemConfigHandler.GetAIConfig)
+			configGroup.PUT("/ai", systemConfigHandler.UpdateAIConfig)
+
+			// 存储配置接口
+			configGroup.GET("/storage", systemConfigHandler.GetStorageConfig)
+			configGroup.PUT("/storage", systemConfigHandler.UpdateStorageConfig)
+
+			// 兼容旧版API
+			configGroup.GET("/storage-path", systemConfigHandler.GetStoragePath)
+			configGroup.PUT("/storage-path", systemConfigHandler.UpdateStoragePath)
+		}
 	}
 
 	fileApi := router.Group("/api/files")
@@ -117,6 +145,7 @@ func Init(
 		fileApi.GET("/download/:id", fileHandler.DownloadFile)
 		fileApi.PUT("/rename/:id", fileHandler.RenameFile)
 		fileApi.DELETE("/:id", fileHandler.DeleteFile)
+		fileApi.PUT("/storage-path", fileHandler.UpdateStoragePath) // 添加更新存储路径路由
 	}
 
 	// 开放静态文件服务
