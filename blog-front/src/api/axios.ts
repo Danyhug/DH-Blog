@@ -10,8 +10,18 @@ interface AjaxResult<T> {
   data: T;
 }
 
+// 获取服务器配置（如果有）
+const getServerUrl = () => {
+  // 检查是否有服务器注入的配置
+  if (window && (window as any).__SERVER_CONFIG__) {
+    return (window as any).__SERVER_CONFIG__.SERVER_URL;
+  }
+  // 否则使用环境变量中的配置
+  return SERVER_URL;
+};
+
 const request = axios.create({
-  baseURL: SERVER_URL,
+  baseURL: getServerUrl(),
   timeout: 10000,
   headers: {
     "Content-Type": "application/json;charset=UTF-8",

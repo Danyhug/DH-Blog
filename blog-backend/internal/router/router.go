@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"dh-blog/internal/config"
+	"dh-blog/internal/frontend"
 	"dh-blog/internal/handler"
 	"dh-blog/internal/middleware"
 	"dh-blog/internal/service"
@@ -24,6 +26,7 @@ func Init(
 	fileHandler *handler.FileHandler,
 	ipService service.IPService,
 	staticFilesAbsPath string,
+	conf *config.Config, // 添加配置参数
 ) *gin.Engine {
 
 	// 使用原始的路由配置
@@ -152,6 +155,10 @@ func Init(
 	// 开放静态文件服务
 	publicAPI.Static("/uploads", staticFilesAbsPath)
 	fmt.Printf("静态文件服务路径: /uploads -> %s\n", staticFilesAbsPath)
+
+	// 注册前端静态文件路由
+	frontend.RegisterFrontendRoutes(router, conf)
+	logrus.Info("前端静态文件路由已注册")
 
 	return router
 }

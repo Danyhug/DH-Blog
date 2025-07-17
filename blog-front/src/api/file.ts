@@ -76,14 +76,14 @@ export const uploadFile = (parentId: string | undefined, file: File): Promise<an
 
 /**
  * 创建文件夹
- * @param folderName 文件夹名称
  * @param parentId 父目录ID，为空则创建在根目录
+ * @param folderName 文件夹名称
  * @returns 创建结果
  */
-export const createFolder = (folderName: string, parentId?: string): Promise<any> => {
+export const createFolder = (parentId: string, folderName: string): Promise<any> => {
   return request.post('/files/folder', {
-    folderName,
-    parentId: parentId || ''
+    parentId: parentId || '',
+    folderName
   })
 }
 

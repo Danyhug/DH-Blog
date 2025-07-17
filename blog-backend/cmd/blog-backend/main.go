@@ -19,6 +19,7 @@ import (
 	"dh-blog/internal/service"
 	"dh-blog/internal/utils"
 	"dh-blog/internal/wire"
+
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -85,6 +86,7 @@ func main() {
 
 	// 启动 HTTP 服务器（在新的 goroutine 中）
 	go func() {
+		logrus.Infof("HTTP服务器启动，监听地址: %s", server.Addr)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logrus.Fatalf("无法监听 %s 端口: %v\n", server.Addr, err)
 		}

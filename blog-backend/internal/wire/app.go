@@ -96,5 +96,6 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 		fileHandler,
 		ipService,
 		staticFilesAbsPath,
+		conf, // 添加配置参数
 	)
 }

@@ -1002,16 +1002,18 @@ onUnmounted(() => {
 
   .file-container {
     flex: 1;
-    overflow: auto;
+    overflow: visible; /* 修改为visible，确保子元素不被裁剪 */
     display: flex;
     flex-direction: column;
     min-height: 400px;
     /* 最小高度，确保在内容少时也有一定高度 */
     background-color: #ffffff;
+    padding: 10px; /* 添加内边距，为溢出的元素留出空间 */
 
     .file-container-inner {
       display: flex;
       flex-direction: column;
+      overflow: visible; /* 确保子元素不被裁剪 */
     }
 
     .loading-container {
@@ -1025,9 +1027,11 @@ onUnmounted(() => {
     .file-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-      gap: 10px;
+      gap: 15px; /* 增加间距，为标记留出更多空间 */
       flex: 1;
       background-color: #ffffff;
+      overflow: visible; /* 确保子元素不被裁剪 */
+      padding: 10px; /* 添加内边距，为溢出的元素留出空间 */
 
       .file-item {
         cursor: pointer;
@@ -1035,7 +1039,7 @@ onUnmounted(() => {
         padding: 15px;
         transition: all 0.3s ease;
         position: relative;
-        overflow: hidden;
+        /* 移除overflow: hidden，这是导致高亮效果被切断的原因 */
         height: 140px;
         /* 固定高度 */
         display: flex;
@@ -1442,18 +1446,6 @@ onUnmounted(() => {
   }
 }
 
-@keyframes highlight-pulse {
-  0% {
-    box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
-  }
-  100% {
-    box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
-  }
-}
-
 // 修改高亮样式，使其更适合长时间显示
 .file-item.new-uploaded-file {
   background-color: rgba(59, 130, 246, 0.05);
@@ -1464,18 +1456,32 @@ onUnmounted(() => {
   &::after {
     content: "新";
     position: absolute;
-    top: 5px;
-    right: 5px;
+    top: -10px; /* 调整标记位置，使其显示在元素外 */
+    right: -10px;
     background-color: #3b82f6;
     color: white;
     font-size: 12px;
     font-weight: bold;
-    width: 18px;
-    height: 18px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 10; /* 使用更高的z-index确保显示在最上层 */
+  }
+}
+
+@keyframes highlight-pulse {
+  0% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
   }
 }
 
