@@ -247,3 +247,21 @@ export const getStoragePath = (): Promise<{path: string}> => {
 export const updateStoragePath = (path: string): Promise<any> => {
   return request.put('/admin/config/storage-path', {path})
 }
+
+// ********** 系统配置项管理 **********
+// 获取所有系统配置项
+export const getSystemSettings = (): Promise<any[]> => {
+  return request.get('/admin/system-setting/list');
+}
+// 新增系统配置项
+export const addSystemSetting = (data: { settingKey: string, settingValue: string, configType?: string }): Promise<any> => {
+  return request.post('/admin/system-setting', data);
+}
+// 更新系统配置项
+export const updateSystemSetting = (data: { id?: number, settingKey: string, settingValue: string, configType?: string }): Promise<any> => {
+  return request.put('/admin/system-setting', data);
+}
+// 删除系统配置项
+export const deleteSystemSetting = (id: number): Promise<any> => {
+  return request.delete(`/admin/system-setting/${id}`);
+}

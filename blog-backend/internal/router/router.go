@@ -24,6 +24,7 @@ func Init(
 	adminHandler *handler.AdminHandler,
 	systemConfigHandler *handler.SystemConfigHandler,
 	fileHandler *handler.FileHandler,
+	systemSettingHandler *handler.SystemSettingHandler, // 添加SystemSettingHandler参数
 	ipService service.IPService,
 	staticFilesAbsPath string,
 	conf *config.Config, // 添加配置参数
@@ -137,6 +138,9 @@ func Init(
 			configGroup.GET("/storage-path", systemConfigHandler.GetStoragePath)
 			configGroup.PUT("/storage-path", systemConfigHandler.UpdateStoragePath)
 		}
+
+		// 注册系统设置路由
+		systemSettingHandler.RegisterRoutes(adminAPI)
 	}
 
 	fileApi := router.Group("/api/files")

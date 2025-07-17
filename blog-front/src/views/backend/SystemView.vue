@@ -394,12 +394,54 @@
                     </el-form>
                 </el-card>
             </el-tab-pane>
+
+            <el-tab-pane label="系统配置" name="settings">
+                <el-card shadow="hover" class="settings-card">
+                    <template #header>
+                        <div class="card-header">
+                            <span><el-icon><Setting /></el-icon> 系统配置管理</span>
+                        </div>
+                    </template>
+                    <el-table :data="systemSettings" style="width: 100%" size="default">
+                        <el-table-column prop="settingKey" label="Key" min-width="180" />
+                        <el-table-column prop="settingValue" label="Value" min-width="220" />
+                        <el-table-column prop="configType" label="类型" min-width="120" />
+                        <el-table-column label="操作" width="160">
+                            <template #default="scope">
+                                <el-button size="small" @click="onEditSetting(scope.row)">编辑</el-button>
+                                <el-button size="small" type="danger" @click="onDeleteSetting(scope.row)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div style="margin-top: 16px; text-align: right;">
+                        <el-button type="primary" @click="onAddSetting">新增配置</el-button>
+                    </div>
+                </el-card>
+            </el-tab-pane>
         </el-tabs>
         
         <div class="action-buttons">
             <el-button @click="activeTab = 'site'" size="default">取消</el-button>
             <el-button type="primary" @click="saveConfig" size="default">保存设置</el-button>
         </div>
+
+        <el-dialog v-model="settingDialogVisible" :title="settingDialogMode === 'add' ? '新增配置项' : '编辑配置项'" width="400px" @close="settingFormRef?.resetFields()">
+            <el-form :model="settingForm" :rules="settingFormRules" ref="settingFormRef" label-width="80px" size="default">
+                <el-form-item label="Key" prop="settingKey">
+                    <el-input v-model="settingForm.settingKey" :disabled="settingDialogMode==='edit'" clearable></el-input>
+                </el-form-item>
+                <el-form-item label="Value" prop="settingValue">
+                    <el-input v-model="settingForm.settingValue" clearable></el-input>
+                </el-form-item>
+                <el-form-item label="类型">
+                    <el-input v-model="settingForm.configType" clearable></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="settingDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="onSettingDialogOk">确定</el-button>
+            </template>
+        </el-dialog>
     </div>
 </template>
 
@@ -411,6 +453,7 @@ import {
     getEmailConfig, updateEmailConfig,
     getAIConfig, updateAIConfig,
     getStorageConfig, updateStorageConfig,
+    getSystemSettings, addSystemSetting, updateSystemSetting, deleteSystemSetting
 } from '@/api/admin';
 import { getDirectoryTree } from '@/api/file';
 import type { SystemConfig, BlogConfig, EmailConfig, AIConfig, StorageConfig } from '@/types/SystemConfig';
@@ -439,6 +482,50 @@ const emailConfig = ref<EmailConfig>({});
 const aiConfig = ref<AIConfig>({});
 const storageConfig = ref<StorageConfig>({});
 const isEditingPrompt = ref(false);
+const systemSettings = ref<any[]>([]);
+
+const settingDialogVisible = ref(false);
+const settingDialogMode = ref<'add' | 'edit'>('add');
+const settingForm = ref<{ id: number | undefined, settingKey: string, settingValue: string, configType?: string }>({ id: undefined, settingKey: '', settingValue: '', configType: '' });
+const settingFormRules = {
+    settingKey: [{ required: true, message: '请输入Key', trigger: 'blur' }],
+    settingValue: [{ required: true, message: '请输入Value', trigger: 'blur' }],
+};
+const settingFormRef = ref();
+
+function onAddSetting() {
+    settingDialogMode.value = 'add';
+    settingForm.value = { id: undefined, settingKey: '', settingValue: '', configType: '' };
+    settingDialogVisible.value = true;
+}
+function onEditSetting(row: any) {
+    settingDialogMode.value = 'edit';
+    settingForm.value = { ...row };
+    settingDialogVisible.value = true;
+}
+async function onDeleteSetting(row: any) {
+    ElMessageBox.confirm('确定要删除该配置项吗？', '提示', { type: 'warning' })
+        .then(async () => {
+            await deleteSystemSetting(row.id);
+            ElMessage.success('删除成功');
+            loadSystemSettings();
+        })
+        .catch(() => {});
+}
+async function onSettingDialogOk() {
+    // 校验表单
+    const valid = await settingFormRef.value.validate().catch(() => false);
+    if (!valid) return;
+    if (settingDialogMode.value === 'add') {
+        await addSystemSetting(settingForm.value);
+        ElMessage.success('新增成功');
+    } else {
+        await updateSystemSetting(settingForm.value);
+        ElMessage.success('更新成功');
+    }
+    settingDialogVisible.value = false;
+    loadSystemSettings();
+}
 
 // 目录选择相关
 const directoryDialogVisible = ref(false);
@@ -551,6 +638,23 @@ const confirmDirectorySelection = () => {
     }
     directoryDialogVisible.value = false;
 };
+
+// 系统配置项加载与刷新
+async function loadSystemSettings() {
+    try {
+        const res = await getSystemSettings();
+        systemSettings.value = res;
+    } catch (e) {
+        ElMessage.error('获取系统配置失败');
+    }
+}
+
+// 监听tab切换，切到系统配置时加载
+watch(activeTab, (tab) => {
+    if (tab === 'settings') {
+        loadSystemSettings();
+    }
+});
 
 // 监听选项卡变化，按需加载不同类型的配置
 watch(activeTab, async (newTab) => {

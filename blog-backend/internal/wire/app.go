@@ -85,6 +85,8 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	systemConfigHandler := handler.NewSystemConfigHandler(systemSettingRepo, db, fileService)
 	// 添加文件处理器
 	fileHandler := handler.NewFileHandler(fileService)
+	// 添加系统设置处理器
+	systemSettingHandler := handler.NewSystemSettingHandler(systemSettingRepo, db)
 
 	return router.Init(
 		articleHandler,
@@ -94,6 +96,7 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 		adminHandler,
 		systemConfigHandler,
 		fileHandler,
+		systemSettingHandler, // 添加系统设置处理器
 		ipService,
 		staticFilesAbsPath,
 		conf, // 添加配置参数
