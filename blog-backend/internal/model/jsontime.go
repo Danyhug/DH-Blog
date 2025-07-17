@@ -43,7 +43,7 @@ func (t *JSONTime) UnmarshalJSON(data []byte) error {
 
 // Value 实现了 driver.Valuer 接口。
 // 它将 JSONTime 转换为 driver.Value 以便存储到数据库。
-func (t JSONTime) Value() (driver.Value, error) {
+func (t *JSONTime) Value() (driver.Value, error) {
 	if t.IsZero() {
 		return nil, nil
 	}

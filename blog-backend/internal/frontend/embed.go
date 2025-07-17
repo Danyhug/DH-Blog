@@ -13,7 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-//go:embed dist
 var distFS embed.FS
 
 // RegisterFrontendRoutes 注册前端静态文件路由

@@ -10,18 +10,17 @@ import (
 
 // IFileRepository 文件存储接口
 type IFileRepository interface {
-	// 基础CRUD操作
 	Create(ctx context.Context, file *model.File) error        // 创建文件记录
 	Update(ctx context.Context, file *model.File) error        // 更新文件记录
 	Delete(ctx context.Context, id int) error                  // 删除文件记录
 	FindByID(ctx context.Context, id int) (*model.File, error) // 根据ID查找文件
 
-	// 文件系统特有操作
+	// ListByParentID 文件系统特有操作
 	ListByParentID(ctx context.Context, userID uint64, parentID string) ([]*model.File, error)                 // 获取指定目录下的所有文件
 	FindByPath(ctx context.Context, userID uint64, path string) (*model.File, error)                           // 根据存储路径查找文件
 	FindByUserIDAndName(ctx context.Context, userID uint64, parentID string, name string) (*model.File, error) // 根据用户ID、父目录和文件名查找文件
 
-	// 统计和批量操作
+	// BatchDelete 统计和批量操作
 	BatchDelete(ctx context.Context, ids []int) error                                            // 批量删除文件
 	CountByUserID(ctx context.Context, userID uint64) (int64, error)                             // 统计用户的文件总数
 	CountByUserIDAndParentID(ctx context.Context, userID uint64, parentID string) (int64, error) // 统计用户在特定目录下的文件数量
