@@ -11,6 +11,7 @@ import (
 	"dh-blog/internal/response"
 	"dh-blog/internal/service"
 	"dh-blog/internal/task"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -393,6 +394,31 @@ func (h *ArticleHandler) GetOverview(c *gin.Context) {
 	}
 
 	h.SuccessWithData(c, overview)
+}
+
+func (h *ArticleHandler) GenerateTags(c *gin.Context) {
+	// 获取文章ID
+	id, err := h.getID(c, "id")
+	if err != nil {
+		h.Error(c, err)
+		return
+	}
+
+	// 查找文章，确保存在
+	article, err := h.articleRepo.FindByID(c.Request.Context(), id)
+	if err != nil {
+		h.Error(c, err)
+		return
+	}
+
+	// 创建AI生成标签的异步任务
+	aiTagTask := task.NewAiGenTask(article.ID, article.Content)
+
+	// 提交到任务队列
+	h.taskManager.SubmitTask(aiTagTask)
+
+	// 返回成功响应
+	h.SuccessWithMessage(c, "标签生成任务已提交，稍后将自动更新")
 }
 
 func (h *ArticleHandler) getID(c *gin.Context, key string) (int, error) {

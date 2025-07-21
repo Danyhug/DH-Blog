@@ -45,7 +45,6 @@ type SystemConfig struct {
 	AiApiURL string `json:"ai_api_url"`
 	AiApiKey string `json:"ai_api_key"`
 	AiModel  string `json:"ai_model"`
-	AiPrompt string `json:"ai_prompt"`
 
 	// 存储配置
 	FileStoragePath string `json:"file_storage_path"` // 文件存储路径
@@ -78,7 +77,6 @@ type AIConfig struct {
 	AiApiURL string `json:"ai_api_url"`
 	AiApiKey string `json:"ai_api_key"`
 	AiModel  string `json:"ai_model"`
-	AiPrompt string `json:"ai_prompt"`
 }
 
 // StorageConfig 存储配置
@@ -105,7 +103,6 @@ func (c *SystemConfig) ToSettingsMap() map[string]string {
 		"ai_api_url":           c.AiApiURL,
 		"ai_api_key":           c.AiApiKey,
 		"ai_model":             c.AiModel,
-		"ai_prompt":            c.AiPrompt,
 		"file_storage_path":    c.FileStoragePath,
 	}
 }
@@ -127,7 +124,6 @@ func FromSettingsMap(settings map[string]string) *SystemConfig {
 	config.AiApiURL = settings["ai_api_url"]
 	config.AiApiKey = settings["ai_api_key"]
 	config.AiModel = settings["ai_model"]
-	config.AiPrompt = settings["ai_prompt"]
 	config.FileStoragePath = settings["file_storage_path"]
 
 	// 布尔字段
@@ -172,7 +168,6 @@ func (c *SystemConfig) GetAIConfig() *AIConfig {
 		AiApiURL: c.AiApiURL,
 		AiApiKey: c.AiApiKey,
 		AiModel:  c.AiModel,
-		AiPrompt: c.AiPrompt,
 	}
 }
 
@@ -209,7 +204,6 @@ func (c *SystemConfig) UpdateAIConfig(aiConfig *AIConfig) {
 	c.AiApiURL = aiConfig.AiApiURL
 	c.AiApiKey = aiConfig.AiApiKey
 	c.AiModel = aiConfig.AiModel
-	c.AiPrompt = aiConfig.AiPrompt
 }
 
 // UpdateStorageConfig 更新存储配置

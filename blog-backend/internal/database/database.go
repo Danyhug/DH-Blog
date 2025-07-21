@@ -90,7 +90,7 @@ func updateSystemSettingsType(db *gorm.DB) error {
 	// 邮件配置相关键
 	emailKeys := []string{"comment_email_notify", "smtp_host", "smtp_port", "smtp_user", "smtp_pass", "smtp_sender"}
 	// AI配置相关键
-	aiKeys := []string{"ai_api_url", "ai_api_key", "ai_model", "ai_prompt"}
+	aiKeys := []string{"ai_api_url", "ai_api_key", "ai_model", "ai_prompt_get_tags", "ai_prompt_get_abstract"}
 	// 存储配置相关键
 	storageKeys := []string{"file_storage_path"}
 

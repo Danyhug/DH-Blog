@@ -1,7 +1,7 @@
 <template>
   <el-tabs v-model="activeName" type="border-card">
     <el-tab-pane label="文章管理" name="first">
-      <ArticleTable :articles="articles"></ArticleTable>
+      <ArticleTable :articles="articles" @refresh="loadArticles"></ArticleTable>
     </el-tab-pane>
 
     <el-tab-pane label="分类管理" name="second">
@@ -35,10 +35,12 @@ const articles = reactive<Article<Tag>[]>([])
 const categories = store.categories
 const tags = store.tags
 
-onMounted(() => {
-  store.getCategories();
-  store.getTags();
-
+// 加载文章列表
+const loadArticles = () => {
+  // 清空现有文章列表
+  articles.splice(0, articles.length)
+  
+  // 重新获取文章列表
   getArticleList({ pageNum: 1, pageSize: 10, total: 10 }).then((res) => {
     let articleList: Article<Tag>[] = [];
     res.list.forEach(item => {
@@ -47,6 +49,12 @@ onMounted(() => {
     })
     articles.push(...articleList);
   })
+}
+
+onMounted(() => {
+  store.getCategories();
+  store.getTags();
+  loadArticles();
 })
 </script>
 <style scoped>

@@ -230,6 +230,13 @@ export const updateAIConfig = (data: AIConfig): Promise<any> => {
   return request.put('/admin/config/ai', data)
 }
 
+/**
+ * 获取预定义的AI提示词标签
+ */
+export const getAIPromptTags = (): Promise<{ label: string, prompt: string }[]> => {
+  return request.get('/admin/config/ai/prompts');
+}
+
 // ********** 存储配置 **********
 export const getStorageConfig = (): Promise<StorageConfig> => {
   return request.get('/admin/config/storage')
@@ -264,4 +271,13 @@ export const updateSystemSetting = (data: { id?: number, settingKey: string, set
 // 删除系统配置项
 export const deleteSystemSetting = (id: number): Promise<any> => {
   return request.delete(`/admin/system-setting/${id}`);
+}
+
+/**
+ * 使用AI为文章生成标签
+ * @param articleId 文章ID
+ * @returns 生成的标签列表
+ */
+export const generateAITags = (articleId: number): Promise<Tag[]> => {
+  return request.post(`/admin/article/${articleId}/generate-tags`);
 }

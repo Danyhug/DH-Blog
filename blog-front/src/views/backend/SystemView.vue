@@ -361,36 +361,37 @@
                                     v-for="tag in promptTags"
                                     :key="tag.label"
                                     class="prompt-tag"
+                                    :class="{ 'is-active': selectedPromptLabel === tag.label }"
                                     effect="light"
                                     round
-                                    @click="selectPrompt(tag.prompt)"
+                                    @click="selectPrompt(tag)"
                                 >
                                     <el-icon><MagicStick /></el-icon> {{ tag.label }}
                                 </el-tag>
                             </div>
-                            <div class="info-text">
-                                <el-icon><InfoFilled /></el-icon> 点击上方标签可快速填充AI提示词，方便您快速修改，切勿修改模板填充符
+                        </el-form-item>
+
+                        <el-form-item label="提示词内容" v-if="selectedPrompt">
+                            <div class="prompt-editor-container">
+                                <div v-show="!isEditingPrompt" class="ai-prompt-display" @click="startEditing">
+                                    <div v-html="highlightedPrompt"></div>
+                                    <el-button class="edit-button" type="primary" link>
+                                        <el-icon><Edit /></el-icon>
+                                        编辑
+                                    </el-button>
+                                </div>
+                                <el-input
+                                    v-show="isEditingPrompt"
+                                    ref="promptInputRef"
+                                    v-model="selectedPrompt.prompt"
+                                    type="textarea"
+                                    :autosize="{ minRows: 4 }"
+                                    class="prompt-textarea"
+                                    @blur="isEditingPrompt = false"
+                                ></el-input>
                             </div>
                         </el-form-item>
                         
-                        <el-form-item label="提示词">
-                            <div class="prompt-editor-container">
-                                <div v-if="!isEditingPrompt" class="ai-prompt-display" @click="startEditing" v-html="highlightedPrompt"></div>
-                                <el-input
-                                    v-else
-                                    v-model="aiConfig.ai_prompt"
-                                    type="textarea"
-                                    :autosize="{ minRows: 4, maxRows: 8 }"
-                                    @blur="stopEditing"
-                                    class="prompt-textarea"
-                                    placeholder="请输入AI提示词，填充符格式为 {{.变量名}}"
-                                ></el-input>
-                                <div class="warning-text">
-                                    <el-icon><WarningFilled /></el-icon>
-                                    请勿修改 <span style="font-weight: bold;">&lbrace;&lbrace;.变量名&rbrace;&rbrace;</span> 形式的模板变量，它们将在生成内容时被自动替换。
-                                </div>
-                            </div>
-                        </el-form-item>
                     </el-form>
                 </el-card>
             </el-tab-pane>
@@ -446,14 +447,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed, watch, nextTick } from 'vue';
 import { 
     getSystemConfig, updateSystemConfig, 
     getBlogConfig, updateBlogConfig,
     getEmailConfig, updateEmailConfig,
     getAIConfig, updateAIConfig,
     getStorageConfig, updateStorageConfig,
-    getSystemSettings, addSystemSetting, updateSystemSetting, deleteSystemSetting
+    getSystemSettings, addSystemSetting, updateSystemSetting, deleteSystemSetting,
+    getAIPromptTags // 导入获取AI提示词标签的API
 } from '@/api/admin';
 import { getDirectoryTree } from '@/api/file';
 import type { SystemConfig, BlogConfig, EmailConfig, AIConfig, StorageConfig } from '@/types/SystemConfig';
@@ -483,6 +485,10 @@ const aiConfig = ref<AIConfig>({});
 const storageConfig = ref<StorageConfig>({});
 const isEditingPrompt = ref(false);
 const systemSettings = ref<any[]>([]);
+
+const selectedPrompt = ref<{ label: string, prompt: string } | null>(null);
+const selectedPromptLabel = ref('');
+const promptInputRef = ref();
 
 const settingDialogVisible = ref(false);
 const settingDialogMode = ref<'add' | 'edit'>('add');
@@ -534,40 +540,24 @@ const currentPath = ref('');
 const selectedPath = ref('');
 const expandedKeys = ref<string[]>([]);
 
-const promptTags = ref([
-    {
-        label: '文章标签提取',
-        prompt: '请根据以下文章内容，提取出3-5个关键词作为文章标签，用逗号分隔。文章内容：{{.ArticleContent}}'
-    },
-    {
-        label: '文章摘要生成',
-        prompt: '请根据以下文章内容，生成一个100字左右的摘要。文章内容：{{.ArticleContent}}'
-    },
-    {
-        label: '评论回复',
-        prompt: '请根据以下评论内容，生成一个友好的回复。评论内容：{{.CommentContent}}，回复对象：{{.UserName}}'
-    }
-]);
+const promptTags = ref<{ label: string, prompt: string }[]>([]);
 
 const highlightedPrompt = computed(() => {
-    if (!aiConfig.value.ai_prompt) {
-        return '<span style="color: #909399;">点击此处输入AI提示词，填充符格式为 &lbrace;&lbrace;.变量名&rbrace;&rbrace;</span>';
-    }
-    let processedPrompt = escapeHtml(aiConfig.value.ai_prompt);
+    if (!selectedPrompt.value) return '';
+    let processedPrompt = escapeHtml(selectedPrompt.value.prompt);
     return processedPrompt.replace(/\{\{\.[a-zA-Z0-9_]+\}\}/g, '<span class="text-highlight">$&</span>');
 });
 
-const startEditing = () => {
+const startEditing = async () => {
     isEditingPrompt.value = true;
+    await nextTick();
+    promptInputRef.value?.focus();
 };
 
-const stopEditing = () => {
+const selectPrompt = (tag: { label: string, prompt: string }) => {
+    selectedPrompt.value = { ...tag };
+    selectedPromptLabel.value = tag.label;
     isEditingPrompt.value = false;
-};
-
-const selectPrompt = (prompt: string) => {
-    aiConfig.value.ai_prompt = prompt;
-    isEditingPrompt.value = false; // Switch back to display mode after selecting
 };
 
 // 打开目录选择器
@@ -666,6 +656,7 @@ watch(activeTab, async (newTab) => {
         await loadStorageConfig();
     } else if (newTab === 'ai') {
         await loadAIConfig();
+        await loadAIPromptTags(); // 加载AI提示词标签
     }
 });
 
@@ -706,6 +697,20 @@ const loadStorageConfig = async () => {
         storageConfig.value = res;
     } catch (error) {
         ElMessage.error('加载存储配置失败');
+    }
+};
+
+// 加载AI提示词标签
+const loadAIPromptTags = async () => {
+    try {
+        const res = await getAIPromptTags();
+        promptTags.value = res;
+        // 默认选中第一个
+        if (res.length > 0) {
+            selectPrompt(res[0]);
+        }
+    } catch (error) {
+        ElMessage.error('加载AI提示词标签失败');
     }
 };
 
@@ -757,7 +762,6 @@ onMounted(async () => {
         ai_api_url: res.ai_api_url,
         ai_api_key: res.ai_api_key,
         ai_model: res.ai_model,
-        ai_prompt: res.ai_prompt
     };
     
     storageConfig.value = {
@@ -774,6 +778,8 @@ onMounted(async () => {
     } else if (activeTab.value === 'ai') {
         await loadAIConfig();
     }
+    // 组件挂载后立即加载AI提示词标签
+    await loadAIPromptTags();
 });
 </script>
 
@@ -845,12 +851,19 @@ onMounted(async () => {
             transform: translateY(-2px);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
+
+        &.is-active {
+            background-color: #409EFF;
+            color: #fff;
+            border-color: #409EFF;
+        }
     }
 }
 
 .prompt-editor-container {
     width: 100%;
-    
+    position: relative;
+
     .ai-prompt-display {
         border: 1px solid #DCDFE6;
         border-radius: 4px;
@@ -863,10 +876,15 @@ onMounted(async () => {
         font-size: 14px;
         color: #606266;
         transition: all 0.3s;
+        position: relative;
         
         &:hover {
             border-color: #C0C4CC;
             box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+
+            .edit-button {
+                opacity: 1;
+            }
         }
         
         .text-highlight {
@@ -876,10 +894,18 @@ onMounted(async () => {
             padding: 0 2px;
             border-radius: 2px;
         }
+
+        .edit-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
     }
     
     .prompt-textarea {
-        min-height: 120px;
+        /* min-height: 120px; */
     }
 }
 

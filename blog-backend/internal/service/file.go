@@ -25,7 +25,6 @@ type fileService struct {
 }
 
 const (
-	defaultFilePath    = `/Users/danyhug/GolandProjects/DH-Blog/blog-deploy/backend`
 	filePathSettingKey = "file_storage_path" // 文件存储路径在数据库中的键名
 )
 
@@ -71,22 +70,22 @@ type IFileService interface {
 // 参数:
 //   - repo: 文件存储库接口
 //   - settingRepo: 系统设置仓库接口
-//   - defaultPath: 可选，默认文件存储路径，当数据库中未配置时使用
 //
 // 返回:
 //   - IFileService: 文件服务接口
-func NewFileService(repo repository.IFileRepository, settingRepo repository.SystemSettingRepository, defaultPath ...string) IFileService {
-	// 设置默认路径
-	defPath := defaultFilePath
-	if len(defaultPath) > 0 && defaultPath[0] != "" {
-		defPath = defaultPath[0]
+func NewFileService(repo repository.IFileRepository, settingRepo repository.SystemSettingRepository) IFileService {
+	// 默认路径应该是 可执行文件/data/webdav
+	executable, err := os.Executable()
+	if err != nil {
+		logrus.Errorf("无法获取可执行文件的路径: %v", err)
+		return nil
 	}
+	defaultPath := filepath.Join(filepath.Dir(executable), "data", "webdav")
 
 	service := &fileService{
 		repo:        repo,
 		settingRepo: settingRepo,
-		defaultPath: defPath,
-		filePath:    defPath, // 初始值设为默认路径，后续会从数据库更新
+		defaultPath: defaultPath,
 	}
 
 	// 尝试从数据库加载存储路径

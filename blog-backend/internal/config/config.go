@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -49,6 +50,17 @@ type Config struct {
 	Upload    Upload   `yaml:"upload"` // New upload configuration
 }
 
+func getRandomString(length int) string {
+	// 获取一个随机字符串，用于生成 JWT 密钥
+	var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+"
+	cLen := len(chars)
+	jwtChars := make([]byte, length)
+	for ; length > 0; length-- {
+		jwtChars = append(jwtChars, chars[rand.Intn(cLen)])
+	}
+	return string(jwtChars)
+}
+
 func DefaultConfig() *Config {
 	return &Config{
 		Server: Server{
@@ -62,7 +74,7 @@ func DefaultConfig() *Config {
 			DBFile: "data/dhblog.db", // Default SQLite database file
 			Dsn:    "",               // DSN will be empty for SQLite by default
 		},
-		JwtSecret: "test",
+		JwtSecret: getRandomString(16),
 		Upload: Upload{
 			Local: LocalUpload{
 				Path: "article", // Default local upload path

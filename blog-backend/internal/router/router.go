@@ -77,6 +77,7 @@ func Init(
 		adminAPI.POST("/article", articleHandler.SaveArticle)
 		adminAPI.PUT("/article", articleHandler.UpdateArticle)
 		adminAPI.POST("/article/list", articleHandler.GetArticleList)
+		adminAPI.POST("/article/:id/generate-tags", articleHandler.GenerateTags) // 添加AI生成标签接口
 		adminAPI.POST("/upload/:type", adminHandler.UploadFile)
 
 		// 标签管理 API
@@ -129,6 +130,7 @@ func Init(
 			// AI配置接口
 			configGroup.GET("/ai", systemConfigHandler.GetAIConfig)
 			configGroup.PUT("/ai", systemConfigHandler.UpdateAIConfig)
+			configGroup.GET("/ai/prompts", systemConfigHandler.GetAIPromptTags) // 新增获取AI提示词标签接口
 
 			// 存储配置接口
 			configGroup.GET("/storage", systemConfigHandler.GetStorageConfig)

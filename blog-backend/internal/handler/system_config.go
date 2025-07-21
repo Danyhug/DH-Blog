@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
@@ -12,6 +13,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
+
+// PromptTag defines the structure for an AI prompt tag
+type PromptTag struct {
+	Label  string `json:"label"`
+	Prompt string `json:"prompt"`
+}
 
 // SystemConfigHandler 系统配置处理器
 type SystemConfigHandler struct {
@@ -231,7 +238,6 @@ func (h *SystemConfigHandler) UpdateAIConfig(c *gin.Context) {
 		"ai_api_url": aiConfig.AiApiURL,
 		"ai_api_key": aiConfig.AiApiKey,
 		"ai_model":   aiConfig.AiModel,
-		"ai_prompt":  aiConfig.AiPrompt,
 	}
 
 	// 使用带类型的批量更新
@@ -360,4 +366,31 @@ func boolToString(b bool) string {
 // 辅助函数：整数转字符串
 func intToString(i int) string {
 	return strconv.Itoa(i)
+}
+
+// GetAIPromptTags 返回预定义的AI提示词标签
+func (h *SystemConfigHandler) GetAIPromptTags(c *gin.Context) {
+	tagsPrompt, err := h.settingRepo.GetSetting("ai_prompt_get_tags")
+	if err != nil {
+		h.Error(c, fmt.Errorf("获取标签提示词失败: %w", err))
+		return
+	}
+
+	abstractPrompt, err := h.settingRepo.GetSetting("ai_prompt_get_abstract")
+	if err != nil {
+		h.Error(c, fmt.Errorf("获取摘要提示词失败: %w", err))
+		return
+	}
+
+	promptTags := []PromptTag{
+		{
+			Label:  "文章标签提取",
+			Prompt: tagsPrompt,
+		},
+		{
+			Label:  "文章摘要生成",
+			Prompt: abstractPrompt,
+		},
+	}
+	h.SuccessWithData(c, promptTags)
 }

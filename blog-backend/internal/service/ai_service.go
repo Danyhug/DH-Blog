@@ -14,6 +14,7 @@ import (
 	"dh-blog/internal/dhcache"
 	"dh-blog/internal/model"
 	"dh-blog/internal/repository"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -198,16 +199,10 @@ func (s *OpenAIService) GenerateTags(text string, existingTags []string) (result
 		}
 	}
 
-	// 获取最新配置
-	config, err := s.getLatestConfig()
-	if err != nil {
-		return nil, fmt.Errorf("获取AI配置失败: %w", err)
-	}
-
 	// 使用从数据库加载的AI提示词
-	prompt := config.AiPrompt
-	if prompt == "" {
-		logrus.Warn("AI提示词为空，使用默认提示词")
+	prompt, err := s.settingRepo.GetSetting("ai_prompt_get_tags")
+	if err != nil {
+		logrus.Errorf("从数据库获取AI提示词失败: %v", err)
 		// 如果数据库中没有配置提示词，可以使用一个默认值
 		prompt = database.DefaultTagsPrompt
 	}
@@ -236,7 +231,7 @@ func (s *OpenAIService) GenerateTags(text string, existingTags []string) (result
 		return nil, err
 	}
 
-	logrus.Debugf("AI提示词: %s", buf.String())
+	logrus.Infof("AI提示词: %s", buf.String())
 	response, err := s.Request(buf.String())
 	if err != nil {
 		logrus.Errorf("请求OpenAI API失败: %v", err)

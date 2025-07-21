@@ -57,15 +57,12 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	// 添加文件存储库
 	fileRepo := repository.NewFileRepository(db)
 
-	// 文件存储根目录
-	fileStoragePath := filepath.Join(dataDir, "files")
-
 	// 初始化服务
 	uploadService := service.NewUploadService(conf, dataDir)
 	aiService := service.NewAIService(systemSettingRepo, cacheService.GetCache())
 	ipService := service.NewIPService(logRepo)
 	// 添加文件服务
-	fileService := service.NewFileService(fileRepo, systemSettingRepo, fileStoragePath)
+	fileService := service.NewFileService(fileRepo, systemSettingRepo)
 
 	// 初始化任务管理器
 	taskManager := task.NewTaskManager(db, aiService, tagRepo)
