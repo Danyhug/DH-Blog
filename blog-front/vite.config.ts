@@ -29,7 +29,7 @@ export default defineConfig({
 
   build: {
     sourcemap: false,
-    outDir: '../blog-deploy/front', // 修改输出目录到blog-deploy/front
+    outDir: 'dist', // Ensure the output directory is 'dist'
     emptyOutDir: true, // 构建前清空输出目录
     target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'], // 更新target配置，使用现代浏览器列表
     rollupOptions: {
