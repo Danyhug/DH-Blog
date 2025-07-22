@@ -50,8 +50,8 @@ type Config struct {
 	Upload    Upload   `yaml:"upload"` // New upload configuration
 }
 
+// 获取一个随机字符串，用于生成 JWT 密钥
 func getRandomString(length int) string {
-	// 获取一个随机字符串，用于生成 JWT 密钥
 	var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+"
 	cLen := len(chars)
 	jwtChars := make([]byte, length)
@@ -83,7 +83,7 @@ func DefaultConfig() *Config {
 				URL:      "", // Default empty WebDAV URL
 				Username: "",
 				Password: "",
-				Path:     "webdav", // Default WebDAV path
+				Path:     "data/webdav", // Default WebDAV path
 			},
 		},
 	}
@@ -94,7 +94,6 @@ func Init() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("获取可执行文件路径失败: %w", err)
 	}
-	// 获取项目根目录 (假设可执行文件在 cmd/blog-backend/)
 	projectRoot := filepath.Dir(exePath)
 	dataDir := filepath.Join(projectRoot, "data")
 	configFilePath := filepath.Join(dataDir, "config.yaml")
