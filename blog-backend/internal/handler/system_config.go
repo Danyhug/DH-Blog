@@ -307,7 +307,7 @@ func (h *SystemConfigHandler) UpdateStorageConfig(c *gin.Context) {
 
 // GetStoragePath 获取文件存储路径 (兼容旧版API)
 func (h *SystemConfigHandler) GetStoragePath(c *gin.Context) {
-	path, err := h.settingRepo.GetSetting("file_storage_path")
+	path, err := h.settingRepo.GetSetting(model.SettingKeyFileStoragePath)
 	if err != nil {
 		h.ErrorWithMessage(c, "获取文件存储路径失败: "+err.Error())
 		return
@@ -370,13 +370,13 @@ func intToString(i int) string {
 
 // GetAIPromptTags 返回预定义的AI提示词标签
 func (h *SystemConfigHandler) GetAIPromptTags(c *gin.Context) {
-	tagsPrompt, err := h.settingRepo.GetSetting("ai_prompt_get_tags")
+	tagsPrompt, err := h.settingRepo.GetSetting(model.SettingKeyAiPromptGetTags)
 	if err != nil {
 		h.Error(c, fmt.Errorf("获取标签提示词失败: %w", err))
 		return
 	}
 
-	abstractPrompt, err := h.settingRepo.GetSetting("ai_prompt_get_abstract")
+	abstractPrompt, err := h.settingRepo.GetSetting(model.SettingKeyAiPromptGetAbstract)
 	if err != nil {
 		h.Error(c, fmt.Errorf("获取摘要提示词失败: %w", err))
 		return

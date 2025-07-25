@@ -200,7 +200,7 @@ func (s *OpenAIService) GenerateTags(text string, existingTags []string) (result
 	}
 
 	// 使用从数据库加载的AI提示词
-	prompt, err := s.settingRepo.GetSetting("ai_prompt_get_tags")
+	prompt, err := s.settingRepo.GetSetting(model.SettingKeyAiPromptGetTags)
 	if err != nil {
 		logrus.Errorf("从数据库获取AI提示词失败: %v", err)
 		// 如果数据库中没有配置提示词，可以使用一个默认值

@@ -78,13 +78,36 @@ func Init(conf *config.Config) (*gorm.DB, error) {
 // updateSystemSettingsType 更新系统设置的配置类型
 func updateSystemSettingsType(db *gorm.DB) error {
 	// 博客基本配置相关键
-	blogKeys := []string{"blog_title", "signature", "avatar", "github_link", "bilibili_link", "open_blog", "open_comment"}
+	blogKeys := []string{
+		model.SettingKeyBlogTitle,
+		model.SettingKeySignature,
+		model.SettingKeyAvatar,
+		model.SettingKeyGithubLink,
+		model.SettingKeyBilibiliLink,
+		model.SettingKeyOpenBlog,
+		model.SettingKeyOpenComment,
+	}
 	// 邮件配置相关键
-	emailKeys := []string{"comment_email_notify", "smtp_host", "smtp_port", "smtp_user", "smtp_pass", "smtp_sender"}
+	emailKeys := []string{
+		model.SettingKeyCommentEmailNotify,
+		model.SettingKeySmtpHost,
+		model.SettingKeySmtpPort,
+		model.SettingKeySmtpUser,
+		model.SettingKeySmtpPass,
+		model.SettingKeySmtpSender,
+	}
 	// AI配置相关键
-	aiKeys := []string{"ai_api_url", "ai_api_key", "ai_model", "ai_prompt_get_tags", "ai_prompt_get_abstract"}
+	aiKeys := []string{
+		model.SettingKeyAiApiURL,
+		model.SettingKeyAiApiKey,
+		model.SettingKeyAiModel,
+		model.SettingKeyAiPromptGetTags,
+		model.SettingKeyAiPromptGetAbstract,
+	}
 	// 存储配置相关键
-	storageKeys := []string{"file_storage_path"}
+	storageKeys := []string{
+		model.SettingKeyFileStoragePath,
+	}
 
 	// 更新博客基本配置类型
 	for _, key := range blogKeys {

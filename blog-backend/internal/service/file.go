@@ -24,8 +24,10 @@ type fileService struct {
 	defaultPath string                             // 默认存储路径，当数据库未配置时使用
 }
 
-const (
-	filePathSettingKey = "file_storage_path" // 文件存储路径在数据库中的键名
+var (
+	// 注入了default.go和task.go
+	// filePathSettingKey = "file_storage_path" // 文件存储路径在数据库中的键名
+	filePathSettingKey = model.SettingKeyFileStoragePath // 文件存储路径在数据库中的键名
 )
 
 // IFileService 定义了网盘核心功能的业务逻辑合同 (MVP版本)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"dh-blog/internal/model"
+
 	"gorm.io/gorm"
 )
 
@@ -30,13 +31,13 @@ func insertDefaultData(db *gorm.DB) error {
 	db.Model(&model.SystemSetting{}).Count(&settingsCount)
 	if settingsCount == 0 {
 		defaultSettings := []model.SystemSetting{
-			{SettingKey: "blog_title", SettingValue: "DH-Blog"},
-			{SettingKey: "signature", SettingValue: "我们原神玩家是这样的"},
-			{SettingKey: "open_comment", SettingValue: "true"},
-			{SettingKey: "ai_model", SettingValue: "gpt-4.1-mini"},
-			{SettingKey: "ai_api_url", SettingValue: "https://tbai.xin/v1/chat/completions"},
-			{SettingKey: "ai_prompt_get_tags", SettingValue: DefaultTagsPrompt},
-			{SettingKey: "ai_prompt_get_abstract", SettingValue: DefaultAbstractPrompt},
+			{SettingKey: model.SettingKeyBlogTitle, SettingValue: "DH-Blog"},
+			{SettingKey: model.SettingKeySignature, SettingValue: "我们原神玩家是这样的"},
+			{SettingKey: model.SettingKeyOpenComment, SettingValue: "true"},
+			{SettingKey: model.SettingKeyAiModel, SettingValue: "gpt-4.1-mini"},
+			{SettingKey: model.SettingKeyAiApiURL, SettingValue: "https://tbai.xin/v1/chat/completions"},
+			{SettingKey: model.SettingKeyAiPromptGetTags, SettingValue: DefaultTagsPrompt},
+			{SettingKey: model.SettingKeyAiPromptGetAbstract, SettingValue: DefaultAbstractPrompt},
 		}
 		if err := db.Create(&defaultSettings).Error; err != nil {
 			return fmt.Errorf("创建默认系统设置失败: %w", err)

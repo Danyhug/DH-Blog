@@ -14,6 +14,41 @@ const (
 	ConfigTypeStorage = "storage" // 存储配置
 )
 
+// 博客基本配置键名常量
+const (
+	SettingKeyBlogTitle    = "blog_title"    // 博客标题
+	SettingKeySignature    = "signature"     // 个性签名
+	SettingKeyAvatar       = "avatar"        // 头像
+	SettingKeyGithubLink   = "github_link"   // GitHub链接
+	SettingKeyBilibiliLink = "bilibili_link" // B站链接
+	SettingKeyOpenBlog     = "open_blog"     // 是否开放博客
+	SettingKeyOpenComment  = "open_comment"  // 是否开放评论
+)
+
+// 邮件配置键名常量
+const (
+	SettingKeyCommentEmailNotify = "comment_email_notify" // 评论邮件通知
+	SettingKeySmtpHost           = "smtp_host"            // SMTP主机
+	SettingKeySmtpPort           = "smtp_port"            // SMTP端口
+	SettingKeySmtpUser           = "smtp_user"            // SMTP用户名
+	SettingKeySmtpPass           = "smtp_pass"            // SMTP密码
+	SettingKeySmtpSender         = "smtp_sender"          // SMTP发件人
+)
+
+// AI配置键名常量
+const (
+	SettingKeyAiApiURL            = "ai_api_url"             // AI API URL
+	SettingKeyAiApiKey            = "ai_api_key"             // AI API Key
+	SettingKeyAiModel             = "ai_model"               // AI模型
+	SettingKeyAiPromptGetTags     = "ai_prompt_get_tags"     // 获取标签的提示词
+	SettingKeyAiPromptGetAbstract = "ai_prompt_get_abstract" // 获取摘要的提示词
+)
+
+// 存储配置键名常量
+const (
+	SettingKeyFileStoragePath = "file_storage_path" // 文件存储路径
+)
+
 // SystemSetting 映射到数据库中的 system_settings 表
 type SystemSetting struct {
 	ID           uint   `gorm:"primaryKey"`
@@ -87,23 +122,23 @@ type StorageConfig struct {
 // ToSettingsMap 将SystemConfig转换为map[string]string
 func (c *SystemConfig) ToSettingsMap() map[string]string {
 	return map[string]string{
-		"blog_title":           c.BlogTitle,
-		"signature":            c.Signature,
-		"avatar":               c.Avatar,
-		"github_link":          c.GithubLink,
-		"bilibili_link":        c.BilibiliLink,
-		"open_blog":            strconv.FormatBool(c.OpenBlog),
-		"open_comment":         strconv.FormatBool(c.OpenComment),
-		"comment_email_notify": strconv.FormatBool(c.CommentEmailNotify),
-		"smtp_host":            c.SmtpHost,
-		"smtp_port":            strconv.Itoa(c.SmtpPort),
-		"smtp_user":            c.SmtpUser,
-		"smtp_pass":            c.SmtpPass,
-		"smtp_sender":          c.SmtpSender,
-		"ai_api_url":           c.AiApiURL,
-		"ai_api_key":           c.AiApiKey,
-		"ai_model":             c.AiModel,
-		"file_storage_path":    c.FileStoragePath,
+		SettingKeyBlogTitle:          c.BlogTitle,
+		SettingKeySignature:          c.Signature,
+		SettingKeyAvatar:             c.Avatar,
+		SettingKeyGithubLink:         c.GithubLink,
+		SettingKeyBilibiliLink:       c.BilibiliLink,
+		SettingKeyOpenBlog:           strconv.FormatBool(c.OpenBlog),
+		SettingKeyOpenComment:        strconv.FormatBool(c.OpenComment),
+		SettingKeyCommentEmailNotify: strconv.FormatBool(c.CommentEmailNotify),
+		SettingKeySmtpHost:           c.SmtpHost,
+		SettingKeySmtpPort:           strconv.Itoa(c.SmtpPort),
+		SettingKeySmtpUser:           c.SmtpUser,
+		SettingKeySmtpPass:           c.SmtpPass,
+		SettingKeySmtpSender:         c.SmtpSender,
+		SettingKeyAiApiURL:           c.AiApiURL,
+		SettingKeyAiApiKey:           c.AiApiKey,
+		SettingKeyAiModel:            c.AiModel,
+		SettingKeyFileStoragePath:    c.FileStoragePath,
 	}
 }
 
@@ -112,27 +147,27 @@ func FromSettingsMap(settings map[string]string) *SystemConfig {
 	config := &SystemConfig{}
 
 	// 字符串字段
-	config.BlogTitle = settings["blog_title"]
-	config.Signature = settings["signature"]
-	config.Avatar = settings["avatar"]
-	config.GithubLink = settings["github_link"]
-	config.BilibiliLink = settings["bilibili_link"]
-	config.SmtpHost = settings["smtp_host"]
-	config.SmtpUser = settings["smtp_user"]
-	config.SmtpPass = settings["smtp_pass"]
-	config.SmtpSender = settings["smtp_sender"]
-	config.AiApiURL = settings["ai_api_url"]
-	config.AiApiKey = settings["ai_api_key"]
-	config.AiModel = settings["ai_model"]
-	config.FileStoragePath = settings["file_storage_path"]
+	config.BlogTitle = settings[SettingKeyBlogTitle]
+	config.Signature = settings[SettingKeySignature]
+	config.Avatar = settings[SettingKeyAvatar]
+	config.GithubLink = settings[SettingKeyGithubLink]
+	config.BilibiliLink = settings[SettingKeyBilibiliLink]
+	config.SmtpHost = settings[SettingKeySmtpHost]
+	config.SmtpUser = settings[SettingKeySmtpUser]
+	config.SmtpPass = settings[SettingKeySmtpPass]
+	config.SmtpSender = settings[SettingKeySmtpSender]
+	config.AiApiURL = settings[SettingKeyAiApiURL]
+	config.AiApiKey = settings[SettingKeyAiApiKey]
+	config.AiModel = settings[SettingKeyAiModel]
+	config.FileStoragePath = settings[SettingKeyFileStoragePath]
 
 	// 布尔字段
-	config.OpenBlog, _ = strconv.ParseBool(settings["open_blog"])
-	config.OpenComment, _ = strconv.ParseBool(settings["open_comment"])
-	config.CommentEmailNotify, _ = strconv.ParseBool(settings["comment_email_notify"])
+	config.OpenBlog, _ = strconv.ParseBool(settings[SettingKeyOpenBlog])
+	config.OpenComment, _ = strconv.ParseBool(settings[SettingKeyOpenComment])
+	config.CommentEmailNotify, _ = strconv.ParseBool(settings[SettingKeyCommentEmailNotify])
 
 	// 整数字段
-	config.SmtpPort, _ = strconv.Atoi(settings["smtp_port"])
+	config.SmtpPort, _ = strconv.Atoi(settings[SettingKeySmtpPort])
 
 	return config
 }
