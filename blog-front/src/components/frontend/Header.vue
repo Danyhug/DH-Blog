@@ -5,19 +5,13 @@
         <li class="item">
           <router-link to="/">
             <Icon iconName="icon-chengbao"></Icon>
-            首页
+            内容中心
           </router-link>
         </li>
         <li class="item">
-          <router-link to="/about">
+          <router-link to="/knowledge">
             <Icon iconName="icon-chaoren"></Icon>
-            关于
-          </router-link>
-        </li>
-        <li class="item">
-          <router-link to="/tags">
-            <Icon iconName="icon-fenlei"></Icon>
-            分类
+            知识星图
           </router-link>
         </li>
         <li class="item">
@@ -27,15 +21,9 @@
           </router-link>
         </li>
         <li class="item">
-          <router-link to="/webdav-demo">
-            <Icon iconName="icon-cangku"></Icon>
-            WebDAV演示
-          </router-link>
-        </li>
-        <li class="item">
           <router-link to="/login">
             <Icon iconName="icon-fenlei"></Icon>
-            后台
+            后台管理
           </router-link>
         </li>
       </ul>

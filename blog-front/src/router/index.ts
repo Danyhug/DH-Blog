@@ -6,6 +6,8 @@ const MainView = () => import(/* webpackChunkName: "main" */ '../views/frontend/
 const HomeView = () => import(/* webpackChunkName: "home" */ '../views/frontend/HomeView.vue');
 const LockView = () => import(/* webpackChunkName: "lock" */ '../views/frontend/LockView.vue');
 const ErrorView = () => import(/* webpackChunkName: "error" */ '../views/frontend/ErrorView.vue');
+const KnowledgeView = () => import(/* webpackChunkName: "knowledge" */ '../views/frontend/Knowledge.vue');
+
 // WebDAV相关组件
 const WebDriveView = () => import(/* webpackChunkName: "webdrive" */ '../views/frontend/webdav');
 
@@ -38,9 +40,10 @@ const routes = [
     path: '/view', component: HomeView, children:
       [
         { path: 'home', component: MainView, name: 'Home', meta: { title: '我的个人纪录' } },
-        { path: 'article/:id', component: ArticleView, name: 'ArticleInfo', meta: { title: '文章详情' } }
-      ]
+        { path: 'article/:id', component: ArticleView, name: 'ArticleInfo', meta: { title: '文章详情' } },
+      ],
   },
+  { path: '/knowledge', component: KnowledgeView, name: 'Knowledge', meta: { title: '知识星图' } },
   // 后台页面
   {
     path: '/admin', redirect: '/admin/dashboard', component: AdminView, name: 'Admin', meta: { title: '后台管理' }, children:
