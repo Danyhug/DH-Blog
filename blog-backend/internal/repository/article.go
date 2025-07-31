@@ -240,6 +240,67 @@ func (r *ArticleRepository) GetArticlesByTagName(tagName string) (data []model.A
 	return data, nil
 }
 
+// FindByTagName 根据标签名获取文章列表（别名方法）
+func (r *ArticleRepository) FindByTagName(ctx context.Context, tagName string) ([]*model.Article, error) {
+	articles, err := r.GetArticlesByTagName(tagName)
+	if err != nil {
+		return nil, err
+	}
+	
+	// 转换为指针切片
+	result := make([]*model.Article, len(articles))
+	for i := range articles {
+		result[i] = &articles[i]
+	}
+	return result, nil
+}
+
+// GetArticlesByCategoryName 根据分类名获取文章列表
+func (r *ArticleRepository) GetArticlesByCategoryName(categoryName string) (data []model.Article, err error) {
+	// 缓存键
+	cacheKey := fmt.Sprintf("%scategory:%s", PrefixArticleList, categoryName)
+
+	// 尝试从缓存获取
+	if cached, found := r.cache.Get(cacheKey); found {
+		if articles, ok := cached.([]model.Article); ok {
+			logrus.Debugf("从缓存获取分类文章列表: %s", categoryName)
+			return articles, nil
+		} else {
+			logrus.Warnf("分类文章列表缓存类型转换失败: %s, 将从数据库重新获取", categoryName)
+		}
+	}
+
+	// 从数据库获取
+	err = r.db.Joins("JOIN categories ON categories.id = articles.category_id").
+		Where("categories.name = ? OR categories.slug = ?", categoryName, categoryName).
+		Find(&data).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("获取分类文章列表失败: %s, 错误: %w", categoryName, err)
+	}
+
+	// 存入缓存
+	_ = r.cache.Set(cacheKey, data, ExpireShort)
+	logrus.Debugf("分类文章列表已缓存: %s", categoryName)
+
+	return data, nil
+}
+
+// FindByCategoryName 根据分类名获取文章列表（别名方法）
+func (r *ArticleRepository) FindByCategoryName(ctx context.Context, categoryName string) ([]*model.Article, error) {
+	articles, err := r.GetArticlesByCategoryName(categoryName)
+	if err != nil {
+		return nil, err
+	}
+	
+	// 转换为指针切片
+	result := make([]*model.Article, len(articles))
+	for i := range articles {
+		result[i] = &articles[i]
+	}
+	return result, nil
+}
+
 // UpdateArticleViewCount 更新文章浏览次数
 func (r *ArticleRepository) UpdateArticleViewCount(id int) {
 	// 更新数据库中的浏览次数

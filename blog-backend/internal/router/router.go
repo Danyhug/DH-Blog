@@ -57,6 +57,8 @@ func Init(
 		publicAPI.GET("/article/overview", articleHandler.GetOverview)
 		publicAPI.GET("/article/tag", articleHandler.GetAllTags)
 		publicAPI.GET("/article/category", articleHandler.GetAllCategories)
+		publicAPI.GET("/article/taxonomies", articleHandler.GetAllTaxonomies)
+		publicAPI.GET("/article/taxonomy/articles", articleHandler.GetArticlesByTaxonomy)
 
 		// 用户公共 API
 		publicAPI.POST("/user/login", userHandler.Login)

@@ -5,7 +5,10 @@
             <section class="content-section">
                 <h2 class="section-title">📂 文章分类</h2>
                 <div class="grid-wrapper">
-                    <div class="grid-container">
+                    <div v-if="isLoading" class="loading-state">
+                        <i class="fas fa-spinner fa-spin"></i> 加载中...
+                    </div>
+                    <div v-else class="grid-container">
                         <!-- ✨ Staggering achieved via inline style -->
                         <a v-for="(category, index) in categories" :key="category.name" href="#" class="card"
                             :style="{ animationDelay: 800 + index * 50 + 'ms' }" @click.prevent="openModal(category)">
@@ -22,7 +25,10 @@
             <section class="content-section tag-section" style="flex: 1">
                 <h2 class="section-title">🏷️ 热门标签</h2>
                 <div class="grid-wrapper">
-                    <div class="grid-container">
+                    <div v-if="isLoading" class="loading-state">
+                        <i class="fas fa-spinner fa-spin"></i> 加载中...
+                    </div>
+                    <div v-else class="grid-container">
                         <!-- ✨ Staggering achieved via inline style -->
                         <a v-for="(tag, index) in tags" :key="tag.name" href="#" class="card"
                             :style="{ animationDelay: 800 + index * 50 + 'ms' }" @click.prevent="openModal(tag)">
@@ -45,7 +51,12 @@
                         <h3 class="modal-title">{{ modalTitle }}</h3>
                         <ul class="article-list">
                             <li v-for="(article, index) in modalArticles" :key="index">
-                                {{ article.title }}
+                                <div>{{ article.title }}</div>
+                                <div class="article-info">
+                                    <span><i class="fas fa-eye"></i> {{ article.views }} 阅读</span>
+                                    <span><i class="fas fa-file-word"></i> {{ article.wordNum }} 字</span>
+                                    <span><i class="fas fa-calendar-alt"></i> {{ article.createTime }}</span>
+                                </div>
                             </li>
                         </ul>
                     </div>
@@ -57,28 +68,51 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { getAllTaxonomies, getArticlesByTaxonomy } from '@/api/user';
 
-// --- Reactive State Management (No changes needed here) ---
-const myData = ref([
-    { name: '技术教程', type: 'category', url: '/category/tech-tutorials', count: 150 }, { name: '项目实战', type: 'category', url: '/category/projects', count: 80 }, { name: '前端进阶', type: 'category', url: '/category/frontend-advanced', count: 120 }, { name: '后端服务', type: 'category', url: '/category/backend', count: 60 }, { name: '职业发展', type: 'category', url: '/category/career', count: 30 }, { name: '源码阅读', type: 'category', url: '/category/source-code', count: 15 }, { name: '算法与数据结构', type: 'category', url: '/category/algorithms', count: 45 },
-    { name: 'JavaScript', type: 'tag', url: '/tag/javascript' }, { name: 'React', type: 'tag', url: '/tag/react' }, { name: 'Vue.js', type: 'tag', url: '/tag/vue' }, { name: 'CSS', type: 'tag', url: '/tag/css' }, { name: 'Node.js', type: 'tag', url: '/tag/nodejs' }, { name: 'TypeScript', type: 'tag', url: '/tag/typescript' }, { name: 'Next.js', type: 'tag', url: '/tag/nextjs' }, { name: 'GraphQL', type: 'tag', url: '/tag/graphql' }, { name: 'UI/UX', type: 'tag', url: '/tag/ui-ux' }, { name: 'Vite', type: 'tag', url: '/tag/vite' }, { name: 'Webpack', type: 'tag', url: '/tag/webpack' }, { name: 'Performance', type: 'tag', url: '/tag/performance' }, { name: 'Docker', type: 'tag', url: '/tag/docker' }, { name: 'Three.js', type: 'tag', url: '/tag/threejs' }, { name: 'GSAP', type: 'tag', url: '/tag/gsap' }
-]);
-
-const categories = computed(() => myData.value.filter(item => item.type === 'category'));
-const tags = computed(() => myData.value.filter(item => item.type === 'tag'));
-
+// --- Reactive State Management ---
+const allData = ref([]);
+const isLoading = ref(false);
 const isModalVisible = ref(false);
 const modalTitle = ref('');
 const modalArticles = ref([]);
 
-// --- ✨ Simplified Methods ---
-const openModal = (item) => {
+const categories = computed(() => allData.value.filter(item => item.type === 'category'));
+const tags = computed(() => allData.value.filter(item => item.type === 'tag'));
+
+// --- API Methods ---
+const loadTaxonomies = async () => {
+    isLoading.value = true;
+    try {
+        const data = await getAllTaxonomies();
+        allData.value = data.map(item => ({
+            ...item,
+            count: 0 // 默认计数为0，后续可以添加统计
+        }));
+    } catch (error) {
+        console.error('获取标签和分类失败:', error);
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+const openModal = async (item) => {
     modalTitle.value = `${item.name} - 文章列表`;
     modalArticles.value = [];
-    const articleCount = Math.floor(Math.random() * 15) + 5;
-    for (let i = 1; i <= articleCount; i++) {
-        modalArticles.value.push({ title: `关于 ${item.name} 的文章标题 ${i} - 探索与实践` });
+    
+    try {
+        const articles = await getArticlesByTaxonomy(item.name, item.type);
+        modalArticles.value = articles.map(article => ({
+            title: article.title,
+            views: article.views,
+            wordNum: article.wordNum,
+            createTime: article.createTime
+        }));
+    } catch (error) {
+        console.error('获取文章列表失败:', error);
+        modalArticles.value = [{ title: '加载文章失败，请稍后重试' }];
     }
+    
     isModalVisible.value = true;
 };
 
@@ -94,10 +128,36 @@ onMounted(() => {
             "particles": { "number": { "value": 60, "density": { "enable": true, "value_area": 800 } }, "color": { "value": "#555555" }, "shape": { "type": "circle" }, "opacity": { "value": 0.4, "random": true }, "size": { "value": 3, "random": true }, "line_linked": { "enable": true, "distance": 150, "color": "#CCCCCC", "opacity": 0.4, "width": 1 }, "move": { "enable": true, "speed": 2, "direction": "none", "random": false, "straight": false, "out_mode": "out", "bounce": false } }, "interactivity": { "detect_on": "canvas", "events": { "onhover": { "enable": true, "mode": "repulse" }, "onclick": { "enable": true, "mode": "push" }, "resize": true }, "modes": { "repulse": { "distance": 100, "duration": 0.4 }, "push": { "particles_nb": 4 } } }, "retina_detect": true
         });
     }
+    loadTaxonomies();
 });
 </script>
 
 <style>
+.loading-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-color);
+    font-size: 1.1em;
+}
+
+.loading-state i {
+    margin-right: 10px;
+}
+
+.article-info {
+    font-size: 0.85em;
+    color: #666;
+    margin-top: 6px;
+}
+
+.article-info span {
+    margin-right: 12px;
+}
+
+.article-info i {
+    margin-right: 4px;
+}
+
 /* ✨ New CSS Animations to replace GSAP */
 @keyframes fadeInUp {
     from {

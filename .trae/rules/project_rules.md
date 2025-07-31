@@ -1,8 +1,3 @@
----
-description: 
-globs: 
-alwaysApply: true
----
 
 # MCP Interactive Feedback Rules
 - follow mcp-feedback-enhanced instructions

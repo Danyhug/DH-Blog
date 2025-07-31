@@ -89,6 +89,31 @@ export const getOverview = (): Promise<OverView> => {
 };
 
 /**
+ * 获取所有标签和分类
+ * @returns 返回包含所有标签和分类的数组，格式为{name, url, type}
+ */
+export const getAllTaxonomies = (): Promise<Array<{name: string, url: string, type: string}>> => {
+  return request.get("/article/taxonomies");
+};
+
+/**
+ * 获取指定标签或分类的关联文章
+ * @param name 标签或分类名称
+ * @param type 类型，可以是'tag'或'category'
+ * @returns 返回关联的文章列表
+ */
+export const getArticlesByTaxonomy = (name: string, type: string): Promise<Array<{
+  id: number,
+  title: string,
+  views: number,
+  wordNum: number,
+  createTime: string,
+  updateTime: string
+}>> => {
+  return request.get(`/article/taxonomy/articles?name=${encodeURIComponent(name)}&type=${type}`);
+};
+
+/**
  * 用户评论
  */
 export const addComment = (comment: Comment) => {

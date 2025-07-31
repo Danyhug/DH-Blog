@@ -199,6 +199,95 @@ func (h *ArticleHandler) GetAllCategories(c *gin.Context) {
 	h.SuccessWithData(c, categories)
 }
 
+// GetAllTaxonomies 获取所有标签和分类，格式为{name, url, type}
+func (h *ArticleHandler) GetAllTaxonomies(c *gin.Context) {
+	ctx := c.Request.Context()
+	
+	// 获取所有标签
+	tags, err := h.tagRepo.FindAll(ctx)
+	if err != nil {
+		h.Error(c, err)
+		return
+	}
+	
+	// 获取所有分类
+	categories, err := h.categoryRepo.FindAll(ctx)
+	if err != nil {
+		h.Error(c, err)
+		return
+	}
+	
+	// 构建响应数据
+	var result []map[string]interface{}
+	
+	// 添加标签数据
+	for _, tag := range tags {
+		result = append(result, map[string]interface{}{
+			"name": tag.Name,
+			"url":  fmt.Sprintf("/tag/%s", tag.Name),
+			"type": "tag",
+		})
+	}
+	
+	// 添加分类数据
+	for _, category := range categories {
+		result = append(result, map[string]interface{}{
+			"name": category.Name,
+			"url":  fmt.Sprintf("/category/%s", category.Slug),
+			"type": "category",
+		})
+	}
+	
+	h.SuccessWithData(c, result)
+}
+
+// GetArticlesByTaxonomy 获取指定标签或分类的关联文章
+func (h *ArticleHandler) GetArticlesByTaxonomy(c *gin.Context) {
+	name := c.Query("name")
+	typeParam := c.Query("type")
+	
+	if name == "" || typeParam == "" {
+		c.JSON(http.StatusBadRequest, response.Error("name和type参数不能为空"))
+		return
+	}
+	
+	var articles []*model.Article
+	var err error
+	
+	ctx := c.Request.Context()
+	
+	if typeParam == "tag" {
+		// 根据标签名获取文章
+		articles, err = h.articleRepo.FindByTagName(ctx, name)
+	} else if typeParam == "category" {
+		// 根据分类名获取文章
+		articles, err = h.articleRepo.FindByCategoryName(ctx, name)
+	} else {
+		c.JSON(http.StatusBadRequest, response.Error("type参数必须是tag或category"))
+		return
+	}
+	
+	if err != nil {
+		h.Error(c, err)
+		return
+	}
+	
+	// 构建简化响应，只包含必要字段
+	var result []map[string]interface{}
+	for _, article := range articles {
+		result = append(result, map[string]interface{}{
+			"id":       article.ID,
+			"title":    article.Title,
+			"views":    article.Views,
+			"wordNum":  article.WordNum,
+			"createTime": article.CreatedAt,
+			"updateTime": article.UpdatedAt,
+		})
+	}
+	
+	h.SuccessWithData(c, result)
+}
+
 func (h *ArticleHandler) CreateCategory(c *gin.Context) {
 	var category model.Category
 	if err := h.bindJSON(c, &category); err != nil {
