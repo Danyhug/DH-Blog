@@ -11,10 +11,10 @@
                     <div v-else class="grid-container">
                         <!-- ✨ Staggering achieved via inline style -->
                         <a v-for="(category, index) in categories" :key="category.name" href="#" class="card"
-                            :style="{ animationDelay: 800 + index * 50 + 'ms' }" @click.prevent="openModal(category)">
+                            :style="{ animationDelay: 200 + index * 50 + 'ms' }" @click.prevent="openModal(category)">
                             <div class="card-content">
                                 <span>{{ category.name }}</span>
-                                <span class="count">{{ category.count }}</span>
+                                <span class="count">{{ category.count }}篇</span>
                             </div>
                         </a>
                     </div>
@@ -30,10 +30,11 @@
                     </div>
                     <div v-else class="grid-container">
                         <!-- ✨ Staggering achieved via inline style -->
-                        <a v-for="(tag, index) in tags" :key="tag.name" href="#" class="card"
+                        <a v-for="(tag, index) in tags" :key="tag.name" href="#" class="card tag-card"
                             :style="{ animationDelay: 800 + index * 50 + 'ms' }" @click.prevent="openModal(tag)">
                             <div class="card-content">
                                 <span>{{ tag.name }}</span>
+                                <span class="badge">{{ tag.count }}</span>
                             </div>
                         </a>
                     </div>
@@ -85,10 +86,7 @@ const loadTaxonomies = async () => {
     isLoading.value = true;
     try {
         const data = await getAllTaxonomies();
-        allData.value = data.map(item => ({
-            ...item,
-            count: 0 // 默认计数为0，后续可以添加统计
-        }));
+        allData.value = data;
     } catch (error) {
         console.error('获取标签和分类失败:', error);
     } finally {
@@ -393,6 +391,33 @@ body {
             var(--accent-color-1),
             var(--accent-color-2));
     border-image-slice: 1;
+}
+
+/* 标签角标样式 */
+.badge {
+    position: absolute;
+    top: 0;
+    right: 2px;
+    background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+    z-index: 1;
+}
+
+.section-tags .card {
+    position: relative;
+}
+
+.section-tags .card-content {
+    position: relative;
 }
 
 .section-categories .card:hover .card-content>span:first-child {

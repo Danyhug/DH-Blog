@@ -90,9 +90,9 @@ export const getOverview = (): Promise<OverView> => {
 
 /**
  * 获取所有标签和分类
- * @returns 返回包含所有标签和分类的数组，格式为{name, url, type}
+ * @returns 返回包含所有标签和分类的数组，格式为{name, url, type, count}
  */
-export const getAllTaxonomies = (): Promise<Array<{name: string, url: string, type: string}>> => {
+export const getAllTaxonomies = (): Promise<Array<{name: string, url: string, type: string, count: number}>> => {
   return request.get("/article/taxonomies");
 };
 

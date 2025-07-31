@@ -222,19 +222,23 @@ func (h *ArticleHandler) GetAllTaxonomies(c *gin.Context) {
 	
 	// 添加标签数据
 	for _, tag := range tags {
+		count, _ := h.articleRepo.CountArticlesByTagName(ctx, tag.Name)
 		result = append(result, map[string]interface{}{
-			"name": tag.Name,
-			"url":  fmt.Sprintf("/tag/%s", tag.Name),
-			"type": "tag",
+			"name":  tag.Name,
+			"url":   fmt.Sprintf("/tag/%s", tag.Name),
+			"type":  "tag",
+			"count": count,
 		})
 	}
 	
 	// 添加分类数据
 	for _, category := range categories {
+		count, _ := h.articleRepo.CountArticlesByCategoryName(ctx, category.Name)
 		result = append(result, map[string]interface{}{
-			"name": category.Name,
-			"url":  fmt.Sprintf("/category/%s", category.Slug),
-			"type": "category",
+			"name":  category.Name,
+			"url":   fmt.Sprintf("/category/%s", category.Slug),
+			"type":  "category",
+			"count": count,
 		})
 	}
 	

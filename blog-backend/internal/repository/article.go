@@ -255,6 +255,31 @@ func (r *ArticleRepository) FindByTagName(ctx context.Context, tagName string) (
 	return result, nil
 }
 
+// CountArticlesByTagName 统计指定标签的文章数量
+func (r *ArticleRepository) CountArticlesByTagName(ctx context.Context, tagName string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Table("articles a").
+		Joins("JOIN article_tags at ON a.id = at.article_id").
+		Joins("JOIN tags t ON at.tag_id = t.id").
+		Where("t.name = ? AND a.deleted_at IS NULL", tagName).
+		Count(&count).Error
+	
+	return count, err
+}
+
+// CountArticlesByCategoryName 统计指定分类的文章数量
+func (r *ArticleRepository) CountArticlesByCategoryName(ctx context.Context, categoryName string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Table("articles a").
+		Joins("JOIN categories c ON a.category_id = c.id").
+		Where("c.name = ? AND a.deleted_at IS NULL", categoryName).
+		Count(&count).Error
+	
+	return count, err
+}
+
 // GetArticlesByCategoryName 根据分类名获取文章列表
 func (r *ArticleRepository) GetArticlesByCategoryName(categoryName string) (data []model.Article, err error) {
 	// 缓存键
