@@ -1,8 +1,7 @@
 # .github/workflows/build.yml
 
-name: DH-Blog Build and Release
+name: DH-Blog Build and Release (Diagnostic Version)
 
-# 触发工作流的事件
 on:
   push:
     branches: [ "main" ]
@@ -10,44 +9,61 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-# 全局环境变量，这里的路径是相对于项目根目录的，因为 Actions 从根目录开始
+# 全局环境变量
 env:
   BINARY_NAME: dhblog
-  BACKEND_DIR: blog-backend   # 从根目录出发，直接就是 'blog-backend'
-  FRONTEND_DIR: blog-front    # 从根目录出发，直接就是 'blog-front'
+  BACKEND_DIR: blog-backend
+  FRONTEND_DIR: blog-front
 
-# 定义工作任务
 jobs:
   build-and-release:
-    name: 🏗️ Build All Platforms
+    name: 🏗️ Build and Diagnose
     runs-on: ubuntu-latest
     
-    # 任务执行的步骤
     steps:
       # 步骤 1: 拉取代码
-      # 工作目录: /home/runner/work/DH-Blog/DH-Blog/
       - name: ⬇️ Checkout repository
         uses: actions/checkout@v4
 
       # 步骤 2: 安装 pnpm
-      # 工作目录: /home/runner/work/DH-Blog/DH-Blog/
       - name: ⚙️ Setup pnpm
         uses: pnpm/action-setup@v3
         with:
           version: 8
 
       # 步骤 3: 设置 Node.js 环境
-      # 工作目录: /home/runner/work/DH-Blog/DH-Blog/
       - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'pnpm'
-          # 缓存路径也是从根目录计算的: 'blog-front/pnpm-lock.yaml'
           cache-dependency-path: '${{ env.FRONTEND_DIR }}/pnpm-lock.yaml'
 
-      # 步骤 4: 安装前端依赖并构建
-      # 使用 `working-directory` 切换到前端目录，完美模拟 `(cd ../blog-front && ...)`
+      # ====================================================================
+      # 步骤 4: 终极诊断步骤
+      # 这一步会打印出 CI 环境中文件的真实状态和内容
+      # ====================================================================
+      - name: 🔍 Diagnose File Contents
+        run: |
+          echo "================== DIAGNOSTIC STEP START =================="
+          echo " "
+          echo ">>> Listing files in the frontend directory:"
+          ls -la ${{ env.FRONTEND_DIR }}
+          echo " "
+          echo "---------------------------------------------------------"
+          echo ">>> Displaying content of package.json:"
+          echo " "
+          cat ${{ env.FRONTEND_DIR }}/package.json
+          echo " "
+          echo "---------------------------------------------------------"
+          echo ">>> Displaying content of pnpm-lock.yaml:"
+          echo " "
+          # 使用 || true 来防止在文件不存在时导致工作流失败
+          cat ${{ env.FRONTEND_DIR }}/pnpm-lock.yaml || echo "!!! pnpm-lock.yaml NOT FOUND by 'cat' command !!!"
+          echo " "
+          echo "================== DIAGNOSTIC STEP END ===================="
+
+      # 步骤 5: 安装前端依赖并构建
       - name: 📦 Build Frontend
         working-directory: ${{ env.FRONTEND_DIR }}
         run: |
@@ -57,19 +73,16 @@ jobs:
           echo "==> Building frontend..."
           pnpm build
 
-      # 步骤 5: 设置 Go 环境
-      # 工作目录: /home/runner/work/DH-Blog/DH-Blog/
+      # 步骤 6: 设置 Go 环境
       - name: ⚙️ Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
           cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
 
-      # 步骤 6: 准备嵌入目录并构建所有平台
-      # 回到根目录执行，确保所有路径清晰
+      # 步骤 7: 准备嵌入目录并构建所有平台
       - name: 🛠️ Build Go Binaries for All Platforms
         run: |
-          # 定义变量，路径全部从根目录开始，清晰明了
           DEPLOY_DIR="build"
           EMBED_DIR="${{ env.BACKEND_DIR }}/internal/frontend/dist"
           
@@ -78,40 +91,33 @@ jobs:
           mkdir -p "$DEPLOY_DIR" "$EMBED_DIR"
           
           echo "==> Embedding frontend files..."
-          # 从 'blog-front/dist' 复制到 'blog-backend/internal/frontend/dist'
           cp -r "${{ env.FRONTEND_DIR }}/dist/"* "$EMBED_DIR/"
           
-          # 定义构建函数
           build_for_platform() {
               local os=$1 arch=$2 ext=$3
-              local output_name="${BINARY_NAME}${ext}"
-              local output_path="${DEPLOY_DIR}/${output_name}"
-              
-              echo "==> Building for ${os}/${arch}..."
-              cd "${BACKEND_DIR}"
-              GOOS="${os}" GOARCH="${arch}" go build -ldflags="-s -w" -o "../${output_path}" ./cmd/blog-backend
-              cd ..
-              
-              echo "==> Built: ${output_path}"
+              local output_path="$DEPLOY_DIR/${{ env.BINARY_NAME }}${ext}"
+              echo "==> Building for $os/$arch..."
+              (cd "${{ env.BACKEND_DIR }}" && GOOS=$os GOARCH=$arch go build -ldflags="-s -w" -o "../$output_path" ./cmd/blog-backend)
+              if [ $? -eq 0 ]; then
+                  echo "✅ Successfully built: $output_path"
+              else
+                  echo "❌ Failed to build for $os/$arch"
+                  exit 1
+              fi
           }
-          
-          # 构建所有平台
+
           build_for_platform "darwin" "arm64" "-darwin-arm64"
           build_for_platform "windows" "amd64" "-windows-amd64.exe"
           build_for_platform "linux" "amd64" "-linux-amd64"
           
-          echo "==> All builds completed!"
-          ls -la "${DEPLOY_DIR}/"
+          echo "==> Cleaning up intermediate files..."
+          rm -rf "$EMBED_DIR"
+          
+          echo "==> All builds complete! Artifacts are in the $DEPLOY_DIR directory."
 
-      # 步骤 7: 上传构建产物到 GitHub Release
-      - name: 📤 Upload Release Asset
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
+      # 步骤 8: 上传所有构建产物
+      - name: ⬆️ Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: v${{ github.run_number }}
-          name: Release v${{ github.run_number }}
-          files: build/*
-          generate_release_notes: true
-          make_latest: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: dhblog-binaries
+          path: build/
