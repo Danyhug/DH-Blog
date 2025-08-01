@@ -160,9 +160,8 @@ onMounted(() => {
 @keyframes fadeInUp {
     from {
         opacity: 0;
-        transform: translateY(50px);
+        transform: translateY(30px);
     }
-
     to {
         opacity: 1;
         transform: translateY(0);
@@ -282,6 +281,10 @@ body {
     overflow-x: hidden;
     padding: 25px;
     flex-grow: 1;
+    /* 防止动画导致的滚动条闪烁 */
+    scrollbar-gutter: stable;
+    /* 使用overlay避免布局变化 */
+    overflow-y: overlay;
 }
 
 .grid-wrapper::-webkit-scrollbar {
@@ -341,6 +344,8 @@ body {
     transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
     background: var(--card-bg-color);
     box-shadow: 0 4px 15px var(--shadow-color);
+    animation: fadeInUp 1s cubic-bezier(0.215, 0.61, 0.355, 1) both;
+    transform-origin: center;
 }
 
 .card-content {
