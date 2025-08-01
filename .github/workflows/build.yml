@@ -1,6 +1,6 @@
 # .github/workflows/build.yml
 
-name: DH-Blog Build and Release (Diagnostic Version)
+name: DH-Blog Build and Release
 
 on:
   push:
@@ -17,7 +17,7 @@ env:
 
 jobs:
   build-and-release:
-    name: 🏗️ Build and Diagnose
+    name: 🏗️ Build All Platforms
     runs-on: ubuntu-latest
     
     steps:
@@ -25,11 +25,11 @@ jobs:
       - name: ⬇️ Checkout repository
         uses: actions/checkout@v4
 
-      # 步骤 2: 安装 pnpm
+      # 步骤 2: 安装 pnpm (关键修改：版本升级到 10)
       - name: ⚙️ Setup pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8
+          version: 10 # <--- 已更新为 v10，与您本地环境保持一致
 
       # 步骤 3: 设置 Node.js 环境
       - name: ⚙️ Setup Node.js
@@ -39,31 +39,7 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: '${{ env.FRONTEND_DIR }}/pnpm-lock.yaml'
 
-      # ====================================================================
-      # 步骤 4: 终极诊断步骤
-      # 这一步会打印出 CI 环境中文件的真实状态和内容
-      # ====================================================================
-      - name: 🔍 Diagnose File Contents
-        run: |
-          echo "================== DIAGNOSTIC STEP START =================="
-          echo " "
-          echo ">>> Listing files in the frontend directory:"
-          ls -la ${{ env.FRONTEND_DIR }}
-          echo " "
-          echo "---------------------------------------------------------"
-          echo ">>> Displaying content of package.json:"
-          echo " "
-          cat ${{ env.FRONTEND_DIR }}/package.json
-          echo " "
-          echo "---------------------------------------------------------"
-          echo ">>> Displaying content of pnpm-lock.yaml:"
-          echo " "
-          # 使用 || true 来防止在文件不存在时导致工作流失败
-          cat ${{ env.FRONTEND_DIR }}/pnpm-lock.yaml || echo "!!! pnpm-lock.yaml NOT FOUND by 'cat' command !!!"
-          echo " "
-          echo "================== DIAGNOSTIC STEP END ===================="
-
-      # 步骤 5: 安装前端依赖并构建
+      # 步骤 4: 安装前端依赖并构建
       - name: 📦 Build Frontend
         working-directory: ${{ env.FRONTEND_DIR }}
         run: |
@@ -73,14 +49,14 @@ jobs:
           echo "==> Building frontend..."
           pnpm build
 
-      # 步骤 6: 设置 Go 环境
+      # 步骤 5: 设置 Go 环境
       - name: ⚙️ Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
           cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
 
-      # 步骤 7: 准备嵌入目录并构建所有平台
+      # 步骤 6: 准备嵌入目录并构建所有平台
       - name: 🛠️ Build Go Binaries for All Platforms
         run: |
           DEPLOY_DIR="build"
@@ -115,7 +91,7 @@ jobs:
           
           echo "==> All builds complete! Artifacts are in the $DEPLOY_DIR directory."
 
-      # 步骤 8: 上传所有构建产物
+      # 步骤 7: 上传所有构建产物
       - name: ⬆️ Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
