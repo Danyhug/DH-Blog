@@ -45,6 +45,14 @@
               <UploadIcon class="icon-sm" />
               上传
             </button>
+            <button v-if="selectedFiles.size > 0" class="btn-primary" @click="downloadSelectedFiles">
+              <UploadIcon class="icon-sm" transform="rotate(180)" />
+              下载 ({{ selectedFiles.size }})
+            </button>
+            <button v-if="selectedFiles.size > 0" class="btn-outline" @click="shareSelectedFiles">
+              <UploadIcon class="icon-sm" />
+              分享 ({{ selectedFiles.size }})
+            </button>
           </div>
           <div class="toolbar-right">
             <div class="search-container">
@@ -65,9 +73,11 @@
                 <div v-for="(file, index) in filteredFiles" :key="file.id || index" class="file-item"
                   :class="{ 
                     'folder-item': file.type === 'folder',
-                    'new-uploaded-file': newUploadedFileIds.includes(file.id || '')
+                    'new-uploaded-file': newUploadedFileIds.includes(file.id || ''),
+                    'selected': file.id && selectedFiles.has(file.id)
                   }" 
                   @click="handleFileClick(file)"
+                  @dblclick="handleFileDoubleClick(file)"
                   @contextmenu.prevent="showContextMenu($event, file)">
                   <div class="file-content">
                     <div class="file-icon-container">
@@ -232,6 +242,7 @@ const showSettingsModal = ref(false)
 const showUploadModal = ref(false)
 const showShareLinkPopup = ref(false)
 const isLoading = ref(false)
+const selectedFiles = ref<Set<string>>(new Set()) // 存储选中的文件ID
 // 定义UploadModalInstance类型
 type UploadModalInstance = ComponentPublicInstance & {
   updateFileStatus: (fileIndex: number, status: 'success' | 'error', error?: string) => void
@@ -650,8 +661,22 @@ function cancelDialog() {
   showRenameDialog.value = false;
 }
 
-// 处理文件点击
+// 处理文件单击（选择文件）
 function handleFileClick(file: FileItem) {
+  if (file.id) {
+    if (selectedFiles.value.has(file.id)) {
+      selectedFiles.value.delete(file.id);
+    } else {
+      selectedFiles.value.add(file.id);
+    }
+  }
+}
+
+// 处理文件双击（打开文件或进入文件夹）
+function handleFileDoubleClick(file: FileItem) {
+  // 双击时清空选择状态
+  selectedFiles.value.clear();
+  
   if (file.type === 'folder') {
     // 如果是文件夹，进入该文件夹
     const folderId = file.id as string;
@@ -710,6 +735,64 @@ function downloadFile(file: FileItem) {
     window.open(downloadUrl, '_blank');
   }
   closeContextMenu();
+}
+
+// 批量下载选中的文件
+function downloadSelectedFiles() {
+  if (selectedFiles.value.size === 0) {
+    ElMessage.warning('请先选择要下载的文件');
+    return;
+  }
+
+  const selectedFileItems = filteredFiles.value.filter(file => 
+    file.id && selectedFiles.value.has(file.id) && file.type === 'file'
+  );
+
+  if (selectedFileItems.length === 0) {
+    ElMessage.warning('没有可下载的文件');
+    return;
+  }
+
+  // 逐个下载所有选中的文件
+  selectedFileItems.forEach(file => {
+    if (file.type === 'file' && file.id) {
+      const downloadUrl = getDownloadUrl(file.id);
+      window.open(downloadUrl, '_blank');
+    }
+  });
+
+  // 下载完成后清空选择
+  selectedFiles.value.clear();
+}
+
+// 批量分享选中的文件
+function shareSelectedFiles() {
+  if (selectedFiles.value.size === 0) {
+    ElMessage.warning('请先选择要分享的文件');
+    return;
+  }
+
+  const selectedFileItems = filteredFiles.value.filter(file => 
+    file.id && selectedFiles.value.has(file.id)
+  );
+
+  if (selectedFileItems.length === 0) {
+    ElMessage.warning('没有选择有效的文件');
+    return;
+  }
+
+  if (selectedFileItems.length > 1) {
+    ElMessage.warning('暂不支持批量分享多个文件');
+    return;
+  }
+
+  // 分享单个文件
+  const file = selectedFileItems[0];
+  selectedFile.value = file;
+  showShareLinkPopup.value = true;
+  
+  // 分享后清空选择
+  selectedFiles.value.clear();
 }
 
 // 删除文件
@@ -1044,11 +1127,18 @@ onUnmounted(() => {
         /* 固定高度 */
         display: flex;
         background-color: #ffffff;
+        border: 2px solid transparent;
 
         &:hover {
           background-color: #f5f5f5;
           transform: translateY(-3px);
           box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        &.selected {
+          background-color: #e6f0ff;
+          border-color: #2a8aff;
+          box-shadow: 0 5px 15px rgba(42, 138, 255, 0.2);
         }
 
         &.folder-item {
