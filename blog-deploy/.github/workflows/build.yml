@@ -1,0 +1,103 @@
+# .github/workflows/build.yml
+
+name: DH-Blog Build
+
+on:
+  push:
+    branches: [ "main" ] # 当 main 分支有推送时触发
+  pull_request:
+    branches: [ "main" ] # 当有 PR 指向 main 分支时触发
+  workflow_dispatch: # 允许手动触发
+
+# 定义环境变量，方便统一管理
+env:
+  BINARY_NAME: dhblog
+  BACKEND_DIR: blog-backend
+  FRONTEND_DIR: blog-front
+
+jobs:
+  # --------------------------------------------------
+  # Job 1: 构建前端资源
+  # --------------------------------------------------
+  build-frontend:
+    name: 📦 Build Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js with pnpm
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22' 
+          cache: 'pnpm'
+          cache-dependency-path: '${{ env.FRONTEND_DIR }}/pnpm-lock.yaml'
+
+      - name: 📥 Install frontend dependencies
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: pnpm install
+
+      - name: 🏗️ Build frontend
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: pnpm build
+
+      - name: 📁 Prepare files for embedding
+        run: |
+          # 创建后端用于嵌入的前端文件目录
+          mkdir -p ${{ env.BACKEND_DIR }}/internal/frontend/dist
+          # 将构建好的前端文件复制过去
+          cp -r ${{ env.FRONTEND_DIR }}/dist/* ${{ env.BACKEND_DIR }}/internal/frontend/dist/
+      
+      - name: ⬆️ Upload artifact for next job
+        uses: actions/upload-artifact@v4
+        with:
+          name: prepared-source
+          path: . # 上传整个项目目录，此时已包含嵌入的前端文件
+
+  # --------------------------------------------------
+  # Job 2: 构建跨平台的 Go 二进制文件
+  # --------------------------------------------------
+  build-go-binaries:
+    name: 🛠️ Build Go Binaries
+    needs: build-frontend # 依赖于前端构建任务
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        # 定义不同平台的构建参数
+        include:
+          - os: darwin
+            arch: arm64
+            ext: "-darwin-arm64"
+          - os: windows
+            arch: amd64
+            ext: "-windows-amd64.exe"
+          - os: linux
+            arch: amd64
+            ext: "-linux-amd64"
+            
+    steps:
+      - name: ⬇️ Download prepared source code
+        uses: actions/download-artifact@v4
+        with:
+          name: prepared-source
+
+      - name: ⚙️ Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24' # 使用 Go 1.22
+          cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
+
+      - name: 🏗️ Build for ${{ matrix.os }}/${{ matrix.arch }}
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: |
+          # 设置环境变量并构建
+          GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w" -o ../build/${{ env.BINARY_NAME }}${{ matrix.ext }} ./cmd/blog-backend
+          echo "✅ Built: ${{ env.BINARY_NAME }}${{ matrix.ext }}"
+
+      - name: ⬆️ Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}${{ matrix.ext }}
+          path: build/${{ env.BINARY_NAME }}${{ matrix.ext }}
