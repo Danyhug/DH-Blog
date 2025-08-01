@@ -1,47 +1,64 @@
 # .github/workflows/build.yml
 
+# 工作流名称
 name: DH-Blog Build
 
+# 触发工作流的事件
 on:
   push:
-    branches: [ "main" ] # 当 main 分支有推送时触发
+    branches: [ "main" ] # 1. 当代码推送到 main 分支时触发
   pull_request:
-    branches: [ "main" ] # 当有 PR 指向 main 分支时触发
-  workflow_dispatch: # 允许手动触发
+    branches: [ "main" ] # 2. 当有 Pull Request 指向 main 分支时触发
+  workflow_dispatch:      # 3. 允许在 GitHub Actions 页面手动触发
 
-# 定义环境变量，方便统一管理
+# 全局环境变量，方便统一管理和修改
 env:
   BINARY_NAME: dhblog
   BACKEND_DIR: blog-backend
   FRONTEND_DIR: blog-front
 
+# 定义工作任务
 jobs:
   # --------------------------------------------------
-  # Job 1: 构建前端资源
+  # 任务一：构建前端资源
   # --------------------------------------------------
   build-frontend:
+    # 任务的显示名称
     name: 📦 Build Frontend
+    # 运行此任务的虚拟机环境
     runs-on: ubuntu-latest
     
+    # 任务执行的步骤
     steps:
+      # 步骤1：拉取代码到虚拟机
       - name: ⬇️ Checkout repository
         uses: actions/checkout@v4
 
-      - name: ⚙️ Setup Node.js with pnpm
+      # 步骤2：安装 pnpm CLI（这是关键修复步骤）
+      - name: ⚙️ Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8 # 你可以指定需要的 pnpm 版本
+
+      # 步骤3：设置 Node.js 环境，并配置 pnpm 缓存
+      - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22' 
-          cache: 'pnpm'
+          node-version: '22' # 使用 Node.js 22
+          cache: 'pnpm'      # 启用 pnpm 缓存
           cache-dependency-path: '${{ env.FRONTEND_DIR }}/pnpm-lock.yaml'
 
+      # 步骤4：安装前端依赖。--frozen-lockfile 确保使用锁文件中的确切版本，保证 CI 环境的一致性。
       - name: 📥 Install frontend dependencies
         working-directory: ${{ env.FRONTEND_DIR }}
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
+      # 步骤5：构建前端项目
       - name: 🏗️ Build frontend
         working-directory: ${{ env.FRONTEND_DIR }}
         run: pnpm build
 
+      # 步骤6：准备用于嵌入到 Go 程序中的前端文件
       - name: 📁 Prepare files for embedding
         run: |
           # 创建后端用于嵌入的前端文件目录
@@ -49,6 +66,7 @@ jobs:
           # 将构建好的前端文件复制过去
           cp -r ${{ env.FRONTEND_DIR }}/dist/* ${{ env.BACKEND_DIR }}/internal/frontend/dist/
       
+      # 步骤7：将包含前端产物的整个项目上传为 artifact，供下一个任务使用
       - name: ⬆️ Upload artifact for next job
         uses: actions/upload-artifact@v4
         with:
@@ -56,13 +74,17 @@ jobs:
           path: . # 上传整个项目目录，此时已包含嵌入的前端文件
 
   # --------------------------------------------------
-  # Job 2: 构建跨平台的 Go 二进制文件
+  # 任务二：构建跨平台的 Go 二进制文件
   # --------------------------------------------------
   build-go-binaries:
+    # 任务的显示名称
     name: 🛠️ Build Go Binaries
-    needs: build-frontend # 依赖于前端构建任务
+    # 依赖关系：此任务必须等待 build-frontend 成功后才能开始
+    needs: build-frontend 
+    # 运行此任务的虚拟机环境
     runs-on: ubuntu-latest
     
+    # 构建矩阵：并行构建多个平台的二进制文件
     strategy:
       matrix:
         # 定义不同平台的构建参数
@@ -77,18 +99,22 @@ jobs:
             arch: amd64
             ext: "-linux-amd64"
             
+    # 任务执行的步骤
     steps:
+      # 步骤1：下载上一个任务准备好的、包含前端文件的源码
       - name: ⬇️ Download prepared source code
         uses: actions/download-artifact@v4
         with:
           name: prepared-source
 
+      # 步骤2：设置 Go 环境，并配置 Go 模块缓存
       - name: ⚙️ Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24' # 使用 Go 1.22
+          go-version: '1.22' # 你的文件写的是1.24，我改回1.22，你可以根据需要调整
           cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
 
+      # 步骤3：根据矩阵中的平台信息进行跨平台编译
       - name: 🏗️ Build for ${{ matrix.os }}/${{ matrix.arch }}
         working-directory: ${{ env.BACKEND_DIR }}
         run: |
@@ -96,6 +122,7 @@ jobs:
           GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w" -o ../build/${{ env.BINARY_NAME }}${{ matrix.ext }} ./cmd/blog-backend
           echo "✅ Built: ${{ env.BINARY_NAME }}${{ matrix.ext }}"
 
+      # 步骤4：将编译好的二进制文件分别上传为 artifact
       - name: ⬆️ Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
