@@ -230,7 +230,7 @@ import {
   FileSpreadsheetIcon,
   FilePresentationIcon,
 } from '../utils/icons'
-import { listFiles, createFolder, uploadFile, getDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, FileInfo } from '@/api/file'
+import { listFiles, createFolder, uploadFile, getDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, cancelChunkUpload, getUploadedChunks, FileInfo } from '@/api/file'
 
 // 状态变量
 const uploadProgress = ref(0)
@@ -245,7 +245,7 @@ const isLoading = ref(false)
 const selectedFiles = ref<Set<string>>(new Set()) // 存储选中的文件ID
 // 定义UploadModalInstance类型
 type UploadModalInstance = ComponentPublicInstance & {
-  updateFileStatus: (fileIndex: number, status: 'success' | 'error', error?: string) => void
+  updateFileStatus: (fileIndex: number, status: 'success' | 'error' | 'uploading', message?: string, uploadedChunks?: number, totalChunks?: number) => void
 }
 // 使用正确的类型
 const uploadModalRef = ref<UploadModalInstance | null>(null)
@@ -848,16 +848,21 @@ async function handleUploadFiles(files: File[]) {
     const file = files[i];
     
     try {
-      // 调用修改后的API函数，单独处理每个文件的上传
-      const response = await uploadFile(currentParentId.value, file);
-      // 更新文件状态为成功
-      uploadModalRef.value?.updateFileStatus(i, 'success');
-      successCount++;
-      
-      // 如果上传成功，记录文件ID
-      if (response && response.id) {
-        newUploadedFileIds.value.push(response.id.toString());
+      // 检查文件大小，大于10MB使用分片上传
+      if (file.size > 10 * 1024 * 1024) {
+        await uploadLargeFile(file, i);
+      } else {
+        // 普通上传（小文件）
+          const response = await uploadFile(currentParentId.value, file);
+          // 更新文件状态为成功
+        uploadModalRef.value?.updateFileStatus(i, 'success', undefined, 1, 1);
+        
+        // 如果上传成功，记录文件ID
+        if (response && response.id) {
+          newUploadedFileIds.value.push(response.id.toString());
+        }
       }
+      successCount++;
     } catch (error) {
       // 单个文件上传失败，记录但不中断其他文件上传
       console.error(`文件 "${file.name}" 上传失败:`, error);
@@ -884,6 +889,119 @@ async function handleUploadFiles(files: File[]) {
   
   // 不再自动清除高亮效果
   // 用户可以通过刷新页面或导航到其他目录来清除高亮
+}
+
+// 处理大文件分片上传
+async function uploadLargeFile(file: File, fileIndex: number) {
+  const chunkSize = 5 * 1024 * 1024; // 5MB分片大小
+  const totalChunks = Math.ceil(file.size / chunkSize);
+  
+  try {
+    // 生成基于文件名的稳定uploadId，支持断点续传
+    const stableUploadId = `upload_${currentParentId.value || 'root'}_${file.name}_${file.size}`;
+    
+    // 尝试获取已存在的上传会话
+    let uploadId = stableUploadId;
+    let existingSession = false;
+    let initResponse;
+    
+    try {
+      const chunksResponse = await getUploadedChunks(stableUploadId);
+      if (chunksResponse.totalChunks > 0) {
+        initResponse = {
+          uploadId: stableUploadId,
+          chunkSize: chunkSize,
+          totalChunks: totalChunks,
+          fileName: file.name,
+          fileSize: file.size,
+          parentId: currentParentId.value
+        };
+        existingSession = true;
+        console.log('找到已存在的上传会话，继续断点续传');
+      } else {
+        // 会话存在但没有分片，视为新会话
+        initResponse = await initChunkUpload(currentParentId.value, file.name, file.size, chunkSize, stableUploadId);
+        uploadId = initResponse.uploadId;
+      }
+    } catch (error: any) {
+      // 会话不存在或其他错误，静默创建新的上传会话
+      if (error?.response?.data?.error !== '上传会话不存在') {
+        console.warn('获取上传会话信息失败:', error);
+      }
+      initResponse = await initChunkUpload(currentParentId.value, file.name, file.size, chunkSize, stableUploadId);
+      uploadId = initResponse.uploadId;
+    }
+    
+    // 获取已上传的分片列表（断点续传）
+    let uploadedChunks: number[] = [];
+    try {
+      const chunksResponse = await getUploadedChunks(uploadId);
+      uploadedChunks = chunksResponse.chunks || [];
+    } catch (error: any) {
+      // 静默处理会话不存在的错误，这是预期行为
+      if (error?.response?.data?.error !== '上传会话不存在') {
+        console.warn('获取已上传分片列表失败:', error);
+      }
+      uploadedChunks = [];
+    }
+    
+    // 计算需要上传的分片
+    const pendingChunks = [];
+    for (let i = 0; i < totalChunks; i++) {
+      if (!uploadedChunks.includes(i)) {
+        pendingChunks.push(i);
+      }
+    }
+    
+    // 如果所有分片都已上传，直接完成上传
+    if (pendingChunks.length === 0) {
+      const completeResponse = await completeChunkUpload(uploadId);
+      if (completeResponse && completeResponse.id) {
+        newUploadedFileIds.value.push(completeResponse.id.toString());
+      }
+      uploadModalRef.value?.updateFileStatus(fileIndex, 'success');
+      return;
+    }
+    
+    // 更新上传状态
+    const uploadedCount = uploadedChunks.length;
+    uploadModalRef.value?.updateFileStatus(fileIndex, 'uploading', 
+      `断点续传 (${uploadedCount}/${totalChunks}已上传，剩余${pendingChunks.length}个)`,
+      uploadedCount, totalChunks);
+    
+    // 上传未完成的分片
+    let completedCount = 0;
+    for (const chunkIndex of pendingChunks) {
+      const start = chunkIndex * chunkSize;
+      const end = Math.min(start + chunkSize, file.size);
+      const chunk = file.slice(start, end);
+      
+      await uploadChunk(uploadId, chunkIndex, chunk);
+      completedCount++;
+      
+      // 更新进度
+      const totalUploaded = uploadedCount + completedCount;
+      const progress = Math.round((totalUploaded / totalChunks) * 100);
+      uploadModalRef.value?.updateFileStatus(fileIndex, 'uploading', 
+        `断点续传中 (${totalUploaded}/${totalChunks}) ${progress}%`,
+        totalUploaded, totalChunks);
+    }
+    
+    // 完成分片上传
+    const completeResponse = await completeChunkUpload(uploadId);
+    
+    // 如果上传成功，记录文件ID
+    if (completeResponse && completeResponse.id) {
+      newUploadedFileIds.value.push(completeResponse.id.toString());
+    }
+    
+    // 更新状态为成功
+    uploadModalRef.value?.updateFileStatus(fileIndex, 'success');
+  } catch (error) {
+    console.error('分片上传失败:', error);
+    // 上传失败，不自动取消，允许用户重试
+    throw error;
+  }
 }
 
 // 处理重试上传

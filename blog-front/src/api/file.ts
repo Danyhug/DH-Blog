@@ -75,6 +75,74 @@ export const uploadFile = (parentId: string | undefined, file: File): Promise<an
 }
 
 /**
+ * 初始化分片上传
+ * @param parentId 父目录ID
+ * @param fileName 文件名
+ * @param fileSize 文件大小
+ * @param chunkSize 分片大小
+ * @param uploadId 指定上传会话ID（用于断点续传）
+ * @returns 上传会话ID
+ */
+export const initChunkUpload = (parentId: string | undefined, fileName: string, fileSize: number, chunkSize: number = 10 * 1024 * 1024, uploadId?: string): Promise<any> => {
+  return request.post('/files/upload/chunk/init', {
+    parentId: parentId || '',
+    fileName,
+    fileSize,
+    chunkSize,
+    uploadId
+  })
+}
+
+/**
+ * 上传分片
+ * @param uploadId 上传会话ID
+ * @param chunkIndex 分片索引
+ * @param chunkData 分片数据
+ * @returns 上传结果
+ */
+export const uploadChunk = (uploadId: string, chunkIndex: number, chunkData: Blob): Promise<any> => {
+  const formData = new FormData()
+  formData.append('uploadId', uploadId)
+  formData.append('chunkIndex', chunkIndex.toString())
+  formData.append('chunk', chunkData)
+  
+  return request.post('/files/upload/chunk/chunk', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
+/**
+ * 完成分片上传
+ * @param uploadId 上传会话ID
+ * @returns 上传结果
+ */
+export const completeChunkUpload = (uploadId: string): Promise<any> => {
+  return request.post('/files/upload/chunk/complete', {
+    uploadId
+  })
+}
+
+/**
+ * 获取已上传分片列表
+ * @param uploadId 上传会话ID
+ * @returns 已上传分片列表和总分片数
+ */
+export const getUploadedChunks = (uploadId: string): Promise<any> => {
+  return request.get(`/files/upload/chunk/${uploadId}/chunks`)
+}
+
+/**
+ * 取消分片上传
+ * @param uploadId 上传会话ID
+ * @returns 取消结果
+ */
+export const cancelChunkUpload = (uploadId: string): Promise<any> => {
+  return request.delete(`/files/upload/chunk/${uploadId}`)
+}
+
+/**
  * 创建文件夹
  * @param parentId 父目录ID，为空则创建在根目录
  * @param folderName 文件夹名称
@@ -127,4 +195,4 @@ export const getDownloadUrl = (fileId: string): string => {
   const tokenParam = token.startsWith("Bearer ") ? token.substring(7) : token;
   const url = `${SERVER_URL}/files/download/${fileId}?token=${tokenParam}`;
   return url;
-}; 
+};

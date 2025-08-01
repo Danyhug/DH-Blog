@@ -13,6 +13,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 // Init 初始化并配置 Gin 路由器
@@ -28,6 +29,7 @@ func Init(
 	ipService service.IPService,
 	staticFilesAbsPath string,
 	conf *config.Config, // 添加配置参数
+	db *gorm.DB, // 添加数据库连接参数
 ) *gin.Engine {
 
 	// 使用原始的路由配置
@@ -159,6 +161,9 @@ func Init(
 		fileApi.PUT("/storage-path", fileHandler.UpdateStoragePath)  // 添加更新存储路径路由
 		fileApi.GET("/directory-tree", fileHandler.GetDirectoryTree) // 添加获取目录树的路由
 	}
+
+	// 注册分片上传路由
+	SetupChunkUploadRoutes(router, db)
 
 	// 开放静态文件服务
 	publicAPI.Static("/uploads", staticFilesAbsPath)

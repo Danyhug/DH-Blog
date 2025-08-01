@@ -560,7 +560,7 @@ func (h *ArticleHandler) Error(c *gin.Context, err error) {
 		statusCode = http.StatusInternalServerError
 	}
 
-	c.JSON(statusCode, gin.H{"error": err.Error()})
+	c.JSON(statusCode, response.Error(err.Error()))
 }
 
 func (h *ArticleHandler) Success(c *gin.Context) {

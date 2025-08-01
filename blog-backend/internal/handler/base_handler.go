@@ -45,7 +45,7 @@ func (h *BaseHandler) Error(c *gin.Context, err error) {
 		statusCode = http.StatusInternalServerError
 	}
 
-	c.JSON(statusCode, gin.H{"error": err.Error()})
+	c.JSON(statusCode, response.Error(err.Error()))
 }
 
 // Success 返回成功响应
@@ -60,20 +60,12 @@ func (h *BaseHandler) SuccessWithData(c *gin.Context, data interface{}) {
 
 // SuccessWithMessage 返回带自定义消息的成功响应
 func (h *BaseHandler) SuccessWithMessage(c *gin.Context, message string) {
-	c.JSON(http.StatusOK, gin.H{
-		"code": 1,
-		"msg":  message,
-		"data": nil,
-	})
+	c.JSON(200, response.SuccessWithData(message))
 }
 
 // ErrorWithMessage 返回带自定义消息的错误响应
 func (h *BaseHandler) ErrorWithMessage(c *gin.Context, message string) {
-	c.JSON(http.StatusBadRequest, gin.H{
-		"code": 0,
-		"msg":  message,
-		"data": nil,
-	})
+	c.JSON(400, response.Error(message))
 }
 
 // SuccessWithPage 返回带分页信息的成功响应

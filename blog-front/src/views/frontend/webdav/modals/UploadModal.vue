@@ -69,12 +69,29 @@
           <div class="file-info">
             <p class="file-name">{{ result.file.name }}</p>
             <div class="file-status">
-              <p class="file-size">{{ formatFileSize(result.file.size) }}</p>
+              <p class="file-size">{{ formatFileSize(result.file.size) }}
+                <span v-if="result.uploadedChunks !== undefined && result.totalChunks !== undefined" class="chunk-progress">
+                  ({{ result.uploadedChunks }}/{{ result.totalChunks }})
+                </span>
+              </p>
               <span v-if="result.status === 'success'" class="status-badge success">成功</span>
               <span v-else-if="result.status === 'error'" class="status-badge error">失败</span>
               <span v-else-if="result.status === 'pending'" class="status-badge pending">
                 <span class="loading-spinner"></span>上传中
               </span>
+            </div>
+            <!-- 横向进度条 -->
+            <div v-if="result.status === 'uploading' || result.status === 'pending'" class="upload-progress-bar">
+              <div class="progress-track">
+                <div 
+                  class="progress-fill" 
+                  :style="{
+                    width: result.totalChunks && result.uploadedChunks !== undefined 
+                      ? `${(result.uploadedChunks / result.totalChunks) * 100}%` 
+                      : '0%'
+                  }"
+                ></div>
+              </div>
             </div>
             <p v-if="result.status === 'error'" class="error-message">{{ result.error || '上传失败' }}</p>
           </div>
@@ -88,16 +105,16 @@
       </div>
 
       <div v-if="isUploading" class="upload-progress-container">
-        <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: `${uploadProgress}%` }"></div>
-        </div>
-        <p class="progress-text">总进度：{{ uploadProgress }}%</p>
-        <p class="progress-stats">
-          已完成: {{ getCompletedCount() }}/{{ uploadResults.length }}
-          <span v-if="getSuccessCount() > 0" class="success-count">(成功: {{ getSuccessCount() }})</span>
-          <span v-if="getErrorCount() > 0" class="error-count">(失败: {{ getErrorCount() }})</span>
-        </p>
-      </div>
+    <div class="progress-bar">
+      <div class="progress-fill" :style="{ width: `${uploadProgress}%` }"></div>
+    </div>
+    <p class="progress-text">总进度：{{ uploadProgress }}%</p>
+    <p class="progress-stats">
+      已完成: {{ getCompletedCount() }}/{{ uploadResults.length }}
+      <span v-if="getSuccessCount() > 0" class="success-count">(成功: {{ getSuccessCount() }})</span>
+      <span v-if="getErrorCount() > 0" class="error-count">(失败: {{ getErrorCount() }})</span>
+    </p>
+  </div>
 
       <div v-if="!isUploading && uploadResults.length > 0" class="upload-complete-actions">
         <p class="upload-summary">
@@ -129,8 +146,10 @@ interface Props {
 
 interface UploadResult {
   file: File
-  status: 'pending' | 'success' | 'error'
+  status: 'pending' | 'success' | 'error' | 'uploading'
   error?: string
+  uploadedChunks?: number
+  totalChunks?: number
 }
 
 const props = defineProps<Props>()
@@ -146,8 +165,8 @@ const uploadResults = ref<UploadResult[]>([])
 // 排序上传结果：失败的在上方，成功的在下方
 const sortedUploadResults = computed(() => {
   return [...uploadResults.value].sort((a, b) => {
-    // 先按状态排序：error > pending > success
-    const statusOrder = { error: 0, pending: 1, success: 2 };
+    // 先按状态排序：error > pending > uploading > success
+    const statusOrder = { error: 0, pending: 1, uploading: 2, success: 3 };
     return statusOrder[a.status] - statusOrder[b.status];
   });
 });
@@ -282,14 +301,21 @@ function formatFileSize(size: number): string {
 
 // 暴露方法给父组件调用
 defineExpose({
-  updateFileStatus: (fileIndex: number, status: 'success' | 'error', error?: string) => {
+  updateFileStatus: (fileIndex: number, status: 'success' | 'error' | 'uploading', message?: string, uploadedChunks?: number, totalChunks?: number) => {
     if (uploadResults.value[fileIndex]) {
       uploadResults.value[fileIndex].status = status
-      if (error) {
-        uploadResults.value[fileIndex].error = error
+      if (message) {
+        uploadResults.value[fileIndex].error = message
+      }
+      if (uploadedChunks !== undefined) {
+        uploadResults.value[fileIndex].uploadedChunks = uploadedChunks
+      }
+      if (totalChunks !== undefined) {
+        uploadResults.value[fileIndex].totalChunks = totalChunks
       }
     }
-  }
+  },
+  uploadResults
 })
 </script>
 
@@ -515,6 +541,49 @@ defineExpose({
   font-size: 0.75rem;
   color: #6b7280;
   margin: 0.25rem 0 0 0;
+}
+
+.chunk-progress {
+  color: #2a8aff;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+.upload-progress-bar {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.progress-track {
+  height: 4px;
+  background-color: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  animation: progress-animation 2s ease-in-out infinite;
+}
+
+@keyframes progress-animation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.progress-fill {
+  background-size: 200% 100%;
+  animation: progress-animation 2s ease-in-out infinite;
 }
 
 .status-badge {
