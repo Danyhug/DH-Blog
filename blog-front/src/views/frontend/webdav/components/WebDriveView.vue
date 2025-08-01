@@ -835,6 +835,9 @@ function closeContextMenu() {
 async function handleUploadFiles(files: File[]) {
   if (!files.length) return;
 
+  // 获取是否启用断点续传的设置
+    const enableResumeUpload = (uploadModalRef.value as any)?.enableResumeUpload ?? true;
+
   let successCount = 0;
   let failCount = 0;
   const totalFiles = files.length;
@@ -849,10 +852,10 @@ async function handleUploadFiles(files: File[]) {
     
     try {
       // 检查文件大小，大于10MB使用分片上传
-      if (file.size > 10 * 1024 * 1024) {
+      if (file.size > 10 * 1024 * 1024 && enableResumeUpload) {
         await uploadLargeFile(file, i);
       } else {
-        // 普通上传（小文件）
+        // 普通上传（小文件或大文件但禁用断点续传）
           const response = await uploadFile(currentParentId.value, file);
           // 更新文件状态为成功
         uploadModalRef.value?.updateFileStatus(i, 'success', undefined, 1, 1);
@@ -897,6 +900,19 @@ async function uploadLargeFile(file: File, fileIndex: number) {
   const totalChunks = Math.ceil(file.size / chunkSize);
   
   try {
+    // 获取是否启用断点续传的设置
+    const enableResumeUpload = (uploadModalRef.value as any)?.enableResumeUpload ?? true;
+    
+    // 如果不启用断点续传，直接使用普通上传
+    if (!enableResumeUpload) {
+      const response = await uploadFile(currentParentId.value, file);
+      if (response && response.id) {
+        newUploadedFileIds.value.push(response.id.toString());
+      }
+      uploadModalRef.value?.updateFileStatus(fileIndex, 'success', undefined, 1, 1);
+      return;
+    }
+    
     // 生成基于文件名的稳定uploadId，支持断点续传
     const stableUploadId = `upload_${currentParentId.value || 'root'}_${file.name}_${file.size}`;
     
@@ -971,12 +987,50 @@ async function uploadLargeFile(file: File, fileIndex: number) {
     
     // 上传未完成的分片
     let completedCount = 0;
+    
+    // 获取用户配置的重试次数
+    const maxRetries = (uploadModalRef.value as any)?.maxRetries ?? 0;
+    
+    // 带重试的分片上传函数
+    const uploadChunkWithRetry = async (chunkIndex: number, chunk: Blob) => {
+      let retryCount = 0;
+      const isInfiniteRetry = maxRetries === 0;
+      
+      while (isInfiniteRetry || retryCount < maxRetries) {
+        try {
+          await uploadChunk(uploadId, chunkIndex, chunk);
+          return; // 上传成功，退出重试循环
+        } catch (error) {
+          retryCount++;
+          
+          if (!isInfiniteRetry && retryCount >= maxRetries) {
+            // 超过最大重试次数，抛出错误
+            throw new Error(`分片 ${chunkIndex + 1} 上传失败，已重试 ${maxRetries} 次: ${error instanceof Error ? error.message : '未知错误'}`);
+          }
+          
+          // 记录重试信息
+          const retryInfo = isInfiniteRetry 
+            ? `第 ${retryCount} 次重试` 
+            : `第 ${retryCount}/${maxRetries} 次重试`;
+          console.warn(`分片 ${chunkIndex + 1} 上传失败，${3}秒后${retryInfo}:`, error);
+          
+          // 更新状态显示重试信息
+          uploadModalRef.value?.updateFileStatus(fileIndex, 'uploading', 
+            `分片 ${chunkIndex + 1} 上传失败，${3}秒后重试 (${retryInfo})`,
+            uploadedCount + completedCount, totalChunks);
+          
+          // 等待3秒后重试
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+      }
+    };
+    
     for (const chunkIndex of pendingChunks) {
       const start = chunkIndex * chunkSize;
       const end = Math.min(start + chunkSize, file.size);
       const chunk = file.slice(start, end);
       
-      await uploadChunk(uploadId, chunkIndex, chunk);
+      await uploadChunkWithRetry(chunkIndex, chunk);
       completedCount++;
       
       // 更新进度
