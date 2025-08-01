@@ -1,6 +1,4 @@
-# .github/workflows/build.yml
-
-name: DH-Blog Build and Release
+name: DH-Blog Build and Release (Single Job)
 
 on:
   push:
@@ -9,17 +7,29 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-# 全局环境变量
 env:
   BINARY_NAME: dhblog
   BACKEND_DIR: blog-backend
   FRONTEND_DIR: blog-front
 
 jobs:
-  # 任务一：构建前端并将源码打包，供后续任务使用
-  prepare-source:
-    name: 📦 Prepare Source with Frontend
+  build-and-upload-separately:
+    name: 🛠️ Build for ${{ matrix.os }}/${{ matrix.arch }}
     runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        include:
+          - os: darwin
+            arch: arm64
+            ext: "-darwin-arm64"
+          - os: windows
+            arch: amd64
+            ext: "-windows-amd64.exe"
+          - os: linux
+            arch: amd64
+            ext: "-linux-amd64"
+
     steps:
       - name: ⬇️ Checkout repository
         uses: actions/checkout@v4
@@ -42,62 +52,27 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm build
 
-      - name: 📁 Prepare files for embedding
-        run: |
-          mkdir -p ${{ env.BACKEND_DIR }}/internal/frontend/dist
-          cp -r ${{ env.FRONTEND_DIR }}/dist/* ${{ env.BACKEND_DIR }}/internal/frontend/dist/
-      
-      # 将处理好的完整源码上传，以便构建任务使用
-      - name: ⬆️ Upload prepared source
-        uses: actions/upload-artifact@v4
-        with:
-          name: prepared-source
-          path: .
-
-  # 任务二：使用矩阵并行构建和上传二进制文件
-  build-binaries:
-    name: 🛠️ Build for ${{ matrix.os }}/${{ matrix.arch }}
-    needs: prepare-source # 依赖于上一个任务
-    runs-on: ubuntu-latest
-    
-    # 构建矩阵策略
-    strategy:
-      matrix:
-        include:
-          - os: darwin
-            arch: arm64
-            ext: "-darwin-arm64"
-          - os: windows
-            arch: amd64
-            ext: "-windows-amd64.exe"
-          - os: linux
-            arch: amd64
-            ext: "-linux-amd64"
-
-    steps:
-      # 每个并行任务都需要下载准备好的源码
-      - name: ⬇️ Download prepared source
-        uses: actions/download-artifact@v4
-        with:
-          name: prepared-source
-
       - name: ⚙️ Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
           cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
 
-      # 构建单个二进制文件
       - name: 🏗️ Build Go Binary
         run: |
+          # 准备嵌入目录
+          EMBED_DIR="${{ env.BACKEND_DIR }}/internal/frontend/dist"
+          mkdir -p "$EMBED_DIR"
+          cp -r "${{ env.FRONTEND_DIR }}/dist/"* "$EMBED_DIR/"
+          
+          # 创建输出目录
           mkdir -p build
-          (cd ${{ env.BACKEND_DIR }} && GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w" -o ../build/${{ env.BINARY_NAME }}${{ matrix.ext }} ./cmd/blog-backend)
 
-      # 关键步骤：为每个二进制文件单独上传一个产物
+          # 构建Go二进制文件，添加CGO_ENABLED=1以支持sqlite3
+          (cd ${{ env.BACKEND_DIR }} && CGO_ENABLED=1 GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w" -o ../build/${{ env.BINARY_NAME }}${{ matrix.ext }} ./cmd/blog-backend)
+
       - name: ⬆️ Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
-          # 使用平台信息动态命名产物
           name: ${{ env.BINARY_NAME }}${{ matrix.ext }}
-          # 只上传刚刚构建好的那一个文件
           path: build/${{ env.BINARY_NAME }}${{ matrix.ext }}
