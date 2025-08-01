@@ -10,9 +10,9 @@ import (
 	"dh-blog/internal/config"
 	"dh-blog/internal/model"
 
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"github.com/glebarez/sqlite"
 )
 
 // Init 初始化数据库连接并执行自动迁移
