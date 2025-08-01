@@ -23,12 +23,18 @@ jobs:
           - os: darwin
             arch: arm64
             ext: "-darwin-arm64"
+            cc: o64-clang
+            cxx: o64-clang++
           - os: windows
             arch: amd64
             ext: "-windows-amd64.exe"
+            cc: x86_64-w64-mingw32-gcc
+            cxx: x86_64-w64-mingw32-g++
           - os: linux
             arch: amd64
             ext: "-linux-amd64"
+            cc: gcc
+            cxx: g++
 
     steps:
       - name: ⬇️ Checkout repository
@@ -58,6 +64,22 @@ jobs:
           go-version: '1.22'
           cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
 
+      - name: 🧰 Install cross-compilation tools
+        run: |
+          # 安装跨平台编译所需的工具链
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64  # Windows 编译工具
+          # 安装 macOS 交叉编译工具
+          sudo apt-get install -y clang llvm
+          if [ "${{ matrix.os }}" = "darwin" ]; then
+            git clone https://github.com/tpoechtrager/osxcross.git
+            cd osxcross
+            wget -nc https://github.com/joseluisq/macos-sdk/releases/download/11.3/MacOSX11.3.sdk.tar.xz -P tarballs/
+            UNATTENDED=yes ./build.sh
+            sudo cp -r target /usr/local/osxcross
+            sudo ln -s /usr/local/osxcross/bin/* /usr/local/bin/
+          fi
+
       - name: 🏗️ Build Go Binary
         run: |
           # 准备嵌入目录
@@ -68,11 +90,18 @@ jobs:
           # 创建输出目录
           mkdir -p build
 
-          # 构建Go二进制文件，添加CGO_ENABLED=1以支持sqlite3
-          (cd ${{ env.BACKEND_DIR }} && CGO_ENABLED=1 GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w" -o ../build/${{ env.BINARY_NAME }}${{ matrix.ext }} ./cmd/blog-backend)
+          # 构建Go二进制文件，设置适当的编译器
+          (cd ${{ env.BACKEND_DIR }} && \
+           CGO_ENABLED=1 \
+           GOOS=${{ matrix.os }} \
+           GOARCH=${{ matrix.arch }} \
+           CC=${{ matrix.cc }} \
+           CXX=${{ matrix.cxx }} \
+           go build -ldflags="-s -w" -o ../build/${{ env.BINARY_NAME }}${{ matrix.ext }} ./cmd/blog-backend)
 
       - name: ⬆️ Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}${{ matrix.ext }}
           path: build/${{ env.BINARY_NAME }}${{ matrix.ext }}
+    
