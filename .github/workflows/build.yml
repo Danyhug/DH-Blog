@@ -1,6 +1,6 @@
 # .github/workflows/build.yml
 
-name: DH-Blog Build and Release (Single Job)
+name: DH-Blog Build and Release (Diagnostic v2)
 
 on:
   push:
@@ -60,22 +60,26 @@ jobs:
           go-version: '1.22'
           cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
 
-      # 关键修改：确保创建的目录结构与Go代码期望的一致
-      - name: 🏗️ Build Go Binary
+      # ====================================================================
+      # 终极诊断步骤：验证文件结构
+      # ====================================================================
+      - name: 🔍 Verify Embedded Files Structure
         run: |
-          # 定义 Go 代码期望的嵌入目录路径: blog-backend/internal/frontend/blog-deploy/front
+          echo ">>> Installing 'tree' utility..."
+          sudo apt-get update && sudo apt-get install -y tree
+          
+          echo ">>> Preparing directories for verification..."
           EMBED_TARGET_DIR="${{ env.BACKEND_DIR }}/internal/frontend/blog-deploy/front"
-          
-          # 创建这个嵌套的目录结构
           mkdir -p "$EMBED_TARGET_DIR"
-          
-          # 将前端构建产物复制到这个正确的目录中
           cp -r "${{ env.FRONTEND_DIR }}/dist/"* "$EMBED_TARGET_DIR/"
           
-          # 创建最终的输出目录
-          mkdir -p build
+          echo ">>> Displaying the directory tree that 'go build' will see:"
+          # 打印 Go 代码文件所在的目录，以及它要嵌入的子目录的结构
+          tree ${{ env.BACKEND_DIR }}/internal/frontend/
 
-          # 构建Go二进制文件
+      - name: 🏗️ Build Go Binary
+        run: |
+          # 这一步现在只负责构建，准备工作已在上面完成
           (cd ${{ env.BACKEND_DIR }} && GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w" -o ../build/${{ env.BINARY_NAME }}${{ matrix.ext }} ./cmd/blog-backend)
 
       - name: ⬆️ Upload Binary Artifact
