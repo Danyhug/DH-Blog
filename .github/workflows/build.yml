@@ -1,13 +1,22 @@
 # .github/workflows/build.yml
 
-name: DH-Blog Build and Release (Final Version)
+name: DH-Blog Build and Release
 
 on:
   push:
     branches: [ "main" ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: read
 
 env:
   BINARY_NAME: dhblog
@@ -60,6 +69,12 @@ jobs:
           go-version: '1.22'
           cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
 
+      - name: 🔍 Verify Go dependencies
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: |
+          go mod download
+          go mod verify
+
       # 关键步骤：100% 模拟 sh 脚本的文件复制和构建逻辑
       - name: 🏗️ Build Go Binary
         run: |
@@ -77,9 +92,48 @@ jobs:
 
           # 5. 构建 Go 二进制文件 (这部分不变)
           (cd ${{ env.BACKEND_DIR }} && GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w" -o ../build/${{ env.BINARY_NAME }}${{ matrix.ext }} ./cmd/blog-backend)
+          
+          # 6. 验证嵌入成功（可选）
+          if [ -f "build/${{ env.BINARY_NAME }}${{ matrix.ext }}" ]; then
+            echo "✅ 构建成功: build/${{ env.BINARY_NAME }}${{ matrix.ext }}"
+          else
+            echo "❌ 构建失败"
+            exit 1
+          fi
 
       - name: ⬆️ Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}${{ matrix.ext }}
           path: build/${{ env.BINARY_NAME }}${{ matrix.ext }}
+
+  release:
+    name: 🚀 Create Release
+    runs-on: ubuntu-latest
+    needs: build-and-upload-separately
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: 📥 Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: build
+          
+      - name: 🏷️ Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/${{ env.BINARY_NAME }}-darwin-arm64/${{ env.BINARY_NAME }}-darwin-arm64
+            build/${{ env.BINARY_NAME }}-windows-amd64.exe/${{ env.BINARY_NAME }}-windows-amd64.exe
+            build/${{ env.BINARY_NAME }}-linux-amd64/${{ env.BINARY_NAME }}-linux-amd64
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
