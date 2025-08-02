@@ -19,7 +19,6 @@ jobs:
     name: 🛠️ Build for ${{ matrix.os }}/${{ matrix.arch }}
     runs-on: ubuntu-latest
     
-    # 构建矩阵：这是实现并行构建和分开上传的核心
     strategy:
       matrix:
         include:
@@ -34,8 +33,6 @@ jobs:
             ext: "-linux-amd64"
 
     steps:
-      # 以下所有步骤都会在三个并行环境中分别执行一次
-
       - name: ⬇️ Checkout repository
         uses: actions/checkout@v4
 
@@ -63,23 +60,26 @@ jobs:
           go-version: '1.22'
           cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
 
+      # 关键修改：确保创建的目录结构与Go代码期望的一致
       - name: 🏗️ Build Go Binary
         run: |
-          # 准备嵌入目录
-          EMBED_DIR="${{ env.BACKEND_DIR }}/internal/frontend/dist"
-          mkdir -p "$EMBED_DIR"
-          cp -r "${{ env.FRONTEND_DIR }}/dist/"* "$EMBED_DIR/"
+          # 定义 Go 代码期望的嵌入目录路径: blog-backend/internal/frontend/blog-deploy/front
+          EMBED_TARGET_DIR="${{ env.BACKEND_DIR }}/internal/frontend/blog-deploy/front"
           
-          # 创建输出目录
+          # 创建这个嵌套的目录结构
+          mkdir -p "$EMBED_TARGET_DIR"
+          
+          # 将前端构建产物复制到这个正确的目录中
+          cp -r "${{ env.FRONTEND_DIR }}/dist/"* "$EMBED_TARGET_DIR/"
+          
+          # 创建最终的输出目录
           mkdir -p build
 
           # 构建Go二进制文件
           (cd ${{ env.BACKEND_DIR }} && GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w" -o ../build/${{ env.BINARY_NAME }}${{ matrix.ext }} ./cmd/blog-backend)
 
-      # 关键步骤：为每个二进制文件单独上传一个产物
       - name: ⬆️ Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
-          # 使用平台信息动态命名产物
           name: ${{ env.BINARY_NAME }}${{ matrix.ext }}
           path: build/${{ env.BINARY_NAME }}${{ matrix.ext }}
