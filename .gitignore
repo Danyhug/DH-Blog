@@ -3,6 +3,7 @@ blog-deploy/build/
 blog-deploy/front/
 
 blog-backend/tmp/
+blog-backend/internal/frontend/dist/
 blog-backend/dhblog.db
 
 blog-front/node_modules/

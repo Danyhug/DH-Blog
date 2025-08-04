@@ -209,8 +209,6 @@ import FilePreview from './FilePreview.vue'
 import {
   HomeIcon,
   ChevronRightIcon,
-  Grid3X3Icon,
-  ListIcon,
   SettingsIcon,
   PlusIcon,
   UploadIcon,
@@ -222,7 +220,6 @@ import {
   VideoIcon,
   MusicIcon,
   XIcon,
-  MoreHorizontalIcon,
   ArrowLeftIcon,
   FileCodeIcon,
   FileZipIcon,
@@ -230,11 +227,10 @@ import {
   FileSpreadsheetIcon,
   FilePresentationIcon,
 } from '../utils/icons'
-import { listFiles, createFolder, uploadFile, getDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, cancelChunkUpload, getUploadedChunks, FileInfo } from '@/api/file'
+import { listFiles, createFolder, uploadFile, getDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, getUploadedChunks, FileInfo } from '@/api/file'
 
 // 状态变量
 const uploadProgress = ref(0)
-const viewMode = ref<'grid'>('grid')
 const currentPath = ref('')
 const currentParentId = ref('')
 const searchQuery = ref('')
@@ -294,7 +290,6 @@ provide('navigateToRoot', navigateToRoot)
 provide('navigateToPathSegment', navigateToPathSegment)
 
 // 文件数据
-const files = ref<FileItem[]>([])
 const apiFiles = ref<FileInfo[]>([])
 
 // 移动端文件列表
@@ -1291,37 +1286,29 @@ onUnmounted(() => {
   }
 
   .file-container {
-    flex: 1;
-    overflow: visible; /* 修改为visible，确保子元素不被裁剪 */
-    display: flex;
-    flex-direction: column;
-    min-height: 400px;
-    /* 最小高度，确保在内容少时也有一定高度 */
-    background-color: #ffffff;
-    padding: 10px; /* 添加内边距，为溢出的元素留出空间 */
-
-    .file-container-inner {
+      flex: 1;
+      overflow: visible; /* 修改为visible，确保子元素不被裁剪 */
       display: flex;
       flex-direction: column;
-      overflow: visible; /* 确保子元素不被裁剪 */
-    }
-
-    .loading-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .file-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-      gap: 15px; /* 增加间距，为标记留出更多空间 */
-      flex: 1;
+      min-height: 400px;
+      /* 最小高度，确保在内容少时也有一定高度 */
       background-color: #ffffff;
-      overflow: visible; /* 确保子元素不被裁剪 */
       padding: 10px; /* 添加内边距，为溢出的元素留出空间 */
+
+      .file-container-inner {
+        display: flex;
+        flex-direction: column;
+        overflow: visible; /* 确保子元素不被裁剪 */
+      }
+
+      .file-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        gap: 15px; /* 增加间距，为标记留出更多空间 */
+        flex: 1;
+        background-color: #ffffff;
+        overflow: visible; /* 确保子元素不被裁剪 */
+        padding: 10px; /* 添加内边距，为溢出的元素留出空间 */
 
       .file-item {
         cursor: pointer;
