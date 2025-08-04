@@ -60,19 +60,13 @@ func RegisterFrontendRoutes(router *gin.Engine, conf *config.Config) {
 			return
 		}
 
-		// 注入服务器配置
-		serverPort := conf.Server.HttpPort
-		serverAddress := conf.Server.Address
-		if serverAddress == "0.0.0.0" {
-			serverAddress = "localhost"
-		}
-
+		// 注入服务器配置，使用相对路径避免硬编码localhost
 		serverConfig := fmt.Sprintf(`
 <script>
 window.__SERVER_CONFIG__ = {
-  SERVER_URL: "http://%s:%d/api"
+  SERVER_URL: "%s"
 };
-</script>`, serverAddress, serverPort)
+</script>`, "/api")
 
 		htmlContent := strings.Replace(string(content), "</head>", serverConfig+"</head>", 1)
 
