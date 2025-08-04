@@ -61,7 +61,7 @@ jobs:
         working-directory: ${{ env.FRONTEND_DIR }}
         run: |
           pnpm install --frozen-lockfile
-          pnpm build
+          pnpm build --mode production
 
       - name: ⚙️ Setup Go
         uses: actions/setup-go@v5

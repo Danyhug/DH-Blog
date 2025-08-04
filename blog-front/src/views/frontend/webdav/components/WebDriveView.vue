@@ -913,6 +913,12 @@ async function uploadLargeFile(file: File, fileIndex: number) {
       return;
     }
     
+    // 文件大小检查，避免内存溢出
+    const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB限制
+    if (file.size > MAX_FILE_SIZE) {
+      throw new Error(`文件大小超过限制 (${MAX_FILE_SIZE / 1024 / 1024 / 1024}GB)`);
+    }
+    
     // 生成基于文件名的稳定uploadId，支持断点续传
     const stableUploadId = `upload_${currentParentId.value || 'root'}_${file.name}_${file.size}`;
     
@@ -991,6 +997,10 @@ async function uploadLargeFile(file: File, fileIndex: number) {
     // 获取用户配置的重试次数
     const maxRetries = (uploadModalRef.value as any)?.maxRetries ?? 0;
     
+    // 分批处理，避免内存溢出
+    const BATCH_SIZE = 10; // 每批处理10个分片
+    const CHUNK_DELAY = 10; // 分片间延迟10ms，减少CPU占用
+    
     // 带重试的分片上传函数
     const uploadChunkWithRetry = async (chunkIndex: number, chunk: Blob) => {
       let retryCount = 0;
@@ -1025,20 +1035,45 @@ async function uploadLargeFile(file: File, fileIndex: number) {
       }
     };
     
-    for (const chunkIndex of pendingChunks) {
-      const start = chunkIndex * chunkSize;
-      const end = Math.min(start + chunkSize, file.size);
-      const chunk = file.slice(start, end);
+    // 分批处理分片上传
+    for (let batchStart = 0; batchStart < pendingChunks.length; batchStart += BATCH_SIZE) {
+      const batchEnd = Math.min(batchStart + BATCH_SIZE, pendingChunks.length);
+      const batchChunks = pendingChunks.slice(batchStart, batchEnd);
       
-      await uploadChunkWithRetry(chunkIndex, chunk);
-      completedCount++;
+      // 处理当前批次
+      await Promise.all(batchChunks.map(async (chunkIndex) => {
+        // 使用requestIdleCallback或setTimeout延迟处理，避免阻塞主线程
+        await new Promise(resolve => {
+          setTimeout(() => {
+            const start = chunkIndex * chunkSize;
+            const end = Math.min(start + chunkSize, file.size);
+            const chunk = file.slice(start, end);
+            resolve(chunk);
+          }, CHUNK_DELAY);
+        });
+        
+        const start = chunkIndex * chunkSize;
+        const end = Math.min(start + chunkSize, file.size);
+        const chunk = file.slice(start, end);
+        
+        await uploadChunkWithRetry(chunkIndex, chunk);
+        completedCount++;
+        
+        // 更新进度
+        const totalUploaded = uploadedCount + completedCount;
+        const progress = Math.round((totalUploaded / totalChunks) * 100);
+        uploadModalRef.value?.updateFileStatus(fileIndex, 'uploading', 
+          `断点续传中 (${totalUploaded}/${totalChunks}) ${progress}%`,
+          totalUploaded, totalChunks);
+        
+        // 每上传完一个分片，让出控制权给浏览器
+        await new Promise(resolve => setTimeout(resolve, 1));
+      }));
       
-      // 更新进度
-      const totalUploaded = uploadedCount + completedCount;
-      const progress = Math.round((totalUploaded / totalChunks) * 100);
-      uploadModalRef.value?.updateFileStatus(fileIndex, 'uploading', 
-        `断点续传中 (${totalUploaded}/${totalChunks}) ${progress}%`,
-        totalUploaded, totalChunks);
+      // 批次间延迟，给浏览器喘息时间
+      if (batchEnd < pendingChunks.length) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
     }
     
     // 完成分片上传

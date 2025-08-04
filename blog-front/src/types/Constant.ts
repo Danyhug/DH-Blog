@@ -3,7 +3,7 @@ import { ToolbarNames } from "md-editor-v3/lib/types/MdEditor/type";
 /**
  * 定义项目的所有常量
  */
-export const SERVER_URL = import.meta.env.VITE_APP_SERVER_URL;
+export const SERVER_URL = import.meta.env.VITE_APP_SERVER_URL || "/api";
 export const OSS_URL = import.meta.env.VITE_APP_OSS_URL;
 
 /**
