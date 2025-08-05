@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 
 	"dh-blog/internal/model"
 	"dh-blog/internal/repository"
@@ -28,6 +29,10 @@ var (
 	// 注入了default.go和task.go
 	// filePathSettingKey = "file_storage_path" // 文件存储路径在数据库中的键名
 	filePathSettingKey = model.SettingKeyFileStoragePath // 文件存储路径在数据库中的键名
+	
+	// 全局文件服务实例
+	globalFileService IFileService
+	fileServiceOnce   sync.Once
 )
 
 // IFileService 定义了网盘核心功能的业务逻辑合同 (MVP版本)
@@ -63,7 +68,11 @@ type IFileService interface {
 	// 更新系统的文件存储路径，并迁移现有文件
 	UpdateStoragePath(newPath string) error
 
-	// GetSystemDirectoryTree 8. 获取系统目录树
+	// GetStoragePath 8. 获取当前存储路径
+	// 获取当前配置的文件存储路径
+	GetStoragePath() string
+
+	// GetSystemDirectoryTree 9. 获取系统目录树
 	// 获取系统目录结构，用于前端选择存储路径
 	GetSystemDirectoryTree(ctx context.Context, rootPath string, maxDepth int) (*DirectoryNode, error)
 }
@@ -93,7 +102,21 @@ func NewFileService(repo repository.IFileRepository, settingRepo repository.Syst
 	// 尝试从数据库加载存储路径
 	service.loadStoragePathFromDB()
 
+	// 设置全局文件服务实例
+	fileServiceOnce.Do(func() {
+		globalFileService = service
+	})
+
 	return service
+}
+
+// GetFileService 获取全局文件服务实例
+func GetFileService() IFileService {
+	if globalFileService == nil {
+		logrus.Error("全局文件服务实例未初始化")
+		return nil
+	}
+	return globalFileService
 }
 
 // loadStoragePathFromDB 从数据库加载文件存储路径
@@ -443,6 +466,13 @@ func (s *fileService) UpdateStoragePath(newPath string) error {
 	}
 
 	return nil
+}
+
+// GetStoragePath 获取当前存储路径
+func (s *fileService) GetStoragePath() string {
+	// 先刷新存储路径设置
+	s.loadStoragePathFromDB()
+	return s.filePath
 }
 
 // scanAndAddFiles 扫描存储目录并将文件添加到数据库

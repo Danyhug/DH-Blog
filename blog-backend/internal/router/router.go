@@ -163,7 +163,7 @@ func Init(
 	}
 
 	// 注册分片上传路由
-	SetupChunkUploadRoutes(router, db)
+	SetupChunkUploadRoutes(router, db, fileHandler.GetFileService())
 
 	// 开放静态文件服务
 	publicAPI.Static("/uploads", staticFilesAbsPath)

@@ -24,6 +24,11 @@ func NewFileHandler(fileService service.IFileService) *FileHandler {
 	}
 }
 
+// GetFileService 获取文件服务实例
+func (h *FileHandler) GetFileService() service.IFileService {
+	return h.fileService
+}
+
 // RegisterRoutes 注册路由
 func (h *FileHandler) RegisterRoutes(router *gin.RouterGroup) {
 	fileGroup := router.Group("/files")

@@ -11,12 +11,16 @@ import (
 	"dh-blog/internal/middleware"
 	"dh-blog/internal/model"
 	"dh-blog/internal/response"
+	"dh-blog/internal/service"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
+var fileServiceInstance service.IFileService
+
 // SetupChunkUploadRoutes 注册分片上传相关路由
-func SetupChunkUploadRoutes(engine *gin.Engine, db *gorm.DB) {
+func SetupChunkUploadRoutes(engine *gin.Engine, db *gorm.DB, fileService service.IFileService) {
+	fileServiceInstance = fileService
 	uploadGroup := engine.Group("/api/files/upload/chunk")
 	uploadGroup.Use(middleware.JWTMiddleware()) // 添加JWT中间件
 	{
@@ -82,13 +86,9 @@ func initChunkUpload(c *gin.Context) {
 	}
 	totalChunks := (fileSize + chunkSize - 1) / chunkSize
 
-	// 创建临时目录 - 使用绝对路径
-	executable, err := os.Executable()
-	if err != nil {
-		c.JSON(500, response.Error("获取可执行文件路径失败"))
-		return
-	}
-	baseDir := filepath.Join(filepath.Dir(executable), "data", "webdav")
+	// 获取配置的存储路径
+	storagePath := fileServiceInstance.GetStoragePath()
+	baseDir := storagePath
 	tempDir := filepath.Join(baseDir, "temp", uploadId)
 	if err := os.MkdirAll(tempDir, 0755); err != nil {
 		c.JSON(500, response.Error("创建临时目录失败"))
@@ -126,7 +126,6 @@ func initChunkUpload(c *gin.Context) {
 // @Failure 400 {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk [post]
 func uploadChunk(c *gin.Context) {
-	time.Sleep(1 * time.Second)
 	uploadId := c.PostForm("uploadId")
 	chunkIndexStr := c.PostForm("chunkIndex")
 
@@ -141,13 +140,9 @@ func uploadChunk(c *gin.Context) {
 		return
 	}
 
-	// 检查临时目录是否存在 - 使用绝对路径
-	executable, err := os.Executable()
-	if err != nil {
-		c.JSON(500, response.Error("获取可执行文件路径失败"))
-		return
-	}
-	baseDir := filepath.Join(filepath.Dir(executable), "data", "webdav")
+	// 获取配置的存储路径
+	storagePath := fileServiceInstance.GetStoragePath()
+	baseDir := storagePath
 	tempDir := filepath.Join(baseDir, "temp", uploadId)
 	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
 		c.JSON(400, response.Error("上传会话不存在"))
@@ -244,13 +239,8 @@ func completeChunkUpload(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 检查临时目录 - 使用绝对路径
-		executable, err := os.Executable()
-		if err != nil {
-			c.JSON(500, response.Error("获取可执行文件路径失败"))
-			return
-		}
-		baseDir := filepath.Join(filepath.Dir(executable), "data", "webdav")
+		// 获取配置的存储路径
+		baseDir := fileServiceInstance.GetStoragePath()
 		tempDir := filepath.Join(baseDir, "temp", req.UploadId)
 		if _, err := os.Stat(tempDir); os.IsNotExist(err) {
 			c.JSON(400, response.Error("上传会话不存在"))
@@ -298,7 +288,7 @@ func completeChunkUpload(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 创建最终存储路径 - 使用绝对路径
+		// 创建最终存储路径 - 使用配置的存储路径
 		storageDir := filepath.Join(baseDir, fmt.Sprintf("user_%d", userID))
 		if err := os.MkdirAll(storageDir, 0755); err != nil {
 			c.JSON(500, response.Error("创建存储目录失败"))
@@ -386,13 +376,9 @@ func getUploadedChunks(c *gin.Context) {
 		return
 	}
 
-	// 检查临时目录 - 使用绝对路径
-	executable, err := os.Executable()
-	if err != nil {
-		c.JSON(500, response.Error("获取可执行文件路径失败"))
-		return
-	}
-	baseDir := filepath.Join(filepath.Dir(executable), "data", "webdav")
+	// 获取配置的存储路径
+	storagePath := fileServiceInstance.GetStoragePath()
+	baseDir := storagePath
 	tempDir := filepath.Join(baseDir, "temp", uploadId)
 	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
 		c.JSON(400, response.Error("上传会话不存在"))
@@ -455,8 +441,9 @@ func cancelChunkUpload(c *gin.Context) {
 		return
 	}
 
-	// 检查临时目录
-	tempDir := filepath.Join("uploads", "temp", uploadId)
+	// 获取配置的存储路径
+	storagePath := fileServiceInstance.GetStoragePath()
+	tempDir := filepath.Join(storagePath, "temp", uploadId)
 	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
 		c.JSON(400, response.Error("上传会话不存在"))
 		return
