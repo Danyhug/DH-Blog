@@ -846,20 +846,8 @@ async function handleUploadFiles(files: File[]) {
     const file = files[i];
     
     try {
-      // 检查文件大小，大于10MB使用分片上传
-      if (file.size > 10 * 1024 * 1024 && enableResumeUpload) {
-        await uploadLargeFile(file, i);
-      } else {
-        // 普通上传（小文件或大文件但禁用断点续传）
-          const response = await uploadFile(currentParentId.value, file);
-          // 更新文件状态为成功
-        uploadModalRef.value?.updateFileStatus(i, 'success', undefined, 1, 1);
-        
-        // 如果上传成功，记录文件ID
-        if (response && response.id) {
-          newUploadedFileIds.value.push(response.id.toString());
-        }
-      }
+      // 所有文件都使用分片上传接口
+      await uploadLargeFile(file, i);
       successCount++;
     } catch (error) {
       // 单个文件上传失败，记录但不中断其他文件上传

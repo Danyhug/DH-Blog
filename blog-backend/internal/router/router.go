@@ -13,7 +13,6 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
 
 // Init 初始化并配置 Gin 路由器
@@ -28,8 +27,8 @@ func Init(
 	systemSettingHandler *handler.SystemSettingHandler, // 添加SystemSettingHandler参数
 	ipService service.IPService,
 	staticFilesAbsPath string,
+	chunkUploadHandler *handler.ChunkUploadHandler,
 	conf *config.Config, // 添加配置参数
-	db *gorm.DB, // 添加数据库连接参数
 ) *gin.Engine {
 
 	// 使用原始的路由配置
@@ -153,7 +152,6 @@ func Init(
 	fileApi.Use(middleware.JWTMiddleware())
 	{
 		fileApi.GET("/list", fileHandler.ListFiles)
-		fileApi.POST("/upload", fileHandler.UploadFile)
 		fileApi.POST("/folder", fileHandler.CreateFolder)
 		fileApi.GET("/download/:id", fileHandler.DownloadFile)
 		fileApi.PUT("/rename/:id", fileHandler.RenameFile)
@@ -163,7 +161,19 @@ func Init(
 	}
 
 	// 注册分片上传路由
-	SetupChunkUploadRoutes(router, db, fileHandler.GetFileService())
+	chunkApi := fileApi.Group("/upload/chunk")
+	{
+		// 初始化分片上传
+		chunkApi.POST("/init", chunkUploadHandler.InitChunkUpload)
+		// 上传分片
+		chunkApi.POST("/chunk", chunkUploadHandler.UploadChunk)
+		// 完成分片上传
+		chunkApi.POST("/complete", chunkUploadHandler.CompleteChunkUpload)
+		// 获取已上传分片列表
+		chunkApi.GET("/:uploadId/chunks", chunkUploadHandler.GetUploadedChunks)
+		// 取消分片上传
+		chunkApi.DELETE("/:uploadId", chunkUploadHandler.CancelChunkUpload)
+	}
 
 	// 开放静态文件服务
 	publicAPI.Static("/uploads", staticFilesAbsPath)

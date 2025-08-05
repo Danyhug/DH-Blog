@@ -1,4 +1,4 @@
-package router
+package handler
 
 import (
 	"fmt"
@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"dh-blog/internal/middleware"
 	"dh-blog/internal/model"
 	"dh-blog/internal/response"
 	"dh-blog/internal/service"
@@ -16,28 +15,39 @@ import (
 	"gorm.io/gorm"
 )
 
-var fileServiceInstance service.IFileService
+// ChunkUploadHandler 分片上传处理器
+type ChunkUploadHandler struct {
+	fileService service.IFileService
+	db          *gorm.DB
+}
 
-// SetupChunkUploadRoutes 注册分片上传相关路由
-func SetupChunkUploadRoutes(engine *gin.Engine, db *gorm.DB, fileService service.IFileService) {
-	fileServiceInstance = fileService
-	uploadGroup := engine.Group("/api/files/upload/chunk")
-	uploadGroup.Use(middleware.JWTMiddleware()) // 添加JWT中间件
-	{
-		// 初始化分片上传
-		uploadGroup.POST("/init", initChunkUpload)
-		// 上传分片
-		uploadGroup.POST("/chunk", uploadChunk)
-		// 完成分片上传
-		uploadGroup.POST("/complete", completeChunkUpload(db))
-		// 获取已上传分片列表
-		uploadGroup.GET("/:uploadId/chunks", getUploadedChunks)
-		// 取消分片上传
-		uploadGroup.DELETE("/:uploadId", cancelChunkUpload)
+// NewChunkUploadHandler 创建分片上传处理器
+func NewChunkUploadHandler(fileService service.IFileService, db *gorm.DB) *ChunkUploadHandler {
+	return &ChunkUploadHandler{
+		fileService: fileService,
+		db:          db,
 	}
 }
 
-// initChunkUpload 初始化分片上传
+// RegisterRoutes 注册分片上传路由
+func (h *ChunkUploadHandler) RegisterRoutes(engine *gin.Engine) {
+	uploadGroup := engine.Group("/api/files/upload/chunk")
+	uploadGroup.Use() // 这里应该使用中间件，但由调用者决定
+	{
+		// 初始化分片上传
+		uploadGroup.POST("/init", h.InitChunkUpload)
+		// 上传分片
+		uploadGroup.POST("/chunk", h.UploadChunk)
+		// 完成分片上传
+		uploadGroup.POST("/complete", h.CompleteChunkUpload)
+		// 获取已上传分片列表
+		uploadGroup.GET("/:uploadId/chunks", h.GetUploadedChunks)
+		// 取消分片上传
+		uploadGroup.DELETE("/:uploadId", h.CancelChunkUpload)
+	}
+}
+
+// InitChunkUpload 初始化分片上传
 // @Summary 初始化分片上传
 // @Description 创建一个新的分片上传会话
 // @Tags 文件上传
@@ -51,7 +61,7 @@ func SetupChunkUploadRoutes(engine *gin.Engine, db *gorm.DB, fileService service
 // @Success 200 {object} map[string]interface{} "{"uploadId": "上传会话ID"}"
 // @Failure 400 {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk/init [post]
-func initChunkUpload(c *gin.Context) {
+func (h *ChunkUploadHandler) InitChunkUpload(c *gin.Context) {
 	var req struct {
 		FileName  string `json:"fileName"`
 		FileSize  int64  `json:"fileSize"`
@@ -87,7 +97,7 @@ func initChunkUpload(c *gin.Context) {
 	totalChunks := (fileSize + chunkSize - 1) / chunkSize
 
 	// 获取配置的存储路径
-	storagePath := fileServiceInstance.GetStoragePath()
+	storagePath := h.fileService.GetStoragePath()
 	baseDir := storagePath
 	tempDir := filepath.Join(baseDir, "temp", uploadId)
 	if err := os.MkdirAll(tempDir, 0755); err != nil {
@@ -113,7 +123,7 @@ func initChunkUpload(c *gin.Context) {
 	}))
 }
 
-// uploadChunk 上传分片
+// UploadChunk 上传分片
 // @Summary 上传文件分片
 // @Description 上传文件的一个分片
 // @Tags 文件上传
@@ -125,7 +135,7 @@ func initChunkUpload(c *gin.Context) {
 // @Success 200 {object} map[string]interface{} "{"success": true}"
 // @Failure 400 {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk [post]
-func uploadChunk(c *gin.Context) {
+func (h *ChunkUploadHandler) UploadChunk(c *gin.Context) {
 	uploadId := c.PostForm("uploadId")
 	chunkIndexStr := c.PostForm("chunkIndex")
 
@@ -141,7 +151,7 @@ func uploadChunk(c *gin.Context) {
 	}
 
 	// 获取配置的存储路径
-	storagePath := fileServiceInstance.GetStoragePath()
+	storagePath := h.fileService.GetStoragePath()
 	baseDir := storagePath
 	tempDir := filepath.Join(baseDir, "temp", uploadId)
 	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
@@ -170,197 +180,7 @@ func uploadChunk(c *gin.Context) {
 	}))
 }
 
-// getUserID 从上下文中获取用户ID
-func getUserID(c *gin.Context) uint64 {
-	if userID, exists := c.Get("userID"); exists {
-		if id, ok := userID.(float64); ok {
-			return uint64(id)
-		}
-		if id, ok := userID.(uint64); ok {
-			return id
-		}
-	}
-	return 0
-}
-
-// getMimeType 获取文件MIME类型
-func getMimeType(filename string) string {
-	ext := strings.ToLower(filepath.Ext(filename))
-	switch ext {
-	case ".jpg", ".jpeg":
-		return "image/jpeg"
-	case ".png":
-		return "image/png"
-	case ".gif":
-		return "image/gif"
-	case ".pdf":
-		return "application/pdf"
-	case ".txt":
-		return "text/plain"
-	case ".doc", ".docx":
-		return "application/msword"
-	case ".xls", ".xlsx":
-		return "application/vnd.ms-excel"
-	default:
-		return "application/octet-stream"
-	}
-}
-
-// completeChunkUpload 完成分片上传
-// @Summary 完成分片上传
-// @Description 合并所有分片并完成文件上传
-// @Tags 文件上传
-// @Accept json
-// @Produce json
-// @Param uploadId body string true "上传会话ID"
-// @Success 200 {object} map[string]interface{} "{"id": 123, "name": "文件名", "size": 1024}"
-// @Failure 400 {object} map[string]string "{"error": "错误信息"}"
-// @Router /files/upload/chunk/complete [post]
-func completeChunkUpload(db *gorm.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var req struct {
-			UploadId string `json:"uploadId"`
-		}
-
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(400, response.Error("参数错误"))
-			return
-		}
-
-		if req.UploadId == "" {
-			c.JSON(400, response.Error("uploadId不能为空"))
-			return
-		}
-
-		// 获取用户ID
-		userID := getUserID(c)
-		if userID == 0 {
-			c.JSON(401, response.Error("未授权"))
-			return
-		}
-
-		// 获取配置的存储路径
-		baseDir := fileServiceInstance.GetStoragePath()
-		tempDir := filepath.Join(baseDir, "temp", req.UploadId)
-		if _, err := os.Stat(tempDir); os.IsNotExist(err) {
-			c.JSON(400, response.Error("上传会话不存在"))
-			return
-		}
-
-		// 读取上传信息文件
-		infoFile := filepath.Join(tempDir, "info.txt")
-		infoData, err := os.ReadFile(infoFile)
-		if err != nil {
-			c.JSON(500, response.Error("读取上传信息失败"))
-			return
-		}
-
-		// 解析上传信息
-		var fileName, parentId string
-		var fileSize, totalChunks int
-		lines := strings.Split(string(infoData), "\n")
-		for _, line := range lines {
-			parts := strings.SplitN(line, "=", 2)
-			if len(parts) == 2 {
-				switch parts[0] {
-				case "fileName":
-					fileName = parts[1]
-				case "fileSize":
-					fmt.Sscanf(parts[1], "%d", &fileSize)
-				case "totalChunks":
-					fmt.Sscanf(parts[1], "%d", &totalChunks)
-				case "parentId":
-					parentId = parts[1]
-				}
-			}
-		}
-
-		// 获取已上传的分片文件
-		files, err := filepath.Glob(filepath.Join(tempDir, "chunk_*"))
-		if err != nil {
-			c.JSON(500, response.Error("读取分片失败"))
-			return
-		}
-
-		// 检查分片完整性
-		if len(files) != totalChunks {
-			c.JSON(400, response.Error("分片不完整"))
-			return
-		}
-
-		// 创建最终存储路径 - 使用配置的存储路径
-		storageDir := filepath.Join(baseDir, fmt.Sprintf("user_%d", userID))
-		if err := os.MkdirAll(storageDir, 0755); err != nil {
-			c.JSON(500, response.Error("创建存储目录失败"))
-			return
-		}
-
-		finalPath := filepath.Join(storageDir, fileName)
-
-		// 检查是否已存在同名文件
-		if _, err := os.Stat(finalPath); err == nil {
-			ext := filepath.Ext(fileName)
-			nameWithoutExt := strings.TrimSuffix(fileName, ext)
-			fileName = fmt.Sprintf("%s_%d%s", nameWithoutExt, time.Now().Unix(), ext)
-			finalPath = filepath.Join(storageDir, fileName)
-		}
-
-		// 合并所有分片
-		finalFile, err := os.Create(finalPath)
-		if err != nil {
-			c.JSON(500, response.Error("创建最终文件失败"))
-			return
-		}
-		defer finalFile.Close()
-
-		var totalSize int64
-		for i := 0; i < totalChunks; i++ {
-			chunkFile := filepath.Join(tempDir, fmt.Sprintf("chunk_%d", i))
-			chunkData, err := os.ReadFile(chunkFile)
-			if err != nil {
-				c.JSON(500, response.Error(fmt.Sprintf("读取分片 %d 失败", i)))
-				return
-			}
-
-			if _, err := finalFile.Write(chunkData); err != nil {
-				c.JSON(500, response.Error(fmt.Sprintf("写入分片 %d 失败", i)))
-				return
-			}
-
-			totalSize += int64(len(chunkData))
-		}
-
-		// 清理临时目录
-		os.RemoveAll(tempDir)
-
-		// 创建文件数据库记录
-		file := &model.File{
-			UserID:      uint64(userID),
-			ParentID:    parentId,
-			Name:        fileName,
-			IsFolder:    false,
-			Size:        totalSize,
-			StoragePath: filepath.Join(fmt.Sprintf("user_%d", userID), fileName),
-			MimeType:    getMimeType(fileName),
-		}
-
-		// 保存到数据库
-		if err := db.Create(file).Error; err != nil {
-			// 删除已创建的文件
-			os.Remove(finalPath)
-			c.JSON(500, response.Error("保存文件记录失败"))
-			return
-		}
-
-		c.JSON(200, response.SuccessWithData(gin.H{
-			"id":   file.ID,
-			"name": file.Name,
-			"size": file.Size,
-		}))
-	}
-}
-
-// getUploadedChunks 获取已上传分片列表
+// GetUploadedChunks 获取已上传分片列表
 // @Summary 获取已上传分片列表
 // @Description 获取指定上传会话已上传的分片索引列表
 // @Tags 文件上传
@@ -369,7 +189,7 @@ func completeChunkUpload(db *gorm.DB) gin.HandlerFunc {
 // @Success 200 {object} map[string]interface{} "{"chunks": [0,1,2], "totalChunks": 10}"
 // @Failure 400 {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk/{uploadId}/chunks [get]
-func getUploadedChunks(c *gin.Context) {
+func (h *ChunkUploadHandler) GetUploadedChunks(c *gin.Context) {
 	uploadId := c.Param("uploadId")
 	if uploadId == "" {
 		c.JSON(400, response.Error("uploadId不能为空"))
@@ -377,7 +197,7 @@ func getUploadedChunks(c *gin.Context) {
 	}
 
 	// 获取配置的存储路径
-	storagePath := fileServiceInstance.GetStoragePath()
+	storagePath := h.fileService.GetStoragePath()
 	baseDir := storagePath
 	tempDir := filepath.Join(baseDir, "temp", uploadId)
 	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
@@ -425,7 +245,7 @@ func getUploadedChunks(c *gin.Context) {
 	}))
 }
 
-// cancelChunkUpload 取消分片上传
+// CancelChunkUpload 取消分片上传
 // @Summary 取消分片上传
 // @Description 取消并清理分片上传会话
 // @Tags 文件上传
@@ -434,7 +254,7 @@ func getUploadedChunks(c *gin.Context) {
 // @Success 200 {object} map[string]interface{} "{"success": true}"
 // @Failure 400 {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk/{uploadId} [delete]
-func cancelChunkUpload(c *gin.Context) {
+func (h *ChunkUploadHandler) CancelChunkUpload(c *gin.Context) {
 	uploadId := c.Param("uploadId")
 	if uploadId == "" {
 		c.JSON(400, response.Error("uploadId不能为空"))
@@ -442,7 +262,7 @@ func cancelChunkUpload(c *gin.Context) {
 	}
 
 	// 获取配置的存储路径
-	storagePath := fileServiceInstance.GetStoragePath()
+	storagePath := h.fileService.GetStoragePath()
 	tempDir := filepath.Join(storagePath, "temp", uploadId)
 	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
 		c.JSON(400, response.Error("上传会话不存在"))
@@ -459,4 +279,192 @@ func cancelChunkUpload(c *gin.Context) {
 		"success":  true,
 		"uploadId": uploadId,
 	}))
+}
+
+// CompleteChunkUpload 完成分片上传
+// @Summary 完成分片上传
+// @Description 合并所有分片并完成文件上传
+// @Tags 文件上传
+// @Accept json
+// @Produce json
+// @Param uploadId body string true "上传会话ID"
+// @Success 200 {object} map[string]interface{} "{"id": 123, "name": "文件名", "size": 1024}"
+// @Failure 400 {object} map[string]string "{"error": "错误信息"}"
+// @Router /files/upload/chunk/complete [post]
+func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
+	var req struct {
+		UploadId string `json:"uploadId"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, response.Error("参数错误"))
+		return
+	}
+
+	if req.UploadId == "" {
+		c.JSON(400, response.Error("uploadId不能为空"))
+		return
+	}
+
+	// 获取用户ID
+	userID := h.getUserID(c)
+	if userID == 0 {
+		c.JSON(401, response.Error("未授权"))
+		return
+	}
+
+	// 获取配置的存储路径
+	baseDir := h.fileService.GetStoragePath()
+	tempDir := filepath.Join(baseDir, "temp", req.UploadId)
+	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
+		c.JSON(400, response.Error("上传会话不存在"))
+		return
+	}
+
+	// 读取上传信息文件
+	infoFile := filepath.Join(tempDir, "info.txt")
+	infoData, err := os.ReadFile(infoFile)
+	if err != nil {
+		c.JSON(500, response.Error("读取上传信息失败"))
+		return
+	}
+
+	// 解析上传信息
+	var fileName, parentId string
+	var fileSize, totalChunks int
+	lines := strings.Split(string(infoData), "\n")
+	for _, line := range lines {
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			switch parts[0] {
+			case "fileName":
+				fileName = parts[1]
+			case "fileSize":
+				fmt.Sscanf(parts[1], "%d", &fileSize)
+			case "totalChunks":
+				fmt.Sscanf(parts[1], "%d", &totalChunks)
+			case "parentId":
+				parentId = parts[1]
+			}
+		}
+	}
+
+	// 获取已上传的分片文件
+	files, err := filepath.Glob(filepath.Join(tempDir, "chunk_*"))
+	if err != nil {
+		c.JSON(500, response.Error("读取分片失败"))
+		return
+	}
+
+	// 检查分片完整性
+	if len(files) != totalChunks {
+		c.JSON(400, response.Error("分片不完整"))
+		return
+	}
+
+	// 创建最终存储路径 - 使用配置的存储路径
+	storageDir := filepath.Join(baseDir, fmt.Sprintf("user_%d", userID))
+	if err := os.MkdirAll(storageDir, 0755); err != nil {
+		c.JSON(500, response.Error("创建存储目录失败"))
+		return
+	}
+
+	finalPath := filepath.Join(storageDir, fileName)
+
+	// 检查是否已存在同名文件
+	if _, err := os.Stat(finalPath); err == nil {
+		ext := filepath.Ext(fileName)
+		nameWithoutExt := strings.TrimSuffix(fileName, ext)
+		fileName = fmt.Sprintf("%s_%d%s", nameWithoutExt, time.Now().Unix(), ext)
+		finalPath = filepath.Join(storageDir, fileName)
+	}
+
+	// 合并所有分片
+	finalFile, err := os.Create(finalPath)
+	if err != nil {
+		c.JSON(500, response.Error("创建最终文件失败"))
+		return
+	}
+	defer finalFile.Close()
+
+	var totalSize int64
+	for i := 0; i < totalChunks; i++ {
+		chunkFile := filepath.Join(tempDir, fmt.Sprintf("chunk_%d", i))
+		chunkData, err := os.ReadFile(chunkFile)
+		if err != nil {
+			c.JSON(500, response.Error(fmt.Sprintf("读取分片 %d 失败", i)))
+			return
+		}
+
+		if _, err := finalFile.Write(chunkData); err != nil {
+			c.JSON(500, response.Error(fmt.Sprintf("写入分片 %d 失败", i)))
+			return
+		}
+
+		totalSize += int64(len(chunkData))
+	}
+
+	// 清理临时目录
+	os.RemoveAll(tempDir)
+
+	// 创建文件数据库记录
+	file := &model.File{
+		UserID:      uint64(userID),
+		ParentID:    parentId,
+		Name:        fileName,
+		IsFolder:    false,
+		Size:        totalSize,
+		StoragePath: filepath.Join(fmt.Sprintf("user_%d", userID), fileName),
+		MimeType:    h.getMimeType(fileName),
+	}
+
+	// 保存到数据库
+	if err := h.db.Create(file).Error; err != nil {
+		// 删除已创建的文件
+		os.Remove(finalPath)
+		c.JSON(500, response.Error("保存文件记录失败"))
+		return
+	}
+
+	c.JSON(200, response.SuccessWithData(gin.H{
+		"id":   file.ID,
+		"name": file.Name,
+		"size": file.Size,
+	}))
+}
+
+// getUserID 从上下文中获取用户ID
+func (h *ChunkUploadHandler) getUserID(c *gin.Context) uint64 {
+	if userID, exists := c.Get("userID"); exists {
+		if id, ok := userID.(float64); ok {
+			return uint64(id)
+		}
+		if id, ok := userID.(uint64); ok {
+			return id
+		}
+	}
+	return 0
+}
+
+// getMimeType 获取文件MIME类型
+func (h *ChunkUploadHandler) getMimeType(filename string) string {
+	ext := strings.ToLower(filepath.Ext(filename))
+	switch ext {
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".png":
+		return "image/png"
+	case ".gif":
+		return "image/gif"
+	case ".pdf":
+		return "application/pdf"
+	case ".txt":
+		return "text/plain"
+	case ".doc", ".docx":
+		return "application/msword"
+	case ".xls", ".xlsx":
+		return "application/vnd.ms-excel"
+	default:
+		return "application/octet-stream"
+	}
 }

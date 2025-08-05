@@ -21,7 +21,6 @@ import (
 	"dh-blog/internal/wire"
 
 	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
 
 func main() {
@@ -41,8 +40,8 @@ func main() {
 
 	// 检查用户是否存在，如果不存在则引导创建管理员用户
 	userRepo := repository.NewUserRepository(db)
-	_, err = userRepo.GetUserByUsername("admin") // 尝试获取默认管理员用户
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	first := userRepo.IsFirstStart() // 尝试获取默认管理员用户
+	if first {
 		logrus.Info("未检测到管理员用户，请创建管理员账户：")
 		reader := bufio.NewReader(os.Stdin)
 
@@ -128,6 +127,4 @@ func displayInfo(conf *config.Config) {
 	logrus.Info("[ DH-Blog ] 启动成功")
 	logrus.Infof("[ DH-Blog ] 访问地址：%v", fmt.Sprintf("http://%s:%d",
 		conf.Server.Address, conf.Server.HttpPort))
-	logrus.Info("[ DH-Blog ] 默认用户名：admin")
-	logrus.Info("[ DH-Blog ] 默认密码：admin")
 }

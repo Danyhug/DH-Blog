@@ -30,6 +30,13 @@ func (r *UserRepository) GetUserByUsername(username string) (model.User, error) 
 	return user, nil
 }
 
+// IsFirstStart 查看是否是首次启动程序
+func (r *UserRepository) IsFirstStart() bool {
+	var count int64
+	r.DB.Model(&model.User{}).Count(&count)
+	return count == 0
+}
+
 // CreateUser 创建新用户
 func (r *UserRepository) CreateUser(user *model.User) error {
 	err := r.DB.Create(user).Error

@@ -84,6 +84,7 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	fileHandler := handler.NewFileHandler(fileService)
 	// 添加系统设置处理器
 	systemSettingHandler := handler.NewSystemSettingHandler(systemSettingRepo, db)
+	chunkUploadHandler := handler.NewChunkUploadHandler(fileHandler.GetFileService(), db)
 
 	return router.Init(
 		articleHandler,
@@ -96,7 +97,7 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 		systemSettingHandler, // 添加系统设置处理器
 		ipService,
 		staticFilesAbsPath,
+		chunkUploadHandler,
 		conf, // 添加配置参数
-		db,   // 添加数据库连接参数
 	)
 }

@@ -29,21 +29,6 @@ func (h *FileHandler) GetFileService() service.IFileService {
 	return h.fileService
 }
 
-// RegisterRoutes 注册路由
-func (h *FileHandler) RegisterRoutes(router *gin.RouterGroup) {
-	fileGroup := router.Group("/files")
-	{
-		fileGroup.GET("/list", h.ListFiles)
-		fileGroup.POST("/upload", h.UploadFile)
-		fileGroup.POST("/folder", h.CreateFolder)
-		fileGroup.GET("/download/:id", h.DownloadFile)
-		fileGroup.PUT("/rename/:id", h.RenameFile)
-		fileGroup.DELETE("/:id", h.DeleteFile)
-		fileGroup.PUT("/storage-path", h.UpdateStoragePath)  // 添加更新存储路径的路由
-		fileGroup.GET("/directory-tree", h.GetDirectoryTree) // 添加获取目录树的路由
-	}
-}
-
 // ListFiles 列出文件
 // @Summary 列出指定目录下的文件和文件夹
 // @Description 获取指定目录下的文件和文件夹列表
@@ -73,55 +58,6 @@ func (h *FileHandler) ListFiles(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response.SuccessWithData(files))
-}
-
-// UploadFile 上传文件
-// @Summary 上传文件
-// @Description 将文件上传到指定目录
-// @Tags 文件
-// @Accept multipart/form-data
-// @Produce json
-// @Param parentId formData string false "父目录ID，空表示根目录"
-// @Param file formData file true "要上传的文件"
-// @Success 200 {object} model.File "上传的文件信息"
-// @Failure 400 {object} response.Response "参数错误"
-// @Failure 401 {object} response.Response "未授权"
-// @Failure 500 {object} response.Response "服务器错误"
-// @Router /api/files/upload [post]
-func (h *FileHandler) UploadFile(c *gin.Context) {
-	userID := h.getCurrentUserID(c)
-	if userID == 0 {
-		response.FailWithCode(c, http.StatusUnauthorized, "未授权")
-		return
-	}
-
-	parentID := c.PostForm("parentId")
-
-	// 获取文件
-	file, fileHeader, err := c.Request.FormFile("file")
-	if err != nil {
-		response.FailWithCode(c, http.StatusOK, "获取文件失败")
-		return
-	}
-	defer file.Close()
-
-	// 上传文件
-	uploadedFile, err := h.fileService.UploadFile(
-		c.Request.Context(),
-		userID,
-		parentID,
-		fileHeader.Filename,
-		fileHeader.Size,
-		file,
-	)
-
-	if err != nil {
-		logrus.Errorf("上传文件失败: %v", err)
-		response.FailWithCode(c, http.StatusOK, fmt.Sprintf("上传失败: %v", err))
-		return
-	}
-
-	c.JSON(http.StatusOK, response.SuccessWithData(uploadedFile))
 }
 
 // CreateFolder 创建文件夹
