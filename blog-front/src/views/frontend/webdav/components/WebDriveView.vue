@@ -1,11 +1,7 @@
 <template>
   <div class="web-drive-container">
-    <!-- 移动端视图 -->
-    <MobileView v-if="isMobile" :mobile-files="convertedFiles" @upload="openUploadModal" @open="handleMobileFileOpen"
-      @share="shareFile" @download="downloadFile" @rename="handleMobileRename" @delete="deleteFile" />
-
-    <!-- 桌面端视图 -->
-    <div v-else class="desktop-view">
+    <!-- 响应式文件管理视图 -->
+    <div class="responsive-view">
       <!-- 文件预览组件 -->
       <FilePreview v-if="showFilePreview" :file="selectedFile" @close="closeFilePreview" />
 
@@ -45,13 +41,21 @@
               <UploadIcon class="icon-sm" />
               上传
             </button>
-            <button v-if="selectedFiles.size > 0" class="btn-primary" @click="downloadSelectedFiles">
+            <button v-if="selectedFiles.size > 0 && !isFolderSelected" class="btn-primary" @click="downloadSelectedFiles">
               <UploadIcon class="icon-sm" transform="rotate(180)" />
               下载 ({{ selectedFiles.size }})
             </button>
-            <button v-if="selectedFiles.size > 0" class="btn-outline" @click="shareSelectedFiles">
+            <button v-if="selectedFiles.size > 0 && !isFolderSelected" class="btn-outline" @click="shareSelectedFiles">
               <UploadIcon class="icon-sm" />
               分享 ({{ selectedFiles.size }})
+            </button>
+            <button v-if="selectedFiles.size === 1 && !isFolderSelected" class="btn-outline mobile-preview-btn" @click="previewSelectedFile">
+              <FileIcon class="icon-sm" />
+              预览
+            </button>
+            <button v-if="selectedFiles.size === 1 && isFolderSelected" class="btn-primary enter-folder-btn" @click="enterSelectedFolder">
+              <FolderIcon class="icon-sm" />
+              进入文件夹
             </button>
           </div>
           <div class="toolbar-right">
@@ -204,7 +208,6 @@ import type { FileItem } from '../utils/types/file'
 import SettingsModal from '../modals/SettingsModal.vue'
 import UploadModal from '../modals/UploadModal.vue'
 import ShareLinkPopup from '../modals/ShareLinkPopup.vue'
-import MobileView from './MobileView.vue'
 import FilePreview from './FilePreview.vue'
 import {
   HomeIcon,
@@ -261,7 +264,6 @@ const contextMenu = ref({
     size: ''
   } as FileItem
 })
-const isMobile = ref(false)
 const showNewFolderDialog = ref(false)
 const showRenameDialog = ref(false)
 const newFolderName = ref('新建文件夹')
@@ -291,9 +293,6 @@ provide('navigateToPathSegment', navigateToPathSegment)
 
 // 文件数据
 const apiFiles = ref<FileInfo[]>([])
-
-// 移动端文件列表
-const mobileFiles = ref<FileItem[]>([])
 
 // 将API返回的文件数据转换为组件使用的格式
 const convertedFiles = computed<FileItem[]>(() => {
@@ -455,14 +454,21 @@ const contextMenuStyle = computed(() => {
   }
 })
 
+// 判断选中的是否为文件夹
+const isFolderSelected = computed(() => {
+  if (selectedFiles.value.size !== 1) return false
+  const selectedId = Array.from(selectedFiles.value)[0]
+  const selectedFile = convertedFiles.value.find(f => f.id === selectedId)
+  return selectedFile?.type === 'folder'
+})
+
 // 获取文件列表
 const fetchFiles = async (parentId: string = '') => {
   try {
     isLoading.value = true;
     const response = await listFiles(parentId);
     apiFiles.value = response;
-    // 更新移动端文件列表
-    mobileFiles.value = convertedFiles.value;
+  
     isLoading.value = false;
   } catch (error) {
     console.error('获取文件列表失败:', error);
@@ -471,10 +477,7 @@ const fetchFiles = async (parentId: string = '') => {
   }
 };
 
-// 检测移动设备
-function checkMobile() {
-  isMobile.value = window.innerWidth < 768;
-}
+
 
 // 导航到根目录
 function navigateToRoot() {
@@ -700,15 +703,30 @@ function closeFilePreview() {
   showFilePreview.value = false;
 }
 
-// 处理移动端文件打开
-function handleMobileFileOpen(file: FileItem) {
-  handleFileClick(file);
+// 预览选中的文件（移动端专用）
+function previewSelectedFile() {
+  if (selectedFiles.value.size === 1) {
+    const fileId = Array.from(selectedFiles.value)[0];
+    const file = filteredFiles.value.find(f => f.id === fileId);
+    if (file && file.type !== 'folder') {
+      selectedFile.value = file;
+      showFilePreview.value = true;
+    }
+  }
 }
 
-// 处理移动端重命名
-function handleMobileRename(file: FileItem) {
-  renameFile(file);
+// 进入选中的文件夹
+function enterSelectedFolder() {
+  if (selectedFiles.value.size === 1) {
+    const folderId = Array.from(selectedFiles.value)[0];
+    const folder = filteredFiles.value.find(f => f.id === folderId && f.type === 'folder');
+    if (folder) {
+      handleFileDoubleClick(folder);
+    }
+  }
 }
+
+
 
 // 打开文件
 function openFile(file: FileItem) {
@@ -830,9 +848,6 @@ function closeContextMenu() {
 async function handleUploadFiles(files: File[]) {
   if (!files.length) return;
 
-  // 获取是否启用断点续传的设置
-    const enableResumeUpload = (uploadModalRef.value as any)?.enableResumeUpload ?? true;
-
   let successCount = 0;
   let failCount = 0;
   const totalFiles = files.length;
@@ -896,11 +911,7 @@ async function uploadLargeFile(file: File, fileIndex: number) {
       return;
     }
     
-    // 文件大小检查，避免内存溢出
-    const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB限制
-    if (file.size > MAX_FILE_SIZE) {
-      throw new Error(`文件大小超过限制 (${MAX_FILE_SIZE / 1024 / 1024 / 1024}GB)`);
-    }
+    // 网盘项目不限制文件大小，通过分片上传支持任意大小的文件
     
     // 生成基于文件名的稳定uploadId，支持断点续传
     const stableUploadId = `upload_${currentParentId.value || 'root'}_${file.name}_${file.size}`;
@@ -930,7 +941,8 @@ async function uploadLargeFile(file: File, fileIndex: number) {
       }
     } catch (error: any) {
       // 会话不存在或其他错误，静默创建新的上传会话
-      if (error?.response?.data?.error !== '上传会话不存在') {
+      const errorMessage = error?.response?.data?.error || error?.message || '';
+      if (!errorMessage.includes('上传会话不存在') && !errorMessage.includes('会话不存在')) {
         console.warn('获取上传会话信息失败:', error);
       }
       initResponse = await initChunkUpload(currentParentId.value, file.name, file.size, chunkSize, stableUploadId);
@@ -944,7 +956,8 @@ async function uploadLargeFile(file: File, fileIndex: number) {
       uploadedChunks = chunksResponse.chunks || [];
     } catch (error: any) {
       // 静默处理会话不存在的错误，这是预期行为
-      if (error?.response?.data?.error !== '上传会话不存在') {
+      const errorMessage = error?.response?.data?.error || error?.message || '';
+      if (!errorMessage.includes('上传会话不存在') && !errorMessage.includes('会话不存在')) {
         console.warn('获取已上传分片列表失败:', error);
       }
       uploadedChunks = [];
@@ -1090,14 +1103,12 @@ function closeUploadModal() {
 }
 
 onMounted(() => {
-  checkMobile();
-  window.addEventListener('resize', checkMobile);
   // 初始化时获取文件列表
   fetchFiles();
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', checkMobile);
+  // 清理工作
 })
 </script>
 
@@ -1203,9 +1214,16 @@ onUnmounted(() => {
     margin-bottom: 20px;
     flex-shrink: 0;
 
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
     .toolbar-left {
       display: flex;
       gap: 10px;
+      flex-wrap: wrap;
 
       button {
         display: flex;
@@ -1220,6 +1238,24 @@ onUnmounted(() => {
           width: 16px;
           height: 16px;
         }
+
+        @media (max-width: 768px) {
+          padding: 10px 16px;
+          font-size: 15px;
+          min-height: 44px;
+        }
+
+        @media (max-width: 480px) {
+          padding: 12px 16px;
+          font-size: 16px;
+          flex: 1;
+          justify-content: center;
+          min-height: 48px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        gap: 8px;
       }
 
       .btn-primary {
@@ -1239,6 +1275,48 @@ onUnmounted(() => {
 
         &:hover {
           background-color: #f5f5f5;
+        }
+      }
+
+      .mobile-preview-btn {
+        display: none;
+
+        @media (max-width: 768px) {
+          display: flex;
+          flex: 1;
+          min-width: 100%;
+          margin-top: 8px;
+          justify-content: center;
+        }
+      }
+
+      .enter-folder-btn {
+        display: none;
+
+        @media (max-width: 768px) {
+          display: flex;
+          flex: 1;
+          min-width: 100%;
+          margin-top: 8px;
+          justify-content: center;
+          background-color: #2a8aff;
+          color: white;
+          border: none;
+
+          &:hover {
+            background-color: #1a7aef;
+          }
+        }
+      }
+
+      @media (max-width: 768px) {
+        .btn-primary,
+        .btn-outline {
+          &:nth-child(n+3):nth-last-child(-n+4) {
+            flex: 1;
+            min-width: 100%;
+            margin: 4px 0;
+          }
         }
       }
     }
@@ -1268,35 +1346,71 @@ onUnmounted(() => {
             outline: none;
             border-color: #2a8aff;
           }
+
+          @media (max-width: 768px) {
+            width: 100%;
+            padding: 10px 12px 10px 40px;
+            font-size: 15px;
+            min-height: 44px;
+          }
+
+          @media (max-width: 480px) {
+            padding: 12px 12px 12px 40px;
+            font-size: 16px;
+            min-height: 48px;
+          }
         }
+
+        @media (max-width: 768px) {
+          .search-icon {
+            left: 12px;
+            width: 18px;
+            height: 18px;
+          }
+        }
+      }
+
+      @media (max-width: 768px) {
+        width: 100%;
       }
     }
   }
 
   .file-container {
       flex: 1;
-      overflow: visible; /* 修改为visible，确保子元素不被裁剪 */
+      overflow: visible;
       display: flex;
       flex-direction: column;
       min-height: 400px;
-      /* 最小高度，确保在内容少时也有一定高度 */
       background-color: #ffffff;
-      padding: 10px; /* 添加内边距，为溢出的元素留出空间 */
+      padding: 10px;
 
       .file-container-inner {
         display: flex;
         flex-direction: column;
-        overflow: visible; /* 确保子元素不被裁剪 */
+        overflow: visible;
       }
 
       .file-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-        gap: 15px; /* 增加间距，为标记留出更多空间 */
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
         flex: 1;
         background-color: #ffffff;
-        overflow: visible; /* 确保子元素不被裁剪 */
-        padding: 10px; /* 添加内边距，为溢出的元素留出空间 */
+        overflow: visible;
+        padding: 10px;
+
+        @media (max-width: 768px) {
+          grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+          gap: 12px;
+          padding: 8px;
+        }
+
+        @media (max-width: 480px) {
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: 8px;
+          padding: 5px;
+        }
 
       .file-item {
         cursor: pointer;
@@ -1304,9 +1418,7 @@ onUnmounted(() => {
         padding: 15px;
         transition: all 0.3s ease;
         position: relative;
-        /* 移除overflow: hidden，这是导致高亮效果被切断的原因 */
         height: 140px;
-        /* 固定高度 */
         display: flex;
         background-color: #ffffff;
         border: 2px solid transparent;
@@ -1315,6 +1427,18 @@ onUnmounted(() => {
           background-color: #f5f5f5;
           transform: translateY(-3px);
           box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        @media (max-width: 768px) {
+          height: 120px;
+          padding: 12px;
+          border-radius: 6px;
+        }
+
+        @media (max-width: 480px) {
+          height: 100px;
+          padding: 10px;
+          border-radius: 4px;
         }
 
         &.selected {
@@ -1359,6 +1483,28 @@ onUnmounted(() => {
               width: 40px;
               height: 40px;
               transition: transform 0.3s ease;
+            }
+
+            @media (max-width: 768px) {
+              width: 50px;
+              height: 50px;
+              
+              .folder-icon,
+              .file-icon {
+                width: 35px;
+                height: 35px;
+              }
+            }
+
+            @media (max-width: 480px) {
+              width: 40px;
+              height: 40px;
+              
+              .folder-icon,
+              .file-icon {
+                width: 30px;
+                height: 30px;
+              }
             }
 
             .folder-icon {
@@ -1425,6 +1571,14 @@ onUnmounted(() => {
               text-overflow: ellipsis;
               max-width: 100%;
               line-height: 1.2;
+
+              @media (max-width: 768px) {
+                font-size: 13px;
+              }
+
+              @media (max-width: 480px) {
+                font-size: 12px;
+              }
             }
 
             .file-details {
@@ -1436,7 +1590,19 @@ onUnmounted(() => {
                 color: #999;
                 margin: 0;
                 line-height: 1.2;
+
+                @media (max-width: 480px) {
+                  font-size: 11px;
+                }
               }
+            }
+
+            @media (max-width: 768px) {
+              height: 45px;
+            }
+
+            @media (max-width: 480px) {
+              height: 40px;
             }
           }
         }
@@ -1447,9 +1613,17 @@ onUnmounted(() => {
   .context-menu {
     position: fixed;
     background: white;
-    border-radius: 4px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     z-index: 1000;
+    min-width: 180px;
+    max-width: 250px;
+
+    @media (max-width: 768px) {
+      border-radius: 12px;
+      min-width: 200px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    }
 
     ul {
       list-style: none;
@@ -1457,11 +1631,12 @@ onUnmounted(() => {
       margin: 0;
 
       li {
-        padding: 10px 15px;
+        padding: 12px 16px;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
         cursor: pointer;
+        font-size: 14px;
 
         &:hover {
           background-color: #f5f5f5;
@@ -1472,8 +1647,25 @@ onUnmounted(() => {
         }
 
         .icon-xs {
-          width: 14px;
-          height: 14px;
+          width: 16px;
+          height: 16px;
+        }
+
+        @media (max-width: 768px) {
+          padding: 16px 20px;
+          font-size: 16px;
+          min-height: 48px;
+
+          .icon-xs {
+            width: 18px;
+            height: 18px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          padding: 18px 22px;
+          font-size: 17px;
+          min-height: 52px;
         }
       }
     }
@@ -1561,6 +1753,22 @@ onUnmounted(() => {
   overflow: hidden;
   animation: dialog-appear 0.2s ease-out;
 
+  @media (max-width: 768px) {
+    width: 95%;
+    max-width: 95%;
+    border-radius: 12px;
+  }
+
+  @media (max-width: 480px) {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
   .dialog-header {
     display: flex;
     justify-content: space-between;
@@ -1573,6 +1781,14 @@ onUnmounted(() => {
       font-size: 18px;
       font-weight: 500;
       color: #333;
+
+      @media (max-width: 768px) {
+        font-size: 20px;
+      }
+
+      @media (max-width: 480px) {
+        font-size: 22px;
+      }
     }
 
     .close-btn {
@@ -1586,6 +1802,20 @@ onUnmounted(() => {
       &:hover {
         color: #666;
       }
+
+      @media (max-width: 768px) {
+        font-size: 24px;
+        padding: 8px;
+      }
+
+      @media (max-width: 480px) {
+        font-size: 28px;
+        padding: 12px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      padding: 20px;
     }
   }
 
@@ -1667,6 +1897,27 @@ onUnmounted(() => {
         border-color: #2a8aff;
         box-shadow: 0 0 0 2px rgba(42, 138, 255, 0.2);
       }
+
+      @media (max-width: 768px) {
+        padding: 12px 14px;
+        font-size: 16px;
+        border-radius: 6px;
+      }
+
+      @media (max-width: 480px) {
+        padding: 14px 16px;
+        font-size: 17px;
+        border-radius: 8px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      padding: 24px;
+    }
+
+    @media (max-width: 480px) {
+      padding: 28px;
+      flex: 1;
     }
   }
 
@@ -1677,11 +1928,30 @@ onUnmounted(() => {
     justify-content: flex-end;
     gap: 10px;
 
+    @media (max-width: 480px) {
+      padding: 20px;
+      margin-top: auto;
+    }
+
     button {
       padding: 8px 16px;
       border-radius: 4px;
       cursor: pointer;
       font-size: 14px;
+
+      @media (max-width: 768px) {
+        padding: 10px 20px;
+        font-size: 16px;
+        min-height: 44px;
+      }
+
+      @media (max-width: 480px) {
+        padding: 12px 24px;
+        font-size: 17px;
+        min-height: 48px;
+        flex: 1;
+        max-width: 120px;
+      }
 
       &.btn-outline {
         background-color: white;

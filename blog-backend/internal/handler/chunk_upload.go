@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -29,24 +30,6 @@ func NewChunkUploadHandler(fileService service.IFileService, db *gorm.DB) *Chunk
 	}
 }
 
-// RegisterRoutes 注册分片上传路由
-func (h *ChunkUploadHandler) RegisterRoutes(engine *gin.Engine) {
-	uploadGroup := engine.Group("/api/files/upload/chunk")
-	uploadGroup.Use() // 这里应该使用中间件，但由调用者决定
-	{
-		// 初始化分片上传
-		uploadGroup.POST("/init", h.InitChunkUpload)
-		// 上传分片
-		uploadGroup.POST("/chunk", h.UploadChunk)
-		// 完成分片上传
-		uploadGroup.POST("/complete", h.CompleteChunkUpload)
-		// 获取已上传分片列表
-		uploadGroup.GET("/:uploadId/chunks", h.GetUploadedChunks)
-		// 取消分片上传
-		uploadGroup.DELETE("/:uploadId", h.CancelChunkUpload)
-	}
-}
-
 // InitChunkUpload 初始化分片上传
 // @Summary 初始化分片上传
 // @Description 创建一个新的分片上传会话
@@ -58,8 +41,8 @@ func (h *ChunkUploadHandler) RegisterRoutes(engine *gin.Engine) {
 // @Param fileSize formData int true "文件大小"
 // @Param chunkSize formData int false "分片大小，默认5MB"
 // @Param uploadId formData string false "指定上传会话ID（用于断点续传）"
-// @Success 200 {object} map[string]interface{} "{"uploadId": "上传会话ID"}"
-// @Failure 400 {object} map[string]string "{"error": "错误信息"}"
+// @Success http.StatusOK {object} map[string]interface{} "{"uploadId": "上传会话ID"}"
+// @Failure http.StatusOK {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk/init [post]
 func (h *ChunkUploadHandler) InitChunkUpload(c *gin.Context) {
 	var req struct {
@@ -71,12 +54,12 @@ func (h *ChunkUploadHandler) InitChunkUpload(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, response.Error("参数错误"))
+		c.JSON(http.StatusOK, response.Error("参数错误"))
 		return
 	}
 
 	if req.FileName == "" || req.FileSize == 0 {
-		c.JSON(400, response.Error("文件名和文件大小不能为空"))
+		c.JSON(http.StatusOK, response.Error("文件名和文件大小不能为空"))
 		return
 	}
 
@@ -101,7 +84,7 @@ func (h *ChunkUploadHandler) InitChunkUpload(c *gin.Context) {
 	baseDir := storagePath
 	tempDir := filepath.Join(baseDir, "temp", uploadId)
 	if err := os.MkdirAll(tempDir, 0755); err != nil {
-		c.JSON(500, response.Error("创建临时目录失败"))
+		c.JSON(http.StatusOK, response.Error("创建临时目录失败"))
 		return
 	}
 
@@ -109,11 +92,11 @@ func (h *ChunkUploadHandler) InitChunkUpload(c *gin.Context) {
 	infoFile := filepath.Join(tempDir, "info.txt")
 	infoContent := fmt.Sprintf("fileName=%s\nfileSize=%d\ntotalChunks=%d\nchunkSize=%d\nparentId=%s", fileName, fileSize, totalChunks, chunkSize, parentId)
 	if err := os.WriteFile(infoFile, []byte(infoContent), 0644); err != nil {
-		c.JSON(500, response.Error("保存上传信息失败"))
+		c.JSON(http.StatusOK, response.Error("保存上传信息失败"))
 		return
 	}
 
-	c.JSON(200, response.SuccessWithData(gin.H{
+	c.JSON(http.StatusOK, response.SuccessWithData(gin.H{
 		"uploadId":    uploadId,
 		"chunkSize":   chunkSize,
 		"totalChunks": totalChunks,
@@ -132,21 +115,21 @@ func (h *ChunkUploadHandler) InitChunkUpload(c *gin.Context) {
 // @Param uploadId formData string true "上传会话ID"
 // @Param chunkIndex formData int true "分片索引"
 // @Param chunk formData file true "分片数据"
-// @Success 200 {object} map[string]interface{} "{"success": true}"
-// @Failure 400 {object} map[string]string "{"error": "错误信息"}"
+// @Success http.StatusOK {object} map[string]interface{} "{"success": true}"
+// @Failure http.StatusOK {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk [post]
 func (h *ChunkUploadHandler) UploadChunk(c *gin.Context) {
 	uploadId := c.PostForm("uploadId")
 	chunkIndexStr := c.PostForm("chunkIndex")
 
 	if uploadId == "" || chunkIndexStr == "" {
-		c.JSON(400, response.Error("uploadId和chunkIndex不能为空"))
+		c.JSON(http.StatusOK, response.Error("uploadId和chunkIndex不能为空"))
 		return
 	}
 
 	chunkIndex, err := strconv.Atoi(chunkIndexStr)
 	if err != nil {
-		c.JSON(400, response.Error("chunkIndex格式错误"))
+		c.JSON(http.StatusOK, response.Error("chunkIndex格式错误"))
 		return
 	}
 
@@ -155,25 +138,25 @@ func (h *ChunkUploadHandler) UploadChunk(c *gin.Context) {
 	baseDir := storagePath
 	tempDir := filepath.Join(baseDir, "temp", uploadId)
 	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
-		c.JSON(400, response.Error("上传会话不存在"))
+		c.JSON(http.StatusOK, response.Error("上传会话不存在"))
 		return
 	}
 
 	// 获取上传的文件
 	file, err := c.FormFile("chunk")
 	if err != nil {
-		c.JSON(400, response.Error("获取分片数据失败"))
+		c.JSON(http.StatusOK, response.Error("获取分片数据失败"))
 		return
 	}
 
 	// 保存分片文件
 	chunkFile := filepath.Join(tempDir, fmt.Sprintf("chunk_%d", chunkIndex))
 	if err := c.SaveUploadedFile(file, chunkFile); err != nil {
-		c.JSON(500, response.Error("保存分片失败"))
+		c.JSON(http.StatusOK, response.Error("保存分片失败"))
 		return
 	}
 
-	c.JSON(200, response.SuccessWithData(gin.H{
+	c.JSON(http.StatusOK, response.SuccessWithData(gin.H{
 		"success":    true,
 		"chunkIndex": chunkIndex,
 		"uploadId":   uploadId,
@@ -186,13 +169,13 @@ func (h *ChunkUploadHandler) UploadChunk(c *gin.Context) {
 // @Tags 文件上传
 // @Produce json
 // @Param uploadId path string true "上传会话ID"
-// @Success 200 {object} map[string]interface{} "{"chunks": [0,1,2], "totalChunks": 10}"
-// @Failure 400 {object} map[string]string "{"error": "错误信息"}"
+// @Success http.StatusOK {object} map[string]interface{} "{"chunks": [0,1,2], "totalChunks": 10}"
+// @Failure http.StatusOK {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk/{uploadId}/chunks [get]
 func (h *ChunkUploadHandler) GetUploadedChunks(c *gin.Context) {
 	uploadId := c.Param("uploadId")
 	if uploadId == "" {
-		c.JSON(400, response.Error("uploadId不能为空"))
+		c.JSON(http.StatusOK, response.Error("uploadId不能为空"))
 		return
 	}
 
@@ -200,8 +183,14 @@ func (h *ChunkUploadHandler) GetUploadedChunks(c *gin.Context) {
 	storagePath := h.fileService.GetStoragePath()
 	baseDir := storagePath
 	tempDir := filepath.Join(baseDir, "temp", uploadId)
+	
+	// 如果上传会话不存在，返回空的分片列表（首次上传时的预期行为）
 	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
-		c.JSON(400, response.Error("上传会话不存在"))
+		c.JSON(http.StatusOK, response.SuccessWithData(gin.H{
+			"chunks":      []int{},
+			"totalChunks": 0,
+			"uploadId":    uploadId,
+		}))
 		return
 	}
 
@@ -209,7 +198,7 @@ func (h *ChunkUploadHandler) GetUploadedChunks(c *gin.Context) {
 	pattern := filepath.Join(tempDir, "chunk_*")
 	files, err := filepath.Glob(pattern)
 	if err != nil {
-		c.JSON(500, response.Error("读取分片列表失败"))
+		c.JSON(http.StatusOK, response.Error("读取分片列表失败"))
 		return
 	}
 
@@ -238,7 +227,7 @@ func (h *ChunkUploadHandler) GetUploadedChunks(c *gin.Context) {
 		}
 	}
 
-	c.JSON(200, response.SuccessWithData(gin.H{
+	c.JSON(http.StatusOK, response.SuccessWithData(gin.H{
 		"chunks":      chunks,
 		"totalChunks": totalChunks,
 		"uploadId":    uploadId,
@@ -251,13 +240,13 @@ func (h *ChunkUploadHandler) GetUploadedChunks(c *gin.Context) {
 // @Tags 文件上传
 // @Produce json
 // @Param uploadId path string true "上传会话ID"
-// @Success 200 {object} map[string]interface{} "{"success": true}"
-// @Failure 400 {object} map[string]string "{"error": "错误信息"}"
+// @Success http.StatusOK {object} map[string]interface{} "{"success": true}"
+// @Failure http.StatusOK {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk/{uploadId} [delete]
 func (h *ChunkUploadHandler) CancelChunkUpload(c *gin.Context) {
 	uploadId := c.Param("uploadId")
 	if uploadId == "" {
-		c.JSON(400, response.Error("uploadId不能为空"))
+		c.JSON(http.StatusOK, response.Error("uploadId不能为空"))
 		return
 	}
 
@@ -265,17 +254,17 @@ func (h *ChunkUploadHandler) CancelChunkUpload(c *gin.Context) {
 	storagePath := h.fileService.GetStoragePath()
 	tempDir := filepath.Join(storagePath, "temp", uploadId)
 	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
-		c.JSON(400, response.Error("上传会话不存在"))
+		c.JSON(http.StatusOK, response.Error("上传会话不存在"))
 		return
 	}
 
 	// 清理临时目录
 	if err := os.RemoveAll(tempDir); err != nil {
-		c.JSON(500, response.Error("清理临时文件失败"))
+		c.JSON(http.StatusOK, response.Error("清理临时文件失败"))
 		return
 	}
 
-	c.JSON(200, response.SuccessWithData(gin.H{
+	c.JSON(http.StatusOK, response.SuccessWithData(gin.H{
 		"success":  true,
 		"uploadId": uploadId,
 	}))
@@ -288,8 +277,8 @@ func (h *ChunkUploadHandler) CancelChunkUpload(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param uploadId body string true "上传会话ID"
-// @Success 200 {object} map[string]interface{} "{"id": 123, "name": "文件名", "size": 1024}"
-// @Failure 400 {object} map[string]string "{"error": "错误信息"}"
+// @Success http.StatusOK {object} map[string]interface{} "{"id": 123, "name": "文件名", "size": 1024}"
+// @Failure http.StatusOK {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk/complete [post]
 func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 	var req struct {
@@ -297,12 +286,12 @@ func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, response.Error("参数错误"))
+		c.JSON(http.StatusOK, response.Error("参数错误"))
 		return
 	}
 
 	if req.UploadId == "" {
-		c.JSON(400, response.Error("uploadId不能为空"))
+		c.JSON(http.StatusOK, response.Error("uploadId不能为空"))
 		return
 	}
 
@@ -317,7 +306,7 @@ func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 	baseDir := h.fileService.GetStoragePath()
 	tempDir := filepath.Join(baseDir, "temp", req.UploadId)
 	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
-		c.JSON(400, response.Error("上传会话不存在"))
+		c.JSON(http.StatusOK, response.Error("上传会话不存在"))
 		return
 	}
 
@@ -325,7 +314,7 @@ func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 	infoFile := filepath.Join(tempDir, "info.txt")
 	infoData, err := os.ReadFile(infoFile)
 	if err != nil {
-		c.JSON(500, response.Error("读取上传信息失败"))
+		c.JSON(http.StatusOK, response.Error("读取上传信息失败"))
 		return
 	}
 
@@ -352,20 +341,20 @@ func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 	// 获取已上传的分片文件
 	files, err := filepath.Glob(filepath.Join(tempDir, "chunk_*"))
 	if err != nil {
-		c.JSON(500, response.Error("读取分片失败"))
+		c.JSON(http.StatusOK, response.Error("读取分片失败"))
 		return
 	}
 
 	// 检查分片完整性
 	if len(files) != totalChunks {
-		c.JSON(400, response.Error("分片不完整"))
+		c.JSON(http.StatusOK, response.Error("分片不完整"))
 		return
 	}
 
 	// 创建最终存储路径 - 使用配置的存储路径
 	storageDir := filepath.Join(baseDir, fmt.Sprintf("user_%d", userID))
 	if err := os.MkdirAll(storageDir, 0755); err != nil {
-		c.JSON(500, response.Error("创建存储目录失败"))
+		c.JSON(http.StatusOK, response.Error("创建存储目录失败"))
 		return
 	}
 
@@ -382,7 +371,7 @@ func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 	// 合并所有分片
 	finalFile, err := os.Create(finalPath)
 	if err != nil {
-		c.JSON(500, response.Error("创建最终文件失败"))
+		c.JSON(http.StatusOK, response.Error("创建最终文件失败"))
 		return
 	}
 	defer finalFile.Close()
@@ -392,12 +381,12 @@ func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 		chunkFile := filepath.Join(tempDir, fmt.Sprintf("chunk_%d", i))
 		chunkData, err := os.ReadFile(chunkFile)
 		if err != nil {
-			c.JSON(500, response.Error(fmt.Sprintf("读取分片 %d 失败", i)))
+			c.JSON(http.StatusOK, response.Error(fmt.Sprintf("读取分片 %d 失败", i)))
 			return
 		}
 
 		if _, err := finalFile.Write(chunkData); err != nil {
-			c.JSON(500, response.Error(fmt.Sprintf("写入分片 %d 失败", i)))
+			c.JSON(http.StatusOK, response.Error(fmt.Sprintf("写入分片 %d 失败", i)))
 			return
 		}
 
@@ -422,11 +411,11 @@ func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 	if err := h.db.Create(file).Error; err != nil {
 		// 删除已创建的文件
 		os.Remove(finalPath)
-		c.JSON(500, response.Error("保存文件记录失败"))
+		c.JSON(http.StatusOK, response.Error("保存文件记录失败"))
 		return
 	}
 
-	c.JSON(200, response.SuccessWithData(gin.H{
+	c.JSON(http.StatusOK, response.SuccessWithData(gin.H{
 		"id":   file.ID,
 		"name": file.Name,
 		"size": file.Size,
