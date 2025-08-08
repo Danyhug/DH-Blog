@@ -162,7 +162,8 @@ const login = () => {
         localStorage.setItem('token', token);
 
         ElMessage.success('登录成功')
-        router.replace({ name: "Admin" })
+        const redirect = router.currentRoute.value.query.redirect
+router.replace(redirect ? redirect.toString() : { name: "Admin" })
       })
     }
   }

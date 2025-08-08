@@ -75,11 +75,16 @@ const router = createRouter({
   routes,
 })
 
-const isAuthenticated = () => {
+const isAuthenticated = (to: any) => {
   if (localStorage.getItem('token')) {
     return userCheck()
   }
-  return router.replace({ name: 'Login' })
+  return router.replace({ 
+    name: 'Login',
+    query: {
+      redirect: to.fullPath
+    }
+  })
 }
 
 router.beforeEach(async (to, _, next) => {
@@ -90,9 +95,9 @@ router.beforeEach(async (to, _, next) => {
     window.document.title = 'DH-Blog的个人纪录';
   }
 
-  if (to.path.startsWith('/admin')) {
-    isAuthenticated()
-  }
+  if (to.path.startsWith('/admin') || to.path.startsWith('/webdav')) {
+    await isAuthenticated(to)
+}
 
   next()
 })
