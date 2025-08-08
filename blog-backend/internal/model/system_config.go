@@ -49,6 +49,11 @@ const (
 	SettingKeyFileStoragePath = "file_storage_path" // 文件存储路径
 )
 
+// WebDAV配置键名常量
+const (
+	SettingKeyWebdavChunkSize = "webdav_chunk_size" // WebDAV分片大小(KB)
+)
+
 // SystemSetting 映射到数据库中的 system_settings 表
 type SystemSetting struct {
 	ID           uint   `gorm:"primaryKey"`
@@ -83,6 +88,8 @@ type SystemConfig struct {
 
 	// 存储配置
 	FileStoragePath string `json:"file_storage_path"` // 文件存储路径
+	// WebDAV配置
+	WebdavChunkSize int `json:"webdav_chunk_size"` // WebDAV分片大小(KB)
 	// ... 其他配置项
 }
 
@@ -117,6 +124,7 @@ type AIConfig struct {
 // StorageConfig 存储配置
 type StorageConfig struct {
 	FileStoragePath string `json:"file_storage_path"`
+	WebdavChunkSize int    `json:"webdav_chunk_size"`
 }
 
 // ToSettingsMap 将SystemConfig转换为map[string]string
@@ -139,6 +147,7 @@ func (c *SystemConfig) ToSettingsMap() map[string]string {
 		SettingKeyAiApiKey:           c.AiApiKey,
 		SettingKeyAiModel:            c.AiModel,
 		SettingKeyFileStoragePath:    c.FileStoragePath,
+		SettingKeyWebdavChunkSize:    strconv.Itoa(c.WebdavChunkSize),
 	}
 }
 
@@ -168,6 +177,11 @@ func FromSettingsMap(settings map[string]string) *SystemConfig {
 
 	// 整数字段
 	config.SmtpPort, _ = strconv.Atoi(settings[SettingKeySmtpPort])
+	if chunkSize, ok := settings[SettingKeyWebdavChunkSize]; ok && chunkSize != "" {
+		config.WebdavChunkSize, _ = strconv.Atoi(chunkSize)
+	} else {
+		config.WebdavChunkSize = 5120 // 默认5MB (5120KB)
+	}
 
 	return config
 }
@@ -210,6 +224,7 @@ func (c *SystemConfig) GetAIConfig() *AIConfig {
 func (c *SystemConfig) GetStorageConfig() *StorageConfig {
 	return &StorageConfig{
 		FileStoragePath: c.FileStoragePath,
+		WebdavChunkSize: c.WebdavChunkSize,
 	}
 }
 
@@ -244,6 +259,7 @@ func (c *SystemConfig) UpdateAIConfig(aiConfig *AIConfig) {
 // UpdateStorageConfig 更新存储配置
 func (c *SystemConfig) UpdateStorageConfig(storageConfig *StorageConfig) {
 	c.FileStoragePath = storageConfig.FileStoragePath
+	c.WebdavChunkSize = storageConfig.WebdavChunkSize
 }
 
 // BeforeSave 钩子，用于在保存前处理数据，例如加密敏感信息

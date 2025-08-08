@@ -20,13 +20,15 @@ import (
 type ChunkUploadHandler struct {
 	fileService service.IFileService
 	db          *gorm.DB
+	config      service.IConfigService
 }
 
 // NewChunkUploadHandler 创建分片上传处理器
-func NewChunkUploadHandler(fileService service.IFileService, db *gorm.DB) *ChunkUploadHandler {
+func NewChunkUploadHandler(fileService service.IFileService, db *gorm.DB, config service.IConfigService) *ChunkUploadHandler {
 	return &ChunkUploadHandler{
 		fileService: fileService,
 		db:          db,
+		config:      config,
 	}
 }
 
@@ -70,7 +72,13 @@ func (h *ChunkUploadHandler) InitChunkUpload(c *gin.Context) {
 	uploadId := req.UploadId
 
 	if chunkSize == 0 {
-		chunkSize = int64(5 * 1024 * 1024) // 默认5MB
+		// 从系统配置获取WebDAV分片大小
+		config, err := h.config.GetSystemConfig()
+		if err == nil && config.WebdavChunkSize > 0 {
+			chunkSize = int64(config.WebdavChunkSize * 1024) // KB转字节
+		} else {
+			chunkSize = int64(5 * 1024 * 1024) // 默认5MB
+		}
 	}
 
 	// 如果没有指定uploadId，则生成新的

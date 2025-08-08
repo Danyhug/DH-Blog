@@ -46,6 +46,20 @@
             <label class="form-label">用户名</label>
             <input type="text" v-model="username" class="form-input" />
           </div>
+          <div class="form-group">
+            <label class="form-label">分片大小 (KB)</label>
+            <input 
+              type="number" 
+              v-model="chunkSize" 
+              class="form-input"
+              min="64"
+              max="10240"
+              step="64"
+              @change="handleChunkSizeChange"
+              :disabled="loading"
+            />
+            <p class="form-help">建议范围: 64KB - 10MB (10240KB)</p>
+          </div>
           <div class="toggle-group">
             <span class="toggle-label">自动同步</span>
             <label class="toggle-switch">
@@ -64,8 +78,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { XIcon, ServerIcon } from '../utils/icons'
+import { getSystemConfig, updateSystemConfig } from '@/api/system'
 
 // 发出事件
 const emit = defineEmits(['close'])
@@ -74,6 +89,34 @@ const emit = defineEmits(['close'])
 const serverUrl = ref('https://webdav.example.com/remote.php/dav/files/')
 const username = ref('john.doe')
 const autoSync = ref(true)
+const chunkSize = ref(5120) // 默认5MB = 5120KB
+const loading = ref(false)
+
+// 加载配置
+async function loadConfig() {
+  try {
+    const config = await getSystemConfig()
+    chunkSize.value = config.webdav_chunk_size || 5120
+  } catch (error) {
+    console.error('加载配置失败:', error)
+  }
+}
+
+// 保存配置
+async function saveConfig() {
+  loading.value = true
+  try {
+    await updateSystemConfig({
+      webdav_chunk_size: chunkSize.value
+    })
+    alert('配置已保存')
+  } catch (error) {
+    console.error('保存配置失败:', error)
+    alert('保存配置失败')
+  } finally {
+    loading.value = false
+  }
+}
 
 // 方法
 function reconnect() {
@@ -81,6 +124,21 @@ function reconnect() {
   alert('正在重新连接到WebDAV服务器...')
   // 在实际应用中，这里应该实现与WebDAV服务器的连接逻辑
 }
+
+// 监听分片大小变化
+async function handleChunkSizeChange() {
+  if (chunkSize.value < 64) {
+    chunkSize.value = 64
+  } else if (chunkSize.value > 10240) {
+    chunkSize.value = 10240
+  }
+  await saveConfig()
+}
+
+// 初始化
+onMounted(() => {
+  loadConfig()
+})
 </script>
 
 <style scoped>
@@ -215,8 +273,19 @@ function reconnect() {
   cursor: not-allowed;
 }
 
+.form-input:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+}
+
 .form-input.mono {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.form-help {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 0.25rem 0 0 0;
 }
 
 .storage-info {

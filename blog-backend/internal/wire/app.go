@@ -63,6 +63,8 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	ipService := service.NewIPService(logRepo)
 	// 添加文件服务
 	fileService := service.NewFileService(fileRepo, systemSettingRepo)
+	// 初始化配置服务
+	configService := service.NewConfigService(systemSettingRepo)
 
 	// 初始化任务管理器
 	taskManager := task.NewTaskManager(db, aiService, tagRepo)
@@ -84,7 +86,7 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	fileHandler := handler.NewFileHandler(fileService)
 	// 添加系统设置处理器
 	systemSettingHandler := handler.NewSystemSettingHandler(systemSettingRepo, db)
-	chunkUploadHandler := handler.NewChunkUploadHandler(fileHandler.GetFileService(), db)
+	chunkUploadHandler := handler.NewChunkUploadHandler(fileHandler.GetFileService(), db, configService)
 
 	return router.Init(
 		articleHandler,

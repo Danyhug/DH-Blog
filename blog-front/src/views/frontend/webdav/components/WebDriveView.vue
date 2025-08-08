@@ -894,7 +894,17 @@ async function handleUploadFiles(files: File[]) {
 
 // 处理大文件分片上传
 async function uploadLargeFile(file: File, fileIndex: number) {
-  const chunkSize = 5 * 1024 * 1024; // 5MB分片大小
+  // 从系统配置获取分片大小（KB转字节）
+  let chunkSize = 5 * 1024 * 1024; // 默认5MB
+  try {
+    const config = await getSystemConfig();
+    if (config && config.webdav_chunk_size) {
+      chunkSize = parseInt(config.webdav_chunk_size) * 1024; // KB转字节
+    }
+  } catch (error) {
+    console.warn('获取分片大小配置失败，使用默认值:', error);
+  }
+  
   const totalChunks = Math.ceil(file.size / chunkSize);
   
   try {

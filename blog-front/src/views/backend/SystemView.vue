@@ -248,6 +248,30 @@
                                 注意：更改存储路径会清空文件表，所有文件记录将被删除并重新扫描！
                             </div>
                         </el-form-item>
+                        
+                        <el-form-item label="WebDAV分片大小">
+                            <div class="config-item-container">
+                                <el-input-number 
+                                    v-model="storageConfig.webdav_chunk_size" 
+                                    :min="1024" 
+                                    :max="102400"
+                                    :step="1024"
+                                    controls-position="both"
+                                    style="width: 120px"
+                                    size="large"
+                                ></el-input-number>
+                                <span class="unit-text">KB</span>
+                                <span class="size-hint">({{ storageConfig.webdav_chunk_size ? (Math.round(storageConfig.webdav_chunk_size / 1024 * 100) / 100) : '5.00' }} MB)</span>
+                            </div>
+                            <div class="info-text enhanced">
+                                <el-icon><InfoFilled /></el-icon>
+                                <div class="info-content">
+                                    <p><strong>推荐范围：</strong>5MB - 10MB (5120KB - 10240KB)</p>
+                                    <p><strong>大文件建议：</strong>较大的分片可以提高大文件上传效率，减少请求次数</p>
+                                    <p><strong>小文件建议：</strong>较小的分片适合小文件上传，避免资源浪费</p>
+                                </div>
+                            </div>
+                        </el-form-item>
                     </el-form>
                     
                     <!-- 目录选择对话框 -->
@@ -482,7 +506,7 @@ const config = ref<SystemConfig>({});
 const blogConfig = ref<BlogConfig>({});
 const emailConfig = ref<EmailConfig>({});
 const aiConfig = ref<AIConfig>({});
-const storageConfig = ref<StorageConfig>({});
+const storageConfig = ref<StorageConfig>({ webdav_chunk_size: 5120 }); // 默认5MB
 const isEditingPrompt = ref(false);
 const systemSettings = ref<any[]>([]);
 
@@ -694,7 +718,10 @@ const loadAIConfig = async () => {
 const loadStorageConfig = async () => {
     try {
         const res = await getStorageConfig();
-        storageConfig.value = res;
+        storageConfig.value = {
+            ...res,
+            webdav_chunk_size: res.webdav_chunk_size || 5120
+        };
     } catch (error) {
         ElMessage.error('加载存储配置失败');
     }
@@ -765,7 +792,8 @@ onMounted(async () => {
     };
     
     storageConfig.value = {
-        file_storage_path: res.file_storage_path
+        file_storage_path: res.file_storage_path,
+        webdav_chunk_size: res.webdav_chunk_size || 5120
     };
     
     // 根据当前选项卡加载对应配置
@@ -980,6 +1008,51 @@ onMounted(async () => {
     i {
         margin-right: 4px;
         font-size: 14px;
+    }
+}
+
+.config-item-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    
+    .unit-text {
+        color: #606266;
+        font-weight: 500;
+        font-size: 14px;
+    }
+    
+    .size-hint {
+        color: #909399;
+        font-size: 13px;
+        background-color: #f5f7fa;
+        padding: 4px 8px;
+        border-radius: 4px;
+    }
+}
+
+.info-text.enhanced {
+    background-color: #f5f7fa;
+    border: 1px solid #e4e7ed;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-top: 8px;
+    
+    .info-content {
+        margin-left: 8px;
+        
+        p {
+            margin: 4px 0;
+            line-height: 1.5;
+            
+            &:first-child {
+                margin-top: 0;
+            }
+            
+            &:last-child {
+                margin-bottom: 0;
+            }
+        }
     }
 }
 

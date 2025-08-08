@@ -26,6 +26,7 @@ export interface SystemConfig {
     
     // 存储配置
     file_storage_path?: string; // 文件存储路径
+    webdav_chunk_size?: number; // WebDAV分片大小(KB)
 }
 
 // 博客基本配置
@@ -59,4 +60,5 @@ export interface AIConfig {
 // 存储配置
 export interface StorageConfig {
     file_storage_path?: string;
+    webdav_chunk_size?: number; // WebDAV分片大小(KB)
 }
