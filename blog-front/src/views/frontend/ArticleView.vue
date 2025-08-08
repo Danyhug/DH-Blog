@@ -92,7 +92,7 @@ export default {
         created: this.created,
         wordNum: article.wordNum || 0,
         timConSum: article.wordNum ? (article.wordNum / 400 + 0.5).toFixed(0) : '0',
-        thumbnailUrl: getArticleBg(article.thumbnailUrl),
+        thumbnailUrl: getArticleBg(article.thumbnailUrl, article.id),
         tags: article.tags
       }
     }

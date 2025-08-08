@@ -3,7 +3,7 @@
     <router-link :to="'./article/' + article.id">
       <div class="cover">
         <div class="left">
-          <img :src="getArticleBg(article.thumbnailUrl)" :alt="article.title" loading="lazy">
+          <img :src="getArticleBg(article.thumbnailUrl, article.id)" :alt="article.title" loading="lazy">
         </div>
         <div class="right">
           <div class="top">

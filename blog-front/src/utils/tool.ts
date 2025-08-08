@@ -1,15 +1,36 @@
 import { SERVER_URL, OSS_URL } from "@/types/Constant";
 
-export const getArticleBg = (url: string = ""): string => {
+export const getArticleBg = (url: string = "", articleId?: string | number): string => {
   if (!url || url.length === 0) {
-    // 随机图片
-    return `${SERVER_URL}/upload/image/random?${Math.random()}`;
+    // 使用CDN随机图片，根据文章ID生成稳定图片
+    const providers = [
+      `https://picsum.photos/seed/${articleId || 'default'}/400/250`,
+    ];
+    
+    // 根据文章ID选择图片源，保证同一文章始终显示相同图片
+    if (articleId) {
+      const hash = simpleHash(String(articleId));
+      return providers[hash % providers.length];
+    }
+    
+    return providers[0];
   } else if (url.includes("defaultArticleImg/")) {
     return `${OSS_URL}/${url}`;
   }
   // 拼接url
   return `${SERVER_URL}/${url}`;
 };
+
+// 简单的哈希函数，用于生成稳定但随机的图片
+function simpleHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // 转换为32位整数
+  }
+  return Math.abs(hash);
+}
 
 export const plusDate = (date: Date, add: number): Date => {
   const result = new Date(date);
