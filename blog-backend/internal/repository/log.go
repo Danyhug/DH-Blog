@@ -35,6 +35,15 @@ func (r *LogRepository) SaveAccessLog(log *model.AccessLog) error {
 	return r.db.Create(log).Error
 }
 
+// SaveAccessLogAsync 异步保存访问日志（不阻塞主流程）
+func (r *LogRepository) SaveAccessLogAsync(log *model.AccessLog) {
+	go func() {
+		if err := r.SaveAccessLog(log); err != nil {
+			logrus.Errorf("异步保存访问日志失败: %v", err)
+		}
+	}()
+}
+
 // GetVisitLogs 获取访问日志（带分页）
 func (r *LogRepository) GetVisitLogs(page, pageSize int) ([]model.AccessLog, int64, error) {
 	var logs []model.AccessLog

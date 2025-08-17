@@ -8,9 +8,48 @@
       </template>
     </el-table-column>
 
-    <el-table-column prop="tags" label="标签" width="120">
+    <el-table-column prop="tags" label="标签" min-width="120">
       <template #default="scope">
-        <el-tag type="primary" v-for="tag in scope.row.tags" effect="plain" round>{{ tag.name }}</el-tag>
+        <div style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
+          <template v-if="scope.row.tags && scope.row.tags.length > 0">
+            <el-tooltip 
+              v-if="scope.row.tags.length > 3" 
+              placement="top" 
+              :content="scope.row.tags.map(t => t.name).join(', ')"
+            >
+              <div>
+                <el-tag 
+                  v-for="(tag, index) in scope.row.tags.slice(0, 3)" 
+                  :key="tag.id"
+                  :type="tagColors[index % tagColors.length]" 
+                  effect="plain" 
+                  size="small"
+                  style="margin: 2px;"
+                >
+                  {{ tag.name }}
+                </el-tag>
+                <el-tag type="info" effect="plain" size="small" style="margin: 2px;">
+                  +{{ scope.row.tags.length - 3 }}
+                </el-tag>
+              </div>
+            </el-tooltip>
+            <template v-else>
+              <el-tag 
+                v-for="(tag, index) in scope.row.tags" 
+                :key="tag.id"
+                :type="tagColors[index % tagColors.length]" 
+                effect="plain" 
+                size="small"
+                style="margin: 2px;"
+              >
+                {{ tag.name }}
+              </el-tag>
+            </template>
+          </template>
+          <template v-else>
+            <span style="color: #909399; font-size: 12px;">无标签</span>
+          </template>
+        </div>
       </template>
     </el-table-column>
     <el-table-column prop="views" label="浏览数" />
@@ -75,4 +114,7 @@ const generateTags = async (id: number) => {
 
 // 定义emit以便通知父组件刷新
 const emit = defineEmits(['refresh'])
+
+// 标签颜色数组
+const tagColors = ['primary', 'success', 'warning', 'danger', 'info']
 </script>

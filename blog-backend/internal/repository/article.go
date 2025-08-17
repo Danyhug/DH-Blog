@@ -9,6 +9,7 @@ import (
 
 	"dh-blog/internal/dhcache"
 	"dh-blog/internal/model"
+
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -178,8 +179,8 @@ func (r *ArticleRepository) UpdateArticle(article *model.Article) error {
 
 		article.Tags = tags
 
-		// 更新文章与标签的关联
-		if err := tx.Model(article).Association("Tags").Replace(tags); err != nil {
+		// 优化标签关联更新：只处理变更的标签
+		if err := r.updateArticleTagsOptimized(tx, article, tags); err != nil {
 			return fmt.Errorf("更新文章标签关联失败: %w", err)
 		}
 
@@ -246,7 +247,7 @@ func (r *ArticleRepository) FindByTagName(ctx context.Context, tagName string) (
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 转换为指针切片
 	result := make([]*model.Article, len(articles))
 	for i := range articles {
@@ -264,7 +265,7 @@ func (r *ArticleRepository) CountArticlesByTagName(ctx context.Context, tagName 
 		Joins("JOIN tags t ON at.tag_id = t.id").
 		Where("t.name = ? AND a.deleted_at IS NULL", tagName).
 		Count(&count).Error
-	
+
 	return count, err
 }
 
@@ -276,7 +277,7 @@ func (r *ArticleRepository) CountArticlesByCategoryName(ctx context.Context, cat
 		Joins("JOIN categories c ON a.category_id = c.id").
 		Where("c.name = ? AND a.deleted_at IS NULL", categoryName).
 		Count(&count).Error
-	
+
 	return count, err
 }
 
@@ -317,13 +318,74 @@ func (r *ArticleRepository) FindByCategoryName(ctx context.Context, categoryName
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 转换为指针切片
 	result := make([]*model.Article, len(articles))
 	for i := range articles {
 		result[i] = &articles[i]
 	}
 	return result, nil
+}
+
+// updateArticleTagsOptimized 优化标签关联更新，只处理变更的标签
+func (r *ArticleRepository) updateArticleTagsOptimized(tx *gorm.DB, article *model.Article, newTags []*model.Tag) error {
+	// 获取当前文章的标签
+	var currentTags []model.Tag
+	if err := tx.Model(article).Association("Tags").Find(&currentTags); err != nil {
+		return fmt.Errorf("获取当前标签失败: %w", err)
+	}
+
+	// 构建标签映射，便于快速查找
+	currentTagMap := make(map[int]bool)
+	for _, tag := range currentTags {
+		currentTagMap[tag.ID] = true
+	}
+
+	newTagMap := make(map[int]bool)
+	for _, tag := range newTags {
+		if tag.ID > 0 { // 只处理已存在的标签
+			newTagMap[tag.ID] = true
+		}
+	}
+
+	// 找出需要删除的标签（在当前标签中但不在新标签中）
+	var tagsToDelete []int
+	for _, tag := range currentTags {
+		if !newTagMap[tag.ID] {
+			tagsToDelete = append(tagsToDelete, tag.ID)
+		}
+	}
+
+	// 找出需要添加的标签（在新标签中但不在当前标签中）
+	var tagsToAdd []int
+	for _, tag := range newTags {
+		if tag.ID > 0 && !currentTagMap[tag.ID] {
+			tagsToAdd = append(tagsToAdd, tag.ID)
+		}
+	}
+
+	// 执行删除操作
+	if len(tagsToDelete) > 0 {
+		for _, tagID := range tagsToDelete {
+			if err := tx.Model(article).Association("Tags").Delete(&model.Tag{BaseModel: model.BaseModel{ID: tagID}}); err != nil {
+				// 记录错误但不中断流程
+				logrus.Warnf("删除标签关联失败: %d, 错误: %v", tagID, err)
+			}
+		}
+	}
+
+	// 执行添加操作
+	if len(tagsToAdd) > 0 {
+		var tagsToAddModels []*model.Tag
+		for _, tagID := range tagsToAdd {
+			tagsToAddModels = append(tagsToAddModels, &model.Tag{BaseModel: model.BaseModel{ID: tagID}})
+		}
+		if err := tx.Model(article).Association("Tags").Append(tagsToAddModels); err != nil {
+			return fmt.Errorf("添加标签关联失败: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // UpdateArticleViewCount 更新文章浏览次数

@@ -22,7 +22,7 @@ func (t *JSONTime) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON 实现了 json.Unmarshaler 接口。
-// 它从 "年-月-日 时:分:秒" 格式的字符串中解析时间。
+// 它支持多种时间格式的解析，包括ISO格式和传统格式。
 func (t *JSONTime) UnmarshalJSON(data []byte) error {
 	s := string(data)
 	// 移除引号
@@ -33,12 +33,24 @@ func (t *JSONTime) UnmarshalJSON(data []byte) error {
 		*t = JSONTime{Time: time.Time{}}
 		return nil
 	}
-	parsedTime, err := time.ParseInLocation("2006-01-02 15:04:05", s, time.Local)
-	if err != nil {
-		return err
+
+	// 尝试多种时间格式
+	formats := []string{
+		time.RFC3339,                          // ISO格式: 2006-01-02T15:04:05Z07:00
+		"2006-01-02T15:04:05.999999999Z07:00", // 带微秒的ISO格式
+		"2006-01-02 15:04:05",                 // 传统格式
+		"2006-01-02T15:04:05",                 // 中间带T的格式
+		time.RFC3339Nano,                      // 纳秒级ISO格式
 	}
-	*t = JSONTime{Time: parsedTime}
-	return nil
+
+	for _, format := range formats {
+		if parsedTime, err := time.Parse(format, s); err == nil {
+			*t = JSONTime{Time: parsedTime.Local()}
+			return nil
+		}
+	}
+
+	return fmt.Errorf("无法解析时间格式: %s", s)
 }
 
 // Value 实现了 driver.Valuer 接口。

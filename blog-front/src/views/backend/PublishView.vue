@@ -282,7 +282,7 @@ onMounted(() => {
 
     const getArticleById = () => {
       getArticleInfo(articleId as string).then((res: Article<Tag>) => {
-        const articleTemp = { ...res, tags: res.tags?.map(tag => tag.slug) || [] };
+        const articleTemp = { ...res, tags: res.tags?.map(tag => tag.name) || [] };
         Object.assign(article, articleTemp);
       });
     };

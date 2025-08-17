@@ -202,24 +202,24 @@ func (h *ArticleHandler) GetAllCategories(c *gin.Context) {
 // GetAllTaxonomies 获取所有标签和分类，格式为{name, url, type}
 func (h *ArticleHandler) GetAllTaxonomies(c *gin.Context) {
 	ctx := c.Request.Context()
-	
+
 	// 获取所有标签
 	tags, err := h.tagRepo.FindAll(ctx)
 	if err != nil {
 		h.Error(c, err)
 		return
 	}
-	
+
 	// 获取所有分类
 	categories, err := h.categoryRepo.FindAll(ctx)
 	if err != nil {
 		h.Error(c, err)
 		return
 	}
-	
+
 	// 构建响应数据
 	var result []map[string]interface{}
-	
+
 	// 添加标签数据
 	for _, tag := range tags {
 		count, _ := h.articleRepo.CountArticlesByTagName(ctx, tag.Name)
@@ -230,7 +230,7 @@ func (h *ArticleHandler) GetAllTaxonomies(c *gin.Context) {
 			"count": count,
 		})
 	}
-	
+
 	// 添加分类数据
 	for _, category := range categories {
 		count, _ := h.articleRepo.CountArticlesByCategoryName(ctx, category.Name)
@@ -241,7 +241,7 @@ func (h *ArticleHandler) GetAllTaxonomies(c *gin.Context) {
 			"count": count,
 		})
 	}
-	
+
 	h.SuccessWithData(c, result)
 }
 
@@ -249,17 +249,17 @@ func (h *ArticleHandler) GetAllTaxonomies(c *gin.Context) {
 func (h *ArticleHandler) GetArticlesByTaxonomy(c *gin.Context) {
 	name := c.Query("name")
 	typeParam := c.Query("type")
-	
+
 	if name == "" || typeParam == "" {
 		c.JSON(http.StatusBadRequest, response.Error("name和type参数不能为空"))
 		return
 	}
-	
+
 	var articles []*model.Article
 	var err error
-	
+
 	ctx := c.Request.Context()
-	
+
 	if typeParam == "tag" {
 		// 根据标签名获取文章
 		articles, err = h.articleRepo.FindByTagName(ctx, name)
@@ -270,25 +270,25 @@ func (h *ArticleHandler) GetArticlesByTaxonomy(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response.Error("type参数必须是tag或category"))
 		return
 	}
-	
+
 	if err != nil {
 		h.Error(c, err)
 		return
 	}
-	
+
 	// 构建简化响应，只包含必要字段
 	var result []map[string]interface{}
 	for _, article := range articles {
 		result = append(result, map[string]interface{}{
-			"id":       article.ID,
-			"title":    article.Title,
-			"views":    article.Views,
-			"wordNum":  article.WordNum,
+			"id":         article.ID,
+			"title":      article.Title,
+			"views":      article.Views,
+			"wordNum":    article.WordNum,
 			"createTime": article.CreatedAt,
 			"updateTime": article.UpdatedAt,
 		})
 	}
-	
+
 	h.SuccessWithData(c, result)
 }
 
@@ -298,6 +298,9 @@ func (h *ArticleHandler) CreateCategory(c *gin.Context) {
 		h.Error(c, err)
 		return
 	}
+
+	// 确保新增分类时不使用前端传来的ID，由数据库自动生成
+	category.ID = 0
 
 	// 先创建分类基本信息
 	if err := h.categoryRepo.Create(c.Request.Context(), &category); err != nil {
