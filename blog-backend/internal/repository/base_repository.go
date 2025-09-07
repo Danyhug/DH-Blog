@@ -96,7 +96,7 @@ func (r *GormRepository[T, K]) FindPage(ctx context.Context, page, pageSize int)
 	}
 
 	// 查询分页数据
-	if err := r.db.WithContext(ctx).Offset(offset).Limit(pageSize).Find(&entities).Error; err != nil {
+	if err := r.db.WithContext(ctx).Order("id DESC").Offset(offset).Limit(pageSize).Find(&entities).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询分页数据失败: %w", err)
 	}
 

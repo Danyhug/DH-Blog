@@ -51,7 +51,7 @@
                         <button class="modal-close-btn" @click="closeModal">×</button>
                         <h3 class="modal-title">{{ modalTitle }}</h3>
                         <ul class="article-list">
-                            <li v-for="(article, index) in modalArticles" :key="index">
+                            <li v-for="(article, index) in modalArticles" :key="index" @click="goToArticle(article)">
                                 <div>{{ article.title }}</div>
                                 <div class="article-info">
                                     <span><i class="fas fa-eye"></i> {{ article.views }} 阅读</span>
@@ -70,6 +70,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { getAllTaxonomies, getArticlesByTaxonomy } from '@/api/user';
+import { useRouter } from 'vue-router';
 
 // --- Reactive State Management ---
 const allData = ref([]);
@@ -77,6 +78,7 @@ const isLoading = ref(false);
 const isModalVisible = ref(false);
 const modalTitle = ref('');
 const modalArticles = ref([]);
+const router = useRouter();
 
 const categories = computed(() => allData.value.filter(item => item.type === 'category'));
 const tags = computed(() => allData.value.filter(item => item.type === 'tag'));
@@ -101,6 +103,7 @@ const openModal = async (item) => {
     try {
         const articles = await getArticlesByTaxonomy(item.name, item.type);
         modalArticles.value = articles.map(article => ({
+            id: article.id,
             title: article.title,
             views: article.views,
             wordNum: article.wordNum,
@@ -108,7 +111,7 @@ const openModal = async (item) => {
         }));
     } catch (error) {
         console.error('获取文章列表失败:', error);
-        modalArticles.value = [{ title: '加载文章失败，请稍后重试' }];
+        modalArticles.value = [{ id: 0, title: '加载文章失败，请稍后重试' }];
     }
     
     isModalVisible.value = true;
@@ -116,6 +119,14 @@ const openModal = async (item) => {
 
 const closeModal = () => {
     isModalVisible.value = false;
+};
+
+const goToArticle = (article) => {
+    if (article.id && article.id > 0) {
+        const url = router.resolve({ name: 'ArticleInfo', params: { id: article.id } }).href;
+        window.open(url, '_blank');
+        closeModal();
+    }
 };
 
 // --- Lifecycle Hook ---
