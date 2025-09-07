@@ -27,7 +27,7 @@ import { getArticleInfo } from '@/api/user';
 import { Article } from '@/types/Article.ts'
 import { Tag } from 'element-plus';
 import { useUserStore, useSystemStore } from '@/store';
-import { getArticleBg } from '@/utils/tool';
+import { getArticleBg, formatDate } from '@/utils/tool';
 import { watch } from 'vue';
 import router from '@/router';
 
@@ -81,8 +81,8 @@ export default {
       this.id = article.id || 0
       this.title = article.title || ''
       this.content = article.content || ''
-      this.created = article.createTime || ''
-      this.update = article.updateTime || ''
+      this.created = formatDate(article.createTime) || ''
+      this.update = formatDate(article.updateTime) || ''
       this.viewnum = article.views || 0
 
       // 更改pinia内容

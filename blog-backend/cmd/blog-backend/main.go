@@ -83,6 +83,9 @@ func main() {
 		Handler: router,
 	}
 
+	// 设置日志级别为 Debug
+	logrus.SetLevel(logrus.DebugLevel)
+
 	// 启动 HTTP 服务器（在新的 goroutine 中）
 	go func() {
 		logrus.Infof("HTTP服务器启动，监听地址: %s", server.Addr)

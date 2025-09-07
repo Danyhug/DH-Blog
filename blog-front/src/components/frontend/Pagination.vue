@@ -1,7 +1,7 @@
 <template>
   <!-- 分页组件 -->
   <el-pagination background layout="prev, pager, next" :current-page="currPage" :page-size="props.pageSize"
-    :page-count="props.total" @current-change="currChange($event)" style="margin-bottom: 32px;" />
+    :total="props.total" @current-change="currChange($event)" style="margin-bottom: 32px;" />
 </template>
 <script lang="ts" setup>
 import { defineProps, ref, defineEmits } from 'vue';

@@ -41,14 +41,12 @@ func FailWithCode(c *gin.Context, code int, msg string) {
 
 type PageResult struct {
 	Total int64       `json:"total"`
-	Curr  int64       `json:"curr"`
 	List  interface{} `json:"list"`
 }
 
 func Page(total, curr int64, list interface{}) PageResult {
 	return PageResult{
 		Total: total,
-		Curr:  curr,
 		List:  list,
 	}
 }

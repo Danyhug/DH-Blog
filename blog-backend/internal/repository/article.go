@@ -424,7 +424,7 @@ func (r *ArticleRepository) UpdateArticleViewCount(id int) {
 func (r *ArticleRepository) FindPage(ctx context.Context, page, pageSize int) ([]model.Article, int64, error) {
 	// 缓存键
 	cacheKey := fmt.Sprintf("%spage:%d:%d", PrefixArticleList, page, pageSize)
-	cacheCountKey := fmt.Sprintf("%scount", PrefixArticleList)
+	cacheCountKey := fmt.Sprintf("%scount:%d:%d", PrefixArticleList, page, pageSize)
 
 	// 尝试从缓存获取文章列表
 	var articles []model.Article

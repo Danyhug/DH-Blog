@@ -24,5 +24,6 @@
 - **使用时机**：需要了解新技术或验证实现方案时
 
 ## 注意事项
-- 后端：每次在文件进行更改时，必须进行编译测试，编译后端文件到`blog-deploy/backend` 中，每完成一个任务必须编译一次查看是否成功，所有任务完成后删除编译文件；编译成功后不要运行！
+- 后端：每次在文件进行更改时，必须进行编译测试，编译后端文件到`/Users/danyhug/GolandProjects/DH-Blog/blog-deploy/backend` 中，每完成一个任务必须编译一次查看是否成功，所有任务完成后删除编译文件；编译成功后不要运行！
+- 数据库在 `/Users/danyhug/GolandProjects/DH-Blog/blog-deploy/backend/data/dhblog.db`
 - 前端：更改了文件后进行`pnpm run dev`进行测试，编译成功则退出终端；除非我要求，否则不要改任何样式；`npm`命令统一改为使用`pnpm`

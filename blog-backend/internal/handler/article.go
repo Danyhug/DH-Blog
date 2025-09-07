@@ -448,13 +448,13 @@ func (h *ArticleHandler) GetArticleList(c *gin.Context) {
 		return
 	}
 
-	articles, total, err := h.articleRepo.FindPage(c.Request.Context(), pageReq.Page, pageReq.PageSize)
+	articles, total, err := h.articleRepo.FindPage(c.Request.Context(), pageReq.PageNum, pageReq.PageSize)
 	if err != nil {
 		h.Error(c, err)
 		return
 	}
 
-	h.SuccessWithPage(c, articles, total, pageReq.Page)
+	h.SuccessWithPage(c, articles, total, pageReq.PageNum)
 }
 
 func (h *ArticleHandler) GetOverview(c *gin.Context) {
@@ -535,11 +535,14 @@ func (h *ArticleHandler) bindJSON(c *gin.Context, obj interface{}) error {
 
 func (h *ArticleHandler) getPageRequest(c *gin.Context) (*model.PageRequest, error) {
 	var req model.PageRequest
-	if err := c.ShouldBindQuery(&req); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrPageParamBinding, err)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		// 如果JSON绑定失败，尝试查询参数
+		if err := c.ShouldBindQuery(&req); err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrPageParamBinding, err)
+		}
 	}
-	if req.Page == 0 {
-		req.Page = 1
+	if req.PageNum == 0 {
+		req.PageNum = 1
 	}
 	if req.PageSize == 0 {
 		req.PageSize = 10

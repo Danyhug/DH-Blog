@@ -1,7 +1,9 @@
 package model
 
 // Article 对应于数据库中的 `articles` 表
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type Article struct {
 	BaseModel    `gorm:"embedded"`
