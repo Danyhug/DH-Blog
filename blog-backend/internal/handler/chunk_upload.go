@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,6 +19,7 @@ import (
 	"dh-blog/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -548,7 +550,20 @@ func (h *ChunkUploadHandler) mergeChunksBuffered(tempDir string, totalChunks int
 
 // mergeChunksConcurrent 并发合并分片（适用于大文件）
 func (h *ChunkUploadHandler) mergeChunksConcurrent(tempDir string, totalChunks int, finalFile *os.File, buffer []byte, hasher hash.Hash) (int64, error) {
-	const workers = 4     // 并发工作线程数
+	// 动态获取CPU核数并设置工作线程数
+	cpuCores := runtime.NumCPU()
+	workers := cpuCores * 2 // 通常设置为CPU核数的1-2倍
+	
+	// 设置合理的上下限
+	if workers < 4 {
+		workers = 4 // 最少4个线程
+	}
+	if workers > 16 {
+		workers = 16 // 最多16个线程，避免过度并发
+	}
+	
+	logrus.Infof("检测到CPU核数: %d, 设置并发工作线程数: %d", cpuCores, workers)
+	
 	const batchSize = 100 // 每批处理的分片数
 
 	var totalSize int64
