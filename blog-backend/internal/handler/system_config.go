@@ -294,6 +294,7 @@ func (h *SystemConfigHandler) UpdateStorageConfig(c *gin.Context) {
 	// 转换为配置映射
 	settings := map[string]string{
 		"file_storage_path": storageConfig.FileStoragePath,
+		"webdav_chunk_size": strconv.Itoa(storageConfig.WebdavChunkSize),
 	}
 
 	// 使用带类型的批量更新

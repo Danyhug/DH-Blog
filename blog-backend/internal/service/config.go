@@ -54,5 +54,12 @@ func (s *configService) GetStorageConfig() (*model.StorageConfig, error) {
 // UpdateSystemConfig 更新系统配置
 func (s *configService) UpdateSystemConfig(config *model.SystemConfig) error {
 	settingsMap := config.ToSettingsMap()
-	return s.settingRepo.BatchUpdateSettings(settingsMap)
+	err := s.settingRepo.BatchUpdateSettings(settingsMap)
+	if err != nil {
+		return err
+	}
+	
+	// 清除缓存，确保配置更新后立即生效
+	s.settingRepo.ClearCache()
+	return nil
 }

@@ -8,16 +8,16 @@ export interface SystemConfig {
 // 获取系统配置
 export async function getSystemConfig(): Promise<SystemConfig> {
   const response = await request({
-    url: '/api/system/config',
+    url: '/admin/config',
     method: 'get'
   })
-  return response.data
+  return response
 }
 
 // 更新系统配置
 export async function updateSystemConfig(data: Partial<SystemConfig>) {
   return request({
-    url: '/api/system/config',
+    url: '/admin/config',
     method: 'put',
     data
   })

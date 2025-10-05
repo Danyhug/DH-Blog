@@ -82,7 +82,7 @@ func (h *ChunkUploadHandler) InitChunkUpload(c *gin.Context) {
 		if err == nil && config.WebdavChunkSize > 0 {
 			chunkSize = int64(config.WebdavChunkSize * 1024) // KB转字节
 		} else {
-			chunkSize = int64(5 * 1024 * 1024) // 默认5MB
+			chunkSize = int64(5120 * 1024) // 默认5120KB（5MB）
 		}
 	}
 

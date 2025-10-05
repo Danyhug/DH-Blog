@@ -231,6 +231,7 @@ import {
   FilePresentationIcon,
 } from '../utils/icons'
 import { listFiles, createFolder, uploadFile, getDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, getUploadedChunks, FileInfo } from '@/api/file'
+import { getSystemConfig } from '@/api/system'
 
 // 状态变量
 const uploadProgress = ref(0)
@@ -895,11 +896,15 @@ async function handleUploadFiles(files: File[]) {
 // 处理大文件分片上传
 async function uploadLargeFile(file: File, fileIndex: number) {
   // 从系统配置获取分片大小（KB转字节）
-  let chunkSize = 5 * 1024 * 1024; // 默认5MB
+  let chunkSize = 5120 * 1024; // 默认5120KB（5MB）
   try {
     const config = await getSystemConfig();
     if (config && config.webdav_chunk_size) {
-      chunkSize = parseInt(config.webdav_chunk_size) * 1024; // KB转字节
+      // 配置中的webdav_chunk_size单位是KB，需要转换为字节
+      chunkSize = config.webdav_chunk_size * 1024; // KB转字节
+      console.log('使用配置的分片大小:', config.webdav_chunk_size, 'KB =', chunkSize, '字节');
+    } else {
+      console.log('未找到分片大小配置，使用默认值5MB');
     }
   } catch (error) {
     console.warn('获取分片大小配置失败，使用默认值:', error);
