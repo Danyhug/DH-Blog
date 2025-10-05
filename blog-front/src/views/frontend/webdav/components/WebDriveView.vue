@@ -759,7 +759,7 @@ function downloadSelectedFiles() {
   }
 
   const selectedFileItems = filteredFiles.value.filter(file => 
-    file.id && selectedFiles.value.has(file.id) && file.type === 'file'
+    file.id && selectedFiles.value.has(file.id) && file.type !== 'folder'
   );
 
   if (selectedFileItems.length === 0) {
@@ -769,7 +769,7 @@ function downloadSelectedFiles() {
 
   // 逐个下载所有选中的文件
   selectedFileItems.forEach(file => {
-    if (file.type === 'file' && file.id) {
+    if (file.id) {
       const downloadUrl = getDownloadUrl(file.id);
       window.open(downloadUrl, '_blank');
     }
