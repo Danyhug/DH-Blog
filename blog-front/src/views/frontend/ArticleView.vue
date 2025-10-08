@@ -68,7 +68,8 @@ export default {
     getArticleInfo(this.$route.params.id as string).then((res: Article<Tag>) => {
       this.changeArticleInfo(res)
     }).catch(err => {
-      if (err.message.indexOf('输入密码') != -1) {
+      const message = err?.response?.data?.msg || err?.message || ''
+      if (message.indexOf('输入密码') !== -1) {
         router.replace({ name: 'Lock', query: { id: this.$route.params.id } })
       }
     })

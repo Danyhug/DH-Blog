@@ -347,6 +347,11 @@ func (h *ArticleHandler) GetArticleDetail(c *gin.Context) {
 		return
 	}
 
+	if article.IsLocked {
+		h.Error(c, errors.New("加密文章，请输入密码后访问"))
+		return
+	}
+
 	// 异步增加文章浏览次数
 	go h.articleRepo.UpdateArticleViewCount(id)
 
@@ -551,22 +556,7 @@ func (h *ArticleHandler) getPageRequest(c *gin.Context) (*model.PageRequest, err
 }
 
 func (h *ArticleHandler) Error(c *gin.Context, err error) {
-	// 根据错误类型设置不同的HTTP状态码
-	statusCode := http.StatusInternalServerError
-
-	// 检查特定的错误类型
-	switch {
-	case errors.Is(err, ErrInvalidID) ||
-		errors.Is(err, ErrParamBinding) ||
-		errors.Is(err, ErrPageParamBinding):
-		statusCode = http.StatusBadRequest
-	case errors.Is(err, ErrPasswordIncorrect):
-		statusCode = http.StatusForbidden
-	default:
-		statusCode = http.StatusInternalServerError
-	}
-
-	c.JSON(statusCode, response.Error(err.Error()))
+	c.JSON(http.StatusOK, response.Error(err.Error()))
 }
 
 func (h *ArticleHandler) Success(c *gin.Context) {
