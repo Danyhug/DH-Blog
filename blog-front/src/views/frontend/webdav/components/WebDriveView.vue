@@ -1009,7 +1009,18 @@ async function uploadLargeFile(file: File, fileIndex: number) {
     const maxRetries = (uploadModalRef.value as any)?.maxRetries ?? 0;
     
     // 分批处理，避免内存溢出
-    const BATCH_SIZE = 10; // 每批处理10个分片
+    // 优化批次大小：默认5个分片，根据文件大小智能调整
+    const getOptimalBatchSize = (fileSize: number) => {
+      if (fileSize <= 10 * 1024 * 1024) { // 小文件(<=10MB)：5-8个分片
+        return Math.min(8, Math.max(5, Math.ceil(fileSize / (512 * 1024))));
+      } else if (fileSize <= 100 * 1024 * 1024) { // 中等文件(10-100MB)：3-5个分片
+        return Math.min(5, Math.max(3, Math.ceil(fileSize / (2 * 1024 * 1024))));
+      } else { // 大文件(>100MB)：1-3个分片
+        return Math.min(3, Math.max(1, Math.ceil(fileSize / (10 * 1024 * 1024))));
+      }
+    };
+    
+    const BATCH_SIZE = getOptimalBatchSize(file.size); // 智能批次大小
     const CHUNK_DELAY = 10; // 分片间延迟10ms，减少CPU占用
     
     // 带重试的分片上传函数
@@ -1081,9 +1092,10 @@ async function uploadLargeFile(file: File, fileIndex: number) {
         await new Promise(resolve => setTimeout(resolve, 1));
       }));
       
-      // 批次间延迟，给浏览器喘息时间
+      // 智能批次间延迟：根据批次大小和文件大小动态调整
       if (batchEnd < pendingChunks.length) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        const dynamicDelay = Math.max(30, Math.min(100, BATCH_SIZE * 10)); // 30-100ms动态延迟
+        await new Promise(resolve => setTimeout(resolve, dynamicDelay));
       }
     }
     

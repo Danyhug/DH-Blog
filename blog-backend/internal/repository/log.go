@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"dh-blog/internal/dhcache"
@@ -17,23 +18,52 @@ const (
 	IPBlacklistCacheExpire    = time.Minute * 10 // 10分钟过期
 )
 
+const defaultAccessLogBatchSize = 100
+
 // LogRepository 定义日志仓库
 type LogRepository struct {
-	db    *gorm.DB
-	cache dhcache.Cache
+	db              *gorm.DB
+	cache           dhcache.Cache
+	mu              sync.Mutex
+	accessLogBuffer []model.AccessLog
+	batchSize       int
 }
 
 // NewLogRepository 创建新的日志仓库
 func NewLogRepository(db *gorm.DB, cache dhcache.Cache) *LogRepository {
 	return &LogRepository{
-		db:    db,
-		cache: cache,
+		db:        db,
+		cache:     cache,
+		batchSize: defaultAccessLogBatchSize,
 	}
 }
 
 // SaveAccessLog 保存访问日志
 func (r *LogRepository) SaveAccessLog(log *model.AccessLog) error {
-	return r.db.Create(log).Error
+	if log == nil {
+		return nil
+	}
+
+	r.mu.Lock()
+	r.accessLogBuffer = append(r.accessLogBuffer, *log)
+	if len(r.accessLogBuffer) < r.batchSize {
+		r.mu.Unlock()
+		return nil
+	}
+
+	batch := make([]model.AccessLog, len(r.accessLogBuffer))
+	copy(batch, r.accessLogBuffer)
+	r.accessLogBuffer = r.accessLogBuffer[:0]
+	r.mu.Unlock()
+
+	if err := r.flushAccessLogs(batch); err != nil {
+		r.mu.Lock()
+		r.accessLogBuffer = append(batch, r.accessLogBuffer...)
+		r.mu.Unlock()
+		return err
+	}
+
+	return nil
 }
 
 // SaveAccessLogAsync 异步保存访问日志（不阻塞主流程）
@@ -43,6 +73,20 @@ func (r *LogRepository) SaveAccessLogAsync(log *model.AccessLog) {
 			logrus.Errorf("异步保存访问日志失败: %v", err)
 		}
 	}()
+}
+
+func (r *LogRepository) flushAccessLogs(logs []model.AccessLog) error {
+	if len(logs) == 0 {
+		return nil
+	}
+
+	if err := r.db.Create(&logs).Error; err != nil {
+		logrus.Errorf("批量保存访问日志失败: %v", err)
+		return err
+	}
+
+	logrus.Debugf("批量保存访问日志成功，数量: %d", len(logs))
+	return nil
 }
 
 // GetVisitLogs 获取访问日志（带分页）
