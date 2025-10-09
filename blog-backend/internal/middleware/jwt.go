@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -8,45 +9,70 @@ import (
 	"dh-blog/internal/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
+// JWTMiddleware JWT中间件，用于拦截越权请求
 func JWTMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 尝试从请求头获取token
-		authHeader := c.Request.Header.Get("Authorization")
-		var tokenString string
-
-		if authHeader != "" {
-			// 检查是否已经包含Bearer前缀
-			if strings.HasPrefix(authHeader, "Bearer ") {
-				tokenString = authHeader[7:] // 去掉"Bearer "前缀
-			} else {
-				tokenString = authHeader // 直接使用
-			}
-		}
-
-		// 如果请求头中没有token，尝试从URL参数获取
-		if tokenString == "" {
-			tokenString = c.Query("token")
-		}
+		tokenString := extractToken(c)
 
 		// 如果没有找到token，返回未授权错误
 		if tokenString == "" {
+			c.Set("isLogin", false)
 			response.FailWithCode(c, http.StatusUnauthorized, "请求未携带token，无权限访问")
 			c.Abort()
 			return
 		}
 
-		claims, err := utils.ParseToken(tokenString)
+		token, err := utils.ParseToken(tokenString)
 		if err != nil {
+			c.Set("isLogin", false)
 			response.FailWithCode(c, http.StatusUnauthorized, "无效的Token")
 			c.Abort()
 			return
 		}
 
-		// 将当前请求的claims信息保存到请求的上下文c上
-		c.Set("claims", claims)
-		c.Set("userID", uint64(1))
+		setJWTContext(c, token)
 		c.Next()
+	}
+}
+
+// ValidLoginMiddleware 验证登录中间件，用于检查是否已经登录
+func ValidLoginMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenString := extractToken(c)
+
+		token, err := utils.ParseToken(tokenString)
+		if err == nil {
+			// 验证成功
+			fmt.Println("验证成功")
+			setJWTContext(c, token)
+		} else {
+			c.Set("isLogin", false)
+		}
+
+		c.Next()
+	}
+}
+
+func extractToken(c *gin.Context) string {
+	authHeader := c.Request.Header.Get("Authorization")
+	if authHeader != "" {
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			return authHeader[7:]
+		}
+		return authHeader
+	}
+
+	return c.Query("token")
+}
+
+func setJWTContext(c *gin.Context, token *jwt.Token) {
+	c.Set("isLogin", true)
+	c.Set("jwtToken", token)
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		c.Set("jwtClaims", claims)
 	}
 }

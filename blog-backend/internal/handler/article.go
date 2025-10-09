@@ -347,7 +347,14 @@ func (h *ArticleHandler) GetArticleDetail(c *gin.Context) {
 		return
 	}
 
-	if article.IsLocked {
+	v, exists := c.Get("isLogin")
+	isLogin := false
+	if exists {
+		if loggedIn, ok := v.(bool); ok {
+			isLogin = loggedIn
+		}
+	}
+	if article.IsLocked && !isLogin {
 		h.Error(c, errors.New("加密文章，请输入密码后访问"))
 		return
 	}

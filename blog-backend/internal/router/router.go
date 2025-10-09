@@ -45,7 +45,7 @@ func Init(
 	}))
 
 	// 添加 IP 中间件
-	router.Use(middleware.IPMiddleware(ipService))
+	router.Use(middleware.IPMiddleware(ipService), middleware.ValidLoginMiddleware())
 
 	// 公共 API 路由组
 	publicAPI := router.Group("/api")
