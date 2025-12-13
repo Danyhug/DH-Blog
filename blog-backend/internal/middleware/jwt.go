@@ -3,6 +3,7 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"dh-blog/internal/response"
@@ -74,5 +75,20 @@ func setJWTContext(c *gin.Context, token *jwt.Token) {
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
 		c.Set("jwtClaims", claims)
+
+		if rawID, exists := claims["userID"]; exists {
+			switch v := rawID.(type) {
+			case float64:
+				c.Set("userID", uint64(v))
+			case string:
+				if parsed, err := strconv.ParseUint(v, 10, 64); err == nil {
+					c.Set("userID", parsed)
+				}
+			}
+		}
+	}
+
+	if _, exists := c.Get("userID"); !exists {
+		c.Set("userID", uint64(1))
 	}
 }

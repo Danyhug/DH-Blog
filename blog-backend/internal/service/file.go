@@ -29,7 +29,6 @@ var (
 	// 注入了default.go和task.go
 	// filePathSettingKey = "file_storage_path" // 文件存储路径在数据库中的键名
 	filePathSettingKey = model.SettingKeyFileStoragePath // 文件存储路径在数据库中的键名
-	
 	// 全局文件服务实例
 	globalFileService IFileService
 	fileServiceOnce   sync.Once
@@ -151,71 +150,129 @@ func (s *fileService) loadStoragePathFromDB() {
 }
 
 // 生成存储路径
-func (s *fileService) getStoragePath(userID uint64, parentID string, fileName string) string {
-	// 使用用户ID和父目录创建唯一的存储路径
-	userPath := fmt.Sprintf("user_%d", userID)
-	relativePath := filepath.Join(userPath, parentID)
+func (s *fileService) getStoragePath(ctx context.Context, parentID string, name string) (string, string, error) {
+	normalizedParentID := normalizeParentID(parentID)
 
-	// 创建完整路径
-	fullPath := filepath.Join(s.filePath, relativePath)
-
-	// 确保目录存在
-	_ = os.MkdirAll(fullPath, os.ModePerm)
-
-	// 如果提供了文件名，则返回包含文件名的完整路径
-	if fileName != "" {
-		return filepath.Join(fullPath, fileName)
+	parentPath, err := s.resolveParentStoragePath(ctx, normalizedParentID)
+	if err != nil {
+		return "", "", err
 	}
 
-	return relativePath
+	relative := parentPath
+	if name != "" {
+		relative = filepath.Join(parentPath, name)
+	}
+
+	relative = filepath.Clean(relative)
+	if relative == "." {
+		relative = ""
+	}
+
+	if strings.HasPrefix(relative, "..") || filepath.IsAbs(relative) {
+		return "", "", fmt.Errorf("检测到非法存储路径")
+	}
+
+	fullPath := filepath.Join(s.filePath, relative)
+	return relative, fullPath, nil
+}
+
+func (s *fileService) resolveParentStoragePath(ctx context.Context, parentID string) (string, error) {
+	if parentID == "" {
+		return "", nil
+	}
+
+	id, err := parseFileID(parentID)
+	if err != nil {
+		return "", fmt.Errorf("无效的父目录ID")
+	}
+
+	parent, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		logrus.Errorf("获取父目录失败: %v", err)
+		return "", fmt.Errorf("父目录不存在")
+	}
+
+	if !parent.IsFolder {
+		return "", fmt.Errorf("父目录不是文件夹")
+	}
+
+	return parent.StoragePath, nil
+}
+
+func normalizeParentID(parentID string) string {
+	trimmed := strings.TrimSpace(parentID)
+	if trimmed == "." {
+		return ""
+	}
+	return trimmed
 }
 
 func (s *fileService) ListFiles(ctx context.Context, userID uint64, parentID string) ([]*model.File, error) {
 	// 先刷新存储路径设置
 	s.loadStoragePathFromDB()
 
+	normalizedParentID := normalizeParentID(parentID)
+
+	if _, err := s.resolveParentStoragePath(ctx, normalizedParentID); err != nil {
+		return nil, err
+	}
+
 	// 使用存储库查询数据库
-	files, err := s.repo.ListByParentID(ctx, userID, parentID)
+	files, err := s.repo.ListByParentID(ctx, userID, normalizedParentID)
 	if err != nil {
 		logrus.Errorf("列出文件失败: %v", err)
 		return nil, fmt.Errorf("列出文件失败")
 	}
 
-	return files, nil
+	filtered := make([]*model.File, 0, len(files))
+	for _, file := range files {
+		if normalizeParentID(file.ParentID) == normalizedParentID {
+			filtered = append(filtered, file)
+		}
+	}
+
+	return filtered, nil
 }
 
 func (s *fileService) CreateFolder(ctx context.Context, userID uint64, parentID string, folderName string) (*model.File, error) {
 	// 先刷新存储路径设置
 	s.loadStoragePathFromDB()
 
+	normalizedParentID := normalizeParentID(parentID)
+
 	// 检查是否已存在同名文件夹
-	existing, err := s.repo.FindByUserIDAndName(ctx, userID, parentID, folderName)
+	existing, err := s.repo.FindByUserIDAndName(ctx, userID, normalizedParentID, folderName)
 	if err == nil && existing != nil {
 		return nil, fmt.Errorf("同名文件夹已存在")
 	}
 
-	// 创建文件夹记录
-	folder := &model.File{
-		UserID:   userID,
-		ParentID: parentID,
-		Name:     folderName,
-		IsFolder: true,
-		Size:     0,
+	// 计算存储路径
+	relativePath, fullPath, err := s.getStoragePath(ctx, normalizedParentID, folderName)
+	if err != nil {
+		return nil, err
 	}
 
-	// 保存到数据库
-	err = s.repo.Create(ctx, folder)
-	if err != nil {
-		logrus.Errorf("创建文件夹失败: %v", err)
+	if err := os.MkdirAll(fullPath, os.ModePerm); err != nil {
+		logrus.Errorf("创建实际文件夹失败: %v", err)
 		return nil, fmt.Errorf("创建文件夹失败")
 	}
 
-	// 创建实际的文件系统目录
-	storagePath := s.getStoragePath(userID, parentID, folderName)
-	err = os.MkdirAll(storagePath, os.ModePerm)
-	if err != nil {
-		logrus.Warnf("创建实际文件夹失败，但数据库记录已创建: %v", err)
-		// 即使物理目录创建失败，我们仍然返回数据库记录
+	// 创建文件夹记录
+	folder := &model.File{
+		UserID:      userID,
+		ParentID:    normalizedParentID,
+		Name:        folderName,
+		IsFolder:    true,
+		Size:        0,
+		StoragePath: relativePath,
+	}
+
+	// 保存到数据库
+	if err := s.repo.Create(ctx, folder); err != nil {
+		logrus.Errorf("创建文件夹失败: %v", err)
+		// 清理已创建的目录，避免孤儿目录
+		_ = os.Remove(fullPath)
+		return nil, fmt.Errorf("创建文件夹失败")
 	}
 
 	return folder, nil
@@ -225,18 +282,27 @@ func (s *fileService) UploadFile(ctx context.Context, userID uint64, parentID st
 	// 先刷新存储路径设置
 	s.loadStoragePathFromDB()
 
+	normalizedParentID := normalizeParentID(parentID)
+
 	// 检查是否已存在同名文件
-	existing, err := s.repo.FindByUserIDAndName(ctx, userID, parentID, fileName)
+	existing, err := s.repo.FindByUserIDAndName(ctx, userID, normalizedParentID, fileName)
 	if err == nil && existing != nil {
 		return nil, fmt.Errorf("同名文件已存在")
 	}
 
 	// 创建物理文件存储路径
-	relativePath := s.getStoragePath(userID, parentID, "")
-	storagePath := filepath.Join(s.filePath, relativePath, fileName)
+	relativePath, fullPath, err := s.getStoragePath(ctx, normalizedParentID, fileName)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(fullPath), os.ModePerm); err != nil {
+		logrus.Errorf("创建文件目录失败: %v", err)
+		return nil, fmt.Errorf("创建文件失败")
+	}
 
 	// 创建目标文件
-	outFile, err := os.Create(storagePath)
+	outFile, err := os.Create(fullPath)
 	if err != nil {
 		logrus.Errorf("创建文件失败: %v", err)
 		return nil, fmt.Errorf("创建文件失败")
@@ -248,18 +314,18 @@ func (s *fileService) UploadFile(ctx context.Context, userID uint64, parentID st
 	if err != nil {
 		logrus.Errorf("写入文件内容失败: %v", err)
 		// 删除可能已创建的文件
-		_ = os.Remove(storagePath)
+		_ = os.Remove(fullPath)
 		return nil, fmt.Errorf("写入文件内容失败")
 	}
 
 	// 创建文件数据库记录
 	file := &model.File{
 		UserID:      userID,
-		ParentID:    parentID,
+		ParentID:    normalizedParentID,
 		Name:        fileName,
 		IsFolder:    false,
 		Size:        written,
-		StoragePath: filepath.Join(relativePath, fileName),
+		StoragePath: relativePath,
 		// 确定MIME类型
 		MimeType: getMimeType(fileName),
 	}
@@ -269,7 +335,7 @@ func (s *fileService) UploadFile(ctx context.Context, userID uint64, parentID st
 	if err != nil {
 		logrus.Errorf("保存文件记录失败: %v", err)
 		// 删除已创建的文件
-		_ = os.Remove(storagePath)
+		_ = os.Remove(fullPath)
 		return nil, fmt.Errorf("保存文件记录失败")
 	}
 
@@ -347,7 +413,7 @@ func (s *fileService) RenameFile(ctx context.Context, userID uint64, fileID stri
 	}
 
 	// 检查同名文件是否存在
-	existing, err := s.repo.FindByUserIDAndName(ctx, userID, file.ParentID, newName)
+	existing, err := s.repo.FindByUserIDAndName(ctx, userID, normalizeParentID(file.ParentID), newName)
 	if err == nil && existing != nil && existing.ID != file.ID {
 		return fmt.Errorf("同名文件或文件夹已存在")
 	}

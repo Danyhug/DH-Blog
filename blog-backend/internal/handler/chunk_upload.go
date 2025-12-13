@@ -75,7 +75,7 @@ func (h *ChunkUploadHandler) InitChunkUpload(c *gin.Context) {
 	fileName := req.FileName
 	fileSize := req.FileSize
 	chunkSize := req.ChunkSize
-	parentId := req.ParentId
+	parentId := strings.TrimSpace(req.ParentId)
 	uploadId := req.UploadId
 
 	if chunkSize == 0 {
@@ -310,10 +310,9 @@ func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 		return
 	}
 
-	// 获取用户ID
 	userID := h.getUserID(c)
 	if userID == 0 {
-		c.JSON(401, response.Error("未授权"))
+		c.JSON(http.StatusUnauthorized, response.Error("未授权"))
 		return
 	}
 
@@ -348,9 +347,33 @@ func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 			case "totalChunks":
 				fmt.Sscanf(parts[1], "%d", &totalChunks)
 			case "parentId":
-				parentId = parts[1]
+				parentId = strings.TrimSpace(parts[1])
 			}
 		}
+	}
+
+	parentId = strings.TrimSpace(parentId)
+
+	var parentStoragePath string
+	if parentId != "" {
+		parentNumeric, err := strconv.Atoi(parentId)
+		if err != nil {
+			c.JSON(http.StatusOK, response.Error("父目录ID无效"))
+			return
+		}
+
+		var parent model.File
+		if err := h.db.First(&parent, parentNumeric).Error; err != nil {
+			c.JSON(http.StatusOK, response.Error("父目录不存在"))
+			return
+		}
+
+		if !parent.IsFolder {
+			c.JSON(http.StatusOK, response.Error("父目录不是文件夹"))
+			return
+		}
+
+		parentStoragePath = parent.StoragePath
 	}
 
 	// 获取已上传的分片文件
@@ -367,7 +390,11 @@ func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 	}
 
 	// 创建最终存储路径 - 使用配置的存储路径
-	storageDir := filepath.Join(baseDir, fmt.Sprintf("user_%d", userID))
+	relativeDir := sanitizeRelativePath(parentStoragePath)
+	if parentId != "" && relativeDir == "" {
+		relativeDir = sanitizeRelativePath(parentId)
+	}
+	storageDir := filepath.Join(baseDir, relativeDir)
 	if err := os.MkdirAll(storageDir, 0755); err != nil {
 		c.JSON(http.StatusOK, response.Error("创建存储目录失败"))
 		return
@@ -386,6 +413,7 @@ func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 	// 合并所有分片 - 优化大文件合并性能
 	finalFile, err := os.Create(finalPath)
 	if err != nil {
+		logrus.Error("创建最终文件失败: ", err)
 		c.JSON(http.StatusOK, response.Error("创建最终文件失败"))
 		return
 	}
@@ -448,7 +476,7 @@ func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 		Name:        fileName,
 		IsFolder:    false,
 		Size:        totalSize,
-		StoragePath: filepath.Join(fmt.Sprintf("user_%d", userID), fileName),
+		StoragePath: filepath.Join(relativeDir, fileName),
 		MimeType:    h.getMimeType(fileName),
 	}
 
@@ -553,7 +581,7 @@ func (h *ChunkUploadHandler) mergeChunksConcurrent(tempDir string, totalChunks i
 	// 动态获取CPU核数并设置工作线程数
 	cpuCores := runtime.NumCPU()
 	workers := cpuCores * 2 // 通常设置为CPU核数的1-2倍
-	
+
 	// 设置合理的上下限
 	if workers < 4 {
 		workers = 4 // 最少4个线程
@@ -561,9 +589,9 @@ func (h *ChunkUploadHandler) mergeChunksConcurrent(tempDir string, totalChunks i
 	if workers > 16 {
 		workers = 16 // 最多16个线程，避免过度并发
 	}
-	
+
 	logrus.Infof("检测到CPU核数: %d, 设置并发工作线程数: %d", cpuCores, workers)
-	
+
 	const batchSize = 100 // 每批处理的分片数
 
 	var totalSize int64
@@ -668,6 +696,19 @@ func (h *ChunkUploadHandler) mergeChunksConcurrent(tempDir string, totalChunks i
 	}
 
 	return totalSize, nil
+}
+
+func sanitizeRelativePath(input string) string {
+	input = strings.TrimSpace(input)
+	cleaned := filepath.Clean(input)
+	if input == "" || cleaned == "." {
+		return ""
+	}
+	if strings.HasPrefix(cleaned, "..") || filepath.IsAbs(cleaned) {
+		logrus.Warnf("检测到非法父目录路径: %s，已重置为根目录", input)
+		return ""
+	}
+	return cleaned
 }
 
 // getMimeType 获取文件MIME类型
