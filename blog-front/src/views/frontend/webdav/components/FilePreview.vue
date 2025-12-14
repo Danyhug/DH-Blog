@@ -34,28 +34,16 @@
         </div>
 
       <div class="flex-[2] flex justify-end gap-3 max-md:w-full max-md:justify-between">
-        <!-- 分享模式：显示返回首页和下载按钮 -->
-        <template v-if="shareMode">
-          <a href="/" class="flex items-center gap-2 rounded-lg cursor-pointer text-sm font-medium px-[18px] py-2.5 transition-all duration-300 bg-white/90 border border-[#eee] text-[#555] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:bg-white hover:border-[#ddd]">
-            <ArrowLeftIcon class="w-4 h-4" />
-            返回首页
-          </a>
-          <button v-if="canPreview" class="flex items-center gap-2 rounded-lg cursor-pointer text-sm font-medium px-[18px] py-2.5 transition-all duration-300 bg-gradient-to-br from-[#4facfe] to-[#00f2fe] text-white border-none shadow-[0_4px_10px_rgba(79,172,254,0.2)] hover:-translate-y-0.5 hover:shadow-[0_6px_15px_rgba(79,172,254,0.3)] hover:from-[#4facfe] hover:to-[#00c6fb]" @click="downloadShareFile">
-            <DownloadIcon class="w-4 h-4" />
-            下载
-          </button>
-        </template>
-        <!-- 普通模式：显示返回和下载按钮 -->
-        <template v-else>
-          <button class="flex items-center gap-2 rounded-lg cursor-pointer text-sm font-medium px-[18px] py-2.5 transition-all duration-300 bg-white/90 border border-[#eee] text-[#555] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:bg-white hover:border-[#ddd]" @click="$emit('close')">
-            <ArrowLeftIcon class="w-4 h-4" />
-            返回
-          </button>
-          <a class="flex items-center gap-2 rounded-lg cursor-pointer text-sm font-medium px-[18px] py-2.5 transition-all duration-300 bg-gradient-to-br from-[#4facfe] to-[#00f2fe] text-white border-none shadow-[0_4px_10px_rgba(79,172,254,0.2)] hover:-translate-y-0.5 hover:shadow-[0_6px_15px_rgba(79,172,254,0.3)] hover:from-[#4facfe] hover:to-[#00c6fb]" :href="fileUrl" download :title="'下载' + file.name">
-            <DownloadIcon class="w-4 h-4" />
-            下载
-          </a>
-        </template>
+        <!-- 返回按钮 -->
+        <button class="flex items-center gap-2 rounded-lg cursor-pointer text-sm font-medium px-[18px] py-2.5 transition-all duration-300 bg-white/90 border border-[#eee] text-[#555] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:bg-white hover:border-[#ddd]" @click="handleBack">
+          <ArrowLeftIcon class="w-4 h-4" />
+          {{ shareMode ? '返回首页' : '返回' }}
+        </button>
+        <!-- 下载按钮 -->
+        <button v-if="!shareMode || canPreview" class="flex items-center gap-2 rounded-lg cursor-pointer text-sm font-medium px-[18px] py-2.5 transition-all duration-300 bg-gradient-to-br from-[#4facfe] to-[#00f2fe] text-white border-none shadow-[0_4px_10px_rgba(79,172,254,0.2)] hover:-translate-y-0.5 hover:shadow-[0_6px_15px_rgba(79,172,254,0.3)] hover:from-[#4facfe] hover:to-[#00c6fb]" @click="handleDownload">
+          <DownloadIcon class="w-4 h-4" />
+          下载
+        </button>
       </div>
       </div>
     </div>
@@ -135,9 +123,9 @@
             <div class="w-[70px] h-[70px] rounded-full bg-linear-to-br from-[#ff4d4f] to-[#ff7875] text-white flex items-center justify-center text-[32px] font-bold mb-6 shadow-[0_8px_20px_rgba(255,77,79,0.2)]">!</div>
             <h3 class="text-[22px] text-[#333] mb-4 font-semibold">预览失败</h3>
             <p class="text-[#666] mb-7 text-center leading-relaxed text-[15px]">{{ errorMessage }}</p>
-            <div v-if="!shareMode" class="flex gap-4">
-              <button class="px-6 py-3 rounded-[10px] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-linear-to-br from-[#4facfe] to-[#00f2fe] text-white border-none shadow-[0_4px_10px_rgba(79,172,254,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] hover:from-[#4facfe] hover:to-[#00c6fb]" @click="retryPreview">重试</button>
-              <button class="px-6 py-3 rounded-[10px] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-white text-[#555] border border-[#ddd] hover:bg-[#f9f9f9] hover:border-[#ccc] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)]" @click="downloadFile">下载文件</button>
+            <div class="flex gap-4">
+              <button class="px-6 py-3 rounded-[10px] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-linear-to-br from-[#4facfe] to-[#00f2fe] text-white border-none shadow-[0_4px_10px_rgba(79,172,254,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] hover:from-[#4facfe] hover:to-[#00c6fb]" @click="handleRetry">重试</button>
+              <button class="px-6 py-3 rounded-[10px] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-white text-[#555] border border-[#ddd] hover:bg-[#f9f9f9] hover:border-[#ccc] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)]" @click="handleDownload">下载文件</button>
             </div>
           </div>
 
@@ -221,28 +209,18 @@
                   <span class="font-medium text-[#333]">大小</span>
                   <span class="font-normal text-[#666] max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis">{{ formatFileSize(currentFileSize) }}</span>
                 </div>
-                <div v-if="!shareMode && file.originalFile && file.originalFile.createTime" class="flex justify-between items-center">
+                <div v-if="currentFileCreateTime" class="flex justify-between items-center">
                   <span class="font-medium text-[#333]">创建时间</span>
-                  <span class="font-normal text-[#666] max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis">{{ formatDate(file.originalFile.createTime) }}</span>
+                  <span class="font-normal text-[#666] max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis">{{ formatDate(currentFileCreateTime) }}</span>
                 </div>
               </div>
               <div class="flex justify-center mt-5">
-                <template v-if="shareMode">
-                  <button class="flex flex-col items-center no-underline transition-all duration-300 hover:-translate-y-[3px] group" @click="downloadShareFile">
-                    <div class="w-[60px] h-[60px] bg-linear-to-br from-[#4facfe] to-[#00f2fe] rounded-full flex justify-center items-center mb-3 shadow-[0_5px_15px_rgba(79,172,254,0.3)] transition-all duration-300 group-hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] group-hover:from-[#4facfe] group-hover:to-[#00c6fb]">
-                      <DownloadIcon class="w-7 h-7 text-white" />
-                    </div>
-                    <span class="text-[15px] font-medium text-[#666] transition-colors duration-300 group-hover:text-[#4facfe]">下载文件</span>
-                  </button>
-                </template>
-                <template v-else>
-                  <a class="flex flex-col items-center no-underline transition-all duration-300 hover:-translate-y-[3px] group" :href="fileUrl" download :title="'下载' + file.name">
-                    <div class="w-[60px] h-[60px] bg-linear-to-br from-[#4facfe] to-[#00f2fe] rounded-full flex justify-center items-center mb-3 shadow-[0_5px_15px_rgba(79,172,254,0.3)] transition-all duration-300 group-hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] group-hover:from-[#4facfe] group-hover:to-[#00c6fb]">
-                      <DownloadIcon class="w-7 h-7 text-white" />
-                    </div>
-                    <span class="text-[15px] font-medium text-[#666] transition-colors duration-300 group-hover:text-[#4facfe]">下载文件</span>
-                  </a>
-                </template>
+                <button class="flex flex-col items-center no-underline transition-all duration-300 hover:-translate-y-[3px] group" @click="handleDownload">
+                  <div class="w-[60px] h-[60px] bg-linear-to-br from-[#4facfe] to-[#00f2fe] rounded-full flex justify-center items-center mb-3 shadow-[0_5px_15px_rgba(79,172,254,0.3)] transition-all duration-300 group-hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] group-hover:from-[#4facfe] group-hover:to-[#00c6fb]">
+                    <DownloadIcon class="w-7 h-7 text-white" />
+                  </div>
+                  <span class="text-[15px] font-medium text-[#666] transition-colors duration-300 group-hover:text-[#4facfe]">下载文件</span>
+                </button>
               </div>
             </div>
           </div>
@@ -317,7 +295,6 @@ const shareBlobUrl = ref('') // 分享模式的 Blob URL
 const isLoading = ref(true)
 const hasError = ref(false)
 const errorMessage = ref('')
-const fileContent = ref<Blob | null>(null)
 const textContent = ref('') // 添加textContent变量
 
 // 使用ref存储渲染后的Markdown内容
@@ -428,6 +405,41 @@ const currentFileSize = computed(() => {
   }
   return props.file.originalFile?.size || props.file.size || 0
 })
+
+// 统一的文件创建时间
+const currentFileCreateTime = computed(() => {
+  if (props.shareMode) return ''
+  return props.file.originalFile?.createTime || ''
+})
+
+// ========== 统一的操作方法 ==========
+
+// 统一的返回操作
+const handleBack = () => {
+  if (props.shareMode) {
+    window.location.href = '/'
+  } else {
+    emits('close')
+  }
+}
+
+// 统一的下载操作
+const handleDownload = () => {
+  if (props.shareMode) {
+    downloadShareFile()
+  } else {
+    downloadFile()
+  }
+}
+
+// 统一的重试操作
+const handleRetry = () => {
+  if (props.shareMode) {
+    fetchShareFileContent()
+  } else {
+    retryPreview()
+  }
+}
 
 // 统一的是否支持预览
 const currentSupportedPreviewType = computed(() => {
@@ -570,33 +582,8 @@ const fetchFileContent = async () => {
     if (props.file.type === 'text') {
       // 文本文件直接显示内容
       textContent.value = response.data;
-    } else {
-      // 创建Blob URL
-      fileContent.value = response.data;
-      const blobUrl = URL.createObjectURL(response.data);
-      
-      if (props.file.type === 'image') {
-        const imgElement = document.querySelector('.image-preview img') as HTMLImageElement;
-        if (imgElement) {
-          imgElement.src = blobUrl;
-        }
-      } else if (props.file.type === 'video') {
-        const videoElement = document.querySelector('.video-preview video') as HTMLVideoElement;
-        if (videoElement) {
-          videoElement.src = blobUrl;
-        }
-      } else if (props.file.type === 'audio') {
-        const audioElement = document.querySelector('.audio-preview audio') as HTMLAudioElement;
-        if (audioElement) {
-          audioElement.src = blobUrl;
-        }
-      } else if (props.file.type === 'pdf') {
-        const iframeElement = document.querySelector('.pdf-preview iframe') as HTMLIFrameElement;
-        if (iframeElement) {
-          iframeElement.src = blobUrl;
-        }
-      }
     }
+    // 对于图片/视频/音频/PDF，模板中已通过 :src="currentFileUrl" 绑定下载URL
     
     onPreviewLoaded();
   } catch (error) {
@@ -782,7 +769,6 @@ const fetchShareFileContent = async () => {
       textContent.value = response.data
     } else {
       // 对于图片/视频/音频/PDF，创建 Blob URL
-      fileContent.value = response.data
       shareBlobUrl.value = URL.createObjectURL(response.data)
     }
 
