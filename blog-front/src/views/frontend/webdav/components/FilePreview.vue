@@ -1,58 +1,58 @@
 <template>
-  <div class="file-preview-container" :class="{ 'share-mode': shareMode }">
+  <div class="w-full h-full flex flex-col bg-[#f8f9fa] animate-[fade-in_0.3s_ease] relative" :class="{ 'share-mode': shareMode }">
     <!-- 顶部导航栏 -->
-    <div class="preview-header">
-      <div class="header-content">
-      <div class="header-left">
+    <div class="sticky top-0 z-10 backdrop-blur-[20px] bg-white/90 border-b border-black/5 shadow-[0_4px_20px_rgba(0,0,0,0.05)] py-2.5">
+      <div class="max-w-[1400px] mx-auto flex justify-between items-center px-6 py-3 max-md:flex-col max-md:gap-3 max-md:px-3">
+      <div class="flex-[2] max-md:w-full">
         <!-- 分享模式：显示Logo -->
         <template v-if="shareMode">
-          <a href="/" class="logo-link">
-            <span class="logo-text">DH-Blog</span>
+          <a href="/" class="no-underline">
+            <span class="text-lg font-semibold text-[#333]">DH-Blog</span>
           </a>
         </template>
         <!-- 普通模式：显示面包屑 -->
         <template v-else>
-          <div class="breadcrumb">
-            <HomeIcon class="icon-sm" @click="handleNavigateToRoot" />
+          <div class="flex items-center gap-2 text-sm bg-[#f8f9fa]/90 px-4 py-2.5 rounded-[50px] shadow-[0_2px_8px_rgba(0,0,0,0.03)] backdrop-blur-[4px]">
+            <HomeIcon class="cursor-pointer text-[#555] w-4 h-4 transition-all duration-200 hover:text-[var(--color-blue)] hover:scale-110" @click="handleNavigateToRoot" />
             <template v-if="pathSegments.length > 0">
-              <ChevronRightIcon class="icon-xs" />
+              <ChevronRightIcon class="text-[#aaa] w-3 h-3" />
               <template v-for="(segment, index) in pathSegments" :key="index">
                 <span
-                  class="path-segment"
+                  class="cursor-pointer text-[#555] font-medium px-2 py-0.5 rounded transition-all duration-200 hover:text-[var(--color-blue)] hover:bg-[rgba(56,161,219,0.1)]"
                   @click="handleNavigateToPathSegment(index)"
                 >{{ segment.name }}</span>
-                <ChevronRightIcon v-if="index < pathSegments.length - 1" class="icon-xs" />
+                <ChevronRightIcon v-if="index < pathSegments.length - 1" class="text-[#aaa] w-3 h-3" />
               </template>
             </template>
-            <span v-else class="path-segment" @click="handleNavigateToRoot">我的网盘</span>
+            <span v-else class="cursor-pointer text-[#555] font-medium px-2 py-0.5 rounded transition-all duration-200 hover:text-[var(--color-blue)] hover:bg-[rgba(56,161,219,0.1)]" @click="handleNavigateToRoot">我的网盘</span>
           </div>
         </template>
       </div>
 
-        <div class="header-center">
-          <h2 class="file-title">{{ currentFileName }}</h2>
+        <div class="flex-1 text-center max-md:w-full max-md:order-[-1]">
+          <h2 class="text-lg font-semibold text-[#333] m-0 whitespace-nowrap overflow-hidden text-ellipsis max-w-[400px] max-md:max-w-full inline-block px-4 py-2 rounded-lg bg-white/80 backdrop-blur-[4px] shadow-[0_2px_8px_rgba(0,0,0,0.03)]">{{ currentFileName }}</h2>
         </div>
 
-      <div class="header-right">
+      <div class="flex-[2] flex justify-end gap-3 max-md:w-full max-md:justify-between">
         <!-- 分享模式：显示返回首页和下载按钮 -->
         <template v-if="shareMode">
-          <a href="/" class="action-btn back-btn">
-            <ArrowLeftIcon class="icon-sm" />
+          <a href="/" class="flex items-center gap-2 rounded-lg cursor-pointer text-sm font-medium px-[18px] py-2.5 transition-all duration-300 bg-white/90 border border-[#eee] text-[#555] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:bg-white hover:border-[#ddd]">
+            <ArrowLeftIcon class="w-4 h-4" />
             返回首页
           </a>
-          <button v-if="canPreview" class="action-btn download-btn" @click="downloadShareFile">
-            <DownloadIcon class="icon-sm" />
+          <button v-if="canPreview" class="flex items-center gap-2 rounded-lg cursor-pointer text-sm font-medium px-[18px] py-2.5 transition-all duration-300 bg-gradient-to-br from-[#4facfe] to-[#00f2fe] text-white border-none shadow-[0_4px_10px_rgba(79,172,254,0.2)] hover:-translate-y-0.5 hover:shadow-[0_6px_15px_rgba(79,172,254,0.3)] hover:from-[#4facfe] hover:to-[#00c6fb]" @click="downloadShareFile">
+            <DownloadIcon class="w-4 h-4" />
             下载
           </button>
         </template>
         <!-- 普通模式：显示返回和下载按钮 -->
         <template v-else>
-          <button class="action-btn back-btn" @click="$emit('close')">
-            <ArrowLeftIcon class="icon-sm" />
+          <button class="flex items-center gap-2 rounded-lg cursor-pointer text-sm font-medium px-[18px] py-2.5 transition-all duration-300 bg-white/90 border border-[#eee] text-[#555] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:bg-white hover:border-[#ddd]" @click="$emit('close')">
+            <ArrowLeftIcon class="w-4 h-4" />
             返回
           </button>
-          <a class="action-btn download-btn" :href="fileUrl" download :title="'下载' + file.name">
-            <DownloadIcon class="icon-sm" />
+          <a class="flex items-center gap-2 rounded-lg cursor-pointer text-sm font-medium px-[18px] py-2.5 transition-all duration-300 bg-gradient-to-br from-[#4facfe] to-[#00f2fe] text-white border-none shadow-[0_4px_10px_rgba(79,172,254,0.2)] hover:-translate-y-0.5 hover:shadow-[0_6px_15px_rgba(79,172,254,0.3)] hover:from-[#4facfe] hover:to-[#00c6fb]" :href="fileUrl" download :title="'下载' + file.name">
+            <DownloadIcon class="w-4 h-4" />
             下载
           </a>
         </template>
@@ -60,60 +60,60 @@
       </div>
     </div>
 
-    <div class="preview-content">
+    <div class="flex-1 flex justify-center items-center overflow-auto p-8 max-md:p-4">
       <!-- ========== 分享模式特殊状态处理 ========== -->
       <template v-if="shareMode && !canPreview">
         <!-- 分享加载中 -->
-        <div v-if="shareLoading" class="loading-container">
-          <div class="loading-spinner"></div>
-          <p>加载中...</p>
+        <div v-if="shareLoading" class="flex flex-col items-center justify-center h-full">
+          <div class="w-12 h-12 border-3 border-[rgba(56,161,219,0.1)] border-t-[var(--color-blue)] rounded-full animate-spin mb-5"></div>
+          <p class="text-[#666] text-base font-medium">加载中...</p>
         </div>
 
         <!-- 分享错误 -->
-        <div v-else-if="shareError" class="error-container">
-          <div class="error-icon">!</div>
-          <h3>访问失败</h3>
-          <p>{{ shareError }}</p>
-          <div class="error-actions">
-            <a href="/" class="btn-primary">返回首页</a>
+        <div v-else-if="shareError" class="flex flex-col items-center justify-center h-full max-w-[450px] bg-white p-10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+          <div class="w-[70px] h-[70px] rounded-full bg-linear-to-br from-[#ff4d4f] to-[#ff7875] text-white flex items-center justify-center text-[32px] font-bold mb-6 shadow-[0_8px_20px_rgba(255,77,79,0.2)]">!</div>
+          <h3 class="text-[22px] text-[#333] mb-4 font-semibold">访问失败</h3>
+          <p class="text-[#666] mb-7 text-center leading-relaxed text-[15px]">{{ shareError }}</p>
+          <div class="flex gap-4">
+            <a href="/" class="px-6 py-3 rounded-[10px] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-linear-to-br from-[#4facfe] to-[#00f2fe] text-white border-none shadow-[0_4px_10px_rgba(79,172,254,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] hover:from-[#4facfe] hover:to-[#00c6fb]">返回首页</a>
           </div>
         </div>
 
         <!-- 分享已过期 -->
-        <div v-else-if="shareInfo?.is_expired" class="error-container">
-          <div class="error-icon">!</div>
-          <h3>分享已过期</h3>
-          <p>此分享链接已过期，无法访问</p>
-          <div class="error-actions">
-            <a href="/" class="btn-primary">返回首页</a>
+        <div v-else-if="shareInfo?.is_expired" class="flex flex-col items-center justify-center h-full max-w-[450px] bg-white p-10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+          <div class="w-[70px] h-[70px] rounded-full bg-linear-to-br from-[#ff4d4f] to-[#ff7875] text-white flex items-center justify-center text-[32px] font-bold mb-6 shadow-[0_8px_20px_rgba(255,77,79,0.2)]">!</div>
+          <h3 class="text-[22px] text-[#333] mb-4 font-semibold">分享已过期</h3>
+          <p class="text-[#666] mb-7 text-center leading-relaxed text-[15px]">此分享链接已过期，无法访问</p>
+          <div class="flex gap-4">
+            <a href="/" class="px-6 py-3 rounded-[10px] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-linear-to-br from-[#4facfe] to-[#00f2fe] text-white border-none shadow-[0_4px_10px_rgba(79,172,254,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] hover:from-[#4facfe] hover:to-[#00c6fb]">返回首页</a>
           </div>
         </div>
 
         <!-- 需要密码验证 -->
-        <div v-else-if="shareInfo?.has_password && !passwordVerified" class="password-container">
-          <div class="password-card">
-            <div class="lock-icon">
-              <LockIcon class="icon-lg" />
+        <div v-else-if="shareInfo?.has_password && !passwordVerified" class="flex justify-center items-center w-full p-5">
+          <div class="bg-white rounded-[20px] px-10 py-12 shadow-[0_10px_40px_rgba(0,0,0,0.08)] max-w-[420px] w-full text-center max-md:px-6 max-md:mx-4">
+            <div class="mb-6 flex justify-center items-center">
+              <LockIcon class="w-12 h-12 p-4 bg-linear-to-br from-[rgba(79,172,254,0.1)] to-[rgba(0,242,254,0.1)] rounded-full text-[var(--color-blue)] box-content" />
             </div>
-            <h3>此分享需要密码访问</h3>
-            <div class="file-info-brief">
-              <span class="file-name">{{ shareInfo.file_name }}</span>
-              <span class="file-size">{{ formatFileSize(shareInfo.file_size) }}</span>
+            <h3 class="text-[22px] font-semibold text-[#1a1a1a] mb-3">此分享需要密码访问</h3>
+            <div class="flex flex-col gap-1.5 mb-8 p-4 bg-[#f8f9fa] rounded-xl">
+              <span class="font-semibold text-[15px] text-[#333] break-all leading-relaxed">{{ shareInfo.file_name }}</span>
+              <span class="text-[13px] text-[#888]">{{ formatFileSize(shareInfo.file_size) }}</span>
             </div>
-            <div class="password-input-group">
+            <div class="flex gap-2.5 mb-5">
               <input
                 v-model="password"
                 :type="showPassword ? 'text' : 'password'"
                 placeholder="请输入访问密码"
-                class="password-input"
+                class="flex-1 px-[18px] py-4 border-2 border-[#e8e8e8] rounded-xl text-[15px] outline-none transition-all duration-300 bg-[#fafafa] focus:border-[var(--color-blue)] focus:bg-white focus:shadow-[0_0_0_4px_rgba(79,172,254,0.1)] placeholder:text-[#aaa]"
                 @keyup.enter="verifySharePasswordHandler"
               />
-              <button class="toggle-password" @click="showPassword = !showPassword">
-                <EyeIcon v-if="!showPassword" class="icon-sm" />
-                <EyeOffIcon v-else class="icon-sm" />
+              <button class="p-3.5 bg-[#f0f0f0] border-2 border-transparent rounded-xl cursor-pointer transition-all duration-300 flex items-center justify-center hover:bg-[#e5e5e5]" @click="showPassword = !showPassword">
+                <EyeIcon v-if="!showPassword" class="w-[22px] h-[22px] text-[#666]" />
+                <EyeOffIcon v-else class="w-[22px] h-[22px] text-[#666]" />
               </button>
             </div>
-            <button class="verify-btn" @click="verifySharePasswordHandler" :disabled="verifying">
+            <button class="w-full py-4 bg-linear-to-br from-[#4facfe] to-[#00f2fe] text-white border-none rounded-xl text-base font-semibold cursor-pointer transition-all duration-300 shadow-[0_4px_15px_rgba(79,172,254,0.3)] hover:enabled:-translate-y-0.5 hover:enabled:shadow-[0_8px_25px_rgba(79,172,254,0.4)] active:enabled:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed" @click="verifySharePasswordHandler" :disabled="verifying">
               {{ verifying ? '验证中...' : '验证密码' }}
             </button>
           </div>
@@ -125,43 +125,43 @@
         <!-- 判断文件类型是否支持预览 -->
         <template v-if="currentSupportedPreviewType">
           <!-- 加载状态 -->
-          <div v-if="isLoading" class="loading-container">
-            <div class="loading-spinner"></div>
-            <p>正在加载预览...</p>
+          <div v-if="isLoading" class="flex flex-col items-center justify-center h-full">
+            <div class="w-12 h-12 border-3 border-[rgba(56,161,219,0.1)] border-t-[var(--color-blue)] rounded-full animate-spin mb-5"></div>
+            <p class="text-[#666] text-base font-medium">正在加载预览...</p>
           </div>
 
           <!-- 错误状态 -->
-          <div v-else-if="hasError" class="error-container">
-            <div class="error-icon">!</div>
-            <h3>预览失败</h3>
-            <p>{{ errorMessage }}</p>
-            <div class="error-actions" v-if="!shareMode">
-              <button class="btn-primary" @click="retryPreview">重试</button>
-              <button class="btn-outline" @click="downloadFile">下载文件</button>
+          <div v-else-if="hasError" class="flex flex-col items-center justify-center h-full max-w-[450px] bg-white p-10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+            <div class="w-[70px] h-[70px] rounded-full bg-linear-to-br from-[#ff4d4f] to-[#ff7875] text-white flex items-center justify-center text-[32px] font-bold mb-6 shadow-[0_8px_20px_rgba(255,77,79,0.2)]">!</div>
+            <h3 class="text-[22px] text-[#333] mb-4 font-semibold">预览失败</h3>
+            <p class="text-[#666] mb-7 text-center leading-relaxed text-[15px]">{{ errorMessage }}</p>
+            <div v-if="!shareMode" class="flex gap-4">
+              <button class="px-6 py-3 rounded-[10px] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-linear-to-br from-[#4facfe] to-[#00f2fe] text-white border-none shadow-[0_4px_10px_rgba(79,172,254,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] hover:from-[#4facfe] hover:to-[#00c6fb]" @click="retryPreview">重试</button>
+              <button class="px-6 py-3 rounded-[10px] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-white text-[#555] border border-[#ddd] hover:bg-[#f9f9f9] hover:border-[#ccc] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)]" @click="downloadFile">下载文件</button>
             </div>
           </div>
 
           <!-- 图片预览 -->
-          <div v-else-if="currentFileType === 'image'" class="image-preview">
-            <img :src="currentFileUrl" :alt="currentFileName" @load="onPreviewLoaded" @error="onPreviewError('图片加载失败')" />
+          <div v-else-if="currentFileType === 'image'" class="max-w-full max-h-full flex justify-center items-center bg-[#f5f5f5] rounded-xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+            <img :src="currentFileUrl" :alt="currentFileName" class="max-w-full max-h-[80vh] object-contain rounded-lg transition-transform duration-300 hover:scale-[1.02]" @load="onPreviewLoaded" @error="onPreviewError('图片加载失败')" />
           </div>
 
           <!-- 视频预览 -->
-          <div v-else-if="currentFileType === 'video'" class="video-preview">
-            <video controls :src="currentFileUrl" @loadeddata="onPreviewLoaded" @error="onPreviewError('视频加载失败')">
+          <div v-else-if="currentFileType === 'video'" class="w-full h-full flex justify-center items-center bg-black rounded-xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.1)]">
+            <video controls :src="currentFileUrl" class="max-w-full max-h-[80vh] rounded-lg" @loadeddata="onPreviewLoaded" @error="onPreviewError('视频加载失败')">
               您的浏览器不支持视频播放
             </video>
           </div>
 
           <!-- 音频预览 -->
-          <div v-else-if="currentFileType === 'audio'" class="audio-preview">
-            <div class="audio-card">
-              <div class="audio-icon-container">
-                <MusicIcon class="audio-icon" />
+          <div v-else-if="currentFileType === 'audio'" class="w-full py-5 flex justify-center">
+            <div class="flex items-center gap-[30px] bg-linear-to-br from-white to-[#f8f9fa] p-10 rounded-[20px] shadow-[0_10px_30px_rgba(0,0,0,0.08)] max-w-[650px] w-full max-md:flex-col max-md:p-[30px]">
+              <div class="flex justify-center items-center w-[90px] h-[90px] bg-linear-to-br from-[#e3fdf5] to-[#ffe6fa] rounded-full shadow-[0_8px_20px_rgba(0,0,0,0.05)] max-md:mb-5">
+                <MusicIcon class="w-[45px] h-[45px] text-[var(--color-blue)]" />
               </div>
-              <div class="audio-info">
-                <div class="audio-name">{{ currentFileName }}</div>
-                <audio controls :src="currentFileUrl" @loadeddata="onPreviewLoaded" @error="onPreviewError('音频加载失败')">
+              <div class="flex-1">
+                <div class="text-lg font-semibold text-[#333] mb-5">{{ currentFileName }}</div>
+                <audio controls :src="currentFileUrl" class="w-full h-10 outline-none" @loadeddata="onPreviewLoaded" @error="onPreviewError('音频加载失败')">
                   您的浏览器不支持音频播放
                 </audio>
               </div>
@@ -169,78 +169,78 @@
           </div>
 
           <!-- PDF预览 -->
-          <div v-else-if="currentFileType === 'pdf'" class="pdf-preview">
-            <iframe :src="currentFileUrl" frameborder="0" @load="onPreviewLoaded" @error="onPreviewError('PDF加载失败')"></iframe>
+          <div v-else-if="currentFileType === 'pdf'" class="w-full h-full bg-white rounded-xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+            <iframe :src="currentFileUrl" frameborder="0" class="w-full h-full border-none" @load="onPreviewLoaded" @error="onPreviewError('PDF加载失败')"></iframe>
           </div>
 
           <!-- 文本文件预览 -->
-          <div v-else-if="currentFileType === 'text'" class="text-preview">
-            <div v-if="isMarkdown" class="markdown-content">
+          <div v-else-if="currentFileType === 'text'" class="w-full h-full bg-white rounded-xl overflow-auto shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-5">
+            <div v-if="isMarkdown" class="markdown-content p-5 leading-relaxed text-[#333] font-sans">
               <div v-html="renderedMarkdown"></div>
             </div>
-            <div v-else-if="isHtmlFile" class="html-preview-container">
-              <div class="preview-controls">
-                <button class="preview-toggle-btn" @click="toggleHtmlPreview" :class="{ active: showHtmlPreview }">
+            <div v-else-if="isHtmlFile" class="w-full h-full flex flex-col">
+              <div class="flex gap-3 px-5 py-2.5 bg-[#f9f9fa] border-b border-[#eee] max-md:flex-col max-md:gap-2 max-md:px-4 max-md:py-2">
+                <button class="px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 border-none" :class="showHtmlPreview ? 'bg-[#3b82f6] text-white' : 'bg-[#e5e7eb] text-[#374151] hover:bg-[#d1d5db]'" @click="toggleHtmlPreview">
                   {{ showHtmlPreview ? '查看源码' : '预览HTML' }}
                 </button>
-                <button class="open-new-window-btn" @click="openHtmlInNewWindow" title="在新窗口中打开">
+                <button class="px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 bg-white border border-[#d1d5db] text-[#4b5563] hover:bg-[#f9fafb] hover:border-[#9ca3af]" @click="openHtmlInNewWindow" title="在新窗口中打开">
                   <span>打开新窗口</span>
                 </button>
               </div>
-              <div v-if="showHtmlPreview" class="html-render">
-                <iframe :src="htmlPreviewUrl" sandbox="allow-scripts allow-same-origin" class="html-iframe"></iframe>
+              <div v-if="showHtmlPreview" class="flex-1 p-0">
+                <iframe :src="htmlPreviewUrl" sandbox="allow-scripts allow-same-origin" class="w-full h-full min-h-[70vh] border-none bg-white"></iframe>
               </div>
-              <div v-else class="code-content">
+              <div v-else class="code-content w-full h-full p-5 overflow-auto">
                 <div v-html="highlightedCode"></div>
               </div>
             </div>
-            <div v-else-if="isVueFile || isCodeFile" class="code-content">
+            <div v-else-if="isVueFile || isCodeFile" class="code-content w-full h-full p-5 overflow-auto">
               <div v-html="highlightedCode"></div>
             </div>
-            <div v-else class="text-content">
-              <pre>{{ textContent }}</pre>
+            <div v-else class="w-full h-full">
+              <pre class="font-mono text-sm leading-relaxed whitespace-pre-wrap break-all text-[#333] p-5 m-0 overflow-auto max-h-[70vh]">{{ textContent }}</pre>
             </div>
           </div>
         </template>
 
         <!-- 不支持预览的文件类型 -->
-        <div v-else class="unsupported-preview">
-          <div class="unsupported-card">
-            <div class="unsupported-icon">
-              <component :is="file.icon || FileIcon" class="file-icon" :class="getIconClass(currentFileType)" />
+        <div v-else class="flex justify-center items-center h-full">
+          <div class="flex flex-col items-center justify-center bg-linear-to-br from-white to-[#f8f9fa] p-[50px] rounded-[20px] shadow-[0_10px_30px_rgba(0,0,0,0.08)] max-w-[440px] text-center max-md:p-[30px]">
+            <div class="mb-[30px] bg-linear-to-br from-[#e3fdf5] to-[#ffe6fa] w-[110px] h-[110px] rounded-full flex justify-center items-center shadow-[0_8px_20px_rgba(0,0,0,0.05)]">
+              <component :is="file.icon || FileIcon" class="w-[55px] h-[55px] text-[#999]" :class="getIconClass(currentFileType)" />
             </div>
-            <div class="unsupported-message">
-              <h3>无法预览此文件</h3>
-              <p>该文件类型暂不支持在线预览，您可以下载后在本地查看。</p>
-              <div class="file-info">
-                <div class="file-info-item">
-                  <span class="label">文件名</span>
-                  <span class="value">{{ currentFileName }}</span>
+            <div class="text-center">
+              <h3 class="text-[22px] text-[#333] mb-4 font-semibold">无法预览此文件</h3>
+              <p class="text-[#666] mb-7 leading-relaxed text-[15px]">该文件类型暂不支持在线预览，您可以下载后在本地查看。</p>
+              <div class="flex flex-col gap-2.5 mb-7 bg-[rgba(245,247,250,0.5)] rounded-[10px] px-5 py-4 text-sm text-[#555] shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
+                <div class="flex justify-between items-center border-b border-dashed border-black/5 pb-2">
+                  <span class="font-medium text-[#333]">文件名</span>
+                  <span class="font-normal text-[#666] max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis">{{ currentFileName }}</span>
                 </div>
-                <div class="file-info-item" v-if="currentFileSize">
-                  <span class="label">大小</span>
-                  <span class="value">{{ formatFileSize(currentFileSize) }}</span>
+                <div v-if="currentFileSize" class="flex justify-between items-center border-b border-dashed border-black/5 pb-2">
+                  <span class="font-medium text-[#333]">大小</span>
+                  <span class="font-normal text-[#666] max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis">{{ formatFileSize(currentFileSize) }}</span>
                 </div>
-                <div class="file-info-item" v-if="!shareMode && file.originalFile && file.originalFile.createTime">
-                  <span class="label">创建时间</span>
-                  <span class="value">{{ formatDate(file.originalFile.createTime) }}</span>
+                <div v-if="!shareMode && file.originalFile && file.originalFile.createTime" class="flex justify-between items-center">
+                  <span class="font-medium text-[#333]">创建时间</span>
+                  <span class="font-normal text-[#666] max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis">{{ formatDate(file.originalFile.createTime) }}</span>
                 </div>
               </div>
-              <div class="button-container">
+              <div class="flex justify-center mt-5">
                 <template v-if="shareMode">
-                  <button class="download-button" @click="downloadShareFile">
-                    <div class="download-button-icon">
-                      <DownloadIcon class="icon" />
+                  <button class="flex flex-col items-center no-underline transition-all duration-300 hover:-translate-y-[3px] group" @click="downloadShareFile">
+                    <div class="w-[60px] h-[60px] bg-linear-to-br from-[#4facfe] to-[#00f2fe] rounded-full flex justify-center items-center mb-3 shadow-[0_5px_15px_rgba(79,172,254,0.3)] transition-all duration-300 group-hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] group-hover:from-[#4facfe] group-hover:to-[#00c6fb]">
+                      <DownloadIcon class="w-7 h-7 text-white" />
                     </div>
-                    <span class="download-button-text">下载文件</span>
+                    <span class="text-[15px] font-medium text-[#666] transition-colors duration-300 group-hover:text-[#4facfe]">下载文件</span>
                   </button>
                 </template>
                 <template v-else>
-                  <a class="download-button" :href="fileUrl" download :title="'下载' + file.name">
-                    <div class="download-button-icon">
-                      <DownloadIcon class="icon" />
+                  <a class="flex flex-col items-center no-underline transition-all duration-300 hover:-translate-y-[3px] group" :href="fileUrl" download :title="'下载' + file.name">
+                    <div class="w-[60px] h-[60px] bg-linear-to-br from-[#4facfe] to-[#00f2fe] rounded-full flex justify-center items-center mb-3 shadow-[0_5px_15px_rgba(79,172,254,0.3)] transition-all duration-300 group-hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] group-hover:from-[#4facfe] group-hover:to-[#00c6fb]">
+                      <DownloadIcon class="w-7 h-7 text-white" />
                     </div>
-                    <span class="download-button-text">下载文件</span>
+                    <span class="text-[15px] font-medium text-[#666] transition-colors duration-300 group-hover:text-[#4facfe]">下载文件</span>
                   </a>
                 </template>
               </div>
@@ -848,838 +848,113 @@ onMounted(() => {
 </script>
 
 <style lang="less" scoped>
-.file-preview-container {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background-color: #f8f9fa;
-  animation: fade-in 0.3s ease;
-  position: relative;
-  
-  .preview-header {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    backdrop-filter: blur(20px);
-    background-color: rgba(255, 255, 255, 0.9);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    padding: 10px 0;
-    
-    .header-content {
-      max-width: 1400px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 24px;
-    }
-    
-    .header-left {
-      flex: 2;
-      
-      .breadcrumb {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-        background-color: rgba(248, 249, 250, 0.9);
-        padding: 10px 16px;
-        border-radius: 50px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-        backdrop-filter: blur(4px);
-        
-        .icon-sm {
-          cursor: pointer;
-          color: #555;
-          width: 16px;
-          height: 16px;
-          transition: all 0.2s ease;
-          
-          &:hover {
-            color: var(--color-blue);
-            transform: scale(1.1);
-          }
-        }
-        
-        .icon-xs {
-          color: #aaa;
-          width: 12px;
-          height: 12px;
-        }
-        
-        .path-segment {
-          cursor: pointer;
-          color: #555;
-          font-weight: 500;
-          padding: 2px 8px;
-          border-radius: 4px;
-          transition: all 0.2s ease;
-          
-          &:hover {
-            color: var(--color-blue);
-            background-color: rgba(56, 161, 219, 0.1);
-            text-decoration: none;
-          }
-        }
-      }
-    }
-    
-    .header-center {
-      flex: 1;
-      text-align: center;
-      
-      .file-title {
-        font-size: 18px;
-        font-weight: 600;
-        color: #333;
-        margin: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 400px;
-        display: inline-block;
-        padding: 8px 16px;
-        border-radius: 8px;
-        background-color: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(4px);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-      }
-    }
-    
-    .header-right {
-      flex: 2;
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      
-      .action-btn {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 500;
-        padding: 10px 18px;
-        transition: all 0.3s ease;
-        
-        .icon-sm {
-          width: 16px;
-          height: 16px;
-        }
-        
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-      }
-      
-      .back-btn {
-        background: rgba(255, 255, 255, 0.9);
-        border: 1px solid #eee;
-        color: #555;
-        
-        &:hover {
-          background-color: #fff;
-          border-color: #ddd;
-        }
-      }
-      
-      .download-btn {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        color: white;
-        border: none;
-        box-shadow: 0 4px 10px rgba(79, 172, 254, 0.2);
-        
-        &:hover {
-          background: linear-gradient(135deg, #4facfe 0%, #00c6fb 100%);
-          box-shadow: 0 6px 15px rgba(79, 172, 254, 0.3);
-        }
-      }
-    }
-  }
-  
-  .preview-content {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: auto;
-    padding: 32px;
-    
-    // 加载状态
-    .loading-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      
-      .loading-spinner {
-        width: 48px;
-        height: 48px;
-        border: 3px solid rgba(56, 161, 219, 0.1);
-        border-top: 3px solid var(--color-blue);
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: 20px;
-      }
-      
-      p {
-        color: #666;
-        font-size: 16px;
-        font-weight: 500;
-      }
-    }
-    
-    // 错误状态
-    .error-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      max-width: 450px;
-      background-color: white;
-      padding: 40px;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-      
-      .error-icon {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 32px;
-        font-weight: bold;
-        margin-bottom: 24px;
-        box-shadow: 0 8px 20px rgba(255, 77, 79, 0.2);
-      }
-      
-      h3 {
-        font-size: 22px;
-        color: #333;
-        margin-bottom: 16px;
-        font-weight: 600;
-      }
-      
-      p {
-        color: #666;
-        margin-bottom: 28px;
-        text-align: center;
-        line-height: 1.6;
-        font-size: 15px;
-      }
-      
-      .error-actions {
-        display: flex;
-        gap: 16px;
-        
-        button {
-          padding: 12px 24px;
-          border-radius: 10px;
-          cursor: pointer;
-          font-size: 15px;
-          font-weight: 500;
-          transition: all 0.3s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          
-          &.btn-primary {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            border: none;
-            box-shadow: 0 4px 10px rgba(79, 172, 254, 0.3);
-            
-            &:hover {
-              transform: translateY(-2px);
-              box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
-              background: linear-gradient(135deg, #4facfe 0%, #00c6fb 100%);
-            }
-            
-            &:active {
-              transform: translateY(-1px);
-              box-shadow: 0 4px 8px rgba(79, 172, 254, 0.4);
-            }
-          }
-          
-          &.btn-outline {
-            background-color: white;
-            color: #555;
-            border: 1px solid #ddd;
-            
-            &:hover {
-              background-color: #f9f9f9;
-              border-color: #ccc;
-              transform: translateY(-2px);
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            }
-          }
-        }
-      }
-    }
-    
-    // 图片预览
-    .image-preview {
-      max-width: 100%;
-      max-height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background-color: #f5f5f5;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-      
-      img {
-        max-width: 100%;
-        max-height: 80vh;
-        object-fit: contain;
-        border-radius: 8px;
-        transition: transform 0.3s ease;
-        
-        &:hover {
-          transform: scale(1.02);
-        }
-      }
-    }
-    
-    // 视频预览
-    .video-preview {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background-color: #000;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-      
-      video {
-        max-width: 100%;
-        max-height: 80vh;
-        border-radius: 8px;
-      }
-    }
-    
-    // 音频预览
-    .audio-preview {
-      width: 100%;
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-      
-      .audio-card {
-        display: flex;
-        align-items: center;
-        gap: 30px;
-        background: linear-gradient(145deg, #fff, #f8f9fa);
-        padding: 40px;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-        max-width: 650px;
-        width: 100%;
-        
-        .audio-icon-container {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          width: 90px;
-          height: 90px;
-          background: linear-gradient(135deg, #e3fdf5 0%, #ffe6fa 100%);
-          border-radius: 50%;
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-          
-          .audio-icon {
-            width: 45px;
-            height: 45px;
-            color: var(--color-blue);
-          }
-        }
-        
-        .audio-info {
-          flex: 1;
-          
-          .audio-name {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 20px;
-          }
-          
-          audio {
-            width: 100%;
-            height: 40px;
-            outline: none;
-          }
-        }
-      }
-    }
-    
-    // PDF预览
-    .pdf-preview {
-      width: 100%;
-      height: 100%;
-      background-color: white;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-      
-      iframe {
-        width: 100%;
-        height: 100%;
-        border: none;
-      }
-    }
-
-    // 文本文件预览
-    .text-preview {
-      width: 100%;
-      height: 100%;
-      background-color: white;
-      border-radius: 12px;
-      overflow: auto;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-      padding: 20px;
-      
-      .text-content {
-        width: 100%;
-        height: 100%;
-        
-        pre {
-          font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-          font-size: 14px;
-          line-height: 1.6;
-          white-space: pre-wrap;
-          word-break: break-all;
-          color: #333;
-          padding: 20px;
-          margin: 0;
-          overflow: auto;
-          max-height: 70vh;
-          
-          &.code-content {
-            background-color: #f5f5f5;
-            border-radius: 8px;
-            border: 1px solid #eee;
-            padding: 16px;
-          }
-        }
-      }
-      
-      .markdown-content {
-        padding: 20px;
-        line-height: 1.6;
-        color: #333;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-        
-        h1, h2, h3, h4, h5, h6 {
-          margin-top: 24px;
-          margin-bottom: 16px;
-          font-weight: 600;
-          line-height: 1.25;
-        }
-        
-        h1 {
-          font-size: 2em;
-          border-bottom: 1px solid #eaecef;
-          padding-bottom: 0.3em;
-        }
-        
-        h2 {
-          font-size: 1.5em;
-          border-bottom: 1px solid #eaecef;
-          padding-bottom: 0.3em;
-        }
-        
-        h3 {
-          font-size: 1.25em;
-        }
-        
-        p, blockquote, ul, ol, dl, table, pre {
-          margin-top: 0;
-          margin-bottom: 16px;
-        }
-        
-        blockquote {
-          padding: 0 1em;
-          color: #6a737d;
-          border-left: 0.25em solid #dfe2e5;
-        }
-        
-        code {
-          padding: 0.2em 0.4em;
-          margin: 0;
-          font-size: 85%;
-          background-color: rgba(27, 31, 35, 0.05);
-          border-radius: 3px;
-          font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-        }
-        
-        pre {
-          padding: 16px;
-          overflow: auto;
-          font-size: 85%;
-          line-height: 1.45;
-          background-color: #f6f8fa;
-          border-radius: 3px;
-          
-          code {
-            padding: 0;
-            margin: 0;
-            font-size: 100%;
-            background-color: transparent;
-            border-radius: 0;
-          }
-        }
-        
-        table {
-          display: block;
-          width: 100%;
-          overflow: auto;
-          border-spacing: 0;
-          border-collapse: collapse;
-          
-          th, td {
-            padding: 6px 13px;
-            border: 1px solid #dfe2e5;
-          }
-          
-          tr {
-            background-color: #fff;
-            border-top: 1px solid #c6cbd1;
-            
-            &:nth-child(2n) {
-              background-color: #f6f8fa;
-            }
-          }
-        }
-        
-        img {
-          max-width: 100%;
-          box-sizing: content-box;
-          background-color: #fff;
-        }
-        
-        .error {
-          color: #e53e3e;
-          padding: 10px;
-          background-color: #fff5f5;
-          border-left: 4px solid #e53e3e;
-          margin-bottom: 16px;
-        }
-      }
-
-      .html-preview-container {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        
-        .preview-controls {
-          display: flex;
-          gap: 12px;
-          padding: 10px 20px;
-          background-color: #f9f9fa;
-          border-bottom: 1px solid #eee;
-          
-          button {
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            border: none;
-            
-            &.preview-toggle-btn {
-              background-color: #e5e7eb;
-              color: #374151;
-              
-              &:hover {
-                background-color: #d1d5db;
-              }
-              
-              &.active {
-                background-color: #3b82f6;
-                color: white;
-              }
-            }
-            
-            &.open-new-window-btn {
-              background-color: white;
-              border: 1px solid #d1d5db;
-              color: #4b5563;
-              
-              &:hover {
-                background-color: #f9fafb;
-                border-color: #9ca3af;
-              }
-            }
-          }
-        }
-        
-        .html-render {
-          flex: 1;
-          padding: 0;
-          
-          .html-iframe {
-            width: 100%;
-            height: 100%;
-            min-height: 70vh;
-            border: none;
-            background-color: white;
-          }
-        }
-      }
-    }
-    
-    // 不支持预览的文件类型
-    .unsupported-preview {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100%;
-      
-      .unsupported-card {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(145deg, #fff, #f8f9fa);
-        padding: 50px;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-        max-width: 440px;
-        text-align: center;
-        
-        .unsupported-icon {
-          margin-bottom: 30px;
-          background: linear-gradient(135deg, #e3fdf5 0%, #ffe6fa 100%);
-          width: 110px;
-          height: 110px;
-          border-radius: 50%;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-          
-          .file-icon {
-            width: 55px;
-            height: 55px;
-            color: #999;
-            
-            &.image-icon { color: var(--color-blue); }
-            &.video-icon { color: #f50; }
-            &.audio-icon { color: #73d13d; }
-            &.code-icon { color: #722ed1; }
-            &.pdf-icon { color: #f5222d; }
-            &.archive-icon { color: #fa8c16; }
-            &.spreadsheet-icon { color: #52c41a; }
-            &.presentation-icon { color: #eb2f96; }
-          }
-        }
-        
-        .unsupported-message {
-          h3 {
-            font-size: 22px;
-            color: #333;
-            margin-bottom: 16px;
-            font-weight: 600;
-          }
-          
-          p {
-            color: #666;
-            margin-bottom: 28px;
-            line-height: 1.6;
-            font-size: 15px;
-          }
-          
-          .file-info {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 28px;
-            background-color: rgba(245, 247, 250, 0.5);
-            border-radius: 10px;
-            padding: 16px 20px;
-            font-size: 14px;
-            color: #555;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-            
-            .file-info-item {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              border-bottom: 1px dashed rgba(0, 0, 0, 0.05);
-              padding-bottom: 8px;
-              
-              &:last-child {
-                border-bottom: none;
-                padding-bottom: 0;
-              }
-              
-              .label {
-                font-weight: 500;
-                color: #333;
-              }
-              
-              .value {
-                font-weight: 400;
-                color: #666;
-                max-width: 250px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-              }
-            }
-          }
-          
-          .button-container {
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
-          }
-          
-          .download-button {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            
-            &:hover {
-              transform: translateY(-3px);
-              
-              .download-button-icon {
-                box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
-                background: linear-gradient(135deg, #4facfe 0%, #00c6fb 100%);
-              }
-              
-              .download-button-text {
-                color: #4facfe;
-              }
-            }
-            
-            .download-button-icon {
-              width: 60px;
-              height: 60px;
-              background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-              border-radius: 50%;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              margin-bottom: 12px;
-              box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3);
-              transition: all 0.3s ease;
-              
-              .icon {
-                width: 28px;
-                height: 28px;
-                color: white;
-              }
-            }
-            
-            .download-button-text {
-              font-size: 15px;
-              font-weight: 500;
-              color: #666;
-              transition: color 0.3s ease;
-            }
-          }
-          
-          button {
-            display: none; /* 隐藏旧按钮 */
-          }
-        }
-      }
-    }
-  }
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
+/* 动画 */
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-/* 响应式调整 */
-@media screen and (max-width: 768px) {
-  .file-preview-container {
-    .preview-header {
-      .header-content {
-        flex-direction: column;
-        gap: 12px;
-        padding: 12px;
-        
-        .header-left {
-          width: 100%;
-        }
-        
-        .header-center {
-          width: 100%;
-          order: -1;
-          
-          .file-title {
-            max-width: 100%;
-          }
-        }
-        
-        .header-right {
-          width: 100%;
-          justify-content: space-between;
-        }
-      }
-    }
-    
-    .preview-content {
-      padding: 16px;
-      
-      .audio-preview .audio-card {
-        flex-direction: column;
-        padding: 30px;
-        
-        .audio-icon-container {
-          margin-bottom: 20px;
-        }
-      }
+/* Markdown 内容样式 - 因为是动态生成的 HTML 需要保留 */
+.markdown-content {
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+  }
 
-      .html-preview-container .preview-controls {
-        flex-direction: column;
-        gap: 8px;
-        padding: 8px 16px;
-      }
-      
-      .unsupported-preview .unsupported-card {
-        padding: 30px;
+  h1 {
+    font-size: 2em;
+    border-bottom: 1px solid #eaecef;
+    padding-bottom: 0.3em;
+  }
+
+  h2 {
+    font-size: 1.5em;
+    border-bottom: 1px solid #eaecef;
+    padding-bottom: 0.3em;
+  }
+
+  h3 {
+    font-size: 1.25em;
+  }
+
+  p, blockquote, ul, ol, dl, table, pre {
+    margin-top: 0;
+    margin-bottom: 16px;
+  }
+
+  blockquote {
+    padding: 0 1em;
+    color: #6a737d;
+    border-left: 0.25em solid #dfe2e5;
+  }
+
+  code {
+    padding: 0.2em 0.4em;
+    margin: 0;
+    font-size: 85%;
+    background-color: rgba(27, 31, 35, 0.05);
+    border-radius: 3px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+
+  pre {
+    padding: 16px;
+    overflow: auto;
+    font-size: 85%;
+    line-height: 1.45;
+    background-color: #f6f8fa;
+    border-radius: 3px;
+
+    code {
+      padding: 0;
+      margin: 0;
+      font-size: 100%;
+      background-color: transparent;
+      border-radius: 0;
+    }
+  }
+
+  table {
+    display: block;
+    width: 100%;
+    overflow: auto;
+    border-spacing: 0;
+    border-collapse: collapse;
+
+    th, td {
+      padding: 6px 13px;
+      border: 1px solid #dfe2e5;
+    }
+
+    tr {
+      background-color: #fff;
+      border-top: 1px solid #c6cbd1;
+
+      &:nth-child(2n) {
+        background-color: #f6f8fa;
       }
     }
   }
+
+  img {
+    max-width: 100%;
+    box-sizing: content-box;
+    background-color: #fff;
+  }
+
+  .error {
+    color: #e53e3e;
+    padding: 10px;
+    background-color: #fff5f5;
+    border-left: 4px solid #e53e3e;
+    margin-bottom: 16px;
+  }
 }
 
+/* 代码高亮样式 */
 .code-content {
-  width: 100%;
-  height: 100%;
-  padding: 20px;
-  overflow: auto;
-
   pre.hljs {
     margin: 0;
     padding: 16px;
@@ -1698,166 +973,13 @@ onMounted(() => {
   }
 }
 
-// 分享模式 logo 样式
-.logo-link {
-  text-decoration: none;
-
-  .logo-text {
-    font-size: 18px;
-    font-weight: 600;
-    color: #333;
-  }
-}
-
-// 密码验证容器
-.password-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  padding: 20px;
-
-  .password-card {
-    background: white;
-    border-radius: 20px;
-    padding: 48px 40px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-    max-width: 420px;
-    width: 100%;
-    text-align: center;
-
-    .lock-icon {
-      margin-bottom: 24px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-
-      .icon-lg {
-        width: 48px;
-        height: 48px;
-        padding: 16px;
-        background: linear-gradient(135deg, rgba(79, 172, 254, 0.1) 0%, rgba(0, 242, 254, 0.1) 100%);
-        border-radius: 50%;
-        color: var(--color-blue, #4facfe);
-        box-sizing: content-box;
-      }
-    }
-
-    h3 {
-      font-size: 22px;
-      font-weight: 600;
-      color: #1a1a1a;
-      margin-bottom: 12px;
-    }
-
-    .file-info-brief {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-bottom: 32px;
-      padding: 16px;
-      background: #f8f9fa;
-      border-radius: 12px;
-
-      .file-name {
-        font-weight: 600;
-        font-size: 15px;
-        color: #333;
-        word-break: break-all;
-        line-height: 1.4;
-      }
-
-      .file-size {
-        font-size: 13px;
-        color: #888;
-      }
-    }
-
-    .password-input-group {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-
-      .password-input {
-        flex: 1;
-        padding: 16px 18px;
-        border: 2px solid #e8e8e8;
-        border-radius: 12px;
-        font-size: 15px;
-        outline: none;
-        transition: all 0.3s ease;
-        background: #fafafa;
-
-        &:focus {
-          border-color: var(--color-blue, #4facfe);
-          background: white;
-          box-shadow: 0 0 0 4px rgba(79, 172, 254, 0.1);
-        }
-
-        &::placeholder {
-          color: #aaa;
-        }
-      }
-
-      .toggle-password {
-        padding: 14px;
-        background: #f0f0f0;
-        border: 2px solid transparent;
-        border-radius: 12px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        &:hover {
-          background: #e5e5e5;
-        }
-
-        .icon-sm {
-          width: 22px;
-          height: 22px;
-          color: #666;
-        }
-      }
-    }
-
-    .verify-btn {
-      width: 100%;
-      padding: 16px;
-      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
-
-      &:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
-      }
-
-      &:active:not(:disabled) {
-        transform: translateY(0);
-      }
-
-      &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
-      }
-    }
-  }
-}
-
-// 分享模式响应式
-@media screen and (max-width: 768px) {
-  .password-container .password-card {
-    padding: 24px;
-    margin: 0 16px;
-  }
-}
+/* 文件图标颜色类 */
+.image-icon { color: var(--color-blue); }
+.video-icon { color: #f50; }
+.audio-icon { color: #73d13d; }
+.code-icon { color: #722ed1; }
+.pdf-icon { color: #f5222d; }
+.archive-icon { color: #fa8c16; }
+.spreadsheet-icon { color: #52c41a; }
+.presentation-icon { color: #eb2f96; }
 </style> 

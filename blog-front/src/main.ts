@@ -10,6 +10,7 @@ import 'md-editor-v3/lib/style.css';
 import { createPinia } from 'pinia';
 
 import '@/assets/css/style.less'
+import '@/assets/css/tailwind.css'
 
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import ElementPlus from 'element-plus'
