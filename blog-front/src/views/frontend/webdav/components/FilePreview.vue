@@ -1715,81 +1715,108 @@ onMounted(() => {
   justify-content: center;
   align-items: center;
   width: 100%;
+  padding: 20px;
 
   .password-card {
     background: white;
-    border-radius: 16px;
-    padding: 40px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-    max-width: 400px;
+    border-radius: 20px;
+    padding: 48px 40px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    max-width: 420px;
     width: 100%;
     text-align: center;
 
     .lock-icon {
-      margin-bottom: 20px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
 
       .icon-lg {
-        width: 60px;
-        height: 60px;
+        width: 48px;
+        height: 48px;
+        padding: 16px;
+        background: linear-gradient(135deg, rgba(79, 172, 254, 0.1) 0%, rgba(0, 242, 254, 0.1) 100%);
+        border-radius: 50%;
         color: var(--color-blue, #4facfe);
+        box-sizing: content-box;
       }
     }
 
     h3 {
-      font-size: 20px;
-      color: #333;
-      margin-bottom: 16px;
+      font-size: 22px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 12px;
     }
 
     .file-info-brief {
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      margin-bottom: 24px;
-      color: #666;
-      font-size: 14px;
+      gap: 6px;
+      margin-bottom: 32px;
+      padding: 16px;
+      background: #f8f9fa;
+      border-radius: 12px;
 
       .file-name {
-        font-weight: 500;
+        font-weight: 600;
+        font-size: 15px;
         color: #333;
         word-break: break-all;
+        line-height: 1.4;
+      }
+
+      .file-size {
+        font-size: 13px;
+        color: #888;
       }
     }
 
     .password-input-group {
       display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
+      gap: 10px;
+      margin-bottom: 20px;
 
       .password-input {
         flex: 1;
-        padding: 14px 16px;
-        border: 1px solid #d9d9d9;
-        border-radius: 10px;
+        padding: 16px 18px;
+        border: 2px solid #e8e8e8;
+        border-radius: 12px;
         font-size: 15px;
         outline: none;
-        transition: border-color 0.3s;
+        transition: all 0.3s ease;
+        background: #fafafa;
 
         &:focus {
           border-color: var(--color-blue, #4facfe);
+          background: white;
+          box-shadow: 0 0 0 4px rgba(79, 172, 254, 0.1);
+        }
+
+        &::placeholder {
+          color: #aaa;
         }
       }
 
       .toggle-password {
-        padding: 12px;
-        background: #f5f5f5;
-        border: none;
-        border-radius: 10px;
+        padding: 14px;
+        background: #f0f0f0;
+        border: 2px solid transparent;
+        border-radius: 12px;
         cursor: pointer;
-        transition: background-color 0.3s;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
 
         &:hover {
-          background: #e8e8e8;
+          background: #e5e5e5;
         }
 
         .icon-sm {
-          width: 20px;
-          height: 20px;
+          width: 22px;
+          height: 22px;
           color: #666;
         }
       }
@@ -1797,25 +1824,30 @@ onMounted(() => {
 
     .verify-btn {
       width: 100%;
-      padding: 14px;
+      padding: 16px;
       background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
       color: white;
       border: none;
-      border-radius: 10px;
+      border-radius: 12px;
       font-size: 16px;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
       transition: all 0.3s ease;
-      box-shadow: 0 4px 10px rgba(79, 172, 254, 0.2);
+      box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
 
       &:hover:not(:disabled) {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
+        box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+      }
+
+      &:active:not(:disabled) {
+        transform: translateY(0);
       }
 
       &:disabled {
         opacity: 0.6;
         cursor: not-allowed;
+        transform: none;
       }
     }
   }
