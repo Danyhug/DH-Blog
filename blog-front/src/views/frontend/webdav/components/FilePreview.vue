@@ -1,30 +1,52 @@
 <template>
-  <div class="file-preview-container">
+  <div class="file-preview-container" :class="{ 'share-mode': shareMode }">
     <!-- 顶部导航栏 -->
     <div class="preview-header">
       <div class="header-content">
       <div class="header-left">
-        <div class="breadcrumb">
-          <HomeIcon class="icon-sm" @click="handleNavigateToRoot" />
-          <template v-if="pathSegments.length > 0">
-            <ChevronRightIcon class="icon-xs" />
-            <template v-for="(segment, index) in pathSegments" :key="index">
-              <span 
-                class="path-segment" 
-                @click="handleNavigateToPathSegment(index)"
-              >{{ segment.name }}</span>
-              <ChevronRightIcon v-if="index < pathSegments.length - 1" class="icon-xs" />
+        <!-- 分享模式：显示Logo -->
+        <template v-if="shareMode">
+          <a href="/" class="logo-link">
+            <span class="logo-text">DH-Blog</span>
+          </a>
+        </template>
+        <!-- 普通模式：显示面包屑 -->
+        <template v-else>
+          <div class="breadcrumb">
+            <HomeIcon class="icon-sm" @click="handleNavigateToRoot" />
+            <template v-if="pathSegments.length > 0">
+              <ChevronRightIcon class="icon-xs" />
+              <template v-for="(segment, index) in pathSegments" :key="index">
+                <span
+                  class="path-segment"
+                  @click="handleNavigateToPathSegment(index)"
+                >{{ segment.name }}</span>
+                <ChevronRightIcon v-if="index < pathSegments.length - 1" class="icon-xs" />
+              </template>
             </template>
-          </template>
-          <span v-else class="path-segment" @click="handleNavigateToRoot">我的网盘</span>
-        </div>
+            <span v-else class="path-segment" @click="handleNavigateToRoot">我的网盘</span>
+          </div>
+        </template>
       </div>
-        
+
         <div class="header-center">
-          <h2 class="file-title">{{ file.name }}</h2>
+          <h2 class="file-title">{{ currentFileName }}</h2>
         </div>
-        
+
       <div class="header-right">
+        <!-- 分享模式：显示返回首页和下载按钮 -->
+        <template v-if="shareMode">
+          <a href="/" class="action-btn back-btn">
+            <ArrowLeftIcon class="icon-sm" />
+            返回首页
+          </a>
+          <button v-if="canPreview" class="action-btn download-btn" @click="downloadShareFile">
+            <DownloadIcon class="icon-sm" />
+            下载
+          </button>
+        </template>
+        <!-- 普通模式：显示返回和下载按钮 -->
+        <template v-else>
           <button class="action-btn back-btn" @click="$emit('close')">
             <ArrowLeftIcon class="icon-sm" />
             返回
@@ -33,180 +55,224 @@
             <DownloadIcon class="icon-sm" />
             下载
           </a>
-        </div>
+        </template>
+      </div>
       </div>
     </div>
-    
+
     <div class="preview-content">
-      <!-- 判断文件类型是否支持预览 -->
-      <template v-if="isSupportedPreviewType">
-        <!-- 加载状态 -->
-        <div v-if="isLoading" class="loading-container">
+      <!-- ========== 分享模式特殊状态处理 ========== -->
+      <template v-if="shareMode && !canPreview">
+        <!-- 分享加载中 -->
+        <div v-if="shareLoading" class="loading-container">
           <div class="loading-spinner"></div>
-          <p>正在加载预览...</p>
-        </div>
-        
-        <!-- 错误状态 -->
-        <div v-else-if="hasError" class="error-container">
-          <div class="error-icon">!</div>
-          <h3>预览失败</h3>
-          <p>{{ errorMessage }}</p>
-          <div class="error-actions">
-            <button class="btn-primary" @click="retryPreview">重试</button>
-            <button class="btn-outline" @click="downloadFile">下载文件</button>
-          </div>
-        </div>
-        
-        <!-- 图片预览 -->
-        <div v-else-if="file.type === 'image'" class="image-preview">
-          <img 
-            :src="fileUrl" 
-            :alt="file.name" 
-            @load="onPreviewLoaded" 
-            @error="onPreviewError('图片加载失败')" 
-          />
-        </div>
-        
-        <!-- 视频预览 -->
-        <div v-else-if="file.type === 'video'" class="video-preview">
-          <video 
-            controls 
-            :src="fileUrl"
-            @loadeddata="onPreviewLoaded"
-            @error="onPreviewError('视频加载失败')"
-          >
-            您的浏览器不支持视频播放
-          </video>
-        </div>
-        
-        <!-- 音频预览 -->
-        <div v-else-if="file.type === 'audio'" class="audio-preview">
-          <div class="audio-card">
-            <div class="audio-icon-container">
-            <MusicIcon class="audio-icon" />
-            </div>
-            <div class="audio-info">
-              <div class="audio-name">{{ file.name }}</div>
-              <audio 
-                controls 
-                :src="fileUrl"
-                @loadeddata="onPreviewLoaded"
-                @error="onPreviewError('音频加载失败')"
-              >
-                您的浏览器不支持音频播放
-              </audio>
-            </div>
-          </div>
-        </div>
-        
-        <!-- PDF预览 -->
-        <div v-else-if="file.type === 'pdf'" class="pdf-preview">
-          <iframe 
-            :src="fileUrl" 
-            frameborder="0"
-            @load="onPreviewLoaded"
-            @error="onPreviewError('PDF加载失败')"
-          ></iframe>
+          <p>加载中...</p>
         </div>
 
-        <!-- 文本文件预览 -->
-        <div v-else-if="file.type === 'text'" class="text-preview">
-          <div v-if="isMarkdown" class="markdown-content">
-            <div v-html="renderedMarkdown"></div>
+        <!-- 分享错误 -->
+        <div v-else-if="shareError" class="error-container">
+          <div class="error-icon">!</div>
+          <h3>访问失败</h3>
+          <p>{{ shareError }}</p>
+          <div class="error-actions">
+            <a href="/" class="btn-primary">返回首页</a>
           </div>
-          <div v-else-if="isHtmlFile" class="html-preview-container">
-            <div class="preview-controls">
-              <button 
-                class="preview-toggle-btn"
-                @click="toggleHtmlPreview"
-                :class="{ active: showHtmlPreview }"
-              >
-                {{ showHtmlPreview ? '查看源码' : '预览HTML' }}
+        </div>
+
+        <!-- 分享已过期 -->
+        <div v-else-if="shareInfo?.is_expired" class="error-container">
+          <div class="error-icon">!</div>
+          <h3>分享已过期</h3>
+          <p>此分享链接已过期，无法访问</p>
+          <div class="error-actions">
+            <a href="/" class="btn-primary">返回首页</a>
+          </div>
+        </div>
+
+        <!-- 需要密码验证 -->
+        <div v-else-if="shareInfo?.has_password && !passwordVerified" class="password-container">
+          <div class="password-card">
+            <div class="lock-icon">
+              <LockIcon class="icon-lg" />
+            </div>
+            <h3>此分享需要密码访问</h3>
+            <div class="file-info-brief">
+              <span class="file-name">{{ shareInfo.file_name }}</span>
+              <span class="file-size">{{ formatFileSize(shareInfo.file_size) }}</span>
+            </div>
+            <div class="password-input-group">
+              <input
+                v-model="password"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="请输入访问密码"
+                class="password-input"
+                @keyup.enter="verifySharePasswordHandler"
+              />
+              <button class="toggle-password" @click="showPassword = !showPassword">
+                <EyeIcon v-if="!showPassword" class="icon-sm" />
+                <EyeOffIcon v-else class="icon-sm" />
               </button>
-              <button 
-                class="open-new-window-btn"
-                @click="openHtmlInNewWindow"
-                title="在新窗口中打开"
-              >
-                <span>打开新窗口</span>
-              </button>
             </div>
-            
-            <div v-if="showHtmlPreview" class="html-render">
-              <iframe 
-                :src="htmlPreviewUrl" 
-                sandbox="allow-scripts allow-same-origin"
-                class="html-iframe"
-              ></iframe>
-            </div>
-            <div v-else class="code-content">
-              <div v-html="highlightedCode"></div>
-            </div>
-          </div>
-          <div v-else-if="isVueFile || isCodeFile" class="code-content">
-            <div v-html="highlightedCode"></div>
-          </div>
-          <div v-else class="text-content">
-            <pre>{{ textContent }}</pre>
+            <button class="verify-btn" @click="verifySharePasswordHandler" :disabled="verifying">
+              {{ verifying ? '验证中...' : '验证密码' }}
+            </button>
           </div>
         </div>
       </template>
-      
-      <!-- 不支持预览的文件类型 -->
-      <div v-else class="unsupported-preview">
-        <div class="unsupported-card">
-          <div class="unsupported-icon">
-            <component :is="file.icon || FileIcon" class="file-icon" :class="getIconClass(file.type)" />
+
+      <!-- ========== 统一预览区域（分享模式验证通过或普通模式） ========== -->
+      <template v-else>
+        <!-- 判断文件类型是否支持预览 -->
+        <template v-if="currentSupportedPreviewType">
+          <!-- 加载状态 -->
+          <div v-if="isLoading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>正在加载预览...</p>
           </div>
-          <div class="unsupported-message">
-            <h3>无法预览此文件</h3>
-            <p>该文件类型暂不支持在线预览，您可以下载后在本地查看。</p>
-            <div class="file-info">
-              <div class="file-info-item">
-                <span class="label">文件名</span>
-                <span class="value">{{ file.name }}</span>
+
+          <!-- 错误状态 -->
+          <div v-else-if="hasError" class="error-container">
+            <div class="error-icon">!</div>
+            <h3>预览失败</h3>
+            <p>{{ errorMessage }}</p>
+            <div class="error-actions" v-if="!shareMode">
+              <button class="btn-primary" @click="retryPreview">重试</button>
+              <button class="btn-outline" @click="downloadFile">下载文件</button>
+            </div>
+          </div>
+
+          <!-- 图片预览 -->
+          <div v-else-if="currentFileType === 'image'" class="image-preview">
+            <img :src="currentFileUrl" :alt="currentFileName" @load="onPreviewLoaded" @error="onPreviewError('图片加载失败')" />
+          </div>
+
+          <!-- 视频预览 -->
+          <div v-else-if="currentFileType === 'video'" class="video-preview">
+            <video controls :src="currentFileUrl" @loadeddata="onPreviewLoaded" @error="onPreviewError('视频加载失败')">
+              您的浏览器不支持视频播放
+            </video>
+          </div>
+
+          <!-- 音频预览 -->
+          <div v-else-if="currentFileType === 'audio'" class="audio-preview">
+            <div class="audio-card">
+              <div class="audio-icon-container">
+                <MusicIcon class="audio-icon" />
               </div>
-              <div class="file-info-item" v-if="file.originalFile && file.originalFile.size !== undefined">
-                <span class="label">大小</span>
-                <span class="value">{{ formatFileSize(file.originalFile.size) }}</span>
-              </div>
-              <div class="file-info-item" v-else-if="file.size">
-                <span class="label">大小</span>
-                <span class="value">{{ formatFileSize(file.size) }}</span>
-              </div>
-              <div class="file-info-item" v-if="file.originalFile && file.originalFile.createTime">
-                <span class="label">创建时间</span>
-                <span class="value">{{ formatDate(file.originalFile.createTime) }}</span>
+              <div class="audio-info">
+                <div class="audio-name">{{ currentFileName }}</div>
+                <audio controls :src="currentFileUrl" @loadeddata="onPreviewLoaded" @error="onPreviewError('音频加载失败')">
+                  您的浏览器不支持音频播放
+                </audio>
               </div>
             </div>
-            <div class="button-container">
-              <a class="download-button" :href="fileUrl" download :title="'下载' + file.name">
-                <div class="download-button-icon">
-                  <DownloadIcon class="icon" />
+          </div>
+
+          <!-- PDF预览 -->
+          <div v-else-if="currentFileType === 'pdf'" class="pdf-preview">
+            <iframe :src="currentFileUrl" frameborder="0" @load="onPreviewLoaded" @error="onPreviewError('PDF加载失败')"></iframe>
+          </div>
+
+          <!-- 文本文件预览 -->
+          <div v-else-if="currentFileType === 'text'" class="text-preview">
+            <div v-if="isMarkdown" class="markdown-content">
+              <div v-html="renderedMarkdown"></div>
+            </div>
+            <div v-else-if="isHtmlFile" class="html-preview-container">
+              <div class="preview-controls">
+                <button class="preview-toggle-btn" @click="toggleHtmlPreview" :class="{ active: showHtmlPreview }">
+                  {{ showHtmlPreview ? '查看源码' : '预览HTML' }}
+                </button>
+                <button class="open-new-window-btn" @click="openHtmlInNewWindow" title="在新窗口中打开">
+                  <span>打开新窗口</span>
+                </button>
+              </div>
+              <div v-if="showHtmlPreview" class="html-render">
+                <iframe :src="htmlPreviewUrl" sandbox="allow-scripts allow-same-origin" class="html-iframe"></iframe>
+              </div>
+              <div v-else class="code-content">
+                <div v-html="highlightedCode"></div>
+              </div>
+            </div>
+            <div v-else-if="isVueFile || isCodeFile" class="code-content">
+              <div v-html="highlightedCode"></div>
+            </div>
+            <div v-else class="text-content">
+              <pre>{{ textContent }}</pre>
+            </div>
+          </div>
+        </template>
+
+        <!-- 不支持预览的文件类型 -->
+        <div v-else class="unsupported-preview">
+          <div class="unsupported-card">
+            <div class="unsupported-icon">
+              <component :is="file.icon || FileIcon" class="file-icon" :class="getIconClass(currentFileType)" />
+            </div>
+            <div class="unsupported-message">
+              <h3>无法预览此文件</h3>
+              <p>该文件类型暂不支持在线预览，您可以下载后在本地查看。</p>
+              <div class="file-info">
+                <div class="file-info-item">
+                  <span class="label">文件名</span>
+                  <span class="value">{{ currentFileName }}</span>
                 </div>
-                <span class="download-button-text">下载文件</span>
-              </a>
+                <div class="file-info-item" v-if="currentFileSize">
+                  <span class="label">大小</span>
+                  <span class="value">{{ formatFileSize(currentFileSize) }}</span>
+                </div>
+                <div class="file-info-item" v-if="!shareMode && file.originalFile && file.originalFile.createTime">
+                  <span class="label">创建时间</span>
+                  <span class="value">{{ formatDate(file.originalFile.createTime) }}</span>
+                </div>
+              </div>
+              <div class="button-container">
+                <template v-if="shareMode">
+                  <button class="download-button" @click="downloadShareFile">
+                    <div class="download-button-icon">
+                      <DownloadIcon class="icon" />
+                    </div>
+                    <span class="download-button-text">下载文件</span>
+                  </button>
+                </template>
+                <template v-else>
+                  <a class="download-button" :href="fileUrl" download :title="'下载' + file.name">
+                    <div class="download-button-icon">
+                      <DownloadIcon class="icon" />
+                    </div>
+                    <span class="download-button-text">下载文件</span>
+                  </a>
+                </template>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, inject, nextTick, onMounted, watch } from 'vue'
-import request from '@/api/axios'
 import type { FileItem } from '../utils/types/file'
 import { getDownloadUrl } from '@/api/file'
 import { SERVER_URL } from '@/types/Constant'
+import {
+  getShareInfo,
+  verifySharePassword,
+  getShareDownloadUrl,
+  type PublicShareInfo
+} from '@/api/share'
 import {
   ArrowLeftIcon,
   DownloadIcon,
   MusicIcon,
   HomeIcon,
   ChevronRightIcon,
-  FileIcon
+  FileIcon,
+  LockIcon,
+  EyeIcon,
+  EyeOffIcon
 } from '../utils/icons'
 import axios from 'axios'
 import { marked } from 'marked'
@@ -222,6 +288,9 @@ interface PathSegment {
 
 const props = defineProps<{
   file: FileItem
+  // 分享模式相关
+  shareMode?: boolean
+  shareId?: string
 }>()
 
 const emits = defineEmits<{
@@ -231,7 +300,18 @@ const emits = defineEmits<{
 // 从父组件注入路径导航信息
 const pathSegments = inject<PathSegment[]>('pathSegments', [])
 const navigateToRoot = inject('navigateToRoot', () => {})
-const navigateToPathSegment = inject('navigateToPathSegment', (index: number) => {})
+const navigateToPathSegment = inject('navigateToPathSegment', (_index: number) => {})
+
+// 分享模式相关状态
+const shareInfo = ref<PublicShareInfo | null>(null)
+const shareLoading = ref(false)
+const shareError = ref('')
+const password = ref('')
+const showPassword = ref(false)
+const passwordVerified = ref(false)
+const verifying = ref(false)
+const downloadToken = ref('')
+const shareBlobUrl = ref('') // 分享模式的 Blob URL
 
 // 加载和错误状态
 const isLoading = ref(true)
@@ -281,10 +361,115 @@ function getLanguage(fileName: string): string {
   return langMap[extension] || 'plaintext';
 }
 
+// 计算属性：是否支持预览的文件类型
+const isSupportedPreviewType = computed(() => {
+  const supportedTypes = ['image', 'video', 'audio', 'pdf', 'text'];
+  return supportedTypes.includes(props.file.type);
+});
+
+// ========== 统一计算属性（分享模式和普通模式共用） ==========
+
+// 分享文件类型（根据文件名扩展名判断）
+const shareFileType = computed(() => {
+  if (!shareInfo.value) return 'file'
+  const name = shareInfo.value.file_name.toLowerCase()
+  const ext = name.split('.').pop() || ''
+
+  const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico']
+  const videoExts = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv']
+  const audioExts = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a']
+  const pdfExts = ['pdf']
+  const textExts = ['txt', 'log', 'md', 'markdown', 'json', 'xml', 'html', 'htm', 'css', 'js', 'ts', 'vue', 'py', 'java', 'c', 'cpp', 'go', 'php', 'rb', 'sh', 'sql', 'yaml', 'yml', 'ini', 'conf', 'cfg', 'env']
+
+  if (imageExts.includes(ext)) return 'image'
+  if (videoExts.includes(ext)) return 'video'
+  if (audioExts.includes(ext)) return 'audio'
+  if (pdfExts.includes(ext)) return 'pdf'
+  if (textExts.includes(ext)) return 'text'
+  return 'file'
+})
+
+// 是否可以进入预览模式（分享模式需要验证通过）
+const canPreview = computed(() => {
+  if (props.shareMode) {
+    return passwordVerified.value && !shareError.value && !shareInfo.value?.is_expired
+  }
+  return true
+})
+
+// 统一的文件名
+const currentFileName = computed(() => {
+  if (props.shareMode) {
+    return shareInfo.value?.file_name || '文件分享'
+  }
+  return props.file.name
+})
+
+// 统一的文件类型
+const currentFileType = computed(() => {
+  if (props.shareMode) {
+    return shareFileType.value
+  }
+  return props.file.type
+})
+
+// 统一的文件 URL
+const currentFileUrl = computed(() => {
+  if (props.shareMode) {
+    return shareBlobUrl.value // 使用 Blob URL
+  }
+  return fileUrl.value
+})
+
+// 统一的文件大小
+const currentFileSize = computed(() => {
+  if (props.shareMode) {
+    return shareInfo.value?.file_size || 0
+  }
+  return props.file.originalFile?.size || props.file.size || 0
+})
+
+// 统一的是否支持预览
+const currentSupportedPreviewType = computed(() => {
+  const supportedTypes = ['image', 'video', 'audio', 'pdf', 'text']
+  return supportedTypes.includes(currentFileType.value)
+})
+
+// 添加isMarkdown和isCodeFile计算属性
+const isMarkdown = computed(() => {
+  const name = currentFileName.value;
+  if (!name) return false;
+  const extension = name.split('.').pop()?.toLowerCase();
+  return extension === 'md' || extension === 'markdown';
+});
+
+const isCodeFile = computed(() => {
+  const name = currentFileName.value;
+  if (!name) return false;
+  const extension = name.split('.').pop()?.toLowerCase();
+  return ['js', 'ts', 'html', 'css', 'xml', 'json', 'py', 'java', 'c', 'cpp', 'go', 'php', 'rb', 'sh', 'sql', 'yaml', 'yml'].includes(extension || '');
+});
+
+// 添加isHtmlFile计算属性
+const isHtmlFile = computed(() => {
+  const name = currentFileName.value;
+  if (!name) return false;
+  const extension = name.split('.').pop()?.toLowerCase();
+  return extension === 'html' || extension === 'htm';
+});
+
+// 添加isVueFile计算属性
+const isVueFile = computed(() => {
+  const name = currentFileName.value;
+  if (!name) return false;
+  const extension = name.split('.').pop()?.toLowerCase();
+  return extension === 'vue';
+});
+
 // 监听textContent变化，处理代码高亮
-watch([textContent, () => props.file], async ([newContent, file]) => {
-  if (!newContent || !file) return;
-  
+watch([textContent, currentFileName], async ([newContent, fileName]) => {
+  if (!newContent || !fileName) return;
+
   // 处理Markdown
   if (isMarkdown.value) {
     try {
@@ -296,11 +481,11 @@ watch([textContent, () => props.file], async ([newContent, file]) => {
     }
     return;
   }
-  
+
   // 处理代码文件，包括HTML和Vue
   if (isHtmlFile.value || isVueFile.value || isCodeFile.value) {
     try {
-      const language = getLanguage(file.name);
+      const language = getLanguage(fileName);
       const highlighted = hljs.highlight(newContent, { language }).value;
       highlightedCode.value = `<pre class="hljs"><code>${highlighted}</code></pre>`;
     } catch (error) {
@@ -309,39 +494,6 @@ watch([textContent, () => props.file], async ([newContent, file]) => {
     }
   }
 }, { immediate: true });
-
-// 计算属性：是否支持预览的文件类型
-const isSupportedPreviewType = computed(() => {
-  const supportedTypes = ['image', 'video', 'audio', 'pdf', 'text'];
-  return supportedTypes.includes(props.file.type);
-});
-
-// 添加isMarkdown和isCodeFile计算属性
-const isMarkdown = computed(() => {
-  if (!props.file.name) return false;
-  const extension = props.file.name.split('.').pop()?.toLowerCase();
-  return extension === 'md' || extension === 'markdown';
-});
-
-const isCodeFile = computed(() => {
-  if (!props.file.name) return false;
-  const extension = props.file.name.split('.').pop()?.toLowerCase();
-  return ['js', 'ts', 'html', 'css', 'xml', 'json', 'py', 'java', 'c', 'cpp', 'go', 'php', 'rb', 'sh', 'sql', 'yaml', 'yml'].includes(extension || '');
-});
-
-// 添加isHtmlFile计算属性
-const isHtmlFile = computed(() => {
-  if (!props.file.name) return false;
-  const extension = props.file.name.split('.').pop()?.toLowerCase();
-  return extension === 'html' || extension === 'htm';
-});
-
-// 添加isVueFile计算属性
-const isVueFile = computed(() => {
-  if (!props.file.name) return false;
-  const extension = props.file.name.split('.').pop()?.toLowerCase();
-  return extension === 'vue';
-});
 
 // 控制HTML预览的状态
 const showHtmlPreview = ref(false);
@@ -548,10 +700,145 @@ function openHtmlInNewWindow() {
   window.open(url, '_blank');
 }
 
+// ========== 分享模式相关方法 ==========
+
+// 获取分享信息
+const fetchShareInfo = async () => {
+  if (!props.shareId) {
+    shareError.value = '无效的分享链接'
+    return
+  }
+
+  try {
+    shareLoading.value = true
+    shareError.value = ''
+    shareInfo.value = await getShareInfo(props.shareId)
+
+    // 如果没有密码且未过期，自动获取下载令牌
+    if (!shareInfo.value.has_password && !shareInfo.value.is_expired) {
+      const result = await verifySharePassword(props.shareId, '')
+      if (result.valid && result.download_token) {
+        downloadToken.value = result.download_token
+        passwordVerified.value = true
+        // 开始加载预览
+        fetchShareFileContent()
+      }
+    }
+  } catch (e: any) {
+    shareError.value = e.message || '分享不存在或已失效'
+  } finally {
+    shareLoading.value = false
+  }
+}
+
+// 验证分享密码
+const verifySharePasswordHandler = async () => {
+  if (!password.value) {
+    ElMessage.warning('请输入密码')
+    return
+  }
+
+  try {
+    verifying.value = true
+    const result = await verifySharePassword(props.shareId!, password.value)
+    if (result.valid && result.download_token) {
+      downloadToken.value = result.download_token
+      passwordVerified.value = true
+      ElMessage.success('密码验证成功')
+      // 开始加载预览
+      fetchShareFileContent()
+    } else {
+      ElMessage.error('密码错误')
+    }
+  } catch (e: any) {
+    ElMessage.error(e.message || '密码错误')
+  } finally {
+    verifying.value = false
+  }
+}
+
+// 获取分享文件内容进行预览
+const fetchShareFileContent = async () => {
+  if (!downloadToken.value || !props.shareId) return
+
+  // 检查是否支持预览
+  if (!currentSupportedPreviewType.value) {
+    isLoading.value = false
+    return
+  }
+
+  try {
+    isLoading.value = true
+    hasError.value = false
+
+    const url = getShareDownloadUrl(props.shareId, downloadToken.value)
+    const fileType = currentFileType.value
+
+    const response = await axios.get(url, {
+      responseType: fileType === 'text' ? 'text' : 'blob'
+    })
+
+    if (fileType === 'text') {
+      textContent.value = response.data
+    } else {
+      // 对于图片/视频/音频/PDF，创建 Blob URL
+      fileContent.value = response.data
+      shareBlobUrl.value = URL.createObjectURL(response.data)
+    }
+
+    // 重新获取令牌用于下载（因为令牌是一次性的）
+    try {
+      const result = await verifySharePassword(props.shareId, password.value || '')
+      if (result.valid && result.download_token) {
+        downloadToken.value = result.download_token
+      }
+    } catch (e) {
+      // 忽略错误，下载时会重新获取
+    }
+
+    onPreviewLoaded()
+  } catch (error) {
+    onPreviewError('请求文件内容失败')
+  }
+}
+
+// 下载分享文件
+const downloadShareFile = async () => {
+  if (!downloadToken.value) {
+    // 需要重新获取令牌
+    try {
+      const result = await verifySharePassword(props.shareId!, password.value || '')
+      if (result.valid && result.download_token) {
+        downloadToken.value = result.download_token
+      } else {
+        ElMessage.error('获取下载令牌失败，请刷新页面重试')
+        return
+      }
+    } catch (e: any) {
+      ElMessage.error(e.message || '获取下载令牌失败')
+      return
+    }
+  }
+
+  const url = getShareDownloadUrl(props.shareId!, downloadToken.value)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = shareInfo.value?.file_name || 'download'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  // 令牌是一次性的，下载后清空
+  downloadToken.value = ''
+}
+
 // 组件挂载时尝试加载预览
 onMounted(() => {
-  // 只有支持预览的文件类型才需要加载内容
-  if (isSupportedPreviewType.value) {
+  if (props.shareMode) {
+    // 分享模式：先获取分享信息
+    fetchShareInfo()
+  } else if (isSupportedPreviewType.value) {
+    // 普通模式：直接加载文件内容
     fetchFileContent();
   } else {
     // 对于不支持预览的文件类型，直接结束加载状态
@@ -1392,7 +1679,7 @@ onMounted(() => {
   height: 100%;
   padding: 20px;
   overflow: auto;
-  
+
   pre.hljs {
     margin: 0;
     padding: 16px;
@@ -1401,13 +1688,144 @@ onMounted(() => {
     max-height: 70vh;
     overflow: auto;
   }
-  
+
   pre.error {
     background-color: #fff5f5;
     color: #e53e3e;
     padding: 16px;
     border-radius: 8px;
     border-left: 4px solid #e53e3e;
+  }
+}
+
+// 分享模式 logo 样式
+.logo-link {
+  text-decoration: none;
+
+  .logo-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+  }
+}
+
+// 密码验证容器
+.password-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+
+  .password-card {
+    background: white;
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+
+    .lock-icon {
+      margin-bottom: 20px;
+
+      .icon-lg {
+        width: 60px;
+        height: 60px;
+        color: var(--color-blue, #4facfe);
+      }
+    }
+
+    h3 {
+      font-size: 20px;
+      color: #333;
+      margin-bottom: 16px;
+    }
+
+    .file-info-brief {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 24px;
+      color: #666;
+      font-size: 14px;
+
+      .file-name {
+        font-weight: 500;
+        color: #333;
+        word-break: break-all;
+      }
+    }
+
+    .password-input-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+
+      .password-input {
+        flex: 1;
+        padding: 14px 16px;
+        border: 1px solid #d9d9d9;
+        border-radius: 10px;
+        font-size: 15px;
+        outline: none;
+        transition: border-color 0.3s;
+
+        &:focus {
+          border-color: var(--color-blue, #4facfe);
+        }
+      }
+
+      .toggle-password {
+        padding: 12px;
+        background: #f5f5f5;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+
+        &:hover {
+          background: #e8e8e8;
+        }
+
+        .icon-sm {
+          width: 20px;
+          height: 20px;
+          color: #666;
+        }
+      }
+    }
+
+    .verify-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 10px rgba(79, 172, 254, 0.2);
+
+      &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+// 分享模式响应式
+@media screen and (max-width: 768px) {
+  .password-container .password-card {
+    padding: 24px;
+    margin: 0 16px;
   }
 }
 </style> 

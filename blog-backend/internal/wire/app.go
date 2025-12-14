@@ -56,6 +56,9 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	systemSettingRepo := repository.NewSystemSettingRepository(db, cache)
 	// 添加文件存储库
 	fileRepo := repository.NewFileRepository(db)
+	// 添加分享存储库
+	shareRepo := repository.NewShareRepository(db)
+	shareAccessLogRepo := repository.NewShareAccessLogRepository(db)
 
 	// 初始化服务
 	uploadService := service.NewUploadService(conf, dataDir)
@@ -63,6 +66,8 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	ipService := service.NewIPService(logRepo)
 	// 添加文件服务
 	fileService := service.NewFileService(fileRepo, systemSettingRepo)
+	// 添加分享服务
+	shareService := service.NewShareService(shareRepo, shareAccessLogRepo, fileService)
 	// 初始化配置服务
 	configService := service.NewConfigService(systemSettingRepo)
 
@@ -84,6 +89,8 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	systemConfigHandler := handler.NewSystemConfigHandler(systemSettingRepo, db, fileService)
 	// 添加文件处理器
 	fileHandler := handler.NewFileHandler(fileService)
+	// 添加分享处理器
+	shareHandler := handler.NewShareHandler(shareService)
 	// 添加系统设置处理器
 	systemSettingHandler := handler.NewSystemSettingHandler(systemSettingRepo, db)
 	chunkUploadHandler := handler.NewChunkUploadHandler(fileHandler.GetFileService(), db, configService)
@@ -96,6 +103,7 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 		adminHandler,
 		systemConfigHandler,
 		fileHandler,
+		shareHandler, // 添加分享处理器
 		systemSettingHandler, // 添加系统设置处理器
 		ipService,
 		staticFilesAbsPath,

@@ -24,6 +24,7 @@ func Init(
 	adminHandler *handler.AdminHandler,
 	systemConfigHandler *handler.SystemConfigHandler,
 	fileHandler *handler.FileHandler,
+	shareHandler *handler.ShareHandler, // 添加ShareHandler参数
 	systemSettingHandler *handler.SystemSettingHandler, // 添加SystemSettingHandler参数
 	ipService service.IPService,
 	staticFilesAbsPath string,
@@ -69,6 +70,14 @@ func Init(
 		// 评论公共 API
 		publicAPI.POST("/comment", commentHandler.AddComment)
 		publicAPI.GET("/comment/:articleId", commentHandler.GetCommentsByArticleID)
+	}
+
+	// 公开分享访问路由（无需登录）
+	sharePublicAPI := router.Group("/api/share")
+	{
+		sharePublicAPI.GET("/:shareId", shareHandler.GetShareInfo)
+		sharePublicAPI.POST("/:shareId/verify", shareHandler.VerifyPassword)
+		sharePublicAPI.GET("/:shareId/download", shareHandler.Download)
 	}
 
 	// 管理 API 路由组
@@ -158,6 +167,13 @@ func Init(
 		fileApi.DELETE("/:id", fileHandler.DeleteFile)
 		fileApi.PUT("/storage-path", fileHandler.UpdateStoragePath)  // 添加更新存储路径路由
 		fileApi.GET("/directory-tree", fileHandler.GetDirectoryTree) // 添加获取目录树的路由
+
+		// 分享管理路由
+		fileApi.POST("/share", shareHandler.CreateShare)
+		fileApi.GET("/share", shareHandler.ListShares)
+		fileApi.GET("/share/:id", shareHandler.GetShareDetail)
+		fileApi.DELETE("/share/:id", shareHandler.DeleteShare)
+		fileApi.GET("/share/:id/logs", shareHandler.GetAccessLogs)
 	}
 
 	// 注册分片上传路由

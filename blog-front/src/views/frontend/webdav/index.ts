@@ -1,6 +1,7 @@
 // 主视图组件
 import WebDriveView from './components/WebDriveView.vue'
 import MobileView from './components/MobileView.vue'
+import FilePreview from './components/FilePreview.vue'
 
 // 模态框组件
 import SettingsModal from './modals/SettingsModal.vue'
@@ -16,12 +17,13 @@ export {
   // 主视图组件
   WebDriveView,
   MobileView,
-  
+  FilePreview,
+
   // 模态框组件
   SettingsModal,
   ShareLinkPopup,
   UploadModal,
-  
+
   // 工具和类型
   icons,
   type FileItem

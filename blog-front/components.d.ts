@@ -18,6 +18,7 @@ declare module 'vue' {
     CategoryTable: typeof import('./src/components/backend/Table/CategoryTable.vue')['default']
     Comment: typeof import('./src/components/frontend/Comment.vue')['default']
     CommentItem: typeof import('./src/components/frontend/Comment/CommentItem.vue')['default']
+    ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAside: typeof import('element-plus/es')['ElAside']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElButtonGroup: typeof import('element-plus/es')['ElButtonGroup']

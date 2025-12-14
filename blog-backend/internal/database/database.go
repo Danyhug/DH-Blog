@@ -57,6 +57,8 @@ func Init(conf *config.Config) (*gorm.DB, error) {
 		&model.IPBlacklist{},
 		&model.TagRelation{},
 		&model.File{},
+		&model.Share{},
+		&model.ShareAccessLog{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("数据库自动迁移失败: %w", err)
