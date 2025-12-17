@@ -290,6 +290,7 @@ const passwordVerified = ref(false)
 const verifying = ref(false)
 const downloadToken = ref('')
 const shareBlobUrl = ref('') // 分享模式的 Blob URL
+const shareStreamUrl = ref('') // 分享模式的流式传输 URL（音视频）
 
 // 加载和错误状态
 const isLoading = ref(true)
@@ -393,7 +394,15 @@ const currentFileType = computed(() => {
 // 统一的文件 URL
 const currentFileUrl = computed(() => {
   if (props.shareMode) {
-    return shareBlobUrl.value // 使用 Blob URL
+    // 分享模式：音视频使用流式 URL，其他使用 Blob URL
+    if (isStreamableMedia.value && shareStreamUrl.value) {
+      return shareStreamUrl.value
+    }
+    return shareBlobUrl.value
+  }
+  // 普通模式：音视频使用 preview URL 支持流式传输
+  if (isStreamableMedia.value && props.file.id) {
+    return getDownloadUrl(props.file.id, true) // preview=true
   }
   return fileUrl.value
 })
@@ -445,6 +454,11 @@ const handleRetry = () => {
 const currentSupportedPreviewType = computed(() => {
   const supportedTypes = ['image', 'video', 'audio', 'pdf', 'text']
   return supportedTypes.includes(currentFileType.value)
+})
+
+// 是否为流媒体类型（音视频）- 使用直接 URL 流式传输
+const isStreamableMedia = computed(() => {
+  return ['video', 'audio'].includes(currentFileType.value)
 })
 
 // 添加isMarkdown和isCodeFile计算属性
@@ -554,7 +568,7 @@ const fetchFileContent = async () => {
     onPreviewError('文件ID不存在，无法获取文件内容');
     return;
   }
-  
+
   // 检查文件类型是否支持预览
   if (!isSupportedPreviewType.value) {
     // 不支持预览的文件类型，直接显示不支持预览界面
@@ -562,33 +576,46 @@ const fetchFileContent = async () => {
     return;
   }
 
-  try {
-    isLoading.value = true;
-    hasError.value = false;
-    
-    const url = `/files/download/${props.file.id}`;
-    
-    // 直接使用axios而不是request实例，因为我们需要原始响应
-    const response = await axios.create({
-      baseURL: SERVER_URL,
-      headers: {
-        Authorization: localStorage.getItem("token") || ""
-      }
-    }).get(url, {
-      responseType: props.file.type === 'text' ? 'text' : 'blob'
-    });
-    
-    // 根据文件类型处理预览
-    if (props.file.type === 'text') {
-      // 文本文件直接显示内容
-      textContent.value = response.data;
-    }
-    // 对于图片/视频/音频/PDF，模板中已通过 :src="currentFileUrl" 绑定下载URL
-    
-    onPreviewLoaded();
-  } catch (error) {
-    onPreviewError('请求文件内容失败');
+  // 音视频使用直接 URL 流式传输，不需要 axios 请求
+  // 直接显示播放器，让浏览器处理流式加载
+  if (isStreamableMedia.value) {
+    isLoading.value = false;
+    return;
   }
+
+  // 图片/PDF 使用直接 URL，直接显示元素让浏览器加载
+  if (props.file.type === 'image' || props.file.type === 'pdf') {
+    isLoading.value = false;
+    return;
+  }
+
+  // 文本文件需要获取内容
+  if (props.file.type === 'text') {
+    try {
+      isLoading.value = true;
+      hasError.value = false;
+
+      const url = `/files/download/${props.file.id}`;
+
+      const response = await axios.create({
+        baseURL: SERVER_URL,
+        headers: {
+          Authorization: localStorage.getItem("token") || ""
+        }
+      }).get(url, {
+        responseType: 'text'
+      });
+
+      textContent.value = response.data;
+      onPreviewLoaded();
+    } catch (error) {
+      onPreviewError('请求文件内容失败');
+    }
+    return;
+  }
+
+  // 其他类型，结束加载状态
+  isLoading.value = false;
 }
 
 // 预览加载成功
@@ -754,12 +781,31 @@ const fetchShareFileContent = async () => {
     return
   }
 
+  const fileType = currentFileType.value
+
+  // 音视频使用直接 URL 流式传输
+  if (['video', 'audio'].includes(fileType)) {
+    // 设置流式传输 URL，带 preview=true 参数
+    shareStreamUrl.value = getShareDownloadUrl(props.shareId, downloadToken.value, true)
+    // 重新获取令牌用于下载（因为令牌是一次性的）
+    try {
+      const result = await verifySharePassword(props.shareId, password.value || '')
+      if (result.valid && result.download_token) {
+        downloadToken.value = result.download_token
+      }
+    } catch (e) {
+      // 忽略错误，下载时会重新获取
+    }
+    // 直接显示播放器，让浏览器处理流式加载
+    isLoading.value = false
+    return
+  }
+
   try {
     isLoading.value = true
     hasError.value = false
 
     const url = getShareDownloadUrl(props.shareId, downloadToken.value)
-    const fileType = currentFileType.value
 
     const response = await axios.get(url, {
       responseType: fileType === 'text' ? 'text' : 'blob'
@@ -768,7 +814,7 @@ const fetchShareFileContent = async () => {
     if (fileType === 'text') {
       textContent.value = response.data
     } else {
-      // 对于图片/视频/音频/PDF，创建 Blob URL
+      // 对于图片/PDF，创建 Blob URL
       shareBlobUrl.value = URL.createObjectURL(response.data)
     }
 

@@ -1,5 +1,5 @@
 <template>
-  <div class="container">
+  <div>
     <Header ref="headerElement" />
     <Banner ref="bannerElement">
       <template v-if="sideShowComponent.__name == 'HomeSide'">

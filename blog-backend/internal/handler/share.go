@@ -329,6 +329,9 @@ func (h *ShareHandler) Download(c *gin.Context) {
 		return
 	}
 
+	// 判断是否为预览模式（用于音视频流式传输）
+	preview := c.Query("preview") == "true"
+
 	// 使用令牌下载
 	file, err := h.shareService.DownloadWithToken(
 		c.Request.Context(),
@@ -337,6 +340,7 @@ func (h *ShareHandler) Download(c *gin.Context) {
 		c.ClientIP(),
 		c.Request.UserAgent(),
 		c.Request.Referer(),
+		preview,
 	)
 	if err != nil {
 		response.FailWithCode(c, http.StatusUnauthorized, err.Error())
@@ -350,7 +354,13 @@ func (h *ShareHandler) Download(c *gin.Context) {
 		contentType = "application/octet-stream"
 	}
 
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
+	disposition := "attachment"
+	if preview {
+		disposition = "inline"
+	}
+
+	c.Header("Content-Disposition", fmt.Sprintf("%s; filename=%s", disposition, fileName))
 	c.Header("Content-Type", contentType)
+	// c.File 内部使用 http.ServeFile，自动支持 Range 请求
 	c.File(file.StoragePath)
 }

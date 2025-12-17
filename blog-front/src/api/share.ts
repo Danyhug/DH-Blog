@@ -150,10 +150,15 @@ export const verifySharePassword = (shareId: string, password: string): Promise<
  * 获取分享下载链接
  * @param shareId 分享短链ID
  * @param token 下载令牌
+ * @param preview 是否为预览模式（用于音视频流式传输）
  * @returns 下载链接
  */
-export const getShareDownloadUrl = (shareId: string, token: string): string => {
-  return `${SERVER_URL}/share/${shareId}/download?token=${encodeURIComponent(token)}`
+export const getShareDownloadUrl = (shareId: string, token: string, preview: boolean = false): string => {
+  let url = `${SERVER_URL}/share/${shareId}/download?token=${encodeURIComponent(token)}`
+  if (preview) {
+    url += '&preview=true'
+  }
+  return url
 }
 
 /**

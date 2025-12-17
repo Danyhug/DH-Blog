@@ -149,9 +149,17 @@ func (h *FileHandler) DownloadFile(c *gin.Context) {
 		contentType = "application/octet-stream"
 	}
 
+	// 判断是否为预览模式（用于音视频流式传输）
+	preview := c.Query("preview") == "true"
+	disposition := "attachment"
+	if preview {
+		disposition = "inline"
+	}
+
 	// 设置响应头
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
+	c.Header("Content-Disposition", fmt.Sprintf("%s; filename=%s", disposition, fileName))
 	c.Header("Content-Type", contentType)
+	// c.File 内部使用 http.ServeFile，自动支持 Range 请求
 	c.File(fileInfo.StoragePath)
 }
 

@@ -188,11 +188,15 @@ export const updateStoragePath = (path: string): Promise<any> => {
 /**
  * 获取文件下载链接
  * @param fileId 文件ID
+ * @param preview 是否为预览模式（用于音视频流式传输）
  */
-export const getDownloadUrl = (fileId: string): string => {
+export const getDownloadUrl = (fileId: string, preview: boolean = false): string => {
   const token = localStorage.getItem("token") || "";
   // 检查token是否已经包含Bearer前缀，如果包含则直接使用，否则不添加前缀
   const tokenParam = token.startsWith("Bearer ") ? token.substring(7) : token;
-  const url = `${SERVER_URL}/files/download/${fileId}?token=${tokenParam}`;
+  let url = `${SERVER_URL}/files/download/${fileId}?token=${tokenParam}`;
+  if (preview) {
+    url += '&preview=true';
+  }
   return url;
 };

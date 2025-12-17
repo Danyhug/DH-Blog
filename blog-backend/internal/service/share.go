@@ -71,7 +71,8 @@ type IShareService interface {
 	// VerifyPassword 验证分享密码并返回下载令牌
 	VerifyPassword(ctx context.Context, shareID, password string) (*VerifyPasswordResponse, error)
 	// DownloadWithToken 使用令牌下载分享文件
-	DownloadWithToken(ctx context.Context, shareID, token string, clientIP, userAgent, referer string) (*model.File, error)
+	// preview 为 true 时表示预览模式（音视频流式传输），不消耗令牌
+	DownloadWithToken(ctx context.Context, shareID, token string, clientIP, userAgent, referer string, preview bool) (*model.File, error)
 	// Download 下载分享文件（无密码分享使用）
 	Download(ctx context.Context, shareID string, clientIP, userAgent, referer string) (*model.File, error)
 	// ListShares 分页获取分享列表
@@ -343,7 +344,7 @@ func (s *shareService) validateDownloadToken(shareID, token string) bool {
 }
 
 // DownloadWithToken 使用令牌下载分享文件
-func (s *shareService) DownloadWithToken(ctx context.Context, shareID, token string, clientIP, userAgent, referer string) (*model.File, error) {
+func (s *shareService) DownloadWithToken(ctx context.Context, shareID, token string, clientIP, userAgent, referer string, preview bool) (*model.File, error) {
 	// 验证令牌
 	if !s.validateDownloadToken(shareID, token) {
 		return nil, errors.New("下载令牌无效或已过期")
@@ -367,20 +368,23 @@ func (s *shareService) DownloadWithToken(ctx context.Context, shareID, token str
 		return nil, errors.New("文件不存在")
 	}
 
-	// 增加下载次数
-	if err := s.shareRepo.IncrementDownloadCount(ctx, shareID); err != nil {
-		logrus.Warnf("增加下载次数失败: %v", err)
-	}
-
-	// 记录下载日志
-	go func() {
-		if err := s.RecordAccess(context.Background(), shareID, model.ShareActionDownload, clientIP, userAgent, referer); err != nil {
-			logrus.Warnf("记录下载日志失败: %v", err)
+	// 预览模式不增加下载次数，不删除令牌（支持音视频流式多次请求）
+	if !preview {
+		// 增加下载次数
+		if err := s.shareRepo.IncrementDownloadCount(ctx, shareID); err != nil {
+			logrus.Warnf("增加下载次数失败: %v", err)
 		}
-	}()
 
-	// 下载成功后删除令牌（一次性使用）
-	tokenStore.Delete(token)
+		// 记录下载日志
+		go func() {
+			if err := s.RecordAccess(context.Background(), shareID, model.ShareActionDownload, clientIP, userAgent, referer); err != nil {
+				logrus.Warnf("记录下载日志失败: %v", err)
+			}
+		}()
+
+		// 下载成功后删除令牌（一次性使用）
+		tokenStore.Delete(token)
+	}
 
 	return file, nil
 }
