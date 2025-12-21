@@ -432,6 +432,7 @@ defineExpose({
   height: 2.5rem;
   color: #6b7280;
   margin-bottom: 1rem;
+  display: inline-block;
 }
 
 .drop-text {
