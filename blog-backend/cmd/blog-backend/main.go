@@ -30,7 +30,7 @@ func main() {
 	}
 
 	// 初始化 JWT 工具
-	utils.InitJwtUtils(conf.JwtSecret)
+	utils.InitJwtUtils(conf.JwtSecret, conf.Server.JwtExpire)
 
 	// 初始化数据库连接和迁移
 	db, err := database.Init(conf)

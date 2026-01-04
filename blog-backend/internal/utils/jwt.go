@@ -10,18 +10,20 @@ import (
 
 var JwtConfig struct {
 	JwtSecret string
+	JwtExpire time.Duration
 }
 
 // InitJwtUtils 初始化 JWT 工具
-func InitJwtUtils(secret string) {
+func InitJwtUtils(secret string, expire time.Duration) {
 	JwtConfig.JwtSecret = secret
+	JwtConfig.JwtExpire = expire
 }
 
 // GenerateToken 生成 JWT Token
 func GenerateToken(username string) (string, error) {
 	claims := jwt.MapClaims{
 		"username": username,
-		"exp":      time.Now().Add(time.Hour * 24).Unix(), // Token 有效期 24 小时
+		"exp":      time.Now().Add(JwtConfig.JwtExpire).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

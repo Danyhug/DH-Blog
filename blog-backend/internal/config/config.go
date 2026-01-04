@@ -13,12 +13,13 @@ import (
 )
 
 type Server struct {
-	Address    string `yaml:"address"`
-	HttpPort   int    `yaml:"httpPort"`
-	HttpsPort  int    `yaml:"httpsPort"`
-	CertFile   string `yaml:"certFile"`
-	KeyFile    string `yaml:"keyFile"`
-	StaticPath string `yaml:"staticPath"` // 新增：静态文件服务路径
+	Address    string        `yaml:"address"`
+	HttpPort   int           `yaml:"httpPort"`
+	HttpsPort  int           `yaml:"httpsPort"`
+	CertFile   string        `yaml:"certFile"`
+	KeyFile    string        `yaml:"keyFile"`
+	StaticPath string        `yaml:"staticPath"` // 新增：静态文件服务路径
+	JwtExpire  time.Duration `yaml:"jwtExpire"`  // 新增：JWT 过期时间
 }
 
 type DataBase struct {
@@ -67,7 +68,8 @@ func DefaultConfig() *Config {
 			Address:    "0.0.0.0",
 			HttpPort:   2233,
 			HttpsPort:  -1,
-			StaticPath: "data/upload", // 默认静态文件服务路径
+			StaticPath: "data/upload",       // 默认静态文件服务路径
+			JwtExpire:  time.Hour * 24 * 30, // 默认一个月
 		},
 		DataBase: DataBase{
 			Type:   "sqlite3",
