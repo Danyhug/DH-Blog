@@ -1,9 +1,16 @@
 package handler
 
 import (
+	"archive/zip"
+	"bufio"
+	"compress/flate"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"strconv"
+	"sync"
+	"time"
 
 	"dh-blog/internal/model"
 	"dh-blog/internal/repository"
@@ -13,6 +20,14 @@ import (
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
+
+// 缓冲区池，复用内存减少GC压力
+var bufferPool = sync.Pool{
+	New: func() any {
+		buf := make([]byte, 32*1024) // 32KB缓冲区
+		return &buf
+	},
+}
 
 // PromptTag defines the structure for an AI prompt tag
 type PromptTag struct {
@@ -352,7 +367,7 @@ func (h *SystemConfigHandler) UpdateStoragePath(c *gin.Context) {
 }
 
 // BindJSON 绑定JSON数据
-func (h *SystemConfigHandler) BindJSON(c *gin.Context, obj interface{}) error {
+func (h *SystemConfigHandler) BindJSON(c *gin.Context, obj any) error {
 	return c.ShouldBindJSON(obj)
 }
 
@@ -394,4 +409,147 @@ func (h *SystemConfigHandler) GetAIPromptTags(c *gin.Context) {
 		},
 	}
 	h.SuccessWithData(c, promptTags)
+}
+
+// BackupData 备份数据（WebDAV目录和数据库）
+func (h *SystemConfigHandler) BackupData(c *gin.Context) {
+	// 获取数据目录路径
+	exePath, err := os.Executable()
+	if err != nil {
+		h.ErrorWithMessage(c, "获取可执行文件路径失败: "+err.Error())
+		return
+	}
+	dataDir := filepath.Join(filepath.Dir(exePath), "data")
+
+	// 获取WebDAV存储路径
+	webdavPath := h.fileService.GetStoragePath()
+	if webdavPath == "" {
+		webdavPath = filepath.Join(dataDir, "webdav")
+	}
+
+	// 数据库文件路径
+	dbPath := filepath.Join(dataDir, "dhblog.db")
+
+	// 检查数据库文件是否存在
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		h.ErrorWithMessage(c, "数据库文件不存在")
+		return
+	}
+
+	// 生成备份文件名
+	timestamp := time.Now().Format("20060102150405")
+	backupFileName := fmt.Sprintf("dhblog-%s.zip", timestamp)
+
+	// 创建临时文件
+	tempFile, err := os.CreateTemp("", "dhblog-backup-*.zip")
+	if err != nil {
+		h.ErrorWithMessage(c, "创建临时文件失败: "+err.Error())
+		return
+	}
+	tempFilePath := tempFile.Name()
+	defer os.Remove(tempFilePath)
+
+	// 创建zip写入器，使用最高压缩率
+	zipWriter := zip.NewWriter(tempFile)
+	zipWriter.RegisterCompressor(zip.Deflate, func(out io.Writer) (io.WriteCloser, error) {
+		return flate.NewWriter(out, flate.BestCompression)
+	})
+
+	// 添加数据库文件到zip
+	if err := addFileToZip(zipWriter, dbPath, "dhblog.db"); err != nil {
+		zipWriter.Close()
+		tempFile.Close()
+		h.ErrorWithMessage(c, "添加数据库文件失败: "+err.Error())
+		return
+	}
+
+	// 添加WebDAV目录到zip
+	if _, err := os.Stat(webdavPath); err == nil {
+		if err := addDirToZip(zipWriter, webdavPath, "webdav"); err != nil {
+			zipWriter.Close()
+			tempFile.Close()
+			h.ErrorWithMessage(c, "添加WebDAV目录失败: "+err.Error())
+			return
+		}
+	}
+
+	// 关闭zip写入器
+	if err := zipWriter.Close(); err != nil {
+		tempFile.Close()
+		h.ErrorWithMessage(c, "关闭zip文件失败: "+err.Error())
+		return
+	}
+	tempFile.Close()
+
+	// 设置响应头
+	c.Header("Content-Type", "application/zip")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", backupFileName))
+
+	// 发送文件
+	c.File(tempFilePath)
+	logrus.Infof("数据备份完成: %s", backupFileName)
+}
+
+// addFileToZip 添加单个文件到zip（使用缓冲区优化性能）
+func addFileToZip(zipWriter *zip.Writer, filePath, zipPath string) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	info, err := file.Stat()
+	if err != nil {
+		return err
+	}
+
+	header, err := zip.FileInfoHeader(info)
+	if err != nil {
+		return err
+	}
+	header.Name = zipPath
+	header.Method = zip.Deflate
+
+	writer, err := zipWriter.CreateHeader(header)
+	if err != nil {
+		return err
+	}
+
+	// 使用缓冲读取器和缓冲区池优化大文件复制
+	bufReader := bufio.NewReaderSize(file, 64*1024) // 64KB读取缓冲
+	bufPtr := bufferPool.Get().(*[]byte)
+	defer bufferPool.Put(bufPtr)
+
+	_, err = io.CopyBuffer(writer, bufReader, *bufPtr)
+	return err
+}
+
+// addDirToZip 递归添加目录到zip
+func addDirToZip(zipWriter *zip.Writer, dirPath, zipBasePath string) error {
+	return filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// 计算相对路径
+		relPath, err := filepath.Rel(dirPath, path)
+		if err != nil {
+			return err
+		}
+		zipPath := filepath.Join(zipBasePath, relPath)
+
+		if info.IsDir() {
+			// 创建目录条目
+			if relPath != "." {
+				_, err := zipWriter.Create(zipPath + "/")
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+
+		// 添加文件
+		return addFileToZip(zipWriter, path, zipPath)
+	})
 }

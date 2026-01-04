@@ -259,6 +259,18 @@
                         </el-form-item>
                     </el-form>
 
+                    <el-divider content-position="left">数据备份</el-divider>
+                    <div class="backup-section">
+                        <div class="backup-info">
+                            <el-icon><InfoFilled /></el-icon>
+                            <span>备份将包含数据库文件和WebDAV存储目录，生成压缩包供下载</span>
+                        </div>
+                        <el-button type="primary" :loading="isBackingUp" @click="handleBackup">
+                            <el-icon><Download /></el-icon>
+                            {{ isBackingUp ? '正在备份...' : '立即备份' }}
+                        </el-button>
+                    </div>
+
                     <!-- 目录选择对话框 -->
                     <el-dialog v-model="directoryDialogVisible" title="选择存储路径" width="60%" destroy-on-close>
                         <div class="directory-selector">
@@ -436,7 +448,8 @@ import {
     getAIConfig, updateAIConfig,
     getStorageConfig, updateStorageConfig,
     getSystemSettings, addSystemSetting, updateSystemSetting, deleteSystemSetting,
-    getAIPromptTags // 导入获取AI提示词标签的API
+    getAIPromptTags, // 导入获取AI提示词标签的API
+    getBackupUrl // 导入备份URL函数
 } from '@/api/admin';
 import { getDirectoryTree } from '@/api/file';
 import type { SystemConfig, BlogConfig, EmailConfig, AIConfig, StorageConfig } from '@/types/SystemConfig';
@@ -445,7 +458,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import {
     Edit, Picture, Link, Connection, User, Lock, Key,
     Folder, FolderOpened, Back, Document, InfoFilled,
-    WarningFilled, Message, Setting, Cpu, MagicStick
+    WarningFilled, Message, Setting, Cpu, MagicStick, Download
 } from '@element-plus/icons-vue';
 
 // HTML 转义函数
@@ -522,6 +535,29 @@ const selectedPath = ref('');
 const expandedKeys = ref<string[]>([]);
 
 const promptTags = ref<{ label: string, prompt: string }[]>([]);
+
+// 备份相关
+const isBackingUp = ref(false);
+
+const handleBackup = async () => {
+    try {
+        isBackingUp.value = true;
+        ElMessage.info('正在生成备份文件，请稍候...');
+
+        // 使用 window.open 下载文件
+        const backupUrl = getBackupUrl();
+        window.open(backupUrl, '_blank');
+
+        // 延迟关闭loading状态
+        setTimeout(() => {
+            isBackingUp.value = false;
+            ElMessage.success('备份文件已开始下载');
+        }, 2000);
+    } catch (error) {
+        isBackingUp.value = false;
+        ElMessage.error('备份失败');
+    }
+};
 
 const highlightedPrompt = computed(() => {
     if (!selectedPrompt.value) return '';
@@ -994,6 +1030,28 @@ onMounted(async () => {
     i {
         margin-right: 4px;
         font-size: 14px;
+    }
+}
+
+.backup-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    background-color: #f5f7fa;
+    border-radius: 8px;
+    margin-top: 8px;
+
+    .backup-info {
+        display: flex;
+        align-items: center;
+        color: #606266;
+        font-size: 14px;
+
+        .el-icon {
+            margin-right: 8px;
+            color: #909399;
+        }
     }
 }
 

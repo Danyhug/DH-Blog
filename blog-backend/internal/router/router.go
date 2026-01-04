@@ -150,6 +150,7 @@ func Init(
 			// 存储配置接口
 			configGroup.GET("/storage", systemConfigHandler.GetStorageConfig)
 			configGroup.PUT("/storage", systemConfigHandler.UpdateStorageConfig)
+			configGroup.GET("/backup", systemConfigHandler.BackupData) // 数据备份接口
 
 			// 兼容旧版API
 			configGroup.GET("/storage-path", systemConfigHandler.GetStoragePath)

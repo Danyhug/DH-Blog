@@ -1,4 +1,5 @@
 import request from '@/api/axios'
+import { SERVER_URL } from '@/types/Constant'
 import { Article } from '@/types/Article'
 import { Category } from '@/types/Category'
 import { Page, PageResult } from '@/types/Page'
@@ -244,6 +245,13 @@ export const getStorageConfig = (): Promise<StorageConfig> => {
 
 export const updateStorageConfig = (data: StorageConfig): Promise<any> => {
   return request.put('/admin/config/storage', data)
+}
+
+// 获取数据备份下载URL
+export const getBackupUrl = (): string => {
+  const token = localStorage.getItem("token") || "";
+  const tokenParam = token.startsWith("Bearer ") ? token.substring(7) : token;
+  return `${SERVER_URL}/admin/config/backup?token=${tokenParam}`;
 }
 
 // ********** 文件存储路径配置（兼容旧版） **********
