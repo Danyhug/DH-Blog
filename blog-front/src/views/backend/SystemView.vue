@@ -1,13 +1,13 @@
 <template>
-    <div class="system-view">
+    <div class="p-5">
         <!-- 删除页面头部（面包屑和标题）部分 -->
 
-        <el-tabs v-model="activeTab" class="system-tabs">
+        <el-tabs v-model="activeTab" class="mb-5">
             <el-tab-pane label="站点设置" name="site">
-                <el-card shadow="hover" class="settings-card">
+                <el-card shadow="hover" class="mb-5">
                     <template #header>
-                        <div class="card-header">
-                            <span><el-icon>
+                        <div class="flex items-center">
+                            <span><el-icon class="mr-2">
                                     <Setting />
                                 </el-icon> 基本信息设置</span>
                         </div>
@@ -31,9 +31,9 @@
                         <el-row :gutter="24">
                             <el-col :span="12">
                                 <el-form-item label="个人头像">
-                                    <div class="avatar-uploader-container">
-                                        <div class="avatar-preview" v-if="blogConfig.avatar">
-                                            <img :src="blogConfig.avatar" class="avatar-image" />
+                                    <div class="flex flex-col">
+                                        <div class="w-[100px] h-[100px] mb-2.5 rounded overflow-hidden border border-gray-200 shadow-sm" v-if="blogConfig.avatar">
+                                            <img :src="blogConfig.avatar" class="w-full h-full object-cover" />
                                         </div>
                                         <el-input v-model="blogConfig.avatar" placeholder="请输入头像URL或上传图片" clearable
                                             :prefix-icon="Picture"></el-input>
@@ -73,10 +73,10 @@
             </el-tab-pane>
 
             <el-tab-pane label="功能设置" name="features">
-                <el-card shadow="hover" class="settings-card">
+                <el-card shadow="hover" class="mb-5">
                     <template #header>
-                        <div class="card-header">
-                            <span><el-icon>
+                        <div class="flex items-center">
+                            <span><el-icon class="mr-2">
                                     <Setting />
                                 </el-icon> 功能开关设置</span>
                         </div>
@@ -85,31 +85,31 @@
                         <el-row :gutter="24">
                             <el-col :span="8">
                                 <el-form-item label="开放博客">
-                                    <div class="switch-container">
+                                    <div class="flex flex-col items-start">
                                         <el-switch v-model="config.open_blog" active-color="#13ce66"
                                             inactive-color="#ff4949">
                                         </el-switch>
-                                        <div class="form-item-tip">开启后博客将对外可访问</div>
+                                        <div class="text-xs text-gray-400 mt-2">开启后博客将对外可访问</div>
                                     </div>
                                 </el-form-item>
                             </el-col>
                             <el-col :span="8">
                                 <el-form-item label="开放评论">
-                                    <div class="switch-container">
+                                    <div class="flex flex-col items-start">
                                         <el-switch v-model="config.open_comment" active-color="#13ce66"
                                             inactive-color="#ff4949">
                                         </el-switch>
-                                        <div class="form-item-tip">开启后访客可以评论文章</div>
+                                        <div class="text-xs text-gray-400 mt-2">开启后访客可以评论文章</div>
                                     </div>
                                 </el-form-item>
                             </el-col>
                             <el-col :span="8">
                                 <el-form-item label="评论邮件通知">
-                                    <div class="switch-container">
+                                    <div class="flex flex-col items-start">
                                         <el-switch v-model="config.comment_email_notify" active-color="#13ce66"
                                             inactive-color="#ff4949">
                                         </el-switch>
-                                        <div class="form-item-tip">开启后收到评论将发送邮件通知</div>
+                                        <div class="text-xs text-gray-400 mt-2">开启后收到评论将发送邮件通知</div>
                                     </div>
                                 </el-form-item>
                             </el-col>
@@ -119,10 +119,10 @@
             </el-tab-pane>
 
             <el-tab-pane label="邮箱设置" name="email">
-                <el-card shadow="hover" class="settings-card">
+                <el-card shadow="hover" class="mb-5">
                     <template #header>
-                        <div class="card-header">
-                            <span><el-icon>
+                        <div class="flex items-center">
+                            <span><el-icon class="mr-2">
                                     <Message />
                                 </el-icon> 邮件服务设置</span>
                         </div>
@@ -169,13 +169,13 @@
 
                         <el-row>
                             <el-col :span="24">
-                                <div class="test-email-container">
+                                <div class="flex items-center mt-4">
                                     <el-button type="primary" size="default">
                                         <el-icon>
                                             <Message />
                                         </el-icon> 测试邮件发送
                                     </el-button>
-                                    <span class="test-email-tip">点击按钮发送测试邮件到当前SMTP用户邮箱</span>
+                                    <span class="ml-3 text-[13px] text-gray-400">点击按钮发送测试邮件到当前SMTP用户邮箱</span>
                                 </div>
                             </el-col>
                         </el-row>
@@ -184,10 +184,10 @@
             </el-tab-pane>
 
             <el-tab-pane label="文件存储" name="storage">
-                <el-card shadow="hover" class="settings-card">
+                <el-card shadow="hover" class="mb-5">
                     <template #header>
-                        <div class="card-header">
-                            <span><el-icon>
+                        <div class="flex items-center">
+                            <span><el-icon class="mr-2">
                                     <Folder />
                                 </el-icon> 文件存储设置</span>
                         </div>
@@ -204,14 +204,14 @@
                                     </el-button>
                                 </template>
                             </el-input>
-                            <div class="info-text">
-                                <el-icon>
+                            <div class="text-gray-400 text-[13px] mt-2 flex items-center">
+                                <el-icon class="mr-1 text-sm">
                                     <InfoFilled />
                                 </el-icon>
                                 请设置一个服务器上有读写权限的绝对路径，用于存储上传的文件。保存后即时生效，不需要重启服务器。
                             </div>
-                            <div class="warning-text">
-                                <el-icon>
+                            <div class="text-red-500 text-[13px] mt-2 font-bold flex items-center">
+                                <el-icon class="mr-1 text-sm">
                                     <WarningFilled />
                                 </el-icon>
                                 注意：更改存储路径会清空文件表，所有文件记录将被删除并重新扫描！
@@ -219,8 +219,8 @@
                         </el-form-item>
 
                         <el-form-item label="WebDAV分片大小">
-                            <div class="chunk-size-container">
-                                <div class="slider-section">
+                            <div class="w-full">
+                                <div class="mb-5 px-1">
                                     <el-slider v-model="storageConfig.webdav_chunk_size" :min="512" :max="10240"
                                         :step="512" :marks="{
                                             512: '512KB',
@@ -229,40 +229,39 @@
                                             5120: '5MB',
                                             10240: '10MB'
                                         }" show-stops :format-tooltip="formatChunkSizeTooltip"
-                                        class="chunk-size-slider" style="width: 100%; margin: 0 8px;" />
+                                        class="w-full" style="margin: 0 8px; font-size: 12px;" />
                                 </div>
-                                <div class="size-display">
-                                    <div class="current-size">
-                                        <span class="size-value">{{ formatSize(storageConfig.webdav_chunk_size)
-                                            }}</span>
-                                        <span class="size-unit">({{ storageConfig.webdav_chunk_size }} KB)</span>
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div>
+                                        <span class="font-semibold text-gray-800 mr-2" style="font-size: 12px;">{{ formatSize(storageConfig.webdav_chunk_size) }}</span>
+                                        <span class="text-gray-400" style="font-size: 12px;">({{ storageConfig.webdav_chunk_size }} KB)</span>
                                     </div>
-                                    <div class="size-indicator">
+                                    <div>
                                         <el-tag :type="getSizeTagType(storageConfig.webdav_chunk_size)" size="small"
-                                            effect="light">
+                                            effect="light" class="font-medium">
                                             {{ getSizeDescription(storageConfig.webdav_chunk_size) }}
                                         </el-tag>
                                     </div>
                                 </div>
                             </div>
-                            <div class="info-text enhanced">
-                                <el-icon>
+                            <div class="bg-gray-50 border border-gray-200 rounded-md p-3 mt-2 text-gray-400 text-[13px] flex items-start">
+                                <el-icon class="mr-2 text-sm mt-0.5">
                                     <InfoFilled />
                                 </el-icon>
-                                <div class="info-content">
-                                    <p><strong>推荐范围：</strong>512KB - 10MB (512KB - 10240KB)</p>
-                                    <p><strong>大文件建议：</strong>5-10MB分片提高大文件上传效率，减少请求次数</p>
-                                    <p><strong>小文件建议：</strong>512KB-2MB分片适合小文件，避免资源浪费</p>
-                                    <p><strong>网络优化：</strong>不稳定网络建议使用较小分片，提高成功率</p>
+                                <div class="ml-2">
+                                    <p class="my-1 leading-normal"><strong class="text-gray-600">推荐范围：</strong>512KB - 10MB (512KB - 10240KB)</p>
+                                    <p class="my-1 leading-normal"><strong class="text-gray-600">大文件建议：</strong>5-10MB分片提高大文件上传效率，减少请求次数</p>
+                                    <p class="my-1 leading-normal"><strong class="text-gray-600">小文件建议：</strong>512KB-2MB分片适合小文件，避免资源浪费</p>
+                                    <p class="my-1 leading-normal"><strong class="text-gray-600">网络优化：</strong>不稳定网络建议使用较小分片，提高成功率</p>
                                 </div>
                             </div>
                         </el-form-item>
                     </el-form>
 
                     <el-divider content-position="left">数据备份</el-divider>
-                    <div class="backup-section">
-                        <div class="backup-info">
-                            <el-icon><InfoFilled /></el-icon>
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg mt-2">
+                        <div class="flex items-center text-gray-600 text-sm">
+                            <el-icon class="mr-2 text-gray-400"><InfoFilled /></el-icon>
                             <span>备份将包含数据库文件和WebDAV存储目录，生成压缩包供下载</span>
                         </div>
                         <el-button type="primary" :loading="isBackingUp" @click="handleBackup">
@@ -273,8 +272,8 @@
 
                     <!-- 目录选择对话框 -->
                     <el-dialog v-model="directoryDialogVisible" title="选择存储路径" width="60%" destroy-on-close>
-                        <div class="directory-selector">
-                            <div class="directory-path">
+                        <div class="h-[400px] overflow-y-auto">
+                            <div class="mb-4 flex justify-between items-center p-3 bg-gray-50 rounded">
                                 <el-tag type="info" size="default">当前路径: {{ currentPath || '/' }}</el-tag>
                                 <el-button size="default" @click="loadParentDirectory" :disabled="!currentPath">
                                     <el-icon>
@@ -288,11 +287,11 @@
                                 children: 'children',
                                 isLeaf: (data: any) => !data.isDir
                             }" @node-click="handleNodeClick" :load="loadNode" lazy
-                                :default-expanded-keys="expandedKeys" class="directory-tree">
+                                :default-expanded-keys="expandedKeys" class="border border-gray-200 rounded p-3 h-[320px] overflow-y-auto">
                                 <template #default="{ node, data }">
-                                    <span class="custom-tree-node">
+                                    <span class="flex-1 flex items-center justify-between py-2">
                                         <span>
-                                            <el-icon>
+                                            <el-icon class="mr-2">
                                                 <component :is="data.isDir ? Folder : Document" />
                                             </el-icon>
                                             {{ node.label }}
@@ -318,10 +317,10 @@
             </el-tab-pane>
 
             <el-tab-pane label="AI设置" name="ai">
-                <el-card shadow="hover" class="settings-card">
+                <el-card shadow="hover" class="mb-5">
                     <template #header>
-                        <div class="card-header">
-                            <span><el-icon>
+                        <div class="flex items-center">
+                            <span><el-icon class="mr-2">
                                     <Cpu />
                                 </el-icon> AI服务设置</span>
                         </div>
@@ -352,9 +351,9 @@
                         <el-divider content-position="left">提示词设置</el-divider>
 
                         <el-form-item label="提示词选择">
-                            <div class="prompt-tags-container">
-                                <el-tag v-for="tag in promptTags" :key="tag.label" class="prompt-tag"
-                                    :class="{ 'is-active': selectedPromptLabel === tag.label }" effect="light" round
+                            <div class="flex flex-wrap gap-3 mb-4">
+                                <el-tag v-for="tag in promptTags" :key="tag.label" class="cursor-pointer transition-all duration-300 px-4 py-2 hover:-translate-y-0.5 hover:shadow"
+                                    :class="{ 'bg-blue-500 text-white border-blue-500': selectedPromptLabel === tag.label }" effect="light" round
                                     @click="selectPrompt(tag)">
                                     <el-icon>
                                         <MagicStick />
@@ -364,10 +363,10 @@
                         </el-form-item>
 
                         <el-form-item label="提示词内容" v-if="selectedPrompt">
-                            <div class="prompt-editor-container">
-                                <div v-show="!isEditingPrompt" class="ai-prompt-display" @click="startEditing">
+                            <div class="w-full relative">
+                                <div v-show="!isEditingPrompt" class="border border-gray-300 rounded p-3 min-h-[120px] cursor-text whitespace-pre-wrap break-words leading-relaxed text-sm text-gray-600 transition-all duration-300 relative hover:border-gray-400 hover:shadow-[0_0_0_2px_rgba(64,158,255,0.1)] group" @click="startEditing">
                                     <div v-html="highlightedPrompt"></div>
-                                    <el-button class="edit-button" type="primary" link>
+                                    <el-button class="absolute top-2 right-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100" type="primary" link>
                                         <el-icon>
                                             <Edit />
                                         </el-icon>
@@ -375,7 +374,7 @@
                                     </el-button>
                                 </div>
                                 <el-input v-show="isEditingPrompt" ref="promptInputRef" v-model="selectedPrompt.prompt"
-                                    type="textarea" :autosize="{ minRows: 4 }" class="prompt-textarea"
+                                    type="textarea" :autosize="{ minRows: 4 }"
                                     @blur="isEditingPrompt = false"></el-input>
                             </div>
                         </el-form-item>
@@ -385,10 +384,10 @@
             </el-tab-pane>
 
             <el-tab-pane label="系统配置" name="settings">
-                <el-card shadow="hover" class="settings-card">
+                <el-card shadow="hover" class="mb-5">
                     <template #header>
-                        <div class="card-header">
-                            <span><el-icon>
+                        <div class="flex items-center">
+                            <span><el-icon class="mr-2">
                                     <Setting />
                                 </el-icon> 系统配置管理</span>
                         </div>
@@ -404,14 +403,14 @@
                             </template>
                         </el-table-column>
                     </el-table>
-                    <div style="margin-top: 16px; text-align: right;">
+                    <div class="mt-4 text-right">
                         <el-button type="primary" @click="onAddSetting">新增配置</el-button>
                     </div>
                 </el-card>
             </el-tab-pane>
         </el-tabs>
 
-        <div class="action-buttons">
+        <div class="flex justify-end mt-5 pt-4 border-t border-gray-200">
             <el-button @click="activeTab = 'site'" size="default">取消</el-button>
             <el-button type="primary" @click="saveConfig" size="default">保存设置</el-button>
         </div>
@@ -833,302 +832,21 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped lang="less">
-.system-view {
-    padding: 20px;
-}
-
-/* 删除页面头部相关样式 */
-
-.settings-card {
-    margin-bottom: 20px;
-
-    .card-header {
-        display: flex;
-        align-items: center;
-
-        i {
-            margin-right: 8px;
-        }
-    }
-}
-
-.system-tabs {
-    margin-bottom: 20px;
-}
-
-.action-buttons {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 20px;
-    padding: 15px 0;
-    border-top: 1px solid #EBEEF5;
-}
-
-.avatar-uploader-container {
-    display: flex;
-    flex-direction: column;
-
-    .avatar-preview {
-        width: 100px;
-        height: 100px;
-        margin-bottom: 10px;
-        border-radius: 4px;
-        overflow: hidden;
-        border: 1px solid #EBEEF5;
-        box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-
-        .avatar-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-    }
-}
-
-.prompt-tags-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 16px;
-
-    .prompt-tag {
-        cursor: pointer;
-        transition: all 0.3s;
-        padding: 8px 16px;
-
-        &:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        &.is-active {
-            background-color: #409EFF;
-            color: #fff;
-            border-color: #409EFF;
-        }
-    }
-}
-
-.prompt-editor-container {
-    width: 100%;
-    position: relative;
-
-    .ai-prompt-display {
-        border: 1px solid #DCDFE6;
-        border-radius: 4px;
-        padding: 12px 16px;
-        min-height: 120px;
-        cursor: text;
-        white-space: pre-wrap;
-        word-break: break-word;
-        line-height: 1.6;
-        font-size: 14px;
-        color: #606266;
-        transition: all 0.3s;
-        position: relative;
-
-        &:hover {
-            border-color: #C0C4CC;
-            box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
-
-            .edit-button {
-                opacity: 1;
-            }
-        }
-
-        .text-highlight {
-            color: #409EFF;
-            font-weight: bold;
-            background-color: rgba(64, 158, 255, 0.1);
-            padding: 0 2px;
-            border-radius: 2px;
-        }
-
-        .edit-button {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-    }
-
-    .prompt-textarea {
-        /* min-height: 120px; */
-    }
-}
-
-.directory-selector {
-    height: 400px;
-    overflow-y: auto;
-
-    .directory-path {
-        margin-bottom: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px;
-        background-color: #f5f7fa;
-        border-radius: 4px;
-    }
-
-    .directory-tree {
-        border: 1px solid #EBEEF5;
-        border-radius: 4px;
-        padding: 12px;
-        height: 320px;
-        overflow-y: auto;
-    }
-
-    .custom-tree-node {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 8px 0;
-
-        i {
-            margin-right: 8px;
-        }
-    }
-}
-
-.switch-container {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-}
-
-.form-item-tip {
-    font-size: 12px;
-    color: #909399;
-    margin-top: 8px;
-}
-
-.info-text {
-    color: #909399;
-    font-size: 13px;
-    margin-top: 8px;
-    display: flex;
-    align-items: center;
-
-    i {
-        margin-right: 4px;
-        font-size: 14px;
-    }
-}
-
-.warning-text {
-    color: #F56C6C;
-    font-size: 13px;
-    margin-top: 8px;
+<style scoped>
+/* 提示词高亮样式 - 动态生成的内容需要保留 */
+:deep(.text-highlight) {
+    color: #409EFF;
     font-weight: bold;
-    display: flex;
-    align-items: center;
-
-    i {
-        margin-right: 4px;
-        font-size: 14px;
-    }
+    background-color: rgba(64, 158, 255, 0.1);
+    padding: 0 2px;
+    border-radius: 2px;
 }
 
-.backup-section {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px;
-    background-color: #f5f7fa;
-    border-radius: 8px;
-    margin-top: 8px;
-
-    .backup-info {
-        display: flex;
-        align-items: center;
-        color: #606266;
-        font-size: 14px;
-
-        .el-icon {
-            margin-right: 8px;
-            color: #909399;
-        }
-    }
-}
-
-.config-item-container {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-
-    .unit-text {
-        color: #606266;
-        font-weight: 500;
-        font-size: 14px;
-    }
-
-    .size-hint {
-        color: #909399;
-        font-size: 13px;
-        background-color: #f5f7fa;
-        padding: 4px 8px;
-        border-radius: 4px;
-    }
-}
-
-.info-text.enhanced {
-    background-color: #f5f7fa;
-    border: 1px solid #e4e7ed;
-    border-radius: 6px;
-    padding: 12px 16px;
-    margin-top: 8px;
-
-    .info-content {
-        margin-left: 8px;
-
-        p {
-            margin: 4px 0;
-            line-height: 1.5;
-
-            &:first-child {
-                margin-top: 0;
-            }
-
-            &:last-child {
-                margin-bottom: 0;
-            }
-        }
-    }
-}
-
-.test-email-container {
-    display: flex;
-    align-items: center;
-    margin-top: 16px;
-
-    .test-email-tip {
-        margin-left: 12px;
-        font-size: 13px;
-        color: #909399;
-    }
-}
-
+/* Element Plus 组件样式覆盖 */
 :deep(.el-form-item__label) {
     font-weight: 500;
     color: #303133;
     margin-bottom: 8px;
-}
-
-:deep(.el-input__inner) {
-    transition: all 0.3s;
-
-    &:hover {
-        border-color: #C0C4CC;
-    }
-
-    &:focus {
-        border-color: #409EFF;
-        box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
-    }
 }
 
 :deep(.el-input-number) {
@@ -1139,21 +857,9 @@ onMounted(async () => {
     text-align: left;
 }
 
-:deep(.el-form-item) {
-    margin-bottom: 22px;
-}
-
 :deep(.el-card__header) {
     padding: 16px 20px;
     font-weight: 500;
-}
-
-:deep(.el-card__body) {
-    padding: 20px;
-}
-
-:deep(.el-tabs__header) {
-    margin-bottom: 20px;
 }
 
 :deep(.el-tabs__item) {
@@ -1170,142 +876,11 @@ onMounted(async () => {
     color: #606266;
 }
 
-// WebDAV分片大小样式
-.chunk-size-container {
-  width: 100%;
-  max-width: 100%;
-  
-  .slider-section {
-    margin-bottom: 20px;
-    padding: 0 4px;
-    
-    .chunk-size-slider {
-      width: 100%;
-      
-      :deep(.el-slider__runway) {
-        height: 6px;
-        background-color: #f0f2f5;
-        border-radius: 3px;
-        margin: 0 8px;
-      }
-      
-      :deep(.el-slider__bar) {
-        height: 6px;
-        background: linear-gradient(90deg, #409eff 0%, #53c41a 50%, #ffba00 100%);
-        border-radius: 3px;
-      }
-      
-      :deep(.el-slider__button) {
-        width: 16px;
-        height: 16px;
-        border: 2px solid #409eff;
-        background-color: #fff;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-      
-      :deep(.el-slider__marks) {
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-      }
-      
-      :deep(.el-slider__marks-text) {
-        font-size: 11px;
-        color: #666;
-        margin-top: 12px;
-        white-space: nowrap;
-        transform: translateX(-50%);
-      }
-      
-      :deep(.el-slider__marks-text:first-child) {
-        transform: translateX(0);
-      }
-      
-      :deep(.el-slider__marks-text:last-child) {
-        transform: translateX(-100%);
-      }
-      
-      :deep(.el-slider__input) {
-         display: none;
-       }
-    }
-  }
-
-    .size-display {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 12px 16px;
-        background-color: #f8f9fa;
-        border-radius: 8px;
-
-        .current-size {
-            .size-value {
-                font-size: 18px;
-                font-weight: 600;
-                color: #303133;
-                margin-right: 8px;
-            }
-
-            .size-unit {
-                font-size: 14px;
-                color: #909399;
-            }
-        }
-
-        .size-indicator {
-            .el-tag {
-                font-weight: 500;
-            }
-        }
-    }
+:deep(.el-slider__input) {
+    display: none;
 }
 
-// 响应式适配
-@media (max-width: 768px) {
-  .chunk-size-container {
-    .slider-section {
-      padding: 0 2px;
-      
-      .chunk-size-slider {
-        :deep(.el-slider__marks-text) {
-          font-size: 10px;
-          margin-top: 8px;
-        }
-        
-        :deep(.el-slider__input) {
-           display: none;
-         }
-      }
-    }
-    
-    .size-display {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-      padding: 10px 12px;
-    }
-  }
-}
-
-@media (max-width: 480px) {
-  .chunk-size-container {
-    .slider-section {
-      .chunk-size-slider {
-        :deep(.el-slider__marks-text) {
-          font-size: 9px;
-          transform: translateX(-50%) scale(0.9);
-        }
-        
-        :deep(.el-slider__marks-text:first-child) {
-          transform: translateX(0) scale(0.9);
-        }
-        
-        :deep(.el-slider__marks-text:last-child) {
-          transform: translateX(-100%) scale(0.9);
-        }
-      }
-    }
-  }
+:deep(.el-slider__marks-text) {
+    font-size: 12px;
 }
 </style>
