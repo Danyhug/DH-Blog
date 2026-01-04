@@ -39,10 +39,10 @@ type UploadService struct {
 
 // NewUploadService 创建并初始化 UploadService
 // 这里通过依赖注入，传入所有具体的 uploader 实现
-func NewUploadService(cfg *config.Config, dataDir string) *UploadService {
+func NewUploadService(cfg *config.Config, dataDir string, fileService IFileService) *UploadService {
 	return &UploadService{
 		Uploaders: map[UploadType]Uploader{
-			ArticleUpload: NewLocalUploader(dataDir, cfg.Upload.Local.Path),
+			ArticleUpload: NewBlogImageUploader(fileService),
 			WebdavUpload:  NewWebdavUploader(cfg),
 		},
 	}
@@ -90,6 +90,45 @@ func (u *LocalUploader) Upload(file *multipart.FileHeader) (string, error) {
 	}
 
 	return "uploads/" + filepath.Join(u.SubPath, fileName), nil
+}
+
+// BlogImageUploader 将博客图片保存到WebDAV存储目录
+type BlogImageUploader struct {
+	fileService IFileService
+}
+
+// NewBlogImageUploader 创建博客图片上传器
+func NewBlogImageUploader(fileService IFileService) Uploader {
+	return &BlogImageUploader{fileService: fileService}
+}
+
+// Upload 实现Uploader接口的上传方法
+func (u *BlogImageUploader) Upload(file *multipart.FileHeader) (string, error) {
+	// 获取WebDAV存储路径
+	storagePath := u.fileService.GetStoragePath()
+	if storagePath == "" {
+		return "", fmt.Errorf("WebDAV存储路径未配置")
+	}
+
+	// 构建博客图片目录路径
+	blogImagesDir := filepath.Join(storagePath, "blog-images")
+
+	// 确保目录存在
+	if err := os.MkdirAll(blogImagesDir, 0755); err != nil {
+		return "", fmt.Errorf("创建博客图片目录失败: %w", err)
+	}
+
+	// 生成文件名
+	fileName := fmt.Sprintf("%d_%s", time.Now().Unix(), file.Filename)
+	dst := filepath.Join(blogImagesDir, fileName)
+
+	// 保存文件
+	if err := SaveUploadedFile(file, dst); err != nil {
+		return "", fmt.Errorf("保存文件失败: %w", err)
+	}
+
+	// 返回公开访问URL
+	return "blog-images/" + fileName, nil
 }
 
 // WebdavUploader 实现了将文件保存到 WebDAV 的策略

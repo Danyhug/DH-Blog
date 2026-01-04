@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full flex flex-col bg-[#f8f9fa] animate-[fade-in_0.3s_ease] relative" :class="{ 'share-mode': shareMode }">
+  <div class="w-full min-h-screen flex flex-col bg-[#f8f9fa] animate-[fade-in_0.3s_ease] relative" :class="{ 'share-mode': shareMode }">
     <!-- 顶部导航栏 -->
     <div class="sticky top-0 z-10 backdrop-blur-[20px] bg-white/90 border-b border-black/5 shadow-[0_4px_20px_rgba(0,0,0,0.05)] py-2.5">
       <div class="max-w-[1400px] mx-auto flex justify-between items-center px-6 py-3 max-md:flex-col max-md:gap-3 max-md:px-3">

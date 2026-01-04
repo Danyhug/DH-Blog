@@ -2,6 +2,8 @@ package router
 
 import (
 	"fmt"
+	"net/http"
+	"path/filepath"
 	"time"
 
 	"dh-blog/internal/config"
@@ -30,6 +32,7 @@ func Init(
 	staticFilesAbsPath string,
 	chunkUploadHandler *handler.ChunkUploadHandler,
 	conf *config.Config, // 添加配置参数
+	fileService service.IFileService, // 添加文件服务参数（用于博客图片公开访问）
 ) *gin.Engine {
 
 	// 使用原始的路由配置
@@ -194,6 +197,18 @@ func Init(
 	// 开放静态文件服务
 	publicAPI.Static("/uploads", staticFilesAbsPath)
 	fmt.Printf("静态文件服务路径: /uploads -> %s\n", staticFilesAbsPath)
+
+	// 博客图片公开访问路由（存储在WebDAV目录中）
+	publicAPI.GET("/blog-images/*filepath", func(c *gin.Context) {
+		storagePath := fileService.GetStoragePath()
+		if storagePath == "" {
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+		filePath := c.Param("filepath")
+		fullPath := filepath.Join(storagePath, "blog-images", filePath)
+		c.File(fullPath)
+	})
 
 	// 注册前端静态文件路由
 	frontend.RegisterFrontendRoutes(router, conf)

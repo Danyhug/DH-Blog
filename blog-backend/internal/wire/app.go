@@ -61,11 +61,12 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	shareAccessLogRepo := repository.NewShareAccessLogRepository(db)
 
 	// 初始化服务
-	uploadService := service.NewUploadService(conf, dataDir)
 	aiService := service.NewAIService(systemSettingRepo, cacheService.GetCache())
 	ipService := service.NewIPService(logRepo)
-	// 添加文件服务
+	// 添加文件服务（需要在 uploadService 之前初始化）
 	fileService := service.NewFileService(fileRepo, systemSettingRepo)
+	// 初始化上传服务（依赖 fileService）
+	uploadService := service.NewUploadService(conf, dataDir, fileService)
 	// 添加分享服务
 	shareService := service.NewShareService(shareRepo, shareAccessLogRepo, fileService)
 	// 初始化配置服务
@@ -109,5 +110,6 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 		staticFilesAbsPath,
 		chunkUploadHandler,
 		conf, // 添加配置参数
+		fileService, // 添加文件服务参数（用于博客图片公开访问）
 	)
 }
