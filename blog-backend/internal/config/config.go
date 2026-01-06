@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 )
 
@@ -115,10 +116,32 @@ func Init() (*Config, error) {
 
 	// 设置默认值
 	defaultCfg := DefaultConfig()
-	v.SetDefault("server", defaultCfg.Server)
-	v.SetDefault("database", defaultCfg.DataBase)
+	v.SetDefault("server", map[string]any{
+		"address":    defaultCfg.Server.Address,
+		"httpPort":   defaultCfg.Server.HttpPort,
+		"httpsPort":  defaultCfg.Server.HttpsPort,
+		"certFile":   defaultCfg.Server.CertFile,
+		"keyFile":    defaultCfg.Server.KeyFile,
+		"staticPath": defaultCfg.Server.StaticPath,
+		"jwtExpire":  defaultCfg.Server.JwtExpire,
+	})
+	v.SetDefault("database", map[string]any{
+		"type":   defaultCfg.DataBase.Type,
+		"dbFile": defaultCfg.DataBase.DBFile,
+		"dsn":    defaultCfg.DataBase.Dsn,
+	})
 	v.SetDefault("jwtSecret", defaultCfg.JwtSecret)
-	v.SetDefault("upload", defaultCfg.Upload)
+	v.SetDefault("upload", map[string]any{
+		"local": map[string]any{
+			"path": defaultCfg.Upload.Local.Path,
+		},
+		"webdav": map[string]any{
+			"url":      defaultCfg.Upload.Webdav.URL,
+			"username": defaultCfg.Upload.Webdav.Username,
+			"password": defaultCfg.Upload.Webdav.Password,
+			"path":     defaultCfg.Upload.Webdav.Path,
+		},
+	})
 
 	// 2. 尝试读取现有配置文件
 	readErr := v.ReadInConfig()
@@ -155,7 +178,18 @@ func Init() (*Config, error) {
 		}
 	}
 
-	// 4. 执行更新操作（如果需要）
+	// 4. Unmarshal 配置到结构体（使用自定义 DecodeHook 处理 time.Duration）
+	var finalConfig Config
+	if err := v.Unmarshal(&finalConfig, viper.DecodeHook(
+		mapstructure.ComposeDecodeHookFunc(
+			mapstructure.StringToTimeDurationHookFunc(),
+			mapstructure.StringToSliceHookFunc(","),
+		),
+	)); err != nil {
+		return nil, fmt.Errorf("解析最终配置文件失败: %w", err)
+	}
+
+	// 5. 执行更新操作（如果需要）
 	if needsUpdate {
 		// 备份现有配置文件（如果存在）
 		if configExists {
@@ -167,17 +201,11 @@ func Init() (*Config, error) {
 			fmt.Printf("已备份旧配置文件至: %s\n", backupFilePath)
 		}
 
-		// 将合并后的配置（默认值 + 文件值）写入新的 config.yaml
+		// 将合并后的配置写入新的 config.yaml
 		if err := v.WriteConfigAs(configFilePath); err != nil {
 			return nil, fmt.Errorf("写入新配置文件失败: %w", err)
 		}
 		fmt.Printf("已更新配置文件至: %s\n", configFilePath)
-	}
-
-	// 5. Unmarshal 最终配置
-	var finalConfig Config
-	if err := v.Unmarshal(&finalConfig); err != nil {
-		return nil, fmt.Errorf("解析最终配置文件失败: %w", err)
 	}
 
 	return &finalConfig, nil
