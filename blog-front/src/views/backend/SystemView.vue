@@ -259,15 +259,45 @@
                     </el-form>
 
                     <el-divider content-position="left">数据备份</el-divider>
-                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg mt-2">
-                        <div class="flex items-center text-gray-600 text-sm">
+                    <div class="p-4 bg-gray-50 rounded-lg mt-2">
+                        <div class="flex items-center text-gray-600 text-sm mb-3">
                             <el-icon class="mr-2 text-gray-400"><InfoFilled /></el-icon>
-                            <span>备份将包含数据库文件和WebDAV存储目录，生成压缩包供下载</span>
+                            <span>选择要备份的目录（数据库始终包含在备份中）</span>
                         </div>
-                        <el-button type="primary" :loading="isBackingUp" @click="handleBackup">
-                            <el-icon><Download /></el-icon>
-                            {{ isBackingUp ? '正在备份...' : '立即备份' }}
-                        </el-button>
+
+                        <!-- 目录选择 -->
+                        <div class="mb-4">
+                            <el-checkbox-group v-model="selectedBackupDirs" class="flex flex-wrap gap-2">
+                                <el-checkbox
+                                    v-for="dir in backupDirs"
+                                    :key="dir.name"
+                                    :value="dir.name"
+                                    border
+                                >
+                                    {{ dir.name }}
+                                    <el-tag v-if="dir.is_protected" type="success" size="small" class="ml-1">固定</el-tag>
+                                </el-checkbox>
+                            </el-checkbox-group>
+                            <div v-if="backupDirs.length === 0" class="text-gray-400 text-sm">
+                                暂无可备份的目录
+                            </div>
+                        </div>
+
+                        <!-- 操作按钮 -->
+                        <div class="flex justify-end gap-2">
+                            <el-button @click="loadBackupDirs" :loading="isLoadingBackupDirs">
+                                <el-icon><Refresh /></el-icon>
+                                刷新目录
+                            </el-button>
+                            <el-button type="primary" :loading="isBackingUp" @click="handleBackup('selected')" :disabled="selectedBackupDirs.length === 0">
+                                <el-icon><Download /></el-icon>
+                                {{ isBackingUp ? '正在备份...' : '备份选中目录' }}
+                            </el-button>
+                            <el-button type="warning" :loading="isBackingUpFull" @click="handleBackup('full')">
+                                <el-icon><Download /></el-icon>
+                                {{ isBackingUpFull ? '正在备份...' : '全部备份' }}
+                            </el-button>
+                        </div>
                     </div>
 
                     <!-- 目录选择对话框 -->
@@ -448,7 +478,8 @@ import {
     getStorageConfig, updateStorageConfig,
     getSystemSettings, addSystemSetting, updateSystemSetting, deleteSystemSetting,
     getAIPromptTags, // 导入获取AI提示词标签的API
-    getBackupUrl // 导入备份URL函数
+    getBackupUrl, getBackupDirs, // 导入备份相关函数
+    type BackupDirInfo
 } from '@/api/admin';
 import { getDirectoryTree } from '@/api/file';
 import type { SystemConfig, BlogConfig, EmailConfig, AIConfig, StorageConfig } from '@/types/SystemConfig';
@@ -457,7 +488,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import {
     Edit, Picture, Link, Connection, User, Lock, Key,
     Folder, FolderOpened, Back, Document, InfoFilled,
-    WarningFilled, Message, Setting, Cpu, MagicStick, Download
+    WarningFilled, Message, Setting, Cpu, MagicStick, Download, Refresh
 } from '@element-plus/icons-vue';
 
 // HTML 转义函数
@@ -537,23 +568,58 @@ const promptTags = ref<{ label: string, prompt: string }[]>([]);
 
 // 备份相关
 const isBackingUp = ref(false);
+const isBackingUpFull = ref(false);
+const isLoadingBackupDirs = ref(false);
+const backupDirs = ref<BackupDirInfo[]>([]);
+const selectedBackupDirs = ref<string[]>([]);
 
-const handleBackup = async () => {
+// 加载可备份的目录列表
+const loadBackupDirs = async () => {
     try {
-        isBackingUp.value = true;
-        ElMessage.info('正在生成备份文件，请稍候...');
+        isLoadingBackupDirs.value = true;
+        const dirs = await getBackupDirs();
+        backupDirs.value = dirs || [];
+        // 默认选中固定目录
+        selectedBackupDirs.value = dirs?.filter(d => d.is_protected).map(d => d.name) || [];
+    } catch (error) {
+        console.error('加载目录列表失败:', error);
+        backupDirs.value = [];
+    } finally {
+        isLoadingBackupDirs.value = false;
+    }
+};
+
+const handleBackup = async (mode: 'selected' | 'full') => {
+    try {
+        if (mode === 'full') {
+            isBackingUpFull.value = true;
+            ElMessage.info('正在生成全量备份文件，数据量较大请耐心等待...');
+        } else {
+            isBackingUp.value = true;
+            ElMessage.info('正在生成备份文件，请稍候...');
+        }
 
         // 使用 window.open 下载文件
-        const backupUrl = getBackupUrl();
+        let backupUrl: string;
+        if (mode === 'full') {
+            backupUrl = getBackupUrl({ mode: 'full' });
+        } else {
+            backupUrl = getBackupUrl({ dirs: selectedBackupDirs.value });
+        }
         window.open(backupUrl, '_blank');
 
         // 延迟关闭loading状态
         setTimeout(() => {
-            isBackingUp.value = false;
+            if (mode === 'full') {
+                isBackingUpFull.value = false;
+            } else {
+                isBackingUp.value = false;
+            }
             ElMessage.success('备份文件已开始下载');
         }, 2000);
     } catch (error) {
         isBackingUp.value = false;
+        isBackingUpFull.value = false;
         ElMessage.error('备份失败');
     }
 };
@@ -829,6 +895,8 @@ onMounted(async () => {
     }
     // 组件挂载后立即加载AI提示词标签
     await loadAIPromptTags();
+    // 加载备份目录列表
+    await loadBackupDirs();
 });
 </script>
 
