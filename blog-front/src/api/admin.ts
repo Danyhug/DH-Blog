@@ -247,11 +247,32 @@ export const updateStorageConfig = (data: StorageConfig): Promise<any> => {
   return request.put('/admin/config/storage', data)
 }
 
+// 备份目录信息
+export interface BackupDirInfo {
+  name: string
+  is_protected: boolean
+}
+
+// 获取可备份的目录列表
+export const getBackupDirs = (): Promise<BackupDirInfo[]> => {
+  return request.get('/admin/config/backup/dirs')
+}
+
 // 获取数据备份下载URL
-export const getBackupUrl = (): string => {
+// mode: 'full' - 备份数据库和整个WebDAV目录
+// dirs: 逗号分隔的目录名列表 - 备份数据库和指定目录
+// 默认（无参数）：备份数据库和固定目录
+export const getBackupUrl = (options?: { mode?: 'full', dirs?: string[] }): string => {
   const token = localStorage.getItem("token") || "";
   const tokenParam = token.startsWith("Bearer ") ? token.substring(7) : token;
-  return `${SERVER_URL}/admin/config/backup?token=${tokenParam}`;
+
+  let url = `${SERVER_URL}/admin/config/backup?token=${tokenParam}`;
+  if (options?.mode === 'full') {
+    url += '&mode=full';
+  } else if (options?.dirs && options.dirs.length > 0) {
+    url += `&dirs=${encodeURIComponent(options.dirs.join(','))}`;
+  }
+  return url;
 }
 
 // ********** 文件存储路径配置（兼容旧版） **********

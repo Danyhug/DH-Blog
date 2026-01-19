@@ -32,6 +32,9 @@ var (
 	// 全局文件服务实例
 	globalFileService IFileService
 	fileServiceOnce   sync.Once
+
+	// ProtectedDirectories 固定目录列表，这些目录不能被删除
+	ProtectedDirectories = []string{"blog-images", "blog-music", "blog-videos"}
 )
 
 // IFileService 定义了网盘核心功能的业务逻辑合同 (MVP版本)
@@ -74,6 +77,18 @@ type IFileService interface {
 	// GetSystemDirectoryTree 9. 获取系统目录树
 	// 获取系统目录结构，用于前端选择存储路径
 	GetSystemDirectoryTree(ctx context.Context, rootPath string, maxDepth int) (*DirectoryNode, error)
+
+	// EnsureProtectedDirectories 10. 确保固定目录存在
+	// 在启动时调用，创建音乐、图片、视频等固定目录
+	EnsureProtectedDirectories(ctx context.Context) error
+
+	// GetProtectedDirectoryID 11. 获取固定目录的ID
+	// 根据目录名称获取固定目录的数据库ID
+	GetProtectedDirectoryID(ctx context.Context, dirName string) (string, error)
+
+	// IsProtectedDirectory 12. 检查是否为固定目录
+	// 检查指定文件ID是否为根目录下的固定目录
+	IsProtectedDirectory(ctx context.Context, fileID string) bool
 }
 
 // NewFileService 创建新的文件服务
@@ -472,6 +487,15 @@ func (s *fileService) DeleteFile(ctx context.Context, userID uint64, fileID stri
 		return fmt.Errorf("无权删除此文件")
 	}
 
+	// 检查是否为固定目录（根目录下的音乐、图片、视频）
+	if file.IsFolder && file.ParentID == "" {
+		for _, name := range ProtectedDirectories {
+			if file.Name == name {
+				return fmt.Errorf("系统目录 '%s' 不能删除", name)
+			}
+		}
+	}
+
 	// 实际路径
 	fullPath := filepath.Join(s.filePath, file.StoragePath)
 
@@ -864,4 +888,110 @@ func parseFileID(fileID string) (int, error) {
 		return 0, fmt.Errorf("无效的文件ID格式")
 	}
 	return id, nil
+}
+
+// EnsureProtectedDirectories 确保固定目录存在
+// 在项目启动时调用，自动创建音乐、图片、视频等固定目录
+func (s *fileService) EnsureProtectedDirectories(ctx context.Context) error {
+	// 先刷新存储路径设置
+	s.loadStoragePathFromDB()
+
+	// 使用管理员用户ID (通常为1)
+	const adminUserID uint64 = 1
+
+	for _, dirName := range ProtectedDirectories {
+		// 检查目录是否已存在于数据库中
+		existingFile, _ := s.repo.FindByUserIDAndName(ctx, adminUserID, "", dirName)
+		if existingFile != nil {
+			logrus.Debugf("固定目录已存在: %s", dirName)
+			// 确保物理目录也存在
+			fullPath := filepath.Join(s.filePath, dirName)
+			if err := os.MkdirAll(fullPath, os.ModePerm); err != nil {
+				logrus.Warnf("创建物理目录失败: %s, 错误: %v", fullPath, err)
+			}
+			continue
+		}
+
+		// 创建物理目录
+		fullPath := filepath.Join(s.filePath, dirName)
+		if err := os.MkdirAll(fullPath, os.ModePerm); err != nil {
+			logrus.Errorf("创建固定目录失败: %s, 错误: %v", fullPath, err)
+			return fmt.Errorf("创建固定目录 %s 失败: %w", dirName, err)
+		}
+
+		// 创建数据库记录
+		folder := &model.File{
+			UserID:      adminUserID,
+			ParentID:    "", // 根目录
+			Name:        dirName,
+			IsFolder:    true,
+			StoragePath: dirName,
+			MimeType:    "",
+		}
+
+		if err := s.repo.Create(ctx, folder); err != nil {
+			logrus.Errorf("创建固定目录数据库记录失败: %s, 错误: %v", dirName, err)
+			return fmt.Errorf("创建固定目录 %s 数据库记录失败: %w", dirName, err)
+		}
+
+		logrus.Infof("已创建固定目录: %s", dirName)
+	}
+
+	return nil
+}
+
+// GetProtectedDirectoryID 获取固定目录的数据库ID
+func (s *fileService) GetProtectedDirectoryID(ctx context.Context, dirName string) (string, error) {
+	// 使用管理员用户ID
+	const adminUserID uint64 = 1
+
+	// 检查是否为有效的固定目录名称
+	isProtected := false
+	for _, name := range ProtectedDirectories {
+		if name == dirName {
+			isProtected = true
+			break
+		}
+	}
+	if !isProtected {
+		return "", fmt.Errorf("'%s' 不是有效的固定目录", dirName)
+	}
+
+	// 查找目录
+	file, err := s.repo.FindByUserIDAndName(ctx, adminUserID, "", dirName)
+	if err != nil {
+		return "", fmt.Errorf("查找固定目录失败: %w", err)
+	}
+	if file == nil {
+		return "", fmt.Errorf("固定目录 '%s' 不存在", dirName)
+	}
+
+	return fmt.Sprintf("%d", file.ID), nil
+}
+
+// IsProtectedDirectory 检查指定文件ID是否为根目录下的固定目录
+func (s *fileService) IsProtectedDirectory(ctx context.Context, fileID string) bool {
+	id, err := parseFileID(fileID)
+	if err != nil {
+		return false
+	}
+
+	file, err := s.repo.FindByID(ctx, id)
+	if err != nil || file == nil {
+		return false
+	}
+
+	// 必须是根目录下的文件夹
+	if !file.IsFolder || file.ParentID != "" {
+		return false
+	}
+
+	// 检查名称是否在固定目录列表中
+	for _, name := range ProtectedDirectories {
+		if file.Name == name {
+			return true
+		}
+	}
+
+	return false
 }

@@ -1,6 +1,7 @@
 package wire
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -65,6 +66,10 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	ipService := service.NewIPService(logRepo)
 	// 添加文件服务（需要在 uploadService 之前初始化）
 	fileService := service.NewFileService(fileRepo, systemSettingRepo)
+	// 确保固定目录存在（音乐、图片、视频）
+	if err := fileService.EnsureProtectedDirectories(context.Background()); err != nil {
+		logrus.Warnf("创建固定目录失败: %v", err)
+	}
 	// 初始化上传服务（依赖 fileService）
 	uploadService := service.NewUploadService(conf, dataDir, fileService)
 	// 添加分享服务
@@ -104,12 +109,12 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 		adminHandler,
 		systemConfigHandler,
 		fileHandler,
-		shareHandler, // 添加分享处理器
+		shareHandler,         // 添加分享处理器
 		systemSettingHandler, // 添加系统设置处理器
 		ipService,
 		staticFilesAbsPath,
 		chunkUploadHandler,
-		conf, // 添加配置参数
+		conf,        // 添加配置参数
 		fileService, // 添加文件服务参数（用于博客图片公开访问）
 	)
 }

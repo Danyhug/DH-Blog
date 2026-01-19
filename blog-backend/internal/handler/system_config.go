@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -411,8 +412,67 @@ func (h *SystemConfigHandler) GetAIPromptTags(c *gin.Context) {
 	h.SuccessWithData(c, promptTags)
 }
 
+// BackupDirInfo 备份目录信息
+type BackupDirInfo struct {
+	Name        string `json:"name"`
+	IsProtected bool   `json:"is_protected"`
+}
+
+// GetBackupDirs 获取可备份的目录列表
+func (h *SystemConfigHandler) GetBackupDirs(c *gin.Context) {
+	// 获取数据目录路径
+	exePath, err := os.Executable()
+	if err != nil {
+		h.ErrorWithMessage(c, "获取可执行文件路径失败: "+err.Error())
+		return
+	}
+	dataDir := filepath.Join(filepath.Dir(exePath), "data")
+
+	// 获取WebDAV存储路径
+	webdavPath := h.fileService.GetStoragePath()
+	if webdavPath == "" {
+		webdavPath = filepath.Join(dataDir, "webdav")
+	}
+
+	// 读取目录列表
+	entries, err := os.ReadDir(webdavPath)
+	if err != nil {
+		h.SuccessWithData(c, []BackupDirInfo{})
+		return
+	}
+
+	// 构建目录信息列表
+	var dirs []BackupDirInfo
+	for _, entry := range entries {
+		if entry.IsDir() {
+			// 检查是否为固定目录
+			isProtected := false
+			for _, protectedDir := range service.ProtectedDirectories {
+				if entry.Name() == protectedDir {
+					isProtected = true
+					break
+				}
+			}
+			dirs = append(dirs, BackupDirInfo{
+				Name:        entry.Name(),
+				IsProtected: isProtected,
+			})
+		}
+	}
+
+	h.SuccessWithData(c, dirs)
+}
+
 // BackupData 备份数据（WebDAV目录和数据库）
+// 支持参数：
+// - mode=full：备份数据库 + 整个 WebDAV 目录
+// - dirs=目录1,目录2：备份数据库 + 指定的目录列表
+// - 默认（无参数）：备份数据库 + 固定目录（音乐、图片、视频）
 func (h *SystemConfigHandler) BackupData(c *gin.Context) {
+	// 获取备份模式参数
+	mode := c.DefaultQuery("mode", "")
+	dirsParam := c.DefaultQuery("dirs", "")
+
 	// 获取数据目录路径
 	exePath, err := os.Executable()
 	if err != nil {
@@ -438,7 +498,12 @@ func (h *SystemConfigHandler) BackupData(c *gin.Context) {
 
 	// 生成备份文件名
 	timestamp := time.Now().Format("20060102150405")
-	backupFileName := fmt.Sprintf("dhblog-%s.zip", timestamp)
+	var backupFileName string
+	if mode == "full" {
+		backupFileName = fmt.Sprintf("dhblog-full-%s.zip", timestamp)
+	} else {
+		backupFileName = fmt.Sprintf("dhblog-%s.zip", timestamp)
+	}
 
 	// 创建临时文件
 	tempFile, err := os.CreateTemp("", "dhblog-backup-*.zip")
@@ -463,13 +528,46 @@ func (h *SystemConfigHandler) BackupData(c *gin.Context) {
 		return
 	}
 
-	// 添加WebDAV目录到zip
+	// 根据模式添加WebDAV目录
 	if _, err := os.Stat(webdavPath); err == nil {
-		if err := addDirToZip(zipWriter, webdavPath, "webdav"); err != nil {
-			zipWriter.Close()
-			tempFile.Close()
-			h.ErrorWithMessage(c, "添加WebDAV目录失败: "+err.Error())
-			return
+		if mode == "full" {
+			// 全量备份：添加整个WebDAV目录
+			if err := addDirToZip(zipWriter, webdavPath, "webdav"); err != nil {
+				zipWriter.Close()
+				tempFile.Close()
+				h.ErrorWithMessage(c, "添加WebDAV目录失败: "+err.Error())
+				return
+			}
+		} else {
+			// 确定要备份的目录列表
+			var dirsToBackup []string
+			if dirsParam != "" {
+				// 使用用户指定的目录
+				dirsToBackup = strings.Split(dirsParam, ",")
+			} else {
+				// 默认使用固定目录
+				dirsToBackup = service.ProtectedDirectories
+			}
+
+			// 备份指定目录
+			for _, dirName := range dirsToBackup {
+				dirName = strings.TrimSpace(dirName)
+				if dirName == "" {
+					continue
+				}
+				// 安全检查：防止路径遍历攻击
+				if strings.Contains(dirName, "..") || strings.ContainsAny(dirName, "/\\") {
+					logrus.Warnf("忽略不安全的目录名: %s", dirName)
+					continue
+				}
+				dirPath := filepath.Join(webdavPath, dirName)
+				if _, err := os.Stat(dirPath); err == nil {
+					if err := addDirToZip(zipWriter, dirPath, filepath.Join("webdav", dirName)); err != nil {
+						logrus.Warnf("添加目录失败: %s, 错误: %v", dirName, err)
+						// 继续处理其他目录
+					}
+				}
+			}
 		}
 	}
 
@@ -487,7 +585,7 @@ func (h *SystemConfigHandler) BackupData(c *gin.Context) {
 
 	// 发送文件
 	c.File(tempFilePath)
-	logrus.Infof("数据备份完成: %s", backupFileName)
+	logrus.Infof("数据备份完成: %s (模式: %s, 目录: %s)", backupFileName, mode, dirsParam)
 }
 
 // addFileToZip 添加单个文件到zip（使用缓冲区优化性能）
