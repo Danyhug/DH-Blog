@@ -70,8 +70,6 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	if err := fileService.EnsureProtectedDirectories(context.Background()); err != nil {
 		logrus.Warnf("创建固定目录失败: %v", err)
 	}
-	// 初始化上传服务（依赖 fileService）
-	uploadService := service.NewUploadService(conf, dataDir, fileService)
 	// 添加分享服务
 	shareService := service.NewShareService(shareRepo, shareAccessLogRepo, fileService)
 	// 初始化配置服务
@@ -91,7 +89,7 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	userHandler := handler.NewUserHandler(userRepo)
 	commentHandler := handler.NewCommentHandler(commentRepo)
 	logHandler := handler.NewLogHandler(logRepo)
-	adminHandler := handler.NewAdminHandler(uploadService, aiService)
+	adminHandler := handler.NewAdminHandler(fileService, aiService)
 	systemConfigHandler := handler.NewSystemConfigHandler(systemSettingRepo, db, fileService)
 	// 添加文件处理器
 	fileHandler := handler.NewFileHandler(fileService)

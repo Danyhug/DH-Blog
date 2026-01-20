@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"dh-blog/internal/config"
@@ -200,15 +201,15 @@ func Init(
 	publicAPI.Static("/uploads", staticFilesAbsPath)
 	fmt.Printf("静态文件服务路径: /uploads -> %s\n", staticFilesAbsPath)
 
-	// 博客图片公开访问路由（存储在WebDAV目录中）
-	publicAPI.GET("/blog-images/*filepath", func(c *gin.Context) {
+	// 博客公开访问路由（存储在WebDAV目录中）
+	publicAPI.GET("/博客/*filepath", func(c *gin.Context) {
 		storagePath := fileService.GetStoragePath()
 		if storagePath == "" {
 			c.AbortWithStatus(http.StatusNotFound)
 			return
 		}
-		filePath := c.Param("filepath")
-		fullPath := filepath.Join(storagePath, "blog-images", filePath)
+		filePath := strings.TrimPrefix(c.Param("filepath"), "/")
+		fullPath := filepath.Join(storagePath, "博客", filePath)
 		c.File(fullPath)
 	})
 

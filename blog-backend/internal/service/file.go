@@ -34,7 +34,7 @@ var (
 	fileServiceOnce   sync.Once
 
 	// ProtectedDirectories 固定目录列表，这些目录不能被删除
-	ProtectedDirectories = []string{"blog-images", "blog-music", "blog-videos"}
+	ProtectedDirectories = []string{"博客"}
 )
 
 // IFileService 定义了网盘核心功能的业务逻辑合同 (MVP版本)
@@ -957,13 +957,47 @@ func (s *fileService) GetProtectedDirectoryID(ctx context.Context, dirName strin
 		return "", fmt.Errorf("'%s' 不是有效的固定目录", dirName)
 	}
 
+	// 刷新存储路径，确保物理目录创建在正确位置
+	s.loadStoragePathFromDB()
+
 	// 查找目录
 	file, err := s.repo.FindByUserIDAndName(ctx, adminUserID, "", dirName)
 	if err != nil {
 		return "", fmt.Errorf("查找固定目录失败: %w", err)
 	}
 	if file == nil {
-		return "", fmt.Errorf("固定目录 '%s' 不存在", dirName)
+		// 兜底创建固定目录（防止历史数据不完整）
+		fullPath := filepath.Join(s.filePath, dirName)
+		if err := os.MkdirAll(fullPath, os.ModePerm); err != nil {
+			return "", fmt.Errorf("创建固定目录 '%s' 失败: %w", dirName, err)
+		}
+
+		folder := &model.File{
+			UserID:      adminUserID,
+			ParentID:    "",
+			Name:        dirName,
+			IsFolder:    true,
+			StoragePath: dirName,
+			MimeType:    "",
+		}
+
+		if err := s.repo.Create(ctx, folder); err != nil {
+			return "", fmt.Errorf("创建固定目录 '%s' 失败: %w", dirName, err)
+		}
+
+		return fmt.Sprintf("%d", folder.ID), nil
+	}
+
+	if file.StoragePath == "" {
+		file.StoragePath = dirName
+		if err := s.repo.Update(ctx, file); err != nil {
+			return "", fmt.Errorf("更新固定目录路径失败: %w", err)
+		}
+	}
+
+	fullPath := filepath.Join(s.filePath, file.StoragePath)
+	if err := os.MkdirAll(fullPath, os.ModePerm); err != nil {
+		return "", fmt.Errorf("创建固定目录 '%s' 失败: %w", dirName, err)
 	}
 
 	return fmt.Sprintf("%d", file.ID), nil

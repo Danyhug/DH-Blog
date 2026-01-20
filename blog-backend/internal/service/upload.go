@@ -110,8 +110,8 @@ func (u *BlogImageUploader) Upload(file *multipart.FileHeader) (string, error) {
 		return "", fmt.Errorf("WebDAV存储路径未配置")
 	}
 
-	// 构建博客图片目录路径
-	blogImagesDir := filepath.Join(storagePath, "blog-images")
+	// 构建博客目录路径
+	blogImagesDir := filepath.Join(storagePath, "博客")
 
 	// 确保目录存在
 	if err := os.MkdirAll(blogImagesDir, 0755); err != nil {
@@ -128,7 +128,7 @@ func (u *BlogImageUploader) Upload(file *multipart.FileHeader) (string, error) {
 	}
 
 	// 返回公开访问URL
-	return "blog-images/" + fileName, nil
+	return "博客/" + fileName, nil
 }
 
 // WebdavUploader 实现了将文件保存到 WebDAV 的策略
