@@ -17,7 +17,7 @@ mkdir -p "$EMBED_DIR"
 
 # 2. 构建前端
 echo "构建前端..."
-(cd "$FRONTEND_DIR" && pnpm build --mode production)
+(cd "$FRONTEND_DIR" && bun run build -- --mode production)
 
 # 3. 嵌入前端到后端
 echo "嵌入前端到后端..."

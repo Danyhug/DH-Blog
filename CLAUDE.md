@@ -23,16 +23,16 @@ cd blog-backend && go build -ldflags="-s -w" -o dhblog ./cmd/blog-backend
 ### Frontend (blog-front/)
 ```bash
 # Install dependencies
-cd blog-front && pnpm install
+cd blog-front && bun install
 
 # Development server
-cd blog-front && pnpm dev
+cd blog-front && bun run dev
 
 # Production build
-cd blog-front && pnpm build
+cd blog-front && bun run build
 
 # Build with type checking
-cd blog-front && pnpm build:type-check
+cd blog-front && bun run build:type-check
 ```
 
 ### Full Build (blog-deploy/)
@@ -108,5 +108,5 @@ On first startup, if no admin user exists, the application prompts for username/
 - 不了解的框架或库，不要直接使用，先通过`use context7`官方文档或搜索相关资料，确认后再使用；
 - 后端：每次在文件进行更改时，必须进行编译测试，编译后端文件到`/Users/danyhug/GolandProjects/DH-Blog/blog-deploy/backend` 中，每完成一个任务必须编译一次查看是否成功，所有任务完成后删除编译文件；编译成功后不要运行！
 - 数据库在 `/Users/danyhug/GolandProjects/DH-Blog/blog-deploy/backend/data/dhblog.db`
-- 前端：除非我要求，否则不要改任何样式；`npm`命令统一改为使用`pnpm`；不要写任何css样式，全部用tailwindcss框架和element-plus组件库
+- 前端：除非我要求，否则不要改任何样式；`npm`命令统一改为使用`bun`；不要写任何css样式，全部用tailwindcss框架和element-plus组件库
 - 更改要尽量最小规模更新，不要更改无关代码，用中文对话

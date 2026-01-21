@@ -275,7 +275,7 @@ DH-Blog/
 ### 部署目录 (blog-deploy/)
 
 #### build.sh - Linux/macOS构建脚本
-- 前端构建（pnpm build）
+- 前端构建（bun run build）
 - 后端多平台编译（Windows/Linux/macOS）
 - 前端静态文件嵌入后端
 - 清理临时文件
@@ -366,9 +366,9 @@ DH-Blog/
 ### 开发环境
 1. 克隆项目
 2. 后端: `cd blog-backend && go mod tidy`
-3. 前端: `cd blog-front && pnpm install`
+3. 前端: `cd blog-front && bun install`
 4. 启动后端: `cd blog-backend && go run cmd/blog-backend/main.go`
-5. 启动前端: `cd blog-front && pnpm dev`
+5. 启动前端: `cd blog-front && bun run dev`
 
 ### 生产构建
 1. 使用构建脚本: `cd blog-deploy && ./build.sh`
