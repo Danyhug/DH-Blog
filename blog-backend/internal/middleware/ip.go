@@ -13,6 +13,9 @@ import (
 )
 
 func getResourceType(path string) string {
+	if strings.HasPrefix(path, "/api/user/heart") {
+		return "heartbeat"
+	}
 	// 确保路径长度足够并且包含/api/前缀
 	if len(path) < 5 || !strings.HasPrefix(path, "/api/") {
 		return ""
@@ -36,9 +39,10 @@ func IPMiddleware(ipService service.IPService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取客户端IP
 		ip := utils.GetClientIP(c.Request)
+		resourceType := getResourceType(c.Request.URL.Path)
 
 		go func() {
-			if c.Request.URL.Path == "/api/user/heart" {
+			if resourceType == "heartbeat" {
 				return
 			}
 			os, browser := utils.ParseUserAgent(c.Request.UserAgent())
@@ -63,7 +67,7 @@ func IPMiddleware(ipService service.IPService) gin.HandlerFunc {
 				UserAgent:    ua,
 				RequestURL:   c.Request.URL.String(),
 				City:         city,
-				ResourceType: getResourceType(c.Request.URL.Path),
+				ResourceType: resourceType,
 			}
 
 			err = ipService.RecordRequest(log)
