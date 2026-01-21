@@ -85,7 +85,7 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	logrus.Info("应用程序核心组件初始化完成")
 
 	// 初始化处理器
-	articleHandler := handler.NewArticleHandler(articleRepo, tagRepo, categoryRepo, aiService, taskManager)
+	articleHandler := handler.NewArticleHandler(articleRepo, tagRepo, categoryRepo, commentRepo, aiService, taskManager)
 	userHandler := handler.NewUserHandler(userRepo)
 	commentHandler := handler.NewCommentHandler(commentRepo)
 	logHandler := handler.NewLogHandler(logRepo)

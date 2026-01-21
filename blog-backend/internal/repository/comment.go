@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -135,6 +136,15 @@ func (r *CommentRepository) UpdateComment(comment *model.Comment) error {
 		return fmt.Errorf("更新评论失败: %w", err)
 	}
 	return nil
+}
+
+// Count 获取评论总数
+func (r *CommentRepository) Count(ctx context.Context) (int64, error) {
+	var count int64
+	if err := r.DB.WithContext(ctx).Model(&model.Comment{}).Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("查询评论总数失败: %w", err)
+	}
+	return count, nil
 }
 
 // buildCommentTreeAndSort 辅助函数，用于构建评论树并进行排序

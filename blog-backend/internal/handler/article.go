@@ -20,6 +20,7 @@ var (
 	ErrGetArticleCount  = errors.New("获取文章总数失败")
 	ErrGetTagCount      = errors.New("获取标签总数失败")
 	ErrGetCategoryCount = errors.New("获取分类总数失败")
+	ErrGetCommentCount  = errors.New("获取评论总数失败")
 	ErrUpdateArticle    = errors.New("更新文章失败")
 )
 
@@ -29,6 +30,7 @@ type ArticleHandler struct {
 	articleRepo  *repository.ArticleRepository
 	tagRepo      *repository.TagRepository
 	categoryRepo *repository.CategoryRepository
+	commentRepo  *repository.CommentRepository
 	aiService    service.AIService
 	taskManager  *task.TaskManager
 }
@@ -38,6 +40,7 @@ func NewArticleHandler(
 	articleRepo *repository.ArticleRepository,
 	tagRepo *repository.TagRepository,
 	categoryRepo *repository.CategoryRepository,
+	commentRepo *repository.CommentRepository,
 	aiService service.AIService,
 	taskManager *task.TaskManager,
 ) *ArticleHandler {
@@ -45,6 +48,7 @@ func NewArticleHandler(
 		articleRepo:  articleRepo,
 		tagRepo:      tagRepo,
 		categoryRepo: categoryRepo,
+		commentRepo:  commentRepo,
 		aiService:    aiService,
 		taskManager:  taskManager,
 	}
@@ -480,8 +484,11 @@ func (h *ArticleHandler) GetOverview(c *gin.Context) {
 		h.Error(c, fmt.Errorf("%w: %v", ErrGetTagCount, err))
 		return
 	}
-	// Note: Comment count is not available in the new structure
-	commentCount := int64(0)
+	commentCount, err := h.commentRepo.Count(c.Request.Context())
+	if err != nil {
+		h.Error(c, fmt.Errorf("%w: %v", ErrGetCommentCount, err))
+		return
+	}
 	categoryCount, err := h.categoryRepo.Count(c.Request.Context())
 	if err != nil {
 		h.Error(c, fmt.Errorf("%w: %v", ErrGetCategoryCount, err))
