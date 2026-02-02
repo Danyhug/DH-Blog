@@ -36,25 +36,24 @@ const categories = store.categories
 const tags = store.tags
 
 // 加载文章列表
-const loadArticles = () => {
+const loadArticles = async () => {
   // 清空现有文章列表
   articles.splice(0, articles.length)
   
   // 重新获取文章列表
-  getArticleList({ pageNum: 1, pageSize: 10, total: 10 }).then((res) => {
-    let articleList: Article<Tag>[] = [];
-    res.list.forEach(item => {
-      item.categoryName = categories.find(c => c.id === item.categoryId)?.name
-      articleList.push({ ...item })
-    })
-    articles.push(...articleList);
+  const res = await getArticleList({ pageNum: 1, pageSize: 10, total: 10 })
+  const articleList: Article<Tag>[] = []
+  res.list.forEach(item => {
+    item.categoryName = categories.find(c => c.id === item.categoryId)?.name
+    articleList.push({ ...item })
   })
+  articles.push(...articleList)
 }
 
-onMounted(() => {
-  store.getCategories();
-  store.getTags();
-  loadArticles();
+onMounted(async () => {
+  await store.getCategories()
+  await store.getTags()
+  await loadArticles()
 })
 </script>
 <style scoped>
