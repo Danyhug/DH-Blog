@@ -34,6 +34,7 @@ func Init(
 	chunkUploadHandler *handler.ChunkUploadHandler,
 	conf *config.Config, // 添加配置参数
 	fileService service.IFileService, // 添加文件服务参数（用于博客图片公开访问）
+	webDAVHandler *handler.WebDAVHandler, // WebDAV 处理器
 ) *gin.Engine {
 
 	// 使用原始的路由配置
@@ -173,6 +174,7 @@ func Init(
 		fileApi.DELETE("/:id", fileHandler.DeleteFile)
 		fileApi.PUT("/storage-path", fileHandler.UpdateStoragePath)  // 添加更新存储路径路由
 		fileApi.GET("/directory-tree", fileHandler.GetDirectoryTree) // 添加获取目录树的路由
+		fileApi.POST("/sync", fileHandler.SyncFiles)               // 手动同步磁盘文件到数据库
 
 		// 分享管理路由
 		fileApi.POST("/share", shareHandler.CreateShare)
@@ -212,6 +214,25 @@ func Init(
 		fullPath := filepath.Join(storagePath, "博客", filePath)
 		c.File(fullPath)
 	})
+
+	// 注册 WebDAV 路由
+	if conf.WebDAVServer.Enabled {
+		prefix := conf.WebDAVServer.Prefix
+		davHandler := webDAVHandler.ServeWebDAV()
+
+		// 注册标准 HTTP 方法
+		router.Any(prefix+"/*path", davHandler)
+		router.Any(prefix, davHandler)
+
+		// 注册 WebDAV 特有方法
+		webdavMethods := []string{"PROPFIND", "PROPPATCH", "MKCOL", "COPY", "MOVE", "LOCK", "UNLOCK"}
+		for _, method := range webdavMethods {
+			router.Handle(method, prefix+"/*path", davHandler)
+			router.Handle(method, prefix, davHandler)
+		}
+
+		logrus.Infof("WebDAV 服务已启用，路径前缀: %s", prefix)
+	}
 
 	// 注册前端静态文件路由
 	frontend.RegisterFrontendRoutes(router, conf)

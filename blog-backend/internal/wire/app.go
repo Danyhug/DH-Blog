@@ -99,6 +99,9 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 	systemSettingHandler := handler.NewSystemSettingHandler(systemSettingRepo, db)
 	chunkUploadHandler := handler.NewChunkUploadHandler(fileHandler.GetFileService(), db, configService)
 
+	// 创建 WebDAV 处理器
+	webDAVHandler := handler.NewWebDAVHandler(userRepo, fileService, conf.WebDAVServer.Prefix)
+
 	return router.Init(
 		articleHandler,
 		userHandler,
@@ -112,7 +115,8 @@ func InitApp(conf *config.Config, db *gorm.DB) *gin.Engine {
 		ipService,
 		staticFilesAbsPath,
 		chunkUploadHandler,
-		conf,        // 添加配置参数
-		fileService, // 添加文件服务参数（用于博客图片公开访问）
+		conf,           // 添加配置参数
+		fileService,    // 添加文件服务参数（用于博客图片公开访问）
+		webDAVHandler,  // WebDAV 处理器
 	)
 }

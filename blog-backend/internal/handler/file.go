@@ -364,3 +364,23 @@ func (h *FileHandler) getCurrentUserID(c *gin.Context) uint64 {
 	}
 	return userID.(uint64)
 }
+
+// SyncFiles 手动同步磁盘文件到数据库
+func (h *FileHandler) SyncFiles(c *gin.Context) {
+	userID := h.getCurrentUserID(c)
+	if userID != 1 {
+		response.FailWithCode(c, http.StatusUnauthorized, "只有管理员可以同步文件")
+		return
+	}
+
+	if err := h.fileService.SyncFilesFromDisk(); err != nil {
+		logrus.Errorf("同步文件失败: %v", err)
+		response.FailWithCode(c, http.StatusInternalServerError, "同步文件失败: "+err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, response.AjaxResult{
+		Code: 1,
+		Msg:  "文件同步完成",
+	})
+}

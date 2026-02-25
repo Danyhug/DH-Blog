@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"dh-blog/internal/model"
 	"dh-blog/internal/repository"
@@ -23,6 +24,10 @@ type fileService struct {
 	settingRepo repository.SystemSettingRepository // 系统设置仓库
 	filePath    string                             // 实际存储文件的基础路径
 	defaultPath string                             // 默认存储路径，当数据库未配置时使用
+
+	// SyncFilesFromDisk 防抖相关
+	syncMu    sync.Mutex
+	syncTimer *time.Timer
 }
 
 var (
@@ -89,6 +94,14 @@ type IFileService interface {
 	// IsProtectedDirectory 12. 检查是否为固定目录
 	// 检查指定文件ID是否为根目录下的固定目录
 	IsProtectedDirectory(ctx context.Context, fileID string) bool
+
+	// SyncFilesFromDisk 13. 从磁盘同步文件到数据库
+	// 清空文件表并重新扫描磁盘目录，立即执行
+	SyncFilesFromDisk() error
+
+	// SyncFilesFromDiskDebounced 14. 从磁盘同步文件到数据库（防抖）
+	// 带 5 秒防抖机制，适合 WebDAV 批量操作时自动触发
+	SyncFilesFromDiskDebounced()
 }
 
 // NewFileService 创建新的文件服务
@@ -1028,4 +1041,61 @@ func (s *fileService) IsProtectedDirectory(ctx context.Context, fileID string) b
 	}
 
 	return false
+}
+
+// SyncFilesFromDisk 从磁盘同步文件到数据库（立即执行）
+func (s *fileService) SyncFilesFromDisk() error {
+	return s.doSyncFilesFromDisk()
+}
+
+// SyncFilesFromDiskDebounced 从磁盘同步文件到数据库（防抖，非阻塞）
+// 每次调用会重置 5 秒定时器，适合 WebDAV 批量操作时频繁触发
+func (s *fileService) SyncFilesFromDiskDebounced() {
+	s.syncMu.Lock()
+	defer s.syncMu.Unlock()
+
+	// 如果已有等待中的同步任务，重置定时器
+	if s.syncTimer != nil {
+		s.syncTimer.Stop()
+	}
+
+	s.syncTimer = time.AfterFunc(5*time.Second, func() {
+		s.syncMu.Lock()
+		s.syncTimer = nil
+		s.syncMu.Unlock()
+
+		if err := s.doSyncFilesFromDisk(); err != nil {
+			logrus.Warnf("防抖同步文件失败: %v", err)
+		}
+	})
+}
+
+// doSyncFilesFromDisk 实际执行文件同步
+func (s *fileService) doSyncFilesFromDisk() error {
+	logrus.Info("开始从磁盘同步文件到数据库")
+
+	// 先刷新存储路径设置
+	s.loadStoragePathFromDB()
+
+	ctx := context.Background()
+
+	// 1. 清空文件表
+	if err := s.repo.TruncateFiles(ctx); err != nil {
+		logrus.Errorf("同步文件时清空文件表失败: %v", err)
+		return fmt.Errorf("清空文件表失败: %v", err)
+	}
+
+	// 2. 重新扫描磁盘目录
+	if err := s.scanAndAddFiles(ctx); err != nil {
+		logrus.Errorf("同步文件时扫描目录失败: %v", err)
+		return fmt.Errorf("扫描目录失败: %v", err)
+	}
+
+	// 3. 确保固定目录存在
+	if err := s.EnsureProtectedDirectories(ctx); err != nil {
+		logrus.Warnf("同步文件时创建固定目录失败: %v", err)
+	}
+
+	logrus.Info("磁盘文件同步完成")
+	return nil
 }

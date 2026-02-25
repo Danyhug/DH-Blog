@@ -45,11 +45,17 @@ type Upload struct {
 	Webdav WebdavUpload `yaml:"webdav"`
 }
 
+type WebDAVServer struct {
+	Enabled bool   `yaml:"enabled"` // 是否启用 WebDAV 服务端
+	Prefix  string `yaml:"prefix"`  // WebDAV 路由前缀，默认 "/dav"
+}
+
 type Config struct {
-	Server    Server   `yaml:"server"`
-	DataBase  DataBase `yaml:"database"`
-	JwtSecret string   `yaml:"jwtSecret"`
-	Upload    Upload   `yaml:"upload"` // New upload configuration
+	Server       Server       `yaml:"server"`
+	DataBase     DataBase     `yaml:"database"`
+	JwtSecret    string       `yaml:"jwtSecret"`
+	Upload       Upload       `yaml:"upload"`       // New upload configuration
+	WebDAVServer WebDAVServer `yaml:"webdavServer"` // WebDAV 服务端配置
 }
 
 // 获取一个随机字符串，用于生成 JWT 密钥
@@ -88,6 +94,10 @@ func DefaultConfig() *Config {
 				Password: "",
 				Path:     "data/webdav", // Default WebDAV path
 			},
+		},
+		WebDAVServer: WebDAVServer{
+			Enabled: true,
+			Prefix:  "/dav",
 		},
 	}
 }
@@ -141,6 +151,10 @@ func Init() (*Config, error) {
 			"password": defaultCfg.Upload.Webdav.Password,
 			"path":     defaultCfg.Upload.Webdav.Path,
 		},
+	})
+	v.SetDefault("webdavServer", map[string]any{
+		"enabled": defaultCfg.WebDAVServer.Enabled,
+		"prefix":  defaultCfg.WebDAVServer.Prefix,
 	})
 
 	// 2. 尝试读取现有配置文件
