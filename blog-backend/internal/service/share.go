@@ -46,9 +46,11 @@ type VerifyPasswordResponse struct {
 
 // downloadToken 下载令牌信息
 type downloadToken struct {
-	ShareID   string
-	CreatedAt time.Time
-	ExpiresAt time.Time
+	ShareID         string
+	CreatedAt       time.Time
+	ExpiresAt       time.Time
+	DownloadCounted bool
+	mu              sync.Mutex
 }
 
 // tokenStore 令牌存储
@@ -370,20 +372,26 @@ func (s *shareService) DownloadWithToken(ctx context.Context, shareID, token str
 
 	// 预览模式不增加下载次数，不删除令牌（支持音视频流式多次请求）
 	if !preview {
-		// 增加下载次数
-		if err := s.shareRepo.IncrementDownloadCount(ctx, shareID); err != nil {
-			logrus.Warnf("增加下载次数失败: %v", err)
-		}
+		// 支持移动端多次请求（探测头信息+实际下载），不再删除令牌，改为在令牌生命周期内维护下载计数状态
+		if val, ok := tokenStore.Load(token); ok {
+			dt := val.(*downloadToken)
+			dt.mu.Lock()
+			if !dt.DownloadCounted {
+				// 增加下载次数
+				if err := s.shareRepo.IncrementDownloadCount(ctx, shareID); err != nil {
+					logrus.Warnf("增加下载次数失败: %v", err)
+				}
+				dt.DownloadCounted = true
 
-		// 记录下载日志
-		go func() {
-			if err := s.RecordAccess(context.Background(), shareID, model.ShareActionDownload, clientIP, userAgent, referer); err != nil {
-				logrus.Warnf("记录下载日志失败: %v", err)
+				// 记录下载日志
+				go func() {
+					if err := s.RecordAccess(context.Background(), shareID, model.ShareActionDownload, clientIP, userAgent, referer); err != nil {
+						logrus.Warnf("记录下载日志失败: %v", err)
+					}
+				}()
 			}
-		}()
-
-		// 下载成功后删除令牌（一次性使用）
-		tokenStore.Delete(token)
+			dt.mu.Unlock()
+		}
 	}
 
 	return file, nil
