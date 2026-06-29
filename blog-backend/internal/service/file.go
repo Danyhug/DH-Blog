@@ -26,8 +26,9 @@ type fileService struct {
 	defaultPath string                             // 默认存储路径，当数据库未配置时使用
 
 	// SyncFilesFromDisk 防抖相关
-	syncMu    sync.Mutex
-	syncTimer *time.Timer
+	syncMu      sync.Mutex
+	syncTimer   *time.Timer
+	syncExecMu  sync.Mutex // 保护实际同步操作，防止并发执行
 }
 
 var (
@@ -638,11 +639,12 @@ func (s *fileService) scanAndAddFiles(ctx context.Context) error {
 
 		// 创建目录记录
 		folder := &model.File{
-			UserID:   1, // 默认用户ID为1，表示系统用户
-			ParentID: parentID,
-			Name:     filepath.Base(path),
-			IsFolder: true,
-			Size:     0,
+			UserID:      1, // 默认用户ID为1，表示系统用户
+			ParentID:    parentID,
+			Name:        filepath.Base(path),
+			IsFolder:    true,
+			Size:        0,
+			StoragePath: relPath,
 		}
 
 		// 保存到数据库
@@ -1072,6 +1074,9 @@ func (s *fileService) SyncFilesFromDiskDebounced() {
 
 // doSyncFilesFromDisk 实际执行文件同步
 func (s *fileService) doSyncFilesFromDisk() error {
+	s.syncExecMu.Lock()
+	defer s.syncExecMu.Unlock()
+
 	logrus.Info("开始从磁盘同步文件到数据库")
 
 	// 先刷新存储路径设置

@@ -103,7 +103,7 @@ window.__SERVER_CONFIG__ = {
 
 		// 跳过 WebDAV 路由，避免被重定向到 index.html
 		if conf.WebDAVServer.Enabled && strings.HasPrefix(path, conf.WebDAVServer.Prefix) {
-			c.Next()
+			c.AbortWithStatus(http.StatusNotFound)
 			return
 		}
 

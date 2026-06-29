@@ -28,6 +28,7 @@ type WebDAVHandler struct {
 	userRepo    *repository.UserRepository
 	fileService service.IFileService
 	prefix      string
+	lockSystem  webdav.LockSystem // 全局共享的锁系统，保证 LOCK/UNLOCK 正常工作
 }
 
 // NewWebDAVHandler 创建 WebDAV 处理器
@@ -36,6 +37,7 @@ func NewWebDAVHandler(userRepo *repository.UserRepository, fileService service.I
 		userRepo:    userRepo,
 		fileService: fileService,
 		prefix:      prefix,
+		lockSystem:  webdav.NewMemLS(),
 	}
 }
 
@@ -74,11 +76,11 @@ func (h *WebDAVHandler) ServeWebDAV() gin.HandlerFunc {
 			return
 		}
 
-		// 创建 WebDAV Handler
+		// 使用共享的 LockSystem，FileSystem 根据当前存储路径动态创建
 		davHandler := &webdav.Handler{
 			Prefix:     h.prefix,
 			FileSystem: webdav.Dir(storagePath),
-			LockSystem: webdav.NewMemLS(),
+			LockSystem: h.lockSystem,
 			Logger: func(r *http.Request, err error) {
 				if err != nil {
 					logrus.Debugf("WebDAV %s %s: %v", r.Method, r.URL.Path, err)
