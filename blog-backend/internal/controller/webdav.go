@@ -1,4 +1,4 @@
-package handler
+package controller
 
 import (
 	"net/http"
@@ -12,8 +12,8 @@ import (
 	"golang.org/x/net/webdav"
 )
 
-// writeMethods 会修改文件系统的 WebDAV/HTTP 方法
-var writeMethods = map[string]bool{
+// WebDAVWriteMethods 会修改文件系统的 WebDAV/HTTP 方法。
+var WebDAVWriteMethods = map[string]bool{
 	"PUT":       true,
 	"DELETE":    true,
 	"MKCOL":     true,
@@ -23,17 +23,15 @@ var writeMethods = map[string]bool{
 	"POST":      true,
 }
 
-// WebDAVHandler WebDAV 协议处理器
-type WebDAVHandler struct {
+type WebDAVController struct {
 	userRepo    *repository.UserRepository
 	fileService service.IFileService
 	prefix      string
-	lockSystem  webdav.LockSystem // 全局共享的锁系统，保证 LOCK/UNLOCK 正常工作
+	lockSystem  webdav.LockSystem
 }
 
-// NewWebDAVHandler 创建 WebDAV 处理器
-func NewWebDAVHandler(userRepo *repository.UserRepository, fileService service.IFileService, prefix string) *WebDAVHandler {
-	return &WebDAVHandler{
+func NewWebDAVController(userRepo *repository.UserRepository, fileService service.IFileService, prefix string) *WebDAVController {
+	return &WebDAVController{
 		userRepo:    userRepo,
 		fileService: fileService,
 		prefix:      prefix,
@@ -41,10 +39,8 @@ func NewWebDAVHandler(userRepo *repository.UserRepository, fileService service.I
 	}
 }
 
-// ServeWebDAV 返回处理 WebDAV 请求的 gin.HandlerFunc
-func (h *WebDAVHandler) ServeWebDAV() gin.HandlerFunc {
+func (h *WebDAVController) ServeWebDAV() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Basic Auth 认证
 		username, password, ok := c.Request.BasicAuth()
 		if !ok {
 			c.Header("WWW-Authenticate", `Basic realm="DH-Blog WebDAV"`)
@@ -52,7 +48,6 @@ func (h *WebDAVHandler) ServeWebDAV() gin.HandlerFunc {
 			return
 		}
 
-		// 验证用户名密码
 		user, err := h.userRepo.GetUserByUsername(username)
 		if err != nil {
 			logrus.Debugf("WebDAV 认证失败，用户不存在: %s", username)
@@ -68,7 +63,6 @@ func (h *WebDAVHandler) ServeWebDAV() gin.HandlerFunc {
 			return
 		}
 
-		// 获取存储路径
 		storagePath := h.fileService.GetStoragePath()
 		if storagePath == "" {
 			logrus.Error("WebDAV 存储路径为空")
@@ -76,7 +70,6 @@ func (h *WebDAVHandler) ServeWebDAV() gin.HandlerFunc {
 			return
 		}
 
-		// 使用共享的 LockSystem，FileSystem 根据当前存储路径动态创建
 		davHandler := &webdav.Handler{
 			Prefix:     h.prefix,
 			FileSystem: webdav.Dir(storagePath),
@@ -90,8 +83,7 @@ func (h *WebDAVHandler) ServeWebDAV() gin.HandlerFunc {
 
 		davHandler.ServeHTTP(c.Writer, c.Request)
 
-		// 写操作完成后，触发防抖同步（将磁盘变更同步到数据库）
-		if writeMethods[c.Request.Method] && c.Writer.Status() < 400 {
+		if WebDAVWriteMethods[c.Request.Method] && c.Writer.Status() < 400 {
 			h.fileService.SyncFilesFromDiskDebounced()
 		}
 	}

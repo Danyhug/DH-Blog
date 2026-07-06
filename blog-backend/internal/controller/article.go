@@ -1,4 +1,4 @@
-package handler
+package controller
 
 import (
 	"errors"
@@ -24,9 +24,9 @@ var (
 	ErrUpdateArticle    = errors.New("更新文章失败")
 )
 
-// ArticleHandler 封装文章相关的处理器方法
-type ArticleHandler struct {
-	BaseHandler
+// ArticleController 封装文章相关的控制器方法
+type ArticleController struct {
+	BaseController
 	articleRepo  *repository.ArticleRepository
 	tagRepo      *repository.TagRepository
 	categoryRepo *repository.CategoryRepository
@@ -35,16 +35,16 @@ type ArticleHandler struct {
 	taskManager  *task.TaskManager
 }
 
-// NewArticleHandler 创建文章处理器
-func NewArticleHandler(
+// NewArticleController 创建文章控制器
+func NewArticleController(
 	articleRepo *repository.ArticleRepository,
 	tagRepo *repository.TagRepository,
 	categoryRepo *repository.CategoryRepository,
 	commentRepo *repository.CommentRepository,
 	aiService service.AIService,
 	taskManager *task.TaskManager,
-) *ArticleHandler {
-	return &ArticleHandler{
+) *ArticleController {
+	return &ArticleController{
 		articleRepo:  articleRepo,
 		tagRepo:      tagRepo,
 		categoryRepo: categoryRepo,
@@ -54,7 +54,7 @@ func NewArticleHandler(
 	}
 }
 
-func (h *ArticleHandler) GetAllTags(c *gin.Context) {
+func (h *ArticleController) GetAllTags(c *gin.Context) {
 	tags, err := h.tagRepo.FindAll(c.Request.Context())
 	if err != nil {
 		h.Error(c, err)
@@ -64,7 +64,7 @@ func (h *ArticleHandler) GetAllTags(c *gin.Context) {
 	h.SuccessWithData(c, tags)
 }
 
-func (h *ArticleHandler) CreateTag(c *gin.Context) {
+func (h *ArticleController) CreateTag(c *gin.Context) {
 	var tag model.Tag
 	if err := h.bindJSON(c, &tag); err != nil {
 		h.Error(c, err)
@@ -78,7 +78,7 @@ func (h *ArticleHandler) CreateTag(c *gin.Context) {
 	h.Success(c)
 }
 
-func (h *ArticleHandler) UpdateTag(c *gin.Context) {
+func (h *ArticleController) UpdateTag(c *gin.Context) {
 	var tag model.Tag
 	if err := h.bindJSON(c, &tag); err != nil {
 		h.Error(c, err)
@@ -92,7 +92,7 @@ func (h *ArticleHandler) UpdateTag(c *gin.Context) {
 	h.Success(c)
 }
 
-func (h *ArticleHandler) DeleteTag(c *gin.Context) {
+func (h *ArticleController) DeleteTag(c *gin.Context) {
 	id, err := h.getID(c, "id")
 	if err != nil {
 		h.Error(c, err)
@@ -106,7 +106,7 @@ func (h *ArticleHandler) DeleteTag(c *gin.Context) {
 	h.Success(c)
 }
 
-func (h *ArticleHandler) GetCategoryByID(c *gin.Context) {
+func (h *ArticleController) GetCategoryByID(c *gin.Context) {
 	id, err := h.getID(c, "id")
 	if err != nil {
 		h.Error(c, err)
@@ -121,7 +121,7 @@ func (h *ArticleHandler) GetCategoryByID(c *gin.Context) {
 	h.SuccessWithData(c, category)
 }
 
-func (h *ArticleHandler) UpdateCategory(c *gin.Context) {
+func (h *ArticleController) UpdateCategory(c *gin.Context) {
 	var category model.Category
 	if err := h.bindJSON(c, &category); err != nil {
 		h.Error(c, err)
@@ -145,7 +145,7 @@ func (h *ArticleHandler) UpdateCategory(c *gin.Context) {
 	h.Success(c)
 }
 
-func (h *ArticleHandler) GetCategoryDefaultTags(c *gin.Context) {
+func (h *ArticleController) GetCategoryDefaultTags(c *gin.Context) {
 	id, err := h.getID(c, "id")
 	if err != nil {
 		h.Error(c, err)
@@ -161,7 +161,7 @@ func (h *ArticleHandler) GetCategoryDefaultTags(c *gin.Context) {
 	h.SuccessWithData(c, tags)
 }
 
-func (h *ArticleHandler) SaveCategoryDefaultTags(c *gin.Context) {
+func (h *ArticleController) SaveCategoryDefaultTags(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.Error("无效的分类 ID"))
@@ -194,7 +194,7 @@ func (h *ArticleHandler) SaveCategoryDefaultTags(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Success())
 }
 
-func (h *ArticleHandler) GetAllCategories(c *gin.Context) {
+func (h *ArticleController) GetAllCategories(c *gin.Context) {
 	categories, err := h.categoryRepo.FindAll(c.Request.Context())
 	if err != nil {
 		h.Error(c, err)
@@ -204,7 +204,7 @@ func (h *ArticleHandler) GetAllCategories(c *gin.Context) {
 }
 
 // GetAllTaxonomies 获取所有标签和分类，格式为{name, url, type}
-func (h *ArticleHandler) GetAllTaxonomies(c *gin.Context) {
+func (h *ArticleController) GetAllTaxonomies(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// 获取所有标签
@@ -250,7 +250,7 @@ func (h *ArticleHandler) GetAllTaxonomies(c *gin.Context) {
 }
 
 // GetArticlesByTaxonomy 获取指定标签或分类的关联文章
-func (h *ArticleHandler) GetArticlesByTaxonomy(c *gin.Context) {
+func (h *ArticleController) GetArticlesByTaxonomy(c *gin.Context) {
 	name := c.Query("name")
 	typeParam := c.Query("type")
 
@@ -296,7 +296,7 @@ func (h *ArticleHandler) GetArticlesByTaxonomy(c *gin.Context) {
 	h.SuccessWithData(c, result)
 }
 
-func (h *ArticleHandler) CreateCategory(c *gin.Context) {
+func (h *ArticleController) CreateCategory(c *gin.Context) {
 	var category model.Category
 	if err := h.bindJSON(c, &category); err != nil {
 		h.Error(c, err)
@@ -323,7 +323,7 @@ func (h *ArticleHandler) CreateCategory(c *gin.Context) {
 	h.Success(c)
 }
 
-func (h *ArticleHandler) DeleteCategory(c *gin.Context) {
+func (h *ArticleController) DeleteCategory(c *gin.Context) {
 	id, err := h.getID(c, "id")
 	if err != nil {
 		h.Error(c, err)
@@ -337,7 +337,7 @@ func (h *ArticleHandler) DeleteCategory(c *gin.Context) {
 	h.Success(c)
 }
 
-func (h *ArticleHandler) GetArticleDetail(c *gin.Context) {
+func (h *ArticleController) GetArticleDetail(c *gin.Context) {
 	id, err := h.getID(c, "id")
 	if err != nil {
 		h.Error(c, err)
@@ -369,7 +369,7 @@ func (h *ArticleHandler) GetArticleDetail(c *gin.Context) {
 	h.SuccessWithData(c, article)
 }
 
-func (h *ArticleHandler) GetArticleTitle(c *gin.Context) {
+func (h *ArticleController) GetArticleTitle(c *gin.Context) {
 	id, err := h.getID(c, "id")
 	if err != nil {
 		h.Error(c, err)
@@ -384,7 +384,7 @@ func (h *ArticleHandler) GetArticleTitle(c *gin.Context) {
 	h.SuccessWithData(c, article.Title)
 }
 
-func (h *ArticleHandler) UnlockArticle(c *gin.Context) {
+func (h *ArticleController) UnlockArticle(c *gin.Context) {
 	id, err := h.getID(c, "id")
 	if err != nil {
 		h.Error(c, err)
@@ -406,7 +406,7 @@ func (h *ArticleHandler) UnlockArticle(c *gin.Context) {
 	h.SuccessWithData(c, article)
 }
 
-func (h *ArticleHandler) SaveArticle(c *gin.Context) {
+func (h *ArticleController) SaveArticle(c *gin.Context) {
 	var article model.Article
 	if err := c.ShouldBindJSON(&article); err != nil {
 		c.JSON(http.StatusBadRequest, response.Error("参数错误"))
@@ -428,7 +428,7 @@ func (h *ArticleHandler) SaveArticle(c *gin.Context) {
 	c.JSON(http.StatusCreated, response.Success())
 }
 
-func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
+func (h *ArticleController) UpdateArticle(c *gin.Context) {
 	var article model.Article
 	if err := c.ShouldBindJSON(&article); err != nil {
 		c.JSON(http.StatusBadRequest, response.Error(ErrInvalidParams.Error()))
@@ -443,7 +443,7 @@ func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 	c.JSON(http.StatusOK, response.SuccessWithData(article))
 }
 
-func (h *ArticleHandler) DeleteArticle(c *gin.Context) {
+func (h *ArticleController) DeleteArticle(c *gin.Context) {
 	id, err := h.getID(c, "id")
 	if err != nil {
 		h.Error(c, err)
@@ -457,7 +457,7 @@ func (h *ArticleHandler) DeleteArticle(c *gin.Context) {
 	h.Success(c)
 }
 
-func (h *ArticleHandler) GetArticleList(c *gin.Context) {
+func (h *ArticleController) GetArticleList(c *gin.Context) {
 	pageReq, err := h.getPageRequest(c)
 	if err != nil {
 		h.Error(c, err)
@@ -473,7 +473,7 @@ func (h *ArticleHandler) GetArticleList(c *gin.Context) {
 	h.SuccessWithPage(c, articles, total, pageReq.PageNum)
 }
 
-func (h *ArticleHandler) GetOverview(c *gin.Context) {
+func (h *ArticleController) GetOverview(c *gin.Context) {
 	articleCount, err := h.articleRepo.Count(c.Request.Context())
 	if err != nil {
 		h.Error(c, fmt.Errorf("%w: %v", ErrGetArticleCount, err))
@@ -511,7 +511,7 @@ func (h *ArticleHandler) GetOverview(c *gin.Context) {
 	h.SuccessWithData(c, overview)
 }
 
-func (h *ArticleHandler) GenerateTags(c *gin.Context) {
+func (h *ArticleController) GenerateTags(c *gin.Context) {
 	// 获取文章ID
 	id, err := h.getID(c, "id")
 	if err != nil {
@@ -536,7 +536,7 @@ func (h *ArticleHandler) GenerateTags(c *gin.Context) {
 	h.SuccessWithMessage(c, "标签生成任务已提交，稍后将自动更新")
 }
 
-func (h *ArticleHandler) getID(c *gin.Context, key string) (int, error) {
+func (h *ArticleController) getID(c *gin.Context, key string) (int, error) {
 	idStr := c.Param(key)
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -545,14 +545,14 @@ func (h *ArticleHandler) getID(c *gin.Context, key string) (int, error) {
 	return id, nil
 }
 
-func (h *ArticleHandler) bindJSON(c *gin.Context, obj interface{}) error {
+func (h *ArticleController) bindJSON(c *gin.Context, obj interface{}) error {
 	if err := c.ShouldBindJSON(obj); err != nil {
 		return fmt.Errorf("%w: %v", ErrParamBinding, err)
 	}
 	return nil
 }
 
-func (h *ArticleHandler) getPageRequest(c *gin.Context) (*model.PageRequest, error) {
+func (h *ArticleController) getPageRequest(c *gin.Context) (*model.PageRequest, error) {
 	var req model.PageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		// 如果JSON绑定失败，尝试查询参数
@@ -569,18 +569,18 @@ func (h *ArticleHandler) getPageRequest(c *gin.Context) (*model.PageRequest, err
 	return &req, nil
 }
 
-func (h *ArticleHandler) Error(c *gin.Context, err error) {
+func (h *ArticleController) Error(c *gin.Context, err error) {
 	c.JSON(http.StatusOK, response.Error(err.Error()))
 }
 
-func (h *ArticleHandler) Success(c *gin.Context) {
+func (h *ArticleController) Success(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Success())
 }
 
-func (h *ArticleHandler) SuccessWithData(c *gin.Context, data interface{}) {
+func (h *ArticleController) SuccessWithData(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, response.SuccessWithData(data))
 }
 
-func (h *ArticleHandler) SuccessWithPage(c *gin.Context, data interface{}, total int64, page int) {
+func (h *ArticleController) SuccessWithPage(c *gin.Context, data interface{}, total int64, page int) {
 	c.JSON(http.StatusOK, response.SuccessWithData(response.Page(total, int64(page), data)))
 }

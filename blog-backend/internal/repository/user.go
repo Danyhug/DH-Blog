@@ -9,6 +9,8 @@ import (
 	"gorm.io/gorm"
 )
 
+var ErrUserNotFound = errors.New("用户不存在")
+
 type UserRepository struct {
 	DB *gorm.DB
 }
@@ -24,7 +26,7 @@ func (r *UserRepository) GetUserByUsername(username string) (model.User, error) 
 	err := r.DB.Where("username = ?", username).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return model.User{}, fmt.Errorf("查询用户失败: %w", gorm.ErrRecordNotFound)
+			return model.User{}, ErrUserNotFound
 		}
 		return model.User{}, fmt.Errorf("数据库查询用户失败: %w", err)
 	}
@@ -42,7 +44,6 @@ func (r *UserRepository) IsFirstStart() bool {
 func (r *UserRepository) CreateUser(user *model.User) error {
 	err := r.DB.Create(user).Error
 	if err != nil {
-		// 实际项目中需要更细致的错误类型判断，例如唯一索引冲突
 		return fmt.Errorf("创建用户失败: %w", err)
 	}
 	return nil

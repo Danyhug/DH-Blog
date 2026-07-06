@@ -1,4 +1,4 @@
-package handler
+package controller
 
 import (
 	"archive/zip"
@@ -36,17 +36,17 @@ type PromptTag struct {
 	Prompt string `json:"prompt"`
 }
 
-// SystemConfigHandler 系统配置处理器
-type SystemConfigHandler struct {
-	BaseHandler
+// SystemConfigController 系统配置控制器
+type SystemConfigController struct {
+	BaseController
 	settingRepo repository.SystemSettingRepository
 	db          *gorm.DB
 	fileService service.IFileService // 添加文件服务
 }
 
-// NewSystemConfigHandler 创建系统配置处理器
-func NewSystemConfigHandler(settingRepo repository.SystemSettingRepository, db *gorm.DB, fileService service.IFileService) *SystemConfigHandler {
-	return &SystemConfigHandler{
+// NewSystemConfigController 创建系统配置控制器
+func NewSystemConfigController(settingRepo repository.SystemSettingRepository, db *gorm.DB, fileService service.IFileService) *SystemConfigController {
+	return &SystemConfigController{
 		settingRepo: settingRepo,
 		db:          db,
 		fileService: fileService,
@@ -54,7 +54,7 @@ func NewSystemConfigHandler(settingRepo repository.SystemSettingRepository, db *
 }
 
 // RegisterRoutes 注册路由
-func (h *SystemConfigHandler) RegisterRoutes(router *gin.RouterGroup) {
+func (h *SystemConfigController) RegisterRoutes(router *gin.RouterGroup) {
 	configGroup := router.Group("/config")
 	{
 		// 全局配置接口
@@ -84,7 +84,7 @@ func (h *SystemConfigHandler) RegisterRoutes(router *gin.RouterGroup) {
 }
 
 // GetConfigs 获取所有配置
-func (h *SystemConfigHandler) GetConfigs(c *gin.Context) {
+func (h *SystemConfigController) GetConfigs(c *gin.Context) {
 	settings, err := h.settingRepo.GetAllSettings()
 	if err != nil {
 		h.Error(c, err)
@@ -103,7 +103,7 @@ func (h *SystemConfigHandler) GetConfigs(c *gin.Context) {
 }
 
 // UpdateConfigs 更新配置
-func (h *SystemConfigHandler) UpdateConfigs(c *gin.Context) {
+func (h *SystemConfigController) UpdateConfigs(c *gin.Context) {
 	var config model.SystemConfig
 	if err := h.BindJSON(c, &config); err != nil {
 		h.Error(c, err)
@@ -121,7 +121,7 @@ func (h *SystemConfigHandler) UpdateConfigs(c *gin.Context) {
 }
 
 // GetBlogConfig 获取博客基本配置
-func (h *SystemConfigHandler) GetBlogConfig(c *gin.Context) {
+func (h *SystemConfigController) GetBlogConfig(c *gin.Context) {
 	// 获取博客类型的配置
 	settings, err := h.settingRepo.GetSettingsByType(model.ConfigTypeBlog)
 	if err != nil {
@@ -143,7 +143,7 @@ func (h *SystemConfigHandler) GetBlogConfig(c *gin.Context) {
 }
 
 // UpdateBlogConfig 更新博客基本配置
-func (h *SystemConfigHandler) UpdateBlogConfig(c *gin.Context) {
+func (h *SystemConfigController) UpdateBlogConfig(c *gin.Context) {
 	var blogConfig model.BlogConfig
 	if err := h.BindJSON(c, &blogConfig); err != nil {
 		h.Error(c, err)
@@ -171,7 +171,7 @@ func (h *SystemConfigHandler) UpdateBlogConfig(c *gin.Context) {
 }
 
 // GetEmailConfig 获取邮件配置
-func (h *SystemConfigHandler) GetEmailConfig(c *gin.Context) {
+func (h *SystemConfigController) GetEmailConfig(c *gin.Context) {
 	// 获取邮件类型的配置
 	settings, err := h.settingRepo.GetSettingsByType(model.ConfigTypeEmail)
 	if err != nil {
@@ -193,7 +193,7 @@ func (h *SystemConfigHandler) GetEmailConfig(c *gin.Context) {
 }
 
 // UpdateEmailConfig 更新邮件配置
-func (h *SystemConfigHandler) UpdateEmailConfig(c *gin.Context) {
+func (h *SystemConfigController) UpdateEmailConfig(c *gin.Context) {
 	var emailConfig model.EmailConfig
 	if err := h.BindJSON(c, &emailConfig); err != nil {
 		h.Error(c, err)
@@ -220,7 +220,7 @@ func (h *SystemConfigHandler) UpdateEmailConfig(c *gin.Context) {
 }
 
 // GetAIConfig 获取AI配置
-func (h *SystemConfigHandler) GetAIConfig(c *gin.Context) {
+func (h *SystemConfigController) GetAIConfig(c *gin.Context) {
 	// 获取AI类型的配置
 	settings, err := h.settingRepo.GetSettingsByType(model.ConfigTypeAI)
 	if err != nil {
@@ -242,7 +242,7 @@ func (h *SystemConfigHandler) GetAIConfig(c *gin.Context) {
 }
 
 // UpdateAIConfig 更新AI配置
-func (h *SystemConfigHandler) UpdateAIConfig(c *gin.Context) {
+func (h *SystemConfigController) UpdateAIConfig(c *gin.Context) {
 	var aiConfig model.AIConfig
 	if err := h.BindJSON(c, &aiConfig); err != nil {
 		h.Error(c, err)
@@ -266,7 +266,7 @@ func (h *SystemConfigHandler) UpdateAIConfig(c *gin.Context) {
 }
 
 // GetStorageConfig 获取存储配置
-func (h *SystemConfigHandler) GetStorageConfig(c *gin.Context) {
+func (h *SystemConfigController) GetStorageConfig(c *gin.Context) {
 	// 获取存储类型的配置
 	settings, err := h.settingRepo.GetSettingsByType(model.ConfigTypeStorage)
 	if err != nil {
@@ -288,7 +288,7 @@ func (h *SystemConfigHandler) GetStorageConfig(c *gin.Context) {
 }
 
 // UpdateStorageConfig 更新存储配置
-func (h *SystemConfigHandler) UpdateStorageConfig(c *gin.Context) {
+func (h *SystemConfigController) UpdateStorageConfig(c *gin.Context) {
 	var storageConfig model.StorageConfig
 	if err := h.BindJSON(c, &storageConfig); err != nil {
 		h.Error(c, err)
@@ -323,7 +323,7 @@ func (h *SystemConfigHandler) UpdateStorageConfig(c *gin.Context) {
 }
 
 // GetStoragePath 获取文件存储路径 (兼容旧版API)
-func (h *SystemConfigHandler) GetStoragePath(c *gin.Context) {
+func (h *SystemConfigController) GetStoragePath(c *gin.Context) {
 	path, err := h.settingRepo.GetSetting(model.SettingKeyFileStoragePath)
 	if err != nil {
 		h.ErrorWithMessage(c, "获取文件存储路径失败: "+err.Error())
@@ -341,7 +341,7 @@ type UpdateStoragePathRequest struct {
 }
 
 // UpdateStoragePath 更新文件存储路径 (兼容旧版API)
-func (h *SystemConfigHandler) UpdateStoragePath(c *gin.Context) {
+func (h *SystemConfigController) UpdateStoragePath(c *gin.Context) {
 	var req UpdateStoragePathRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.ErrorWithMessage(c, "请求参数无效: "+err.Error())
@@ -368,7 +368,7 @@ func (h *SystemConfigHandler) UpdateStoragePath(c *gin.Context) {
 }
 
 // BindJSON 绑定JSON数据
-func (h *SystemConfigHandler) BindJSON(c *gin.Context, obj any) error {
+func (h *SystemConfigController) BindJSON(c *gin.Context, obj any) error {
 	return c.ShouldBindJSON(obj)
 }
 
@@ -386,7 +386,7 @@ func intToString(i int) string {
 }
 
 // GetAIPromptTags 返回预定义的AI提示词标签
-func (h *SystemConfigHandler) GetAIPromptTags(c *gin.Context) {
+func (h *SystemConfigController) GetAIPromptTags(c *gin.Context) {
 	tagsPrompt, err := h.settingRepo.GetSetting(model.SettingKeyAiPromptGetTags)
 	if err != nil {
 		h.Error(c, fmt.Errorf("获取标签提示词失败: %w", err))
@@ -419,7 +419,7 @@ type BackupDirInfo struct {
 }
 
 // GetBackupDirs 获取可备份的目录列表
-func (h *SystemConfigHandler) GetBackupDirs(c *gin.Context) {
+func (h *SystemConfigController) GetBackupDirs(c *gin.Context) {
 	// 获取数据目录路径
 	exePath, err := os.Executable()
 	if err != nil {
@@ -468,7 +468,7 @@ func (h *SystemConfigHandler) GetBackupDirs(c *gin.Context) {
 // - mode=full：备份数据库 + 整个 WebDAV 目录
 // - dirs=目录1,目录2：备份数据库 + 指定的目录列表
 // - 默认（无参数）：备份数据库 + 固定目录（音乐、图片、视频）
-func (h *SystemConfigHandler) BackupData(c *gin.Context) {
+func (h *SystemConfigController) BackupData(c *gin.Context) {
 	// 获取备份模式参数
 	mode := c.DefaultQuery("mode", "")
 	dirsParam := c.DefaultQuery("dirs", "")

@@ -1,4 +1,4 @@
-package handler
+package controller
 
 import (
 	"net/http"
@@ -39,18 +39,18 @@ func toSystemSettingResponses(settings []model.SystemSetting) []SystemSettingRes
 	return responses
 }
 
-type SystemSettingHandler struct {
-	BaseHandler
+type SystemSettingController struct {
+	BaseController
 	settingRepo repository.SystemSettingRepository
 	db          *gorm.DB
 }
 
-func NewSystemSettingHandler(settingRepo repository.SystemSettingRepository, db *gorm.DB) *SystemSettingHandler {
-	return &SystemSettingHandler{settingRepo: settingRepo, db: db}
+func NewSystemSettingController(settingRepo repository.SystemSettingRepository, db *gorm.DB) *SystemSettingController {
+	return &SystemSettingController{settingRepo: settingRepo, db: db}
 }
 
 // RegisterRoutes 注册路由
-func (h *SystemSettingHandler) RegisterRoutes(router *gin.RouterGroup) {
+func (h *SystemSettingController) RegisterRoutes(router *gin.RouterGroup) {
 	group := router.Group("/system-setting")
 	{
 		group.GET("/list", h.List)
@@ -61,7 +61,7 @@ func (h *SystemSettingHandler) RegisterRoutes(router *gin.RouterGroup) {
 }
 
 // List 获取所有系统配置项
-func (h *SystemSettingHandler) List(c *gin.Context) {
+func (h *SystemSettingController) List(c *gin.Context) {
 	settings, err := h.settingRepo.GetAllSettings()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Error("获取失败"))
@@ -73,7 +73,7 @@ func (h *SystemSettingHandler) List(c *gin.Context) {
 }
 
 // Add 新增配置项
-func (h *SystemSettingHandler) Add(c *gin.Context) {
+func (h *SystemSettingController) Add(c *gin.Context) {
 	var req struct {
 		SettingKey   string `json:"settingKey" binding:"required"`
 		SettingValue string `json:"settingValue" binding:"required"`
@@ -92,7 +92,7 @@ func (h *SystemSettingHandler) Add(c *gin.Context) {
 }
 
 // Update 更新配置项
-func (h *SystemSettingHandler) Update(c *gin.Context) {
+func (h *SystemSettingController) Update(c *gin.Context) {
 	var req struct {
 		ID           uint   `json:"id" binding:"required"`
 		SettingKey   string `json:"settingKey" binding:"required"`
@@ -118,7 +118,7 @@ func (h *SystemSettingHandler) Update(c *gin.Context) {
 }
 
 // Delete 删除配置项
-func (h *SystemSettingHandler) Delete(c *gin.Context) {
+func (h *SystemSettingController) Delete(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {

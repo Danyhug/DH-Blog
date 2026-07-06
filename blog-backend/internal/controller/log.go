@@ -1,4 +1,4 @@
-package handler
+package controller
 
 import (
 	"errors"
@@ -19,16 +19,16 @@ var (
 	ErrInvalidDateFormat = errors.New("无效的日期格式")
 )
 
-type LogHandler struct {
-	BaseHandler
+type LogController struct {
+	BaseController
 	logRepo *repository.LogRepository
 }
 
-func NewLogHandler(logRepo *repository.LogRepository) *LogHandler {
-	return &LogHandler{logRepo: logRepo}
+func NewLogController(logRepo *repository.LogRepository) *LogController {
+	return &LogController{logRepo: logRepo}
 }
 
-func (h *LogHandler) RegisterRoutes(router *gin.RouterGroup) {
+func (h *LogController) RegisterRoutes(router *gin.RouterGroup) {
 	adminRouter := router.Group("/admin/log")
 	{
 		adminRouter.GET("/overview/visitLog", h.GetVisitLogs)
@@ -46,7 +46,7 @@ func (h *LogHandler) RegisterRoutes(router *gin.RouterGroup) {
 }
 
 // GetVisitStatistics 获取访问统计信息
-func (h *LogHandler) GetVisitStatistics(c *gin.Context) {
+func (h *LogController) GetVisitStatistics(c *gin.Context) {
 	stats, err := h.logRepo.GetVisitStatistics()
 	if err != nil {
 		h.Error(c, err)
@@ -55,7 +55,7 @@ func (h *LogHandler) GetVisitStatistics(c *gin.Context) {
 	h.SuccessWithData(c, stats)
 }
 
-func (h *LogHandler) GetVisitLogs(c *gin.Context) {
+func (h *LogController) GetVisitLogs(c *gin.Context) {
 	page := h.GetQueryInt(c, "page", 1)
 	pageSize := h.GetQueryInt(c, "pageSize", 10)
 
@@ -122,7 +122,7 @@ func (h *LogHandler) GetVisitLogs(c *gin.Context) {
 	h.SuccessWithPage(c, stats, total, page)
 }
 
-func (h *LogHandler) BanIP(c *gin.Context) {
+func (h *LogController) BanIP(c *gin.Context) {
 	// 从URL参数获取IP和状态
 	ip := c.Param("ip")
 	statusStr := c.Param("status")
@@ -204,7 +204,7 @@ func (h *LogHandler) BanIP(c *gin.Context) {
 	h.Success(c)
 }
 
-func (h *LogHandler) GetDailyStats(c *gin.Context) {
+func (h *LogController) GetDailyStats(c *gin.Context) {
 	var req struct {
 		StartDate string `form:"startDate" binding:"required"`
 		EndDate   string `form:"endDate" binding:"required"`
@@ -230,7 +230,7 @@ func (h *LogHandler) GetDailyStats(c *gin.Context) {
 }
 
 // GetMonthlyVisitStats 获取月度访问统计数据
-func (h *LogHandler) GetMonthlyVisitStats(c *gin.Context) {
+func (h *LogController) GetMonthlyVisitStats(c *gin.Context) {
 	yearStr := c.Query("year")
 	var year int
 	var err error
@@ -255,7 +255,7 @@ func (h *LogHandler) GetMonthlyVisitStats(c *gin.Context) {
 }
 
 // GetDailyVisitStatsForLastDays 获取最近几天的访问统计数据
-func (h *LogHandler) GetDailyVisitStatsForLastDays(c *gin.Context) {
+func (h *LogController) GetDailyVisitStatsForLastDays(c *gin.Context) {
 	daysStr := c.DefaultQuery("days", "30")
 	days, err := strconv.Atoi(daysStr)
 	if err != nil || days <= 0 {
@@ -272,7 +272,7 @@ func (h *LogHandler) GetDailyVisitStatsForLastDays(c *gin.Context) {
 }
 
 // SaveAccessLog a middleware to save access log
-func (h *LogHandler) SaveAccessLog() gin.HandlerFunc {
+func (h *LogController) SaveAccessLog() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
 

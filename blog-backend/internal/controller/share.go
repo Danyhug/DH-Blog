@@ -1,4 +1,4 @@
-package handler
+package controller
 
 import (
 	"fmt"
@@ -13,14 +13,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ShareHandler 分享处理器
-type ShareHandler struct {
+// ShareController 分享控制器
+type ShareController struct {
 	shareService service.IShareService
 }
 
-// NewShareHandler 创建分享处理器
-func NewShareHandler(shareService service.IShareService) *ShareHandler {
-	return &ShareHandler{
+// NewShareController 创建分享控制器
+func NewShareController(shareService service.IShareService) *ShareController {
+	return &ShareController{
 		shareService: shareService,
 	}
 }
@@ -52,7 +52,7 @@ type VerifyPasswordRequest struct {
 // @Failure 401 {object} response.AjaxResult "未授权"
 // @Failure 500 {object} response.AjaxResult "服务器错误"
 // @Router /api/files/share [post]
-func (h *ShareHandler) CreateShare(c *gin.Context) {
+func (h *ShareController) CreateShare(c *gin.Context) {
 	var req CreateShareRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.FailWithCode(c, http.StatusBadRequest, "参数错误: "+err.Error())
@@ -94,7 +94,7 @@ func (h *ShareHandler) CreateShare(c *gin.Context) {
 // @Failure 401 {object} response.AjaxResult "未授权"
 // @Failure 500 {object} response.AjaxResult "服务器错误"
 // @Router /api/files/share [get]
-func (h *ShareHandler) ListShares(c *gin.Context) {
+func (h *ShareController) ListShares(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
@@ -127,7 +127,7 @@ func (h *ShareHandler) ListShares(c *gin.Context) {
 // @Failure 401 {object} response.AjaxResult "未授权"
 // @Failure 404 {object} response.AjaxResult "分享不存在"
 // @Router /api/files/share/{id} [get]
-func (h *ShareHandler) GetShareDetail(c *gin.Context) {
+func (h *ShareController) GetShareDetail(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -156,7 +156,7 @@ func (h *ShareHandler) GetShareDetail(c *gin.Context) {
 // @Failure 401 {object} response.AjaxResult "未授权"
 // @Failure 500 {object} response.AjaxResult "服务器错误"
 // @Router /api/files/share/{id} [delete]
-func (h *ShareHandler) DeleteShare(c *gin.Context) {
+func (h *ShareController) DeleteShare(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -187,7 +187,7 @@ func (h *ShareHandler) DeleteShare(c *gin.Context) {
 // @Failure 401 {object} response.AjaxResult "未授权"
 // @Failure 500 {object} response.AjaxResult "服务器错误"
 // @Router /api/files/share/{id}/logs [get]
-func (h *ShareHandler) GetAccessLogs(c *gin.Context) {
+func (h *ShareController) GetAccessLogs(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -234,7 +234,7 @@ func (h *ShareHandler) GetAccessLogs(c *gin.Context) {
 // @Success 200 {object} response.AjaxResult "分享信息"
 // @Failure 404 {object} response.AjaxResult "分享不存在"
 // @Router /api/share/{shareId} [get]
-func (h *ShareHandler) GetShareInfo(c *gin.Context) {
+func (h *ShareController) GetShareInfo(c *gin.Context) {
 	shareID := c.Param("shareId")
 	if shareID == "" {
 		response.FailWithCode(c, http.StatusBadRequest, "分享ID不能为空")
@@ -277,7 +277,7 @@ func (h *ShareHandler) GetShareInfo(c *gin.Context) {
 // @Failure 401 {object} response.AjaxResult "密码错误"
 // @Failure 404 {object} response.AjaxResult "分享不存在"
 // @Router /api/share/{shareId}/verify [post]
-func (h *ShareHandler) VerifyPassword(c *gin.Context) {
+func (h *ShareController) VerifyPassword(c *gin.Context) {
 	shareID := c.Param("shareId")
 	if shareID == "" {
 		response.FailWithCode(c, http.StatusBadRequest, "分享ID不能为空")
@@ -316,7 +316,7 @@ func (h *ShareHandler) VerifyPassword(c *gin.Context) {
 // @Failure 401 {object} response.AjaxResult "令牌无效或已过期"
 // @Failure 404 {object} response.AjaxResult "分享不存在"
 // @Router /api/share/{shareId}/download [get]
-func (h *ShareHandler) Download(c *gin.Context) {
+func (h *ShareController) Download(c *gin.Context) {
 	shareID := c.Param("shareId")
 	if shareID == "" {
 		response.FailWithCode(c, http.StatusBadRequest, "分享ID不能为空")

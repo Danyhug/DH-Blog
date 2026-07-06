@@ -1,4 +1,4 @@
-package handler
+package controller
 
 import (
 	"fmt"
@@ -12,20 +12,20 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// FileHandler 文件处理器
-type FileHandler struct {
+// FileController 文件控制器
+type FileController struct {
 	fileService service.IFileService
 }
 
-// NewFileHandler 创建文件处理器
-func NewFileHandler(fileService service.IFileService) *FileHandler {
-	return &FileHandler{
+// NewFileController 创建文件控制器
+func NewFileController(fileService service.IFileService) *FileController {
+	return &FileController{
 		fileService: fileService,
 	}
 }
 
 // GetFileService 获取文件服务实例
-func (h *FileHandler) GetFileService() service.IFileService {
+func (h *FileController) GetFileService() service.IFileService {
 	return h.fileService
 }
 
@@ -41,7 +41,7 @@ func (h *FileHandler) GetFileService() service.IFileService {
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器错误"
 // @Router /api/files/list [get]
-func (h *FileHandler) ListFiles(c *gin.Context) {
+func (h *FileController) ListFiles(c *gin.Context) {
 	userID := h.getCurrentUserID(c)
 	if userID == 0 {
 		response.FailWithCode(c, http.StatusUnauthorized, "未授权")
@@ -72,7 +72,7 @@ func (h *FileHandler) ListFiles(c *gin.Context) {
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器错误"
 // @Router /api/files/folder [post]
-func (h *FileHandler) CreateFolder(c *gin.Context) {
+func (h *FileController) CreateFolder(c *gin.Context) {
 	userID := h.getCurrentUserID(c)
 	if userID == 0 {
 		response.FailWithCode(c, http.StatusUnauthorized, "未授权")
@@ -122,7 +122,7 @@ func (h *FileHandler) CreateFolder(c *gin.Context) {
 // @Failure 404 {object} response.Response "文件不存在"
 // @Failure 500 {object} response.Response "服务器错误"
 // @Router /api/files/download/{id} [get]
-func (h *FileHandler) DownloadFile(c *gin.Context) {
+func (h *FileController) DownloadFile(c *gin.Context) {
 	userID := h.getCurrentUserID(c)
 	if userID == 0 {
 		response.FailWithCode(c, http.StatusUnauthorized, "未授权")
@@ -176,7 +176,7 @@ func (h *FileHandler) DownloadFile(c *gin.Context) {
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器错误"
 // @Router /api/files/rename/{id} [put]
-func (h *FileHandler) RenameFile(c *gin.Context) {
+func (h *FileController) RenameFile(c *gin.Context) {
 	userID := h.getCurrentUserID(c)
 	if userID == 0 {
 		response.FailWithCode(c, http.StatusUnauthorized, "未授权")
@@ -225,7 +225,7 @@ func (h *FileHandler) RenameFile(c *gin.Context) {
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器错误"
 // @Router /api/files/{id} [delete]
-func (h *FileHandler) DeleteFile(c *gin.Context) {
+func (h *FileController) DeleteFile(c *gin.Context) {
 	userID := h.getCurrentUserID(c)
 	if userID == 0 {
 		response.FailWithCode(c, http.StatusUnauthorized, "未授权")
@@ -249,7 +249,7 @@ func (h *FileHandler) DeleteFile(c *gin.Context) {
 }
 
 // UpdateStoragePath 更新文件存储路径
-func (h *FileHandler) UpdateStoragePath(c *gin.Context) {
+func (h *FileController) UpdateStoragePath(c *gin.Context) {
 	// 检查权限（仅允许管理员操作）
 	userID := h.getCurrentUserID(c)
 	if userID != 1 { // 假设ID为1的用户是管理员
@@ -299,7 +299,7 @@ func (h *FileHandler) UpdateStoragePath(c *gin.Context) {
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器错误"
 // @Router /api/files/directory-tree [get]
-func (h *FileHandler) GetDirectoryTree(c *gin.Context) {
+func (h *FileController) GetDirectoryTree(c *gin.Context) {
 	// 检查权限（仅允许管理员操作）
 	userID := h.getCurrentUserID(c)
 	if userID != 1 { // 假设ID为1的用户是管理员
@@ -328,7 +328,7 @@ func (h *FileHandler) GetDirectoryTree(c *gin.Context) {
 }
 
 // requireAuth 验证用户是否已登录
-func (h *FileHandler) requireAuth() gin.HandlerFunc {
+func (h *FileController) requireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 验证JWT或会话
 		// 简化版：从Query或Header中获取userID
@@ -357,7 +357,7 @@ func (h *FileHandler) requireAuth() gin.HandlerFunc {
 }
 
 // getCurrentUserID 获取当前用户ID
-func (h *FileHandler) getCurrentUserID(c *gin.Context) uint64 {
+func (h *FileController) getCurrentUserID(c *gin.Context) uint64 {
 	userID, exists := c.Get("userID")
 	if !exists {
 		return 0
@@ -366,7 +366,7 @@ func (h *FileHandler) getCurrentUserID(c *gin.Context) uint64 {
 }
 
 // SyncFiles 手动同步磁盘文件到数据库
-func (h *FileHandler) SyncFiles(c *gin.Context) {
+func (h *FileController) SyncFiles(c *gin.Context) {
 	userID := h.getCurrentUserID(c)
 	if userID != 1 {
 		response.FailWithCode(c, http.StatusUnauthorized, "只有管理员可以同步文件")

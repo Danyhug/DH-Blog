@@ -136,7 +136,7 @@ func serveCachedFile(c *gin.Context, filePath string, cacheControl string) {
 
 	// 设置缓存控制头
 	c.Header("Cache-Control", cacheControl)
-	
+
 	// 根据文件扩展名设置正确的Content-Type
 	contentType := getContentType(filePath)
 	c.Data(http.StatusOK, contentType, content)

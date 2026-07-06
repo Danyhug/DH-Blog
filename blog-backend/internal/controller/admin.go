@@ -1,4 +1,4 @@
-package handler
+package controller
 
 import (
 	"fmt"
@@ -13,21 +13,21 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// AdminHandler 负责处理后台管理相关的请求
-type AdminHandler struct {
+// AdminController 负责处理后台管理相关的请求
+type AdminController struct {
 	fileService service.IFileService
 	AIService   service.AIService // 添加 AIService 依赖
 }
 
-func NewAdminHandler(fileService service.IFileService, aiService service.AIService) *AdminHandler {
-	return &AdminHandler{
+func NewAdminController(fileService service.IFileService, aiService service.AIService) *AdminController {
+	return &AdminController{
 		fileService: fileService,
 		AIService:   aiService,
 	}
 }
 
 // UploadFile 处理文件上传
-func (h *AdminHandler) UploadFile(c *gin.Context) {
+func (h *AdminController) UploadFile(c *gin.Context) {
 	// 从 URL 参数中获取上传类型
 	uploadTypeStr := c.Param("type")
 	if uploadTypeStr != "blog" {
@@ -85,7 +85,7 @@ func (h *AdminHandler) UploadFile(c *gin.Context) {
 	c.JSON(http.StatusOK, response.SuccessWithData(urlPath))
 }
 
-func (h *AdminHandler) getUserID(c *gin.Context) uint64 {
+func (h *AdminController) getUserID(c *gin.Context) uint64 {
 	if userID, exists := c.Get("userID"); exists {
 		if id, ok := userID.(float64); ok {
 			return uint64(id)

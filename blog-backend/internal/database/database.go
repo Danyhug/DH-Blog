@@ -15,8 +15,8 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// Init 初始化数据库连接并执行自动迁移
-func Init(conf *config.Config) (*gorm.DB, error) {
+// Init 初始化数据库连接并执行自动迁移。
+func Init(conf *config.Config, migrationModels ...any) (*gorm.DB, error) {
 	newLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
 		logger.Config{
@@ -44,22 +44,11 @@ func Init(conf *config.Config) (*gorm.DB, error) {
 		return nil, fmt.Errorf("连接数据库失败: %w", err)
 	}
 
-	// 自动迁移模型到数据库表
-	// GORM 会根据 model 包中定义的结构体自动创建或更新数据库表
-	err = db.AutoMigrate(
-		&model.AccessLog{},
-		&model.Article{},
-		&model.Category{},
-		&model.Comment{},
-		&model.Tag{},
-		&model.User{},
-		&model.SystemSetting{},
-		&model.IPBlacklist{},
-		&model.TagRelation{},
-		&model.File{},
-		&model.Share{},
-		&model.ShareAccessLog{},
-	)
+	if len(migrationModels) == 0 {
+		migrationModels = defaultMigrationModels()
+	}
+
+	err = db.AutoMigrate(migrationModels...)
 	if err != nil {
 		return nil, fmt.Errorf("数据库自动迁移失败: %w", err)
 	}
@@ -75,6 +64,23 @@ func Init(conf *config.Config) (*gorm.DB, error) {
 	}
 
 	return db, nil
+}
+
+func defaultMigrationModels() []any {
+	return []any{
+		&model.AccessLog{},
+		&model.Article{},
+		&model.Category{},
+		&model.Comment{},
+		&model.Tag{},
+		&model.User{},
+		&model.SystemSetting{},
+		&model.IPBlacklist{},
+		&model.TagRelation{},
+		&model.File{},
+		&model.Share{},
+		&model.ShareAccessLog{},
+	}
 }
 
 // updateSystemSettingsType 更新系统设置的配置类型

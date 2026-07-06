@@ -9,13 +9,13 @@ import (
 // Share 分享记录
 type Share struct {
 	ID               int            `gorm:"primaryKey;autoIncrement" json:"id"`
-	ShareID          string         `gorm:"type:varchar(32);uniqueIndex;not null" json:"share_id"`  // 分享短链ID
-	FileKey          string         `gorm:"type:text;not null" json:"file_key"`                     // 文件标识（文件ID）
-	Password         string         `gorm:"type:varchar(64)" json:"password,omitempty"`             // 访问密码（可选）
-	ExpireAt         *time.Time     `json:"expire_at,omitempty"`                                    // 过期时间（可选）
-	MaxDownloadCount *int           `json:"max_download_count,omitempty"`                           // 最大下载次数（可选）
-	ViewCount        int64          `gorm:"default:0;not null" json:"view_count"`                   // 查看次数
-	DownloadCount    int64          `gorm:"default:0;not null" json:"download_count"`               // 下载次数
+	ShareID          string         `gorm:"type:varchar(32);uniqueIndex;not null" json:"share_id"` // 分享短链ID
+	FileKey          string         `gorm:"type:text;not null" json:"file_key"`                    // 文件标识（文件ID）
+	Password         string         `gorm:"type:varchar(64)" json:"password,omitempty"`            // 访问密码（可选）
+	ExpireAt         *time.Time     `json:"expire_at,omitempty"`                                   // 过期时间（可选）
+	MaxDownloadCount *int           `json:"max_download_count,omitempty"`                          // 最大下载次数（可选）
+	ViewCount        int64          `gorm:"default:0;not null" json:"view_count"`                  // 查看次数
+	DownloadCount    int64          `gorm:"default:0;not null" json:"download_count"`              // 下载次数
 	DeletedAt        gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 	CreatedAt        JSONTime       `json:"create_time"`
 	UpdatedAt        JSONTime       `json:"update_time"`

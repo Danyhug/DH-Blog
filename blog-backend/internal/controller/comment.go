@@ -1,4 +1,4 @@
-package handler
+package controller
 
 import (
 	"errors"
@@ -28,17 +28,17 @@ var (
 	ErrParentIDRequired    = errors.New("回复评论需要指定父评论ID")
 )
 
-type CommentHandler struct {
-	BaseHandler
+type CommentController struct {
+	BaseController
 	repo *repository.CommentRepository
 }
 
-func NewCommentHandler(repo *repository.CommentRepository) *CommentHandler {
-	return &CommentHandler{repo: repo}
+func NewCommentController(repo *repository.CommentRepository) *CommentController {
+	return &CommentController{repo: repo}
 }
 
 // AddComment 添加评论
-func (h *CommentHandler) AddComment(c *gin.Context) {
+func (h *CommentController) AddComment(c *gin.Context) {
 	var comment model.Comment
 	if err := c.ShouldBindJSON(&comment); err != nil {
 		c.JSON(http.StatusBadRequest, response.Error("无效的请求参数: "+err.Error()))
@@ -59,7 +59,7 @@ func (h *CommentHandler) AddComment(c *gin.Context) {
 }
 
 // GetCommentsByArticleID 根据文章 ID 获取评论列表（带分页）
-func (h *CommentHandler) GetCommentsByArticleID(c *gin.Context) {
+func (h *CommentController) GetCommentsByArticleID(c *gin.Context) {
 	articleID, err := strconv.ParseInt(c.Param("articleId"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.Error(fmt.Sprintf("%s: %v", ErrInvalidArticleID.Error(), err)))
@@ -76,7 +76,7 @@ func (h *CommentHandler) GetCommentsByArticleID(c *gin.Context) {
 }
 
 // DeleteComment 删除评论
-func (h *CommentHandler) DeleteComment(c *gin.Context) {
+func (h *CommentController) DeleteComment(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.Error(fmt.Sprintf("%s: %v", ErrInvalidCommentID.Error(), err)))
@@ -96,7 +96,7 @@ func (h *CommentHandler) DeleteComment(c *gin.Context) {
 }
 
 // GetAllComments 获取所有评论列表（带分页）
-func (h *CommentHandler) GetAllComments(c *gin.Context) {
+func (h *CommentController) GetAllComments(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
@@ -110,7 +110,7 @@ func (h *CommentHandler) GetAllComments(c *gin.Context) {
 }
 
 // UpdateComment 更新评论
-func (h *CommentHandler) UpdateComment(c *gin.Context) {
+func (h *CommentController) UpdateComment(c *gin.Context) {
 	var comment model.Comment
 	if err := c.ShouldBindJSON(&comment); err != nil {
 		c.JSON(http.StatusBadRequest, response.Error("无效的请求参数: "+err.Error()))
@@ -131,7 +131,7 @@ func (h *CommentHandler) UpdateComment(c *gin.Context) {
 }
 
 // ReplyComment 回复评论
-func (h *CommentHandler) ReplyComment(c *gin.Context) {
+func (h *CommentController) ReplyComment(c *gin.Context) {
 	var comment model.Comment
 	if err := c.ShouldBindJSON(&comment); err != nil {
 		c.JSON(http.StatusBadRequest, response.Error("无效的请求参数: "+err.Error()))
@@ -158,7 +158,7 @@ func (h *CommentHandler) ReplyComment(c *gin.Context) {
 }
 
 // RegisterRoutes 注册路由
-func (h *CommentHandler) RegisterRoutes(router *gin.RouterGroup) {
+func (h *CommentController) RegisterRoutes(router *gin.RouterGroup) {
 	// 评论公共 API
 	router.POST("/comment", h.AddComment)
 	router.GET("/comment/:articleId", h.GetCommentsByArticleID)

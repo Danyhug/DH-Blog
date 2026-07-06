@@ -26,9 +26,9 @@ type fileService struct {
 	defaultPath string                             // 默认存储路径，当数据库未配置时使用
 
 	// SyncFilesFromDisk 防抖相关
-	syncMu      sync.Mutex
-	syncTimer   *time.Timer
-	syncExecMu  sync.Mutex // 保护实际同步操作，防止并发执行
+	syncMu     sync.Mutex
+	syncTimer  *time.Timer
+	syncExecMu sync.Mutex // 保护实际同步操作，防止并发执行
 }
 
 var (

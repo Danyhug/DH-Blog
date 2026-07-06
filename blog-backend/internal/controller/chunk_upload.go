@@ -1,4 +1,4 @@
-package handler
+package controller
 
 import (
 	"crypto/sha256"
@@ -23,16 +23,16 @@ import (
 	"gorm.io/gorm"
 )
 
-// ChunkUploadHandler 分片上传处理器
-type ChunkUploadHandler struct {
+// ChunkUploadController 分片上传控制器
+type ChunkUploadController struct {
 	fileService service.IFileService
 	db          *gorm.DB
 	config      service.IConfigService
 }
 
-// NewChunkUploadHandler 创建分片上传处理器
-func NewChunkUploadHandler(fileService service.IFileService, db *gorm.DB, config service.IConfigService) *ChunkUploadHandler {
-	return &ChunkUploadHandler{
+// NewChunkUploadController 创建分片上传控制器
+func NewChunkUploadController(fileService service.IFileService, db *gorm.DB, config service.IConfigService) *ChunkUploadController {
+	return &ChunkUploadController{
 		fileService: fileService,
 		db:          db,
 		config:      config,
@@ -53,7 +53,7 @@ func NewChunkUploadHandler(fileService service.IFileService, db *gorm.DB, config
 // @Success http.StatusOK {object} map[string]interface{} "{"uploadId": "上传会话ID"}"
 // @Failure http.StatusOK {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk/init [post]
-func (h *ChunkUploadHandler) InitChunkUpload(c *gin.Context) {
+func (h *ChunkUploadController) InitChunkUpload(c *gin.Context) {
 	var req struct {
 		FileName  string `json:"fileName"`
 		FileSize  int64  `json:"fileSize"`
@@ -133,7 +133,7 @@ func (h *ChunkUploadHandler) InitChunkUpload(c *gin.Context) {
 // @Success http.StatusOK {object} map[string]interface{} "{"success": true}"
 // @Failure http.StatusOK {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk [post]
-func (h *ChunkUploadHandler) UploadChunk(c *gin.Context) {
+func (h *ChunkUploadController) UploadChunk(c *gin.Context) {
 	uploadId := c.PostForm("uploadId")
 	chunkIndexStr := c.PostForm("chunkIndex")
 
@@ -187,7 +187,7 @@ func (h *ChunkUploadHandler) UploadChunk(c *gin.Context) {
 // @Success http.StatusOK {object} map[string]interface{} "{"chunks": [0,1,2], "totalChunks": 10}"
 // @Failure http.StatusOK {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk/{uploadId}/chunks [get]
-func (h *ChunkUploadHandler) GetUploadedChunks(c *gin.Context) {
+func (h *ChunkUploadController) GetUploadedChunks(c *gin.Context) {
 	uploadId := c.Param("uploadId")
 	if uploadId == "" {
 		c.JSON(http.StatusOK, response.Error("uploadId不能为空"))
@@ -258,7 +258,7 @@ func (h *ChunkUploadHandler) GetUploadedChunks(c *gin.Context) {
 // @Success http.StatusOK {object} map[string]interface{} "{"success": true}"
 // @Failure http.StatusOK {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk/{uploadId} [delete]
-func (h *ChunkUploadHandler) CancelChunkUpload(c *gin.Context) {
+func (h *ChunkUploadController) CancelChunkUpload(c *gin.Context) {
 	uploadId := c.Param("uploadId")
 	if uploadId == "" {
 		c.JSON(http.StatusOK, response.Error("uploadId不能为空"))
@@ -295,7 +295,7 @@ func (h *ChunkUploadHandler) CancelChunkUpload(c *gin.Context) {
 // @Success http.StatusOK {object} map[string]interface{} "{"id": 123, "name": "文件名", "size": 1024}"
 // @Failure http.StatusOK {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk/complete [post]
-func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
+func (h *ChunkUploadController) CompleteChunkUpload(c *gin.Context) {
 	var req struct {
 		UploadId string `json:"uploadId"`
 	}
@@ -496,7 +496,7 @@ func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 }
 
 // getUserID 从上下文中获取用户ID
-func (h *ChunkUploadHandler) getUserID(c *gin.Context) uint64 {
+func (h *ChunkUploadController) getUserID(c *gin.Context) uint64 {
 	if userID, exists := c.Get("userID"); exists {
 		if id, ok := userID.(float64); ok {
 			return uint64(id)
@@ -509,7 +509,7 @@ func (h *ChunkUploadHandler) getUserID(c *gin.Context) uint64 {
 }
 
 // mergeChunksSequential 顺序合并分片（适用于小文件）
-func (h *ChunkUploadHandler) mergeChunksSequential(tempDir string, totalChunks int, finalFile *os.File, buffer []byte, hasher hash.Hash) (int64, error) {
+func (h *ChunkUploadController) mergeChunksSequential(tempDir string, totalChunks int, finalFile *os.File, buffer []byte, hasher hash.Hash) (int64, error) {
 	var totalSize int64
 
 	for i := 0; i < totalChunks; i++ {
@@ -543,7 +543,7 @@ func (h *ChunkUploadHandler) mergeChunksSequential(tempDir string, totalChunks i
 }
 
 // mergeChunksBuffered 带缓冲的顺序合并（适用于中等文件）
-func (h *ChunkUploadHandler) mergeChunksBuffered(tempDir string, totalChunks int, finalFile *os.File, buffer []byte, hasher hash.Hash) (int64, error) {
+func (h *ChunkUploadController) mergeChunksBuffered(tempDir string, totalChunks int, finalFile *os.File, buffer []byte, hasher hash.Hash) (int64, error) {
 	var totalSize int64
 
 	for i := 0; i < totalChunks; i++ {
@@ -577,7 +577,7 @@ func (h *ChunkUploadHandler) mergeChunksBuffered(tempDir string, totalChunks int
 }
 
 // mergeChunksConcurrent 并发合并分片（适用于大文件）
-func (h *ChunkUploadHandler) mergeChunksConcurrent(tempDir string, totalChunks int, finalFile *os.File, buffer []byte, hasher hash.Hash) (int64, error) {
+func (h *ChunkUploadController) mergeChunksConcurrent(tempDir string, totalChunks int, finalFile *os.File, buffer []byte, hasher hash.Hash) (int64, error) {
 	// 动态获取CPU核数并设置工作线程数
 	cpuCores := runtime.NumCPU()
 	workers := cpuCores * 2 // 通常设置为CPU核数的1-2倍
@@ -712,7 +712,7 @@ func sanitizeRelativePath(input string) string {
 }
 
 // getMimeType 获取文件MIME类型
-func (h *ChunkUploadHandler) getMimeType(filename string) string {
+func (h *ChunkUploadController) getMimeType(filename string) string {
 	ext := strings.ToLower(filepath.Ext(filename))
 	switch ext {
 	case ".jpg", ".jpeg":
