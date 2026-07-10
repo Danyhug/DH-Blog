@@ -7,14 +7,17 @@ import (
 	"strings"
 
 	"dh-blog/internal/response"
-	"dh-blog/internal/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type TokenParser interface {
+	ParseToken(token string) (*jwt.Token, error)
+}
+
 // JWTMiddleware JWT中间件，用于拦截越权请求
-func JWTMiddleware() gin.HandlerFunc {
+func JWTMiddleware(parser TokenParser) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString := extractToken(c)
 
@@ -26,7 +29,14 @@ func JWTMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		token, err := utils.ParseToken(tokenString)
+		if parser == nil {
+			c.Set("isLogin", false)
+			response.FailWithCode(c, http.StatusUnauthorized, "Token 服务未配置")
+			c.Abort()
+			return
+		}
+
+		token, err := parser.ParseToken(tokenString)
 		if err != nil {
 			c.Set("isLogin", false)
 			response.FailWithCode(c, http.StatusUnauthorized, "无效的Token")
@@ -40,11 +50,16 @@ func JWTMiddleware() gin.HandlerFunc {
 }
 
 // ValidLoginMiddleware 验证登录中间件，用于检查是否已经登录
-func ValidLoginMiddleware() gin.HandlerFunc {
+func ValidLoginMiddleware(parser TokenParser) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString := extractToken(c)
 
-		token, err := utils.ParseToken(tokenString)
+		if parser == nil {
+			c.Set("isLogin", false)
+			c.Next()
+			return
+		}
+		token, err := parser.ParseToken(tokenString)
 		if err == nil {
 			// 验证成功
 			fmt.Println("验证成功")

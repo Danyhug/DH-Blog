@@ -6,8 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"dh-blog/internal/model"
-	"dh-blog/internal/repository"
+	usermodule "dh-blog/internal/modules/user"
 	"dh-blog/internal/utils"
 
 	"github.com/sirupsen/logrus"
@@ -16,7 +15,7 @@ import (
 
 // EnsureAdminUser 创建首次启动所需的管理员账号。
 func EnsureAdminUser(db *gorm.DB) error {
-	userRepo := repository.NewUserRepository(db)
+	userRepo := usermodule.NewRepository(db)
 	if !userRepo.IsFirstStart() {
 		return nil
 	}
@@ -37,12 +36,12 @@ func EnsureAdminUser(db *gorm.DB) error {
 		return fmt.Errorf("密码哈希失败: %w", err)
 	}
 
-	adminUser := &model.User{
+	adminUser := &usermodule.User{
 		Username: username,
 		Password: hashedPassword,
 	}
 
-	if err := userRepo.CreateUser(adminUser); err != nil {
+	if err := userRepo.Create(adminUser); err != nil {
 		return fmt.Errorf("创建管理员用户失败: %w", err)
 	}
 

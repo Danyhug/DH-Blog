@@ -4,13 +4,29 @@ import (
 	"strings"
 	"time"
 
-	"dh-blog/internal/model"
-	"dh-blog/internal/service"
 	"dh-blog/internal/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
+
+// AccessRecord is the transport-neutral request data persisted by the logging
+// module. Keeping it here prevents the global middleware from depending on a
+// business module's database model.
+type AccessRecord struct {
+	IPAddress    string
+	AccessDate   time.Time
+	UserAgent    string
+	RequestURL   string
+	City         string
+	ResourceType string
+}
+
+// IPService is the narrow port required by IPMiddleware.
+type IPService interface {
+	RecordRequest(AccessRecord) error
+	IsIPBanned(ip string) (bool, error)
+}
 
 func getResourceType(path string) string {
 	if strings.HasPrefix(path, "/api/user/heart") {
@@ -35,17 +51,19 @@ func getResourceType(path string) string {
 }
 
 // IPMiddleware 客户端 IP 中间件
-func IPMiddleware(ipService service.IPService) gin.HandlerFunc {
+func IPMiddleware(ipService IPService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取客户端IP
 		ip := utils.GetClientIP(c.Request)
 		resourceType := getResourceType(c.Request.URL.Path)
+		userAgent := c.Request.UserAgent()
+		requestURL := c.Request.URL.String()
 
 		go func() {
 			if resourceType == "heartbeat" {
 				return
 			}
-			os, browser := utils.ParseUserAgent(c.Request.UserAgent())
+			os, browser := utils.ParseUserAgent(userAgent)
 			ua := os + "; " + browser
 
 			// 获取IP所在城市
@@ -61,16 +79,16 @@ func IPMiddleware(ipService service.IPService) gin.HandlerFunc {
 			}
 
 			// 创建访问日志
-			log := &model.AccessLog{
+			record := AccessRecord{
 				IPAddress:    ip,
 				AccessDate:   time.Now(),
 				UserAgent:    ua,
-				RequestURL:   c.Request.URL.String(),
+				RequestURL:   requestURL,
 				City:         city,
 				ResourceType: resourceType,
 			}
 
-			err = ipService.RecordRequest(log)
+			err = ipService.RecordRequest(record)
 			if err != nil {
 				logrus.Errorf("保存访问日志时出错: %v", err)
 				return

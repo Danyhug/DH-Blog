@@ -13,7 +13,6 @@ import (
 	"dh-blog/internal/app"
 	"dh-blog/internal/config"
 	"dh-blog/internal/database"
-	"dh-blog/internal/utils"
 
 	"github.com/sirupsen/logrus"
 )
@@ -23,9 +22,6 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("加载配置失败: %v", err)
 	}
-
-	// 初始化 JWT 工具
-	utils.InitJwtUtils(conf.JwtSecret, conf.Server.JwtExpire)
 
 	// 初始化数据库连接和迁移
 	db, err := database.Init(conf, app.SchemaModels()...)
@@ -37,7 +33,11 @@ func main() {
 		logrus.Fatalf("初始化管理员用户失败: %v", err)
 	}
 
-	application := app.New(conf, db)
+	application, err := app.New(conf, db)
+	if err != nil {
+		logrus.Fatalf("初始化应用失败: %v", err)
+	}
+	application.Start()
 
 	// 配置 HTTP 服务器
 	server := &http.Server{

@@ -2,14 +2,11 @@ package task
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
-	"dh-blog/internal/repository"
-	"dh-blog/internal/service"
-
 	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
 
 const (
@@ -46,7 +43,9 @@ type Dispatcher struct {
 	// 是否正在关闭
 	isShutdown bool
 	// 互斥锁，保护isShutdown
-	mu sync.RWMutex
+	mu        sync.RWMutex
+	startOnce sync.Once
+	stopOnce  sync.Once
 }
 
 // NewDispatcher 创建一个新的任务调度器
@@ -117,16 +116,16 @@ func (d *Dispatcher) submitRetry(task *RetryableTask) {
 
 // Start 任务队列，启动！
 func (d *Dispatcher) Start() {
-	// 启动工作协程
-	for i := 0; i < d.maxWorkers; i++ {
-		d.wg.Add(1)
-		go d.worker(i + 1)
-	}
-	logrus.Infof("启动了 %d 个工作协程", d.maxWorkers)
+	d.startOnce.Do(func() {
+		for i := 0; i < d.maxWorkers; i++ {
+			d.wg.Add(1)
+			go d.worker(i + 1)
+		}
+		logrus.Infof("启动了 %d 个工作协程", d.maxWorkers)
 
-	// 启动重试管理协程
-	d.wg.Add(1)
-	go d.retryManager()
+		d.wg.Add(1)
+		go d.retryManager()
+	})
 }
 
 // retryManager 管理重试任务的协程
@@ -233,18 +232,19 @@ func (d *Dispatcher) worker(workID int) {
 
 // Stop 关闭
 func (d *Dispatcher) Stop() {
-	logrus.Infof("正在关闭任务队列...")
+	d.stopOnce.Do(func() {
+		logrus.Infof("正在关闭任务队列...")
 
-	// 标记为正在关闭
-	d.mu.Lock()
-	d.isShutdown = true
-	d.mu.Unlock()
+		d.mu.Lock()
+		d.isShutdown = true
+		d.mu.Unlock()
 
-	close(d.quit)
-	d.wg.Wait()
-	close(d.queue)
-	close(d.retryQueue)
-	logrus.Infof("任务队列已关闭")
+		close(d.quit)
+		d.wg.Wait()
+		close(d.queue)
+		close(d.retryQueue)
+		logrus.Infof("任务队列已关闭")
+	})
 }
 
 // TaskManager 任务管理器，负责初始化和管理所有任务
@@ -252,22 +252,30 @@ type TaskManager struct {
 	dispatcher *Dispatcher
 }
 
-// NewTaskManager 创建一个新的任务管理器
-func NewTaskManager(
-	db *gorm.DB,
-	aiService service.AIService,
-	tagRepo *repository.TagRepository,
-) *TaskManager {
-	// 创建任务调度器
+// NewTaskManager 创建一个不依赖具体业务模块的任务管理器。
+func NewTaskManager() *TaskManager {
 	dispatcher := NewDispatcher(5, 100) // 5个工作协程，队列大小100
-
-	// 注册AI相关任务
-	RegisterAITaskHandlers(dispatcher, db, aiService, tagRepo)
-
 	logrus.Info("任务管理器初始化完成")
 	return &TaskManager{
 		dispatcher: dispatcher,
 	}
+}
+
+// RegisterTagGenerationHandler binds the article module's business handler to
+// the generic queue while keeping task independent from article models/repos.
+func (m *TaskManager) RegisterTagGenerationHandler(handler func(context.Context, int, string) error) {
+	m.dispatcher.Register("AI_Gen_Tags", func(ctx context.Context, payload interface{}) error {
+		tagTask, ok := payload.(*AiGenTagTask)
+		if !ok {
+			return fmt.Errorf("无效的任务负载类型")
+		}
+		return handler(ctx, tagTask.ArticleID, tagTask.Content)
+	})
+}
+
+// SubmitTagGeneration submits the article module's background work.
+func (m *TaskManager) SubmitTagGeneration(articleID int, content string) {
+	m.SubmitTask(NewAiGenTask(articleID, content))
 }
 
 // Start 启动任务管理器

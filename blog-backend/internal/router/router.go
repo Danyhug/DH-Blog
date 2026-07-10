@@ -6,7 +6,6 @@ import (
 	"dh-blog/internal/config"
 	"dh-blog/internal/frontend"
 	"dh-blog/internal/middleware"
-	"dh-blog/internal/service"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -21,7 +20,8 @@ type Module interface {
 // Options 是初始化路由器所需的全局依赖。
 type Options struct {
 	Config    *config.Config
-	IPService service.IPService
+	IPService middleware.IPService
+	JWT       middleware.TokenParser
 }
 
 // Routes 汇总模块注册路由时可用的 Gin 分组。
@@ -29,7 +29,15 @@ type Routes struct {
 	Engine    *gin.Engine
 	PublicAPI *gin.RouterGroup
 	AdminAPI  *gin.RouterGroup
-	FileAPI   *gin.RouterGroup
+	jwt       middleware.TokenParser
+}
+
+// AuthenticatedAPI creates a JWT-protected route group without teaching the
+// router package about a specific business module's URL prefix.
+func (r *Routes) AuthenticatedAPI(path string) *gin.RouterGroup {
+	group := r.Engine.Group(path)
+	group.Use(middleware.JWTMiddleware(r.jwt))
+	return group
 }
 
 // Init 初始化 Gin 路由器并挂载业务模块。
@@ -47,17 +55,16 @@ func Init(options Options, modules ...Module) *gin.Engine {
 	}))
 
 	// 添加 IP 中间件
-	engine.Use(middleware.IPMiddleware(options.IPService), middleware.ValidLoginMiddleware())
+	engine.Use(middleware.IPMiddleware(options.IPService), middleware.ValidLoginMiddleware(options.JWT))
 
 	routes := &Routes{
 		Engine:    engine,
 		PublicAPI: engine.Group("/api"),
 		AdminAPI:  engine.Group("/api/admin"),
-		FileAPI:   engine.Group("/api/files"),
+		jwt:       options.JWT,
 	}
 
-	routes.AdminAPI.Use(middleware.JWTMiddleware())
-	routes.FileAPI.Use(middleware.JWTMiddleware())
+	routes.AdminAPI.Use(middleware.JWTMiddleware(options.JWT))
 
 	for _, module := range modules {
 		module.RegisterRoutes(routes)

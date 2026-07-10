@@ -28,9 +28,10 @@ type item struct {
 }
 
 type DHCache struct {
-	mu     sync.RWMutex
-	items  map[string]item
-	gcStop chan struct{}
+	mu       sync.RWMutex
+	items    map[string]item
+	gcStop   chan struct{}
+	stopOnce sync.Once
 }
 
 func (d *DHCache) Set(key string, value interface{}, duration ...time.Duration) error {
@@ -122,7 +123,9 @@ func (d *DHCache) Delete(key string) bool {
 }
 
 func (d *DHCache) Shutdown() {
-	close(d.gcStop)
+	d.stopOnce.Do(func() {
+		close(d.gcStop)
+	})
 }
 
 func NewCache() Cache {
