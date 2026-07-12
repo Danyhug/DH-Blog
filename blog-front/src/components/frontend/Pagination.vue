@@ -4,7 +4,7 @@
     :total="props.total" @current-change="currChange($event)" style="margin-bottom: 32px;" />
 </template>
 <script lang="ts" setup>
-import { defineProps, ref, defineEmits } from 'vue';
+import { ref } from 'vue';
 
 // 定义接收的 prop
 const props = defineProps({

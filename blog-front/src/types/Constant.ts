@@ -1,4 +1,4 @@
-import { ToolbarNames } from "md-editor-v3/lib/types/MdEditor/type";
+import type { ToolbarNames } from "md-editor-v3";
 
 /**
  * 定义项目的所有常量

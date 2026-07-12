@@ -1,5 +1,5 @@
 import { userCheck } from '@/api/user';
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHashHistory, type RouteLocationNormalizedLoaded } from 'vue-router'
 // 前端路由组件
 const ArticleView = () => import(/* webpackChunkName: "article" */ '../views/frontend/ArticleView.vue');
 const MainView = () => import(/* webpackChunkName: "main" */ '../views/frontend/MainView.vue');
@@ -69,7 +69,7 @@ const routes = [
   // 错误页面
   { path: '/error', component: ErrorView, name: 'Error', meta: { title: '错误页面' } },
   // 分享访问页面（公开，无需登录）
-  { path: '/share/:shareId', component: FilePreview, name: 'Share', meta: { title: '文件分享' }, props: route => ({ shareMode: true, shareId: route.params.shareId, file: { id: '', name: '', type: 'file' } }) },
+  { path: '/share/:shareId', component: FilePreview, name: 'Share', meta: { title: '文件分享' }, props: (route: RouteLocationNormalizedLoaded) => ({ shareMode: true, shareId: route.params.shareId, file: { id: '', name: '', type: 'file' } }) },
   // WebDAV 实用页面
   { path: '/webdav', component: WebDriveView, name: 'WebDAV', meta: { title: '我的网盘' } },
 ]

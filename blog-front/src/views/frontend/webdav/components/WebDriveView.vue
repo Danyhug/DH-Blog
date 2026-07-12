@@ -902,9 +902,6 @@ async function uploadLargeFile(file: File, fileIndex: number) {
     if (config && config.webdav_chunk_size) {
       // 配置中的webdav_chunk_size单位是KB，需要转换为字节
       chunkSize = config.webdav_chunk_size * 1024; // KB转字节
-      console.log('使用配置的分片大小:', config.webdav_chunk_size, 'KB =', chunkSize, '字节');
-    } else {
-      console.log('未找到分片大小配置，使用默认值5MB');
     }
   } catch (error) {
     console.warn('获取分片大小配置失败，使用默认值:', error);
@@ -933,7 +930,6 @@ async function uploadLargeFile(file: File, fileIndex: number) {
     
     // 尝试获取已存在的上传会话
     let uploadId = stableUploadId;
-    let existingSession = false;
     let initResponse;
     
     try {
@@ -947,8 +943,6 @@ async function uploadLargeFile(file: File, fileIndex: number) {
           fileSize: file.size,
           parentId: currentParentId.value
         };
-        existingSession = true;
-        console.log('找到已存在的上传会话，继续断点续传');
       } else {
         // 会话存在但没有分片，视为新会话
         initResponse = await initChunkUpload(currentParentId.value, file.name, file.size, chunkSize, stableUploadId);

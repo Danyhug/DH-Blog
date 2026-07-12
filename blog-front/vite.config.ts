@@ -13,13 +13,16 @@ export default defineConfig({
 
   plugins: [
     tailwindcss(),
-    visualizer(), Vue(),
+    ...(process.env.ANALYZE === 'true' ? [visualizer()] : []),
+    Vue(),
     AutoImport({
       resolvers: [ElementPlusResolver()],
-      imports: ['vue']
+      imports: ['vue'],
+      dts: 'auto-imports.d.ts'
     }),
     Components({
       resolvers: [ElementPlusResolver()],
+      dts: 'components.d.ts'
     }),
   ],
 

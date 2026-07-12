@@ -186,7 +186,6 @@ const getData = () => {
 const expand = ref(false)
 const expandAllRows = () => {
   expand.value = !expand.value
-  console.log(myTable.value.store.states.data._rawValue)
   myTable.value.store.states.data._rawValue.forEach((row: Comment) => {
     myTable.value.toggleRowExpansion(row, expand);
     row.children?.forEach((child: Comment) => {

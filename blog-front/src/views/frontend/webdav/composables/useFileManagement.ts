@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus';
 import type { FileItem } from '../utils/types/file';
 import { listFiles, FileInfo } from '@/api/file';
 import {
-  FolderIcon, FileIcon, FileTextIcon, ImageIcon, VideoIcon, MusicIcon,
+  FolderIcon, FileTextIcon, ImageIcon, VideoIcon, MusicIcon,
   FileCodeIcon, FileZipIcon, FilePdfIcon, FileSpreadsheetIcon, FilePresentationIcon
 } from '../utils/icons';
 
@@ -197,4 +197,4 @@ export function useFileManagement() {
     navigateToParent,
     handleFolderClick,
   };
-} 
+}

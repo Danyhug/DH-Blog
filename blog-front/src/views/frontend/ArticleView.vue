@@ -82,8 +82,8 @@ export default {
       this.id = article.id || 0
       this.title = article.title || ''
       this.content = article.content || ''
-      this.created = formatDate(article.createTime) || ''
-      this.update = formatDate(article.updateTime) || ''
+      this.created = article.createTime ? formatDate(article.createTime) : ''
+      this.update = article.updateTime ? formatDate(article.updateTime) : ''
       this.viewnum = article.views || 0
 
       // 更改pinia内容

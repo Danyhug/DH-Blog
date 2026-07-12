@@ -1,4 +1,4 @@
-import { ref, nextTick, type Ref } from 'vue';
+import { ref, nextTick } from 'vue';
 import type { FileItem } from '../utils/types/file';
 
 export function useDialogs(
@@ -136,4 +136,4 @@ export function useDialogs(
     toggleExtensionEdit,
     enableExtensionEdit,
   };
-} 
+}

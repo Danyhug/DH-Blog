@@ -5,8 +5,7 @@ import {
   renameFile as apiRenameFile,
   deleteFile as apiDeleteFile,
   uploadFile as apiUploadFile,
-  getDownloadUrl,
-  type FileInfo
+  getDownloadUrl
 } from '@/api/file';
 import type { FileItem } from '../utils/types/file';
 import type { ComponentPublicInstance } from 'vue';
@@ -174,4 +173,4 @@ export function useFileActions({
     handleUploadFiles,
     handleRetryUpload
   };
-} 
+}

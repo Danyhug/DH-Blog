@@ -162,7 +162,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { XIcon, FileTextIcon, ImageIcon, VideoIcon, MusicIcon, FolderIcon, UploadIcon } from '../utils/icons'
+import { XIcon, FileTextIcon, ImageIcon, VideoIcon, MusicIcon, UploadIcon } from '../utils/icons'
 
 interface Props {
   uploadProgress: number

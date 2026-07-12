@@ -26,7 +26,7 @@
 </template>
 <script lang="ts" setup>
 import { useRouter } from 'vue-router'
-import { ref, reactive } from 'vue'
+import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { MagicStick } from '@element-plus/icons-vue'
 import { generateAITags } from '@/api/admin'
@@ -46,7 +46,7 @@ const generateTags = async (id: number) => {
     generatingTags[id] = true
     
     // 调用API生成标签
-    const response = await generateAITags(id)
+    await generateAITags(id)
     
     // 显示成功消息
     ElMessage({

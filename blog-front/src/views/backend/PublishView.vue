@@ -89,7 +89,6 @@ import { useSystemStore } from '@/store';
 
 const system = useSystemStore()
 const route = useRoute()
-const editor = ref(null) // 编辑器
 const articleId = route.query?.articleId
 // 保存文章的key
 const article_save_key = `DHBlog_Article_${articleId == null ? 'Draft' : articleId.toString()}`;
@@ -179,7 +178,6 @@ const getCategories = async () => {
 // 获取标签列表
 const getTags = async () => {
   const data = await getArticleTagList();
-  console.log(data);
   tags.push(...data);
 };
 

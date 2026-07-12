@@ -233,13 +233,13 @@
                                 </div>
                                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                     <div>
-                                        <span class="font-semibold text-gray-800 mr-2" style="font-size: 12px;">{{ formatSize(storageConfig.webdav_chunk_size) }}</span>
-                                        <span class="text-gray-400" style="font-size: 12px;">({{ storageConfig.webdav_chunk_size }} KB)</span>
+                                        <span class="font-semibold text-gray-800 mr-2" style="font-size: 12px;">{{ formatSize(storageConfig.webdav_chunk_size ?? 5120) }}</span>
+                                        <span class="text-gray-400" style="font-size: 12px;">({{ storageConfig.webdav_chunk_size ?? 5120 }} KB)</span>
                                     </div>
                                     <div>
-                                        <el-tag :type="getSizeTagType(storageConfig.webdav_chunk_size)" size="small"
+                                        <el-tag :type="getSizeTagType(storageConfig.webdav_chunk_size ?? 5120)" size="small"
                                             effect="light" class="font-medium">
-                                            {{ getSizeDescription(storageConfig.webdav_chunk_size) }}
+                                            {{ getSizeDescription(storageConfig.webdav_chunk_size ?? 5120) }}
                                         </el-tag>
                                     </div>
                                 </div>
@@ -471,7 +471,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, nextTick } from 'vue';
 import {
-    getSystemConfig, updateSystemConfig,
+    getSystemConfig,
     getBlogConfig, updateBlogConfig,
     getEmailConfig, updateEmailConfig,
     getAIConfig, updateAIConfig,

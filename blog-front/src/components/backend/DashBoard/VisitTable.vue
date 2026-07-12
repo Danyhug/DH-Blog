@@ -21,7 +21,7 @@
 
     <div class="item-table" v-loading="loading">
       <el-table :data="ipData" @scroll.native="loadMore" style="overflow-y: auto; max-height: 315px;"
-        @row-click="handleRowClick" ref="vechart" :row-class-name="tableRowClassName">
+        @row-click="handleRowClick" :row-class-name="tableRowClassName">
 
         <el-table-column type="index" label="No" min-width="8%"></el-table-column>
         <el-table-column label="城市" min-width="21%" show-overflow-tooltip>
@@ -81,7 +81,6 @@ import { debounce } from '@/utils/tool';
 
 const today = new Date();
 const loading = ref(false)
-const vechart = ref<HTMLElement>();
 const selectedIp = ref<IpStat>()
 const dialogVisible = ref(false);
 const banText = ref("封禁");
@@ -136,11 +135,6 @@ const getVisit = async () => {
   ipData.value = ipData.value.concat(data.list).sort((a, b) => b.accessCount - a.accessCount);
   setTimeout(() => loading.value = false, 300)
 };
-
-// 计算总访问量
-const totalVisits = computed(() => {
-  return ipData.value.reduce((sum, ip) => sum + ip.accessCount, 0);
-});
 
 // 根据当前选择的时间范围显示相应的访问次数
 const visitCountDisplay = computed(() => {
@@ -240,7 +234,7 @@ function handleRowClick(row: any) {
 function banIp() {
   if (selectedIp.value == undefined) return
 
-  postBanIp(selectedIp.value?.ipAddress, selectedIp.value?.banStatus).then(r => {
+  postBanIp(selectedIp.value.ipAddress, selectedIp.value.banStatus).then(() => {
     dialogVisible.value = false;
     ipData.value = []
     getVisit();
@@ -249,7 +243,6 @@ function banIp() {
 }
 
 const tableRowClassName = ({ row }: { row: IpStat }) => {
-  console.log(row.banStatus == 1 ? 'ban-row' : '')
   return row.banStatus == 1 ? 'ban-row' : ''
 }
 </script>
