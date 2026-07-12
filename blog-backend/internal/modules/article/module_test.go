@@ -192,3 +192,72 @@ func TestRepositoryUsesCategoryDefaultsAndAppendsGeneratedTags(t *testing.T) {
 		t.Fatalf("stored tags = %#v, want default and generated", stored.Tags)
 	}
 }
+
+func TestPublicArticlePageRedactsLockedArticleSecrets(t *testing.T) {
+	db := openArticleTestDB(t)
+	cache := newTestCache()
+	tags := NewTagRepository(db, cache)
+	categories := NewCategoryRepository(db)
+	articles := NewArticleRepository(db, categories, tags, cache)
+
+	publicArticle := Article{Title: "public", Content: "visible"}
+	lockedArticle := Article{Title: "private", Content: "secret", IsLocked: true, LockPassword: "password"}
+	if err := db.Create(&publicArticle).Error; err != nil {
+		t.Fatalf("create public article: %v", err)
+	}
+	if err := db.Create(&lockedArticle).Error; err != nil {
+		t.Fatalf("create locked article: %v", err)
+	}
+	previewTag := Tag{Name: "private-tag"}
+	if err := db.Create(&previewTag).Error; err != nil {
+		t.Fatalf("create preview tag: %v", err)
+	}
+	if err := db.Model(&lockedArticle).Association("Tags").Append(&previewTag); err != nil {
+		t.Fatalf("attach preview tag: %v", err)
+	}
+
+	publicPage, publicTotal, err := articles.FindPublicPage(context.Background(), 1, 10, false)
+	if err != nil {
+		t.Fatalf("find public page: %v", err)
+	}
+	if publicTotal != 2 || len(publicPage) != 2 {
+		t.Fatalf("public page length = %d, total = %d; want both articles", len(publicPage), publicTotal)
+	}
+	if publicPage[0].ID != lockedArticle.ID || publicPage[0].Title != lockedArticle.Title {
+		t.Fatalf("locked article metadata = %#v; want visible title for article %d", publicPage[0], lockedArticle.ID)
+	}
+	if publicPage[0].Content != "" || publicPage[0].LockPassword != "" {
+		t.Fatalf("locked article leaked protected fields: %#v", publicPage[0])
+	}
+	if publicPage[0].CanAccess {
+		t.Fatalf("visitor unexpectedly received access to locked article: %#v", publicPage[0])
+	}
+	if len(publicPage[0].Tags) != 0 {
+		t.Fatalf("homepage article unexpectedly included tags: %#v", publicPage[0].Tags)
+	}
+	if publicPage[1].ID != publicArticle.ID || publicPage[1].Content != publicArticle.Content {
+		t.Fatalf("public article = %#v; want unchanged article %d", publicPage[1], publicArticle.ID)
+	}
+	if !publicPage[1].CanAccess {
+		t.Fatalf("public article should be accessible: %#v", publicPage[1])
+	}
+
+	authenticatedPage, authenticatedTotal, err := articles.FindPublicPage(context.Background(), 1, 10, true)
+	if err != nil {
+		t.Fatalf("find authenticated homepage: %v", err)
+	}
+	if authenticatedTotal != 2 || authenticatedPage[0].Content != lockedArticle.Content || !authenticatedPage[0].CanAccess {
+		t.Fatalf("authenticated homepage did not expose locked content: %#v", authenticatedPage)
+	}
+	if authenticatedPage[0].LockPassword != "" {
+		t.Fatalf("authenticated homepage leaked lock password: %#v", authenticatedPage[0])
+	}
+
+	adminPage, adminTotal, err := articles.FindPage(context.Background(), 1, 10)
+	if err != nil {
+		t.Fatalf("find admin page: %v", err)
+	}
+	if adminTotal != 2 || len(adminPage) != 2 {
+		t.Fatalf("admin page length = %d, total = %d; want both articles", len(adminPage), adminTotal)
+	}
+}

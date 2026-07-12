@@ -343,6 +343,36 @@ func (r *ArticleRepository) FindPage(ctx context.Context, page, pageSize int) ([
 	return articles, total, nil
 }
 
+// FindPublicPage returns the homepage representation for the current viewer.
+// Locked content is included only for authenticated viewers, while passwords
+// are always removed before the result leaves the repository.
+func (r *ArticleRepository) FindPublicPage(ctx context.Context, page, pageSize int, canAccessLocked bool) ([]Article, int64, error) {
+	var total int64
+	if err := r.db.WithContext(ctx).Model(&Article{}).Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("查询文章总数失败: %w", err)
+	}
+
+	var articles []Article
+	offset := (page - 1) * pageSize
+	if err := r.db.WithContext(ctx).
+		Order("id DESC").
+		Offset(offset).
+		Limit(pageSize).
+		Find(&articles).Error; err != nil {
+		return nil, 0, fmt.Errorf("查询公开文章列表失败: %w", err)
+	}
+	for i := range articles {
+		articles[i].CanAccess = !articles[i].IsLocked || canAccessLocked
+		articles[i].LockPassword = ""
+		if articles[i].IsLocked {
+			if !canAccessLocked {
+				articles[i].Content = ""
+			}
+		}
+	}
+	return articles, total, nil
+}
+
 func (r *ArticleRepository) Delete(ctx context.Context, id int) error {
 	err := r.gormRepository.Delete(ctx, id)
 	if err != nil {

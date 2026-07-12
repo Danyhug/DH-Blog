@@ -26,6 +26,7 @@ func (h *Handler) GetArticleDetail(c *gin.Context) {
 		h.Error(c, errors.New("加密文章，请输入密码后访问"))
 		return
 	}
+	article.CanAccess = true
 	go h.articleRepository.UpdateArticleViewCount(id)
 	h.SuccessWithData(c, article)
 }
@@ -59,6 +60,7 @@ func (h *Handler) UnlockArticle(c *gin.Context) {
 		h.Error(c, ErrPasswordIncorrect)
 		return
 	}
+	article.CanAccess = true
 	h.SuccessWithData(c, article)
 }
 
@@ -111,6 +113,22 @@ func (h *Handler) GetArticleList(c *gin.Context) {
 		return
 	}
 	articles, total, err := h.articleRepository.FindPage(c.Request.Context(), pageRequest.PageNum, pageRequest.PageSize)
+	if err != nil {
+		h.Error(c, err)
+		return
+	}
+	h.SuccessWithPage(c, articles, total, pageRequest.PageNum)
+}
+
+func (h *Handler) GetPublicArticleList(c *gin.Context) {
+	pageRequest, err := h.getPageRequest(c)
+	if err != nil {
+		h.Error(c, err)
+		return
+	}
+	isLogin, _ := c.Get("isLogin")
+	canAccessLocked, _ := isLogin.(bool)
+	articles, total, err := h.articleRepository.FindPublicPage(c.Request.Context(), pageRequest.PageNum, pageRequest.PageSize, canAccessLocked)
 	if err != nil {
 		h.Error(c, err)
 		return

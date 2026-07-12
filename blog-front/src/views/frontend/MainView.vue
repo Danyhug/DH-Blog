@@ -23,10 +23,10 @@ const show = ref(true)
 const getPageList = () => {
   getArticleList(store.page).then(res => {
     store.articleList = res.list; // 简化数组替换
+    store.page.total = res.total;
 
     // 如果是首次加载数据，则设置数据总数
-    if (store.page.total === 0) {
-      store.page.total = res.total;
+    if (store.page.pageNum === 1) {
       show.value = false;
     } else {
       // 无论是否首次，都在一段时间后隐藏加载动画并滚动
@@ -40,13 +40,8 @@ const getPageList = () => {
 }
 
 onMounted(() => {
-  // 无缓存
-  if (store.articleList.length == 0) {
-    // 第一次加载，从服务器获取数据
-    getPageList()
-  } else {
-    show.value = false;
-  }
+  // 每次进入首页都按当前登录状态刷新，避免复用访客或管理员的旧列表。
+  getPageList()
 })
 
 // 更新页面

@@ -17,6 +17,7 @@ type Article struct {
 	ThumbnailURL    string `gorm:"column:thumbnail_url" json:"thumbnailUrl"`
 	IsLocked        bool   `gorm:"column:is_locked;default:false" json:"isLocked"`
 	LockPassword    string `gorm:"column:lock_password" json:"lockPassword"`
+	CanAccess       bool   `gorm:"-" json:"canAccess"`
 
 	Tags     []*Tag   `gorm:"many2many:article_tags;" json:"tags"`
 	TagNames []string `gorm:"-" json:"tagNames,omitempty"`

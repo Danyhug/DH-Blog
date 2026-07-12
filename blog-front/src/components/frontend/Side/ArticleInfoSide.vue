@@ -36,8 +36,10 @@
             <el-divider>
               <Icon iconName="icon-shili" iconSize="1.56"></Icon>
             </el-divider>
-            <a href="" class="tag" v-for="(item, index) in store.homeHeaderInfo.tags"
-              :style="{ backgroundColor: tags[index] }">{{ item.name }}</a>
+            <div class="tag-list">
+              <span class="tag" v-for="(item, index) in store.homeHeaderInfo.tags" :key="item.id ?? item.name"
+                :style="{ backgroundColor: tags[index % tags.length] }">{{ item.name }}</span>
+            </div>
           </div>
 
           <div class="catelog">
@@ -172,19 +174,27 @@ onBeforeUnmount(() => {
 
 .tags {
   width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
   color: #909399;
   font-size: 14px;
 
-  a {
-    width: 21%;
-    margin-bottom: 10px;
-    margin-top: 0;
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
     color: #fff;
     border-radius: 5px;
     padding: 3px 6px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
   }
 }
 </style>

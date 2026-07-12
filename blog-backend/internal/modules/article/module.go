@@ -84,7 +84,7 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 	publicAPI.GET("/article/:id", m.handler.GetArticleDetail)
 	publicAPI.GET("/article/title/:id", m.handler.GetArticleTitle)
 	publicAPI.GET("/article/unlock/:id/:password", m.handler.UnlockArticle)
-	publicAPI.POST("/article/list", m.handler.GetArticleList)
+	publicAPI.POST("/article/list", m.handler.GetPublicArticleList)
 	publicAPI.GET("/article/overview", m.handler.GetOverview)
 	publicAPI.GET("/article/tag", m.handler.GetAllTags)
 	publicAPI.GET("/article/category", m.handler.GetAllCategories)
