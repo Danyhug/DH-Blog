@@ -27,9 +27,9 @@
 <script lang="ts" setup>
 import { useRouter } from 'vue-router'
 import { reactive } from 'vue'
-import { ElMessage } from 'element-plus'
 import { MagicStick } from '@element-plus/icons-vue'
 import { generateAITags } from '@/api/admin'
+import { notify } from '@/utils/notification'
 
 const props = defineProps(['articles'])
 const router = useRouter()
@@ -49,8 +49,7 @@ const generateTags = async (id: number) => {
     await generateAITags(id)
     
     // 显示成功消息
-    ElMessage({
-      type: 'success',
+    notify.success({
       message: '标签生成成功，请刷新页面查看'
     })
     
@@ -58,8 +57,7 @@ const generateTags = async (id: number) => {
     emit('refresh')
   } catch (error) {
     console.error('生成标签失败:', error)
-    ElMessage({
-      type: 'error',
+    notify.error({
       message: '标签生成失败，请稍后重试'
     })
   } finally {

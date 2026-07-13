@@ -121,6 +121,7 @@ import { ref, computed } from 'vue'
 import { XIcon, FileTextIcon } from '../utils/icons'
 import type { FileItem } from '../utils/types/file'
 import { createShare, generateShareLink, type ShareInfo } from '@/api/share'
+import { notify } from '@/utils/notification'
 
 // 定义属性
 interface Props {
@@ -154,12 +155,12 @@ const shareUrl = computed(() => {
 // 创建分享链接
 async function createShareLink() {
   if (!props.file.id) {
-    ElMessage.error('文件ID无效')
+    notify.error('文件ID无效')
     return
   }
 
   if (usePassword.value && !password.value) {
-    ElMessage.warning('请输入访问密码')
+    notify.warning('请输入访问密码')
     return
   }
 
@@ -185,9 +186,9 @@ async function createShareLink() {
 
     shareInfo.value = await createShare(data)
     shareCreated.value = true
-    ElMessage.success('分享链接创建成功')
+    notify.success('分享链接创建成功')
   } catch (err: any) {
-    ElMessage.error(err.message || '创建分享链接失败')
+    notify.error(err.message || '创建分享链接失败')
   } finally {
     creating.value = false
   }
@@ -199,11 +200,11 @@ function copyUrl() {
     urlInput.value.select()
     try {
       navigator.clipboard.writeText(shareUrl.value).then(() => {
-        ElMessage.success('链接已复制到剪贴板')
+        notify.success('链接已复制到剪贴板')
       })
     } catch (err) {
       document.execCommand('copy')
-      ElMessage.success('链接已复制到剪贴板')
+      notify.success('链接已复制到剪贴板')
     }
   }
 }
@@ -212,10 +213,10 @@ function copyUrl() {
 function copyPassword() {
   try {
     navigator.clipboard.writeText(displayPassword.value).then(() => {
-      ElMessage.success('密码已复制到剪贴板')
+      notify.success('密码已复制到剪贴板')
     })
   } catch (err) {
-    ElMessage.error('复制失败')
+    notify.error('复制失败')
   }
 }
 

@@ -35,7 +35,7 @@ import { addTag, updateTag, deleteTag } from '@/api/admin';
 import { Tag } from '@/types/Tag'
 import { reactive, ref } from 'vue'
 import { useAdminStore } from '@/store/index'
-import { ElMessage } from 'element-plus'
+import { notify } from '@/utils/notification'
 
 const props = defineProps(['tags'])
 const visible = ref(false)
@@ -56,7 +56,7 @@ const add = () => {
 const confirmAdd = () => {
   addTag(tag).then(() => {
     visible.value = false
-    ElMessage.success('新增标签成功')
+    notify.success('新增标签成功')
     store.getTags()
   })
 }
@@ -70,7 +70,7 @@ const edit = (row: Tag) => {
 
 const update = () => {
   updateTag(tag).then(() => {
-    ElMessage.success('修改标签成功')
+    notify.success('修改标签成功')
   })
   visible.value = false
   store.getTags()
@@ -79,7 +79,7 @@ const update = () => {
 // 删除
 const del = (id: String) => {
   deleteTag(id).then(() => {
-    ElMessage.success('删除标签成功')
+    notify.success('删除标签成功')
     store.getTags()
   })
 }

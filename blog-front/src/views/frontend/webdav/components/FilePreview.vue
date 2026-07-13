@@ -235,6 +235,7 @@ import { ref, computed, inject, nextTick, onMounted, watch } from 'vue'
 import type { FileItem } from '../utils/types/file'
 import { getDownloadUrl } from '@/api/file'
 import { SERVER_URL } from '@/types/Constant'
+import { notify } from '@/utils/notification'
 import {
   getShareInfo,
   verifySharePassword,
@@ -748,7 +749,7 @@ const fetchShareInfo = async () => {
 // 验证分享密码
 const verifySharePasswordHandler = async () => {
   if (!password.value) {
-    ElMessage.warning('请输入密码')
+    notify.warning('请输入密码')
     return
   }
 
@@ -758,14 +759,14 @@ const verifySharePasswordHandler = async () => {
     if (result.valid && result.download_token) {
       downloadToken.value = result.download_token
       passwordVerified.value = true
-      ElMessage.success('密码验证成功')
+      notify.success('密码验证成功')
       // 开始加载预览
       fetchShareFileContent()
     } else {
-      ElMessage.error('密码错误')
+      notify.error('密码错误')
     }
   } catch (e: any) {
-    ElMessage.error(e.message || '密码错误')
+    notify.error(e.message || '密码错误')
   } finally {
     verifying.value = false
   }
@@ -843,11 +844,11 @@ const downloadShareFile = async () => {
       if (result.valid && result.download_token) {
         downloadToken.value = result.download_token
       } else {
-        ElMessage.error('获取下载令牌失败，请刷新页面重试')
+        notify.error('获取下载令牌失败，请刷新页面重试')
         return
       }
     } catch (e: any) {
-      ElMessage.error(e.message || '获取下载令牌失败')
+      notify.error(e.message || '获取下载令牌失败')
       return
     }
   }

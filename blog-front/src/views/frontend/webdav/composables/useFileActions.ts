@@ -1,5 +1,4 @@
 import { ref, type Ref } from 'vue';
-import { ElMessage } from 'element-plus';
 import {
   createFolder as apiCreateFolder,
   renameFile as apiRenameFile,
@@ -9,6 +8,7 @@ import {
 } from '@/api/file';
 import type { FileItem } from '../utils/types/file';
 import type { ComponentPublicInstance } from 'vue';
+import { notify } from '@/utils/notification';
 
 type UploadModalInstance = ComponentPublicInstance & {
   updateFileStatus: (fileIndex: number, status: 'success' | 'error', error?: string) => void;
@@ -29,17 +29,17 @@ export function useFileActions({
   // 创建新文件夹
   const createFolder = async (folderName: string) => {
     if (!folderName.trim()) {
-      ElMessage.warning('文件夹名称不能为空');
+      notify.warning('文件夹名称不能为空');
       return false;
     }
     try {
       await apiCreateFolder(currentParentId.value, folderName);
-      ElMessage.success('文件夹创建成功');
+      notify.success('文件夹创建成功');
       await fetchFiles(currentParentId.value);
       return true;
     } catch (error) {
       console.error('创建文件夹失败:', error);
-      ElMessage.error('创建文件夹失败');
+      notify.error('创建文件夹失败');
       return false;
     }
   };
@@ -51,12 +51,12 @@ export function useFileActions({
     }
     try {
       await apiRenameFile(file.id, newName);
-      ElMessage.success('重命名成功');
+      notify.success('重命名成功');
       await fetchFiles(currentParentId.value);
       return true;
     } catch (error) {
       console.error('重命名失败:', error);
-      ElMessage.error('重命名失败');
+      notify.error('重命名失败');
       return false;
     }
   };
@@ -66,12 +66,12 @@ export function useFileActions({
     if (!file.id) return false;
     try {
       await apiDeleteFile(file.id);
-      ElMessage.success('删除成功');
+      notify.success('删除成功');
       await fetchFiles(currentParentId.value);
       return true;
     } catch (error) {
       console.error('删除失败:', error);
-      ElMessage.error('删除失败');
+      notify.error('删除失败');
       return false;
     }
   };
@@ -79,7 +79,7 @@ export function useFileActions({
   // 批量删除文件
   const deleteFiles = async (files: FileItem[]) => {
     if (files.length === 0) {
-      ElMessage.warning('没有选择要删除的文件');
+      notify.warning('没有选择要删除的文件');
       return;
     }
     
@@ -96,10 +96,10 @@ export function useFileActions({
     }
 
     if (successCount > 0) {
-      ElMessage.success(`成功删除 ${successCount} 个文件`);
+      notify.success(`成功删除 ${successCount} 个文件`);
     }
     if (successCount < files.length) {
-      ElMessage.warning(`有 ${files.length - successCount} 个文件删除失败`);
+      notify.warning(`有 ${files.length - successCount} 个文件删除失败`);
     }
 
     await fetchFiles(currentParentId.value);
@@ -112,7 +112,7 @@ export function useFileActions({
       window.open(downloadUrl, '_blank');
       return true;
     }
-    ElMessage.warning('文件夹无法下载');
+    notify.warning('文件夹无法下载');
     return false;
   };
   
@@ -145,11 +145,11 @@ export function useFileActions({
     }
 
     if (failCount === 0) {
-      ElMessage.success(`全部 ${successCount} 个文件上传成功`);
+      notify.success(`全部 ${successCount} 个文件上传成功`);
     } else if (successCount === 0) {
-      ElMessage.error(`全部 ${failCount} 个文件上传失败`);
+      notify.error(`全部 ${failCount} 个文件上传失败`);
     } else {
-      ElMessage.warning(`上传完成: ${successCount} 个成功, ${failCount} 个失败`);
+      notify.warning(`上传完成: ${successCount} 个成功, ${failCount} 个失败`);
     }
 
     await fetchFiles(currentParentId.value);

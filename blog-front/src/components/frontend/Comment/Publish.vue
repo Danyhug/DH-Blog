@@ -415,6 +415,7 @@ button:hover .play {
 <script setup>
 import { emojis } from '@/types/Constant';
 import { useUserStore } from '@/store/index'
+import { notify } from '@/utils/notification'
 
 const store = useUserStore()
 
@@ -450,19 +451,19 @@ const addEmj = (e) => {
 const submitComment = () => {
   // 严格对名称，邮箱和内容做校验
   if (comment.author.length < 2) {
-    return ElNotification.error({
+    return notify.error({
       title: '提示信息',
       message: "用户名需大于2",
     })
   } else if (comment.content.length < 3) {
-    return ElNotification.error({
+    return notify.error({
       title: '提示信息',
       message: "评论内容需大于3",
     })
   }
   // 校验邮箱
   if (!/^([a-zA-Z0-9_-])+@([a-zA-Z0-9_-])+((\.[a-zA-Z0-9_-]{2,3}){1,2})$/.test(comment.email)) {
-    return ElNotification.error({
+    return notify.error({
       title: '提示信息',
       message: "邮箱格式不正确",
     })

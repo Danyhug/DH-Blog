@@ -81,6 +81,7 @@
 import { ref, onMounted } from 'vue'
 import { XIcon, ServerIcon } from '../utils/icons'
 import { getSystemConfig, updateSystemConfig } from '@/api/system'
+import { notify } from '@/utils/notification'
 
 // 发出事件
 const emit = defineEmits(['close'])
@@ -109,10 +110,10 @@ async function saveConfig() {
     await updateSystemConfig({
       webdav_chunk_size: chunkSize.value
     })
-    alert('配置已保存')
+    notify.success('配置已保存')
   } catch (error) {
     console.error('保存配置失败:', error)
-    alert('保存配置失败')
+    notify.error('保存配置失败')
   } finally {
     loading.value = false
   }
@@ -121,7 +122,11 @@ async function saveConfig() {
 // 方法
 function reconnect() {
   // 重新连接逻辑
-  alert('正在重新连接到WebDAV服务器...')
+  notify.info({
+    title: '正在重新连接',
+    message: '正在重新连接到 WebDAV 服务器...',
+    duration: 4500
+  })
   // 在实际应用中，这里应该实现与WebDAV服务器的连接逻辑
 }
 

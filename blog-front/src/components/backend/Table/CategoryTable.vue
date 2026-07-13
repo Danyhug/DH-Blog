@@ -30,6 +30,7 @@ import { useAdminStore } from '@/store';
 import { Category } from '@/types/Category';
 import { reactive, ref } from 'vue';
 import TableDialog from '@/components/backend/Table/TableDialog.vue'
+import { notify } from '@/utils/notification'
 
 // 绑定的标签
 const bindTags = ref<number[]>([])
@@ -54,7 +55,7 @@ const confirmAdd = () => {
   category.tagIds = bindTags.value
   addCategory(category).then(() => {
     visible.value = false
-    ElMessage.success('新增分类成功')
+    notify.success('新增分类成功')
     store.getCategories()
   })
 }
@@ -75,7 +76,7 @@ const edit = (row: Category) => {
 const update = () => {
   category.tagIds = bindTags.value
   updateCategory(category).then(() => {
-    ElMessage.success('修改分类成功')
+    notify.success('修改分类成功')
   })
   visible.value = false
   store.getCategories()
@@ -84,7 +85,7 @@ const update = () => {
 // 删除
 const del = (id: String) => {
   deleteCategory(id).then(() => {
-    ElMessage.success('删除分类成功')
+    notify.success('删除分类成功')
     store.getCategories()
   })
 }

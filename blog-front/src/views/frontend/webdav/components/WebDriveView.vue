@@ -232,6 +232,7 @@ import {
 } from '../utils/icons'
 import { listFiles, createFolder, uploadFile, getDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, getUploadedChunks, FileInfo } from '@/api/file'
 import { getSystemConfig } from '@/api/system'
+import { notify } from '@/utils/notification'
 
 // 状态变量
 const uploadProgress = ref(0)
@@ -473,7 +474,7 @@ const fetchFiles = async (parentId: string = '') => {
     isLoading.value = false;
   } catch (error) {
     console.error('获取文件列表失败:', error);
-    ElMessage.error('获取文件列表失败');
+    notify.error('获取文件列表失败');
     isLoading.value = false;
   }
 };
@@ -549,13 +550,13 @@ async function confirmNewFolder() {
   if (newFolderName.value.trim()) {
     try {
       await createFolder(currentParentId.value, newFolderName.value);
-      ElMessage.success('文件夹创建成功');
+      notify.success('文件夹创建成功');
       // 刷新文件列表
       fetchFiles(currentParentId.value);
       showNewFolderDialog.value = false;
     } catch (error) {
       console.error('创建文件夹失败:', error);
-      ElMessage.error('创建文件夹失败');
+      notify.error('创建文件夹失败');
     }
   }
 }
@@ -642,12 +643,12 @@ async function confirmRename() {
   if (fileToRename.value && fileToRename.value.id && newFileName.value.trim() && newFileName.value !== fileToRename.value.name) {
     try {
       await apiRenameFile(fileToRename.value.id, newFileName.value);
-      ElMessage.success('重命名成功');
+      notify.success('重命名成功');
       fetchFiles(currentParentId.value);
       showRenameDialog.value = false;
     } catch (error) {
       console.error('重命名失败:', error);
-      ElMessage.error('重命名失败');
+      notify.error('重命名失败');
     }
   } else if (newFileName.value === fileToRename.value?.name) {
     showRenameDialog.value = false;
@@ -754,7 +755,7 @@ function downloadFile(file: FileItem) {
 // 批量下载选中的文件
 function downloadSelectedFiles() {
   if (selectedFiles.value.size === 0) {
-    ElMessage.warning('请先选择要下载的文件');
+    notify.warning('请先选择要下载的文件');
     return;
   }
 
@@ -763,7 +764,7 @@ function downloadSelectedFiles() {
   );
 
   if (selectedFileItems.length === 0) {
-    ElMessage.warning('没有可下载的文件');
+    notify.warning('没有可下载的文件');
     return;
   }
 
@@ -782,7 +783,7 @@ function downloadSelectedFiles() {
 // 批量分享选中的文件
 function shareSelectedFiles() {
   if (selectedFiles.value.size === 0) {
-    ElMessage.warning('请先选择要分享的文件');
+    notify.warning('请先选择要分享的文件');
     return;
   }
 
@@ -791,12 +792,12 @@ function shareSelectedFiles() {
   );
 
   if (selectedFileItems.length === 0) {
-    ElMessage.warning('没有选择有效的文件');
+    notify.warning('没有选择有效的文件');
     return;
   }
 
   if (selectedFileItems.length > 1) {
-    ElMessage.warning('暂不支持批量分享多个文件');
+    notify.warning('暂不支持批量分享多个文件');
     return;
   }
 
@@ -816,12 +817,12 @@ function deleteFile(file: FileItem) {
   if (confirm(`确定要删除 ${file.name} 吗？`)) {
     apiDeleteFile(file.id)
       .then(() => {
-        ElMessage.success('删除成功');
+        notify.success('删除成功');
         fetchFiles(currentParentId.value);
       })
       .catch((error: any) => {
         console.error('删除失败:', error);
-        ElMessage.error('删除失败');
+        notify.error('删除失败');
       });
   }
   closeContextMenu();
@@ -879,11 +880,11 @@ async function handleUploadFiles(files: File[]) {
 
   // 所有文件上传完成后，只显示一个总结提示
   if (failCount === 0) {
-    ElMessage.success(`全部 ${successCount} 个文件上传成功`);
+    notify.success(`全部 ${successCount} 个文件上传成功`);
   } else if (successCount === 0) {
-    ElMessage.error(`全部 ${failCount} 个文件上传失败`);
+    notify.error(`全部 ${failCount} 个文件上传失败`);
   } else {
-    ElMessage.warning(`上传完成: ${successCount} 个成功, ${failCount} 个失败`);
+    notify.warning(`上传完成: ${successCount} 个成功, ${failCount} 个失败`);
   }
 
   // 重新获取文件列表

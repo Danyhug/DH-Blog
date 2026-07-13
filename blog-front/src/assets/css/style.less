@@ -262,3 +262,91 @@ a {
     }
   }
 }
+
+/* 全局操作通知 */
+.dh-notification.el-notification {
+  width: min(370px, calc(100vw - 32px));
+  padding: 15px 42px 15px 18px;
+  overflow: hidden;
+  border: 1px solid rgba(51, 51, 51, .08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 14px 38px rgba(41, 31, 35, .14);
+  backdrop-filter: blur(16px);
+
+  &::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 4px;
+    content: '';
+    background: var(--dh-notification-accent);
+  }
+
+  .el-notification__group {
+    min-width: 0;
+    margin-left: 12px;
+  }
+
+  .el-notification__title {
+    color: var(--grey-8);
+    font-size: .9rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+  }
+
+  .el-notification__content {
+    margin-top: 5px;
+    color: var(--grey-6);
+    font-size: .8125rem;
+    line-height: 1.55;
+    text-align: left;
+
+    p {
+      margin: 0;
+    }
+  }
+
+  .el-notification__icon {
+    color: var(--dh-notification-accent);
+    font-size: 1.25rem;
+  }
+
+  .el-notification__closeBtn {
+    top: 15px;
+    right: 15px;
+    color: var(--grey-5);
+
+    &:hover,
+    &:focus-visible {
+      color: var(--grey-8);
+    }
+  }
+}
+
+.dh-notification.el-notification.dh-notification--primary,
+.dh-notification.el-notification.dh-notification--info {
+  --dh-notification-accent: var(--color-blue);
+}
+
+.dh-notification.el-notification.dh-notification--success {
+  --dh-notification-accent: var(--color-green);
+}
+
+.dh-notification.el-notification.dh-notification--warning {
+  --dh-notification-accent: var(--color-orange);
+}
+
+.dh-notification.el-notification.dh-notification--error {
+  --dh-notification-accent: var(--color-red);
+}
+
+@media screen and (max-width: 600px) {
+  .dh-notification.el-notification {
+    right: 12px !important;
+    width: calc(100vw - 24px);
+    padding: 14px 40px 14px 16px;
+    border-radius: 12px;
+  }
+}

@@ -145,6 +145,7 @@ import { UserLogin } from "@/types/User";
 import { onMounted, ref } from "vue";
 import { userLogin } from "@/api/user";
 import router from "@/router";
+import { notify } from "@/utils/notification";
 
 const user = ref<UserLogin>({
   username: "admin",
@@ -156,12 +157,12 @@ const user = ref<UserLogin>({
 const login = () => {
   if (user.value.valid) {
     if (user.value.username.length == 0 || user.value.password.length == 0) {
-      ElMessage.error("账号或密码不能为空");
+      notify.error("账号或密码不能为空");
     } else {
       userLogin(user.value).then(token => {
         localStorage.setItem('token', token);
 
-        ElMessage.success('登录成功')
+        notify.success('登录成功')
         const redirect = router.currentRoute.value.query.redirect
 router.replace(redirect ? redirect.toString() : { name: "Admin" })
       })
@@ -171,7 +172,7 @@ router.replace(redirect ? redirect.toString() : { name: "Admin" })
 
 onMounted(() => {
   if (localStorage.getItem('token')) {
-    ElMessage.success('登录状态校验成功')
+    notify.success('登录状态校验成功')
     router.replace({ name: "Admin" })
   }
 })

@@ -2,6 +2,7 @@ import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { SERVER_URL } from "@/types/Constant.ts";
 import router from "@/router";
 import { useUserStore } from "@/store";
+import { notify } from "@/utils/notification";
 
 // 返回值类型
 interface AjaxResult<T> {
@@ -58,7 +59,7 @@ request.interceptors.response.use(
       return response.data.data;
     } else {
       // 如果code不是1，你可以根据需要处理错误，比如抛出异常或返回特定错误信息
-      ElMessage.error(response.data.msg);
+      notify.error(response.data.msg);
       return Promise.reject(new Error(response.data.msg || "Error"));
     }
   },
@@ -73,7 +74,7 @@ request.interceptors.response.use(
       router.replace({ name: "Error" });
     }
 
-    ElMessage.error(
+    notify.error(
       error.response.data.msg || error.response.data || "未知错误"
     );
     return Promise.reject(error);

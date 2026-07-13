@@ -1,6 +1,6 @@
 import { ref, computed, type Ref } from 'vue';
-import { ElMessage } from 'element-plus';
 import type { FileItem } from '../utils/types/file';
+import { notify } from '@/utils/notification';
 
 export function useSelection(
   filteredFiles: Ref<Readonly<FileItem[]>>,
@@ -130,7 +130,7 @@ export function useSelection(
     isProcessingBatchAction.value = true;
     
     if (selectedFileIds.value.length === 0) {
-        ElMessage.warning('请先选择要下载的文件');
+        notify.warning('请先选择要下载的文件');
         isProcessingBatchAction.value = false;
         return;
     }
@@ -143,7 +143,7 @@ export function useSelection(
         }
     }
     if (downloadCount > 0) {
-        ElMessage.success(`已开始下载 ${downloadCount} 个文件`);
+        notify.success(`已开始下载 ${downloadCount} 个文件`);
     }
 
     isProcessingBatchAction.value = false;
@@ -157,7 +157,7 @@ export function useSelection(
     
     const filesToDelete = filteredFiles.value.filter(f => selectedFileIds.value.includes(f.id!));
     if (filesToDelete.length === 0) {
-      return ElMessage.warning('请先选择要删除的文件');
+      return notify.warning('请先选择要删除的文件');
     }
 
     if (!confirm(`确定要删除选中的 ${filesToDelete.length} 个文件吗？`)) return;
@@ -191,4 +191,4 @@ export function useSelection(
     handleBatchDelete,
     cancelSelection,
   };
-} 
+}

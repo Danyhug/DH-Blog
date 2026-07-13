@@ -78,6 +78,7 @@ import { getOverviewLog, postBanIp, getVisitStatistics } from "@/api/admin";
 import { IpStat } from "@/types/IpStat";
 import { plusDate } from "@/utils/tool";
 import { debounce } from '@/utils/tool';
+import { notify } from '@/utils/notification';
 
 const today = new Date();
 const loading = ref(false)
@@ -238,7 +239,7 @@ function banIp() {
     dialogVisible.value = false;
     ipData.value = []
     getVisit();
-    ElMessage.success(banText.value + "成功")
+    notify.success(banText.value + "成功")
   })
 }
 

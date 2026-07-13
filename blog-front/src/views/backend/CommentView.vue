@@ -107,6 +107,7 @@ import { getArticleTitleById } from "@/api/user";
 import { useRouter } from "vue-router";
 import { emojis } from '@/types/Constant';
 import { editComment, replyComment } from '@/api/admin'
+import { notify } from '@/utils/notification'
 
 const router = useRouter();
 const isLoading = ref(false)
@@ -154,7 +155,7 @@ const addEmj = (val: string) => {
 const edit = () => {
   editComment(currentRow.value).then(res => {
     editVisible.value = false
-    ElMessage.success(res)
+    notify.success(res)
     getData()
   })
 }
@@ -163,7 +164,7 @@ const edit = () => {
 const reply = () => {
   replyComment(replyForm.content, replyForm.isPublic, currentRow.value.id, currentRow.value.articleId).then(res => {
     replyDialogVisible.value = false
-    ElMessage.success(res)
+    notify.success(res)
     getData()
   })
 }
@@ -172,7 +173,7 @@ const getData = () => {
   isLoading.value = true
   getAllComment(page.pageSize, page.pageNum).then((res) => {
     commentList.value = [...res.list];
-    ElNotification.success({
+    notify.success({
       title: '提示信息',
       message: "已刷新评论信息",
       position: 'bottom-right',
@@ -203,7 +204,7 @@ const deleteCom = (id: number) => {
   }).then(() => {
     // 删除评论
     deleteComment(id).then(res => {
-      ElMessage.success(res)
+      notify.success(res)
       getData()
     })
   })

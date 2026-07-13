@@ -483,7 +483,8 @@ import {
 } from '@/api/admin';
 import { getDirectoryTree } from '@/api/file';
 import type { SystemConfig, BlogConfig, EmailConfig, AIConfig, StorageConfig } from '@/types/SystemConfig';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessageBox } from 'element-plus';
+import { notify } from '@/utils/notification';
 // 导入 Element Plus 图标
 import {
     Edit, Picture, Link, Connection, User, Lock, Key,
@@ -537,7 +538,7 @@ async function onDeleteSetting(row: any) {
     ElMessageBox.confirm('确定要删除该配置项吗？', '提示', { type: 'warning' })
         .then(async () => {
             await deleteSystemSetting(row.id);
-            ElMessage.success('删除成功');
+            notify.success('删除成功');
             loadSystemSettings();
         })
         .catch(() => { });
@@ -548,10 +549,10 @@ async function onSettingDialogOk() {
     if (!valid) return;
     if (settingDialogMode.value === 'add') {
         await addSystemSetting(settingForm.value);
-        ElMessage.success('新增成功');
+        notify.success('新增成功');
     } else {
         await updateSystemSetting(settingForm.value);
-        ElMessage.success('更新成功');
+        notify.success('更新成功');
     }
     settingDialogVisible.value = false;
     loadSystemSettings();
@@ -593,10 +594,18 @@ const handleBackup = async (mode: 'selected' | 'full') => {
     try {
         if (mode === 'full') {
             isBackingUpFull.value = true;
-            ElMessage.info('正在生成全量备份文件，数据量较大请耐心等待...');
+            notify.info({
+                title: '正在准备备份',
+                message: '正在生成全量备份文件，数据量较大请耐心等待...',
+                duration: 6000
+            });
         } else {
             isBackingUp.value = true;
-            ElMessage.info('正在生成备份文件，请稍候...');
+            notify.info({
+                title: '正在准备备份',
+                message: '正在生成备份文件，请稍候...',
+                duration: 5000
+            });
         }
 
         // 使用 window.open 下载文件
@@ -615,12 +624,12 @@ const handleBackup = async (mode: 'selected' | 'full') => {
             } else {
                 isBackingUp.value = false;
             }
-            ElMessage.success('备份文件已开始下载');
+            notify.success('备份文件已开始下载');
         }, 2000);
     } catch (error) {
         isBackingUp.value = false;
         isBackingUpFull.value = false;
-        ElMessage.error('备份失败');
+        notify.error('备份失败');
     }
 };
 
@@ -653,7 +662,7 @@ const openDirectorySelector = async () => {
         const res = await getDirectoryTree();
         directoryTree.value = [res];
     } catch (error) {
-        ElMessage.error('获取目录树失败');
+        notify.error('获取目录树失败');
     }
 };
 
@@ -672,7 +681,7 @@ const loadNode = async (node: any, resolve: (data: any[]) => void) => {
             resolve([]);
         }
     } catch (error) {
-        ElMessage.error('加载子目录失败');
+        notify.error('加载子目录失败');
         resolve([]);
     }
 };
@@ -694,7 +703,7 @@ const loadParentDirectory = async () => {
         directoryTree.value = [res];
         currentPath.value = parentPath || '';
     } catch (error) {
-        ElMessage.error('加载父目录失败');
+        notify.error('加载父目录失败');
     }
 };
 
@@ -717,7 +726,7 @@ async function loadSystemSettings() {
         const res = await getSystemSettings();
         systemSettings.value = res;
     } catch (e) {
-        ElMessage.error('获取系统配置失败');
+        notify.error('获取系统配置失败');
     }
 }
 
@@ -748,7 +757,7 @@ const loadBlogConfig = async () => {
         const res = await getBlogConfig();
         blogConfig.value = res;
     } catch (error) {
-        ElMessage.error('加载博客配置失败');
+        notify.error('加载博客配置失败');
     }
 };
 
@@ -758,7 +767,7 @@ const loadEmailConfig = async () => {
         const res = await getEmailConfig();
         emailConfig.value = res;
     } catch (error) {
-        ElMessage.error('加载邮件配置失败');
+        notify.error('加载邮件配置失败');
     }
 };
 
@@ -768,7 +777,7 @@ const loadAIConfig = async () => {
         const res = await getAIConfig();
         aiConfig.value = res;
     } catch (error) {
-        ElMessage.error('加载AI配置失败');
+        notify.error('加载AI配置失败');
     }
 };
 
@@ -781,7 +790,7 @@ const loadStorageConfig = async () => {
             webdav_chunk_size: res.webdav_chunk_size || 5120
         };
     } catch (error) {
-        ElMessage.error('加载存储配置失败');
+        notify.error('加载存储配置失败');
     }
 };
 
@@ -795,7 +804,7 @@ const loadAIPromptTags = async () => {
             selectPrompt(res[0]);
         }
     } catch (error) {
-        ElMessage.error('加载AI提示词标签失败');
+        notify.error('加载AI提示词标签失败');
     }
 };
 
@@ -841,9 +850,9 @@ const saveConfig = async () => {
         } else if (activeTab.value === 'ai') {
             await updateAIConfig(aiConfig.value);
         }
-        ElMessage.success('保存成功');
+        notify.success('保存成功');
     } catch (error) {
-        ElMessage.error('保存失败');
+        notify.error('保存失败');
     }
 };
 

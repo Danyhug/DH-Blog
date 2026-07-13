@@ -84,6 +84,7 @@ import { getArticleInfo } from '@/api/admin'
 import { toolbars, emojis } from '@/types/Constant'
 import { Article } from '@/types/Article';
 import { Category } from '@/types/Category';
+import { notify } from '@/utils/notification';
 import { Tag } from '@/types/Tag';
 import { useSystemStore } from '@/store';
 
@@ -115,7 +116,7 @@ const changeArticleStatus = (val: boolean) => {
 
   ElMessageBox.prompt("请输入文章密钥：", "提示").then(res => {
     article.lockPassword = res.value
-    ElMessage.success(`设置密钥为 ${article.lockPassword}`)
+    notify.success(`设置密钥为 ${article.lockPassword}`)
   }).catch(_ => article.isLocked = false)
 }
 
@@ -190,11 +191,11 @@ const onUploadImg = async (files: any[], callback: (arg0: any[]) => void) => {
         // 上传文件
         uploadFile(form)
           .then((res) => {
-            ElMessage.success('上传成功');
+            notify.success('上传成功');
             resolve(res);
           })
           .catch((err) => {
-            ElMessage.error('上传失败');
+            notify.error('上传失败');
             reject(err);
           })
       });
@@ -206,7 +207,7 @@ const onUploadImg = async (files: any[], callback: (arg0: any[]) => void) => {
 // 提交文章
 const submit = () => {
   if (article.categoryId == -1) {
-    return ElMessage.error({
+    return notify.error({
       message: '未选择文章分类',
       plain: true,
     })
@@ -219,7 +220,7 @@ const submit = () => {
   // 上传新文章
   if (articleId == null) {
     addArticle(article).then(_ => {
-      ElMessage.success({
+      notify.success({
         message: '发布成功',
         plain: true,
       })
@@ -228,7 +229,7 @@ const submit = () => {
   } else {
     // 更新文章
     updateArticle(article).then(_ => {
-      ElMessage.success({
+      notify.success({
         message: '已成功更新文章',
         plain: true,
       })
@@ -239,13 +240,13 @@ const submit = () => {
 
 onMounted(() => {
   getCategories().catch(error => {
-    ElMessage.error({
+    notify.error({
       message: '获取分类失败' + error.message,
       plain: true,
     })
   });
   getTags().catch(error => {
-    ElMessage.error({
+    notify.error({
       message: '获取标签失败' + error.message,
       plain: true,
     })
@@ -306,18 +307,18 @@ const handleFileUpload = async (event: any) => {
   try {
     const res = await uploadFile(form);
     imageUrl.value = URL.createObjectURL(file);
-    ElMessage.success('上传文件成功');
+    notify.success('上传文件成功');
 
     // 保存缩略图图片url
     article.thumbnailUrl = res.toString();
   } catch (error) {
-    ElMessage.error('上传文件失败');
+    notify.error('上传文件失败');
   }
 };
 
 const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
   if (rawFile.size / 1024 / 1024 > 10) {
-    ElMessage.error('图片不能超过10兆!')
+    notify.error('图片不能超过10兆!')
     return false
   }
   return true

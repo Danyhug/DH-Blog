@@ -20,23 +20,20 @@ import { useUserStore } from '@/store';
 const store = useUserStore()
 const show = ref(true)
 
-const getPageList = () => {
-  getArticleList(store.page).then(res => {
-    store.articleList = res.list; // 简化数组替换
-    store.page.total = res.total;
+const getPageList = async (animate = false) => {
+  const res = await getArticleList(store.page)
+  store.articleList = res.list; // 简化数组替换
+  store.page.total = res.total;
 
-    // 如果是首次加载数据，则设置数据总数
-    if (store.page.pageNum === 1) {
-      show.value = false;
-    } else {
-      // 无论是否首次，都在一段时间后隐藏加载动画并滚动
-      setTimeout(() => {
-        const bannerHeight = document.querySelector('#banner')?.scrollHeight || 0;
-        scrollTo(0, bannerHeight);
-        show.value = false;
-      }, 320);
-    }
-  });
+  if (animate) {
+    setTimeout(() => {
+      const bannerHeight = document.querySelector('#banner')?.scrollHeight || 0
+      scrollTo(0, bannerHeight)
+      show.value = false
+    }, 320)
+  } else {
+    show.value = false
+  }
 }
 
 onMounted(() => {
@@ -49,7 +46,7 @@ const changePage = (curr: number) => {
   show.value = true;
 
   store.page.pageNum = curr;
-  getPageList()
+  getPageList(true)
 }
 
 </script>
@@ -67,5 +64,6 @@ Article {
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 0 18px 32px;
 }
 </style>

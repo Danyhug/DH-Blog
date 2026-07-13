@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue';
-import { ElMessage } from 'element-plus';
 import type { FileItem } from '../utils/types/file';
 import { listFiles, FileInfo } from '@/api/file';
+import { notify } from '@/utils/notification';
 import {
   FolderIcon, FileTextIcon, ImageIcon, VideoIcon, MusicIcon,
   FileCodeIcon, FileZipIcon, FilePdfIcon, FileSpreadsheetIcon, FilePresentationIcon
@@ -139,7 +139,7 @@ export function useFileManagement() {
       apiFiles.value = await listFiles(parentId);
     } catch (error) {
       console.error('获取文件列表失败:', error);
-      ElMessage.error('获取文件列表失败');
+      notify.error('获取文件列表失败');
     } finally {
       isLoading.value = false;
     }
