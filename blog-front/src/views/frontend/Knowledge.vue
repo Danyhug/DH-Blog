@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div class="knowledge-page">
         <div id="particles-js"></div>
         <main class="main-container">
             <section class="content-section">
@@ -141,7 +141,7 @@ onMounted(() => {
 });
 </script>
 
-<style>
+<style scoped>
 .loading-state {
     text-align: center;
     padding: 40px;
@@ -226,7 +226,7 @@ onMounted(() => {
 
 
 /* --- All other styles remain the same --- */
-:root {
+.knowledge-page {
     --accent-color-1: hsl(180, 100%, 40%);
     --accent-color-2: hsl(280, 100%, 55%);
     --bg-color: #F4F7FC;
@@ -236,11 +236,7 @@ onMounted(() => {
     --border-color: #E2E8F0;
     --shadow-color: rgba(45, 55, 72, 0.1);
     --accent-color-1-rgb: 0, 204, 204;
-}
-
-body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    margin: 0;
     background-color: var(--bg-color);
     color: var(--text-color);
     height: 100vh;
@@ -569,7 +565,7 @@ body {
 }
 
 @media (max-width: 900px) {
-    body {
+    .knowledge-page {
         height: auto;
         min-height: 100vh;
     }
