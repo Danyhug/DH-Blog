@@ -134,9 +134,36 @@ func (r *TagRepository) Update(ctx context.Context, tag *Tag) error {
 }
 
 func (r *TagRepository) Delete(ctx context.Context, id int) error {
-	err := r.gormRepository.Delete(ctx, id)
-	if err == nil {
-		r.ClearTagCache()
+	var (
+		tag        Tag
+		articleIDs []int
+	)
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Unscoped().First(&tag, id).Error; err != nil {
+			return fmt.Errorf("查找待删除标签失败: %w", err)
+		}
+		if err := tx.Table("article_tags").Where("tag_id = ?", id).Pluck("article_id", &articleIDs).Error; err != nil {
+			return fmt.Errorf("查找标签文章关联失败: %w", err)
+		}
+		if err := tx.Where("tag_id = ?", id).Delete(&TagRelation{}).Error; err != nil {
+			return fmt.Errorf("删除标签默认关联失败: %w", err)
+		}
+		if err := tx.Exec("DELETE FROM article_tags WHERE tag_id = ?", id).Error; err != nil {
+			return fmt.Errorf("删除标签文章关联失败: %w", err)
+		}
+		if err := tx.Unscoped().Delete(&Tag{}, id).Error; err != nil {
+			return fmt.Errorf("删除标签失败: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
-	return err
+
+	r.ClearTagCache()
+	for _, articleID := range articleIDs {
+		r.cache.Delete(fmt.Sprintf("%s%d", PrefixArticle, articleID))
+	}
+	r.cache.Delete(fmt.Sprintf("%stag:%s", PrefixArticleList, tag.Name))
+	return nil
 }

@@ -66,8 +66,8 @@ export const updateTag = (data: Tag): Promise<Tag> => {
  * 删除标签
  * @param id
  */
-export const deleteTag = (id: String): Promise<any> => {
-  return request.delete('/admin/tag' + id)
+export const deleteTag = (id: number): Promise<any> => {
+  return request.delete('/admin/tag/' + id)
 }
 
 // ********** 分类操作 **********

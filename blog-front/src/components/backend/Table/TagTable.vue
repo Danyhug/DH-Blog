@@ -50,6 +50,7 @@ const tag = reactive<Tag>({
 const add = () => {
   visible.value = true
   state.value = 'add'
+  delete tag.id
   Object.assign(tag, { name: '' })
 }
 
@@ -68,16 +69,15 @@ const edit = (row: Tag) => {
   visible.value = true
 }
 
-const update = () => {
-  updateTag(tag).then(() => {
-    notify.success('修改标签成功')
-  })
+const update = async () => {
+  await updateTag(tag)
+  notify.success('修改标签成功')
   visible.value = false
-  store.getTags()
+  await store.getTags()
 }
 
 // 删除
-const del = (id: String) => {
+const del = (id: number) => {
   deleteTag(id).then(() => {
     notify.success('删除标签成功')
     store.getTags()

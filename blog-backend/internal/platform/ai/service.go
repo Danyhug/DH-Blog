@@ -157,13 +157,18 @@ func (s *OpenAIService) GenerateTags(text string, existingTags []string) (result
 		return nil, err
 	}
 
+	encodedExistingTags, err := json.Marshal(existingTags)
+	if err != nil {
+		return nil, fmt.Errorf("序列化现有标签失败: %w", err)
+	}
+
 	// 准备数据
 	data := struct {
 		Article string
 		Tags    string
 	}{
 		Article: text,
-		Tags:    strings.Join(existingTags, ", "),
+		Tags:    string(encodedExistingTags),
 	}
 
 	// 使用Buffer存储填充后的内容

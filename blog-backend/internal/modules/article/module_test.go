@@ -3,6 +3,7 @@ package article
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -190,6 +191,78 @@ func TestRepositoryUsesCategoryDefaultsAndAppendsGeneratedTags(t *testing.T) {
 	}
 	if len(stored.Tags) != 2 {
 		t.Fatalf("stored tags = %#v, want default and generated", stored.Tags)
+	}
+}
+
+func TestDeleteTagRemovesRelationsWithoutDeletingArticles(t *testing.T) {
+	db := openArticleTestDB(t)
+	cache := newTestCache()
+	tags := NewTagRepository(db, cache)
+
+	tag := Tag{Name: "shared"}
+	if err := db.Create(&tag).Error; err != nil {
+		t.Fatalf("create tag: %v", err)
+	}
+	category := Category{Name: "Backend", Slug: "backend"}
+	if err := db.Create(&category).Error; err != nil {
+		t.Fatalf("create category: %v", err)
+	}
+	if err := db.Create(&TagRelation{TagID: tag.ID, RelatedID: category.ID, RelationType: "category"}).Error; err != nil {
+		t.Fatalf("create category tag relation: %v", err)
+	}
+	articles := []Article{
+		{Title: "A", Content: "first", Tags: []*Tag{&tag}},
+		{Title: "B", Content: "second", Tags: []*Tag{&tag}},
+	}
+	if err := db.Create(&articles).Error; err != nil {
+		t.Fatalf("create tagged articles: %v", err)
+	}
+	for i := range articles {
+		if err := cache.Set(fmt.Sprintf("%s%d", PrefixArticle, articles[i].ID), articles[i]); err != nil {
+			t.Fatalf("cache article: %v", err)
+		}
+	}
+
+	if err := tags.Delete(context.Background(), tag.ID); err != nil {
+		t.Fatalf("delete tag: %v", err)
+	}
+
+	var articleCount int64
+	if err := db.Model(&Article{}).Count(&articleCount).Error; err != nil {
+		t.Fatalf("count articles: %v", err)
+	}
+	if articleCount != 2 {
+		t.Fatalf("article count = %d, want 2", articleCount)
+	}
+	var articleTagCount int64
+	if err := db.Table("article_tags").Where("tag_id = ?", tag.ID).Count(&articleTagCount).Error; err != nil {
+		t.Fatalf("count article tag relations: %v", err)
+	}
+	if articleTagCount != 0 {
+		t.Fatalf("article tag relation count = %d, want 0", articleTagCount)
+	}
+	var defaultRelationCount int64
+	if err := db.Model(&TagRelation{}).Where("tag_id = ?", tag.ID).Count(&defaultRelationCount).Error; err != nil {
+		t.Fatalf("count category tag relations: %v", err)
+	}
+	if defaultRelationCount != 0 {
+		t.Fatalf("category tag relation count = %d, want 0", defaultRelationCount)
+	}
+	var deletedTagCount int64
+	if err := db.Unscoped().Model(&Tag{}).Where("id = ?", tag.ID).Count(&deletedTagCount).Error; err != nil {
+		t.Fatalf("count deleted tag: %v", err)
+	}
+	if deletedTagCount != 0 {
+		t.Fatalf("deleted tag count = %d, want 0", deletedTagCount)
+	}
+	for i := range articles {
+		if _, found := cache.Get(fmt.Sprintf("%s%d", PrefixArticle, articles[i].ID)); found {
+			t.Fatalf("article %d cache was not cleared", articles[i].ID)
+		}
+	}
+	recreated := Tag{Name: tag.Name}
+	if err := tags.Create(context.Background(), &recreated); err != nil {
+		t.Fatalf("recreate deleted tag name: %v", err)
 	}
 }
 

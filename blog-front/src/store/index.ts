@@ -28,21 +28,13 @@ export const useAdminStore = defineStore("admin", () => {
 
   const getCategories = async () => {
     const data = await getArticleCategoryList();
-    if (data.length === 0) {
-      categories.length = 0;
-    } else {
-      Object.assign(categories, data);
-    }
+    categories.splice(0, categories.length, ...data);
   };
 
   // 获取标签列表
   const getTags = async () => {
     const data = await getArticleTagList();
-    if (data.length === 0) {
-      tags.length = 0;
-    } else {
-      Object.assign(tags, data);
-    }
+    tags.splice(0, tags.length, ...data);
   };
 
   return {

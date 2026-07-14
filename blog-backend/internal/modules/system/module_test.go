@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"dh-blog/internal/dhcache"
@@ -120,6 +121,61 @@ func TestNewBackfillsDefaultsAndRepairsConfigTypes(t *testing.T) {
 	}
 	if storagePath.SettingValue != runtime.path {
 		t.Fatalf("persisted storage path=%q want=%q", storagePath.SettingValue, runtime.path)
+	}
+}
+
+func TestNewUpgradesOnlyLegacyDefaultPrompts(t *testing.T) {
+	tests := []struct {
+		name          string
+		legacyKey     string
+		legacyValue   string
+		upgradedValue string
+		customKey     string
+	}{
+		{"tags", SettingKeyAIPromptGetTags, legacyDefaultTagsPrompt, DefaultTagsPrompt, SettingKeyAIPromptGetAbstract},
+		{"abstract", SettingKeyAIPromptGetAbstract, legacyDefaultAbstractPrompt, DefaultAbstractPrompt, SettingKeyAIPromptGetTags},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			db := openSystemTestDB(t)
+			customPrompt := "custom prompt"
+			if err := db.Create([]Setting{
+				{SettingKey: test.legacyKey, SettingValue: test.legacyValue, ConfigType: ConfigTypeAI},
+				{SettingKey: test.customKey, SettingValue: customPrompt, ConfigType: ConfigTypeAI},
+			}).Error; err != nil {
+				t.Fatal(err)
+			}
+			newSystemTestModule(t, db, &storageRuntimeStub{})
+
+			var upgraded Setting
+			if err := db.Where("setting_key = ?", test.legacyKey).First(&upgraded).Error; err != nil {
+				t.Fatal(err)
+			}
+			if upgraded.SettingValue != test.upgradedValue {
+				t.Fatalf("legacy %s prompt was not upgraded", test.name)
+			}
+			var custom Setting
+			if err := db.Where("setting_key = ?", test.customKey).First(&custom).Error; err != nil {
+				t.Fatal(err)
+			}
+			if custom.SettingValue != customPrompt {
+				t.Fatalf("custom prompt was overwritten while upgrading %s", test.name)
+			}
+		})
+	}
+}
+
+func TestDefaultAIPromptsKeepRequiredTemplateContracts(t *testing.T) {
+	for _, placeholder := range []string{"{{.Article}}", "{{.Tags}}"} {
+		if !strings.Contains(DefaultTagsPrompt, placeholder) {
+			t.Fatalf("tag prompt is missing placeholder %s", placeholder)
+		}
+	}
+	if !strings.Contains(DefaultTagsPrompt, "JSON") || !strings.Contains(DefaultTagsPrompt, "不得超过 8 个") {
+		t.Fatal("tag prompt is missing structured output constraints")
+	}
+	if !strings.Contains(DefaultAbstractPrompt, "{{.ArticleContent}}") || !strings.Contains(DefaultAbstractPrompt, "本文讲述了") {
+		t.Fatal("abstract prompt is missing its compatibility contract")
 	}
 }
 

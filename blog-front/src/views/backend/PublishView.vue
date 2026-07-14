@@ -9,14 +9,7 @@
             </el-radio>
           </el-radio-group>
         </el-tab-pane>
-        <el-tab-pane label="标签选择" name="second">
-          <!-- 标签： -->
-          <el-checkbox-group size="large" v-model="article.tags">
-            <el-checkbox-button v-for="tag in tags" :key="tag.id" :value="tag.slug"
-              :label="tag.name"></el-checkbox-button>
-          </el-checkbox-group>
-        </el-tab-pane>
-        <el-tab-pane label="附加信息" name="third">
+        <el-tab-pane label="附加信息" name="second">
           <el-upload class="avatar-uploader" :http-request="handleFileUpload" :show-file-list="false"
             :before-upload="beforeAvatarUpload">
             <img v-if="imageUrl" :src="imageUrl" class="avatar" />
@@ -78,7 +71,7 @@ import {
   addArticle, updateArticle, uploadFile
 } from '@/api/admin';
 
-import { getArticleCategoryList, getArticleTagList } from '@/api/user'
+import { getArticleCategoryList } from '@/api/user'
 import { getArticleInfo } from '@/api/admin'
 
 import { toolbars, emojis } from '@/types/Constant'
@@ -108,7 +101,6 @@ const article = reactive<Article<String>>({
 
 });
 const categories = reactive<Category[]>([]);
-const tags = reactive<Tag[]>([]);
 
 // 切换文章状态 公开 > 私密
 const changeArticleStatus = (val: boolean) => {
@@ -176,12 +168,6 @@ const getCategories = async () => {
   categories.push(...data);
 };
 
-// 获取标签列表
-const getTags = async () => {
-  const data = await getArticleTagList();
-  tags.push(...data);
-};
-
 const onUploadImg = async (files: any[], callback: (arg0: any[]) => void) => {
   const res = await Promise.all(
     files.map((file) => {
@@ -245,13 +231,6 @@ onMounted(() => {
       plain: true,
     })
   });
-  getTags().catch(error => {
-    notify.error({
-      message: '获取标签失败' + error.message,
-      plain: true,
-    })
-  })
-
   // 尝试获取本地文章信息
   const temp = localStorage.getItem(article_save_key) || null;
 
