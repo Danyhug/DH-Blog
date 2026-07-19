@@ -49,6 +49,9 @@ request.interceptors.request.use(
   }
 );
 
+// 标记是否正在处理 Token 失效，避免并发请求触发多次提示与跳转
+let isHandlingUnauthorized = false;
+
 // 添加响应拦截器
 request.interceptors.response.use(
   function (response: AxiosResponse<AjaxResult<any>>) {
@@ -67,15 +70,27 @@ request.interceptors.response.use(
     // 超出 2xx 范围的状态码都会触发该函数。
     // 这里可以处理网络错误、超时等
     if (error.status === 401) {
+      // 并发请求同时收到 401 时，只处理一次，避免弹出多个 Token 失效提示
+      if (isHandlingUnauthorized) {
+        return Promise.reject(error);
+      }
+      isHandlingUnauthorized = true;
+
       localStorage.removeItem("token");
-      router.replace({ name: "Login" });
+      notify.error(
+        error.response?.data?.msg || error.response?.data || "登录已失效，请重新登录"
+      );
+      router.replace({ name: "Login" }).finally(() => {
+        isHandlingUnauthorized = false;
+      });
+      return Promise.reject(error);
     } else if (error.status === 403) {
       useUserStore().isBan || (useUserStore().isBan = true);
       router.replace({ name: "Error" });
     }
 
     notify.error(
-      error.response.data.msg || error.response.data || "未知错误"
+      error.response?.data?.msg || error.response?.data || "未知错误"
     );
     return Promise.reject(error);
   }
