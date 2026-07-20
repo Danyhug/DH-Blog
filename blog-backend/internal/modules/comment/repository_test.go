@@ -11,6 +11,14 @@ import (
 	"gorm.io/gorm"
 )
 
+type testArticle struct {
+	ID        int `gorm:"primaryKey"`
+	Title     string
+	DeletedAt gorm.DeletedAt
+}
+
+func (testArticle) TableName() string { return "articles" }
+
 func newTestModule(t *testing.T) *Module {
 	t.Helper()
 
@@ -19,10 +27,55 @@ func newTestModule(t *testing.T) *Module {
 		t.Fatalf("open sqlite: %v", err)
 	}
 	module := New(db)
-	if err := db.AutoMigrate(MigrationModels()...); err != nil {
+	if err := db.AutoMigrate(append(MigrationModels(), &testArticle{})...); err != nil {
 		t.Fatalf("migrate comment model: %v", err)
 	}
 	return module
+}
+
+func TestRepositoryGroupsCommentsByArticle(t *testing.T) {
+	repository := newTestModule(t).repository
+	if err := repository.db.Create(&[]testArticle{
+		{ID: 1, Title: "第一篇文章"},
+		{ID: 2, Title: "第二篇文章"},
+	}).Error; err != nil {
+		t.Fatalf("create articles: %v", err)
+	}
+
+	firstRoot := &Comment{ArticleID: 1, Author: "root", Email: "root@example.com", Content: "root", IsPublic: true, UA: "test"}
+	if err := repository.AddComment(firstRoot); err != nil {
+		t.Fatalf("add first root: %v", err)
+	}
+	parentID := firstRoot.ID
+	if err := repository.AddComment(&Comment{ArticleID: 1, Author: "child", Email: "child@example.com", Content: "child", IsPublic: true, ParentID: &parentID, UA: "test"}); err != nil {
+		t.Fatalf("add child: %v", err)
+	}
+	if err := repository.AddComment(&Comment{ArticleID: 2, Author: "other", Email: "other@example.com", Content: "other", IsPublic: true, UA: "test"}); err != nil {
+		t.Fatalf("add second article comment: %v", err)
+	}
+
+	groups, total, err := repository.GetCommentGroups(1, 10)
+	if err != nil {
+		t.Fatalf("get comment groups: %v", err)
+	}
+	if total != 2 {
+		t.Fatalf("article group total = %d, want 2", total)
+	}
+	if len(groups) != 2 {
+		t.Fatalf("group count = %d, want 2", len(groups))
+	}
+
+	groupByArticle := make(map[int]*ArticleCommentGroup, len(groups))
+	for _, group := range groups {
+		groupByArticle[group.ArticleID] = group
+	}
+	firstGroup := groupByArticle[1]
+	if firstGroup == nil || firstGroup.ArticleTitle != "第一篇文章" || firstGroup.CommentCount != 2 {
+		t.Fatalf("first article group = %#v", firstGroup)
+	}
+	if len(firstGroup.Children) != 1 || len(firstGroup.Children[0].Children) != 1 {
+		t.Fatalf("first article comment tree = %#v", firstGroup.Children)
+	}
 }
 
 func TestModuleRegistersCommentRoutes(t *testing.T) {

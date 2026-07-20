@@ -23,6 +23,7 @@ var (
 	ErrReplyCommentFailed  = errors.New("回复评论失败")
 	ErrEmptyCommentID      = errors.New("评论 ID 不能为空")
 	ErrParentIDRequired    = errors.New("回复评论需要指定父评论ID")
+	ErrInvalidPagination   = errors.New("无效的分页参数")
 )
 
 type handler struct {
@@ -84,14 +85,19 @@ func (h *handler) DeleteComment(c *gin.Context) {
 }
 
 func (h *handler) GetAllComments(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-	comments, total, err := h.repo.GetAllComments(page, pageSize)
+	pageSize, pageSizeErr := strconv.Atoi(c.Param("pageSize"))
+	page, pageErr := strconv.Atoi(c.Param("pageNum"))
+	if pageSizeErr != nil || pageErr != nil || pageSize <= 0 || page <= 0 {
+		c.JSON(http.StatusBadRequest, response.Error(ErrInvalidPagination.Error()))
+		return
+	}
+
+	groups, total, err := h.repo.GetCommentGroups(page, pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Error(fmt.Sprintf("%s: %v", ErrGetCommentsFailed.Error(), err)))
 		return
 	}
-	c.JSON(http.StatusOK, response.SuccessWithData(response.Page(total, int64(page), comments)))
+	c.JSON(http.StatusOK, response.SuccessWithData(response.Page(total, int64(page), groups)))
 }
 
 func (h *handler) UpdateComment(c *gin.Context) {

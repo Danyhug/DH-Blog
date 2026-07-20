@@ -16,6 +16,15 @@ type Comment struct {
 	Children        []*Comment `gorm:"-" json:"children,omitempty"`
 }
 
+// ArticleCommentGroup 是后台评论管理使用的文章评论分组。
+type ArticleCommentGroup struct {
+	ArticleID         int            `json:"articleId"`
+	ArticleTitle      string         `json:"articleTitle"`
+	CommentCount      int64          `json:"commentCount"`
+	LatestCommentTime model.JSONTime `json:"latestCommentTime"`
+	Children          []*Comment     `json:"children"`
+}
+
 // TableName 保持原有数据库表名。
 func (Comment) TableName() string {
 	return "comments"

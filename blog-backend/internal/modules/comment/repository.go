@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sort"
 
+	"dh-blog/internal/model"
+
 	"gorm.io/gorm"
 )
 
@@ -78,29 +80,71 @@ func (r *Repository) DeleteComment(id int) error {
 	})
 }
 
-// GetAllComments 获取所有评论列表并按根评论分页。
-func (r *Repository) GetAllComments(page, pageSize int) ([]*Comment, int64, error) {
-	var allComments []Comment
+// GetCommentGroups 获取后台评论列表并按文章分页。
+func (r *Repository) GetCommentGroups(page, pageSize int) ([]*ArticleCommentGroup, int64, error) {
+	type articleCommentSummary struct {
+		ArticleID    int
+		ArticleTitle string
+		CommentCount int64
+	}
+
+	var summaries []articleCommentSummary
 	var total int64
 
-	if err := r.db.Model(&Comment{}).Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("查询评论总数失败: %w", err)
-	}
-	if err := r.db.Order("created_at desc").Find(&allComments).Error; err != nil {
-		return nil, 0, fmt.Errorf("查询评论失败: %w", err)
+	if err := r.db.Model(&Comment{}).Distinct("article_id").Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("查询评论文章总数失败: %w", err)
 	}
 
-	rootComments := buildCommentTreeAndSort(allComments)
 	offset := (page - 1) * pageSize
-	end := offset + pageSize
-	if end > len(rootComments) {
-		end = len(rootComments)
-	}
-	if offset > len(rootComments) {
-		offset = len(rootComments)
+	if err := r.db.Model(&Comment{}).
+		Select(`comments.article_id,
+			COALESCE(articles.title, '文章已删除') AS article_title,
+			COUNT(comments.id) AS comment_count`).
+		Joins("LEFT JOIN articles ON articles.id = comments.article_id AND articles.deleted_at IS NULL").
+		Group("comments.article_id, articles.title").
+		Order("MAX(comments.created_at) DESC").
+		Offset(offset).
+		Limit(pageSize).
+		Scan(&summaries).Error; err != nil {
+		return nil, 0, fmt.Errorf("查询文章评论分组失败: %w", err)
 	}
 
-	return rootComments[offset:end], total, nil
+	if len(summaries) == 0 {
+		return []*ArticleCommentGroup{}, total, nil
+	}
+
+	articleIDs := make([]int, 0, len(summaries))
+	for _, summary := range summaries {
+		articleIDs = append(articleIDs, summary.ArticleID)
+	}
+
+	var allComments []Comment
+	if err := r.db.Where("article_id IN ?", articleIDs).Order("created_at desc").Find(&allComments).Error; err != nil {
+		return nil, 0, fmt.Errorf("查询文章评论失败: %w", err)
+	}
+
+	commentsByArticle := make(map[int][]Comment, len(summaries))
+	for _, item := range allComments {
+		commentsByArticle[item.ArticleID] = append(commentsByArticle[item.ArticleID], item)
+	}
+
+	groups := make([]*ArticleCommentGroup, 0, len(summaries))
+	for _, summary := range summaries {
+		articleComments := commentsByArticle[summary.ArticleID]
+		latestCommentTime := model.JSONTime{}
+		if len(articleComments) > 0 {
+			latestCommentTime = articleComments[0].CreatedAt
+		}
+		groups = append(groups, &ArticleCommentGroup{
+			ArticleID:         summary.ArticleID,
+			ArticleTitle:      summary.ArticleTitle,
+			CommentCount:      summary.CommentCount,
+			LatestCommentTime: latestCommentTime,
+			Children:          buildCommentTreeAndSort(articleComments),
+		})
+	}
+
+	return groups, total, nil
 }
 
 // UpdateComment 更新评论。
@@ -146,10 +190,17 @@ func buildCommentTreeAndSort(allComments []Comment) []*Comment {
 	sort.Slice(rootComments, func(i, j int) bool {
 		return rootComments[i].CreatedAt.Time.After(rootComments[j].CreatedAt.Time)
 	})
-	for _, root := range rootComments {
-		sort.Slice(root.Children, func(i, j int) bool {
-			return root.Children[i].CreatedAt.Time.After(root.Children[j].CreatedAt.Time)
+	var sortChildren func(comments []*Comment)
+	sortChildren = func(comments []*Comment) {
+		sort.Slice(comments, func(i, j int) bool {
+			return comments[i].CreatedAt.Time.After(comments[j].CreatedAt.Time)
 		})
+		for _, item := range comments {
+			sortChildren(item.Children)
+		}
+	}
+	for _, root := range rootComments {
+		sortChildren(root.Children)
 	}
 	return rootComments
 }

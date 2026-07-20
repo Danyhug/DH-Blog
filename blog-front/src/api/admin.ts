@@ -5,7 +5,7 @@ import { Category } from '@/types/Category'
 import { Page, PageResult } from '@/types/Page'
 import { Tag } from '@/types/Tag'
 import { IpStat } from '@/types/IpStat'
-import { Comment } from "@/types/Comment";
+import { ArticleCommentGroup, Comment } from "@/types/Comment";
 import { SystemConfig, BlogConfig, EmailConfig, AIConfig, StorageConfig } from '@/types/SystemConfig';
 
 /**
@@ -160,28 +160,28 @@ export const getDailyVisitStats = (days?: number): Promise<{date: string, visit_
  * @param pageSize 
  * @returns 
  */
-export const getAllComment = (pageNum: number, pageSize: number): Promise<PageResult<Comment>> => {
+export const getAllComment = (pageNum: number, pageSize: number): Promise<PageResult<ArticleCommentGroup>> => {
   return request.get(`/admin/comment/${pageSize}/${pageNum}`);
 }
 
 /**
  * 编辑评论
  */
-export const editComment = (comment: Comment): Promise<string> => {
+export const editComment = (comment: Comment): Promise<void> => {
   return request.put('/admin/comment', comment)
 }
 
 /**
  * 回复评论
  */
-export const replyComment = (content: string, isPublic: boolean, parentId: number, articleId: number): Promise<string> => {
+export const replyComment = (content: string, isPublic: boolean, parentId: number, articleId: number): Promise<void> => {
   return request.post('/admin/comment/reply', { content, isPublic, parentId, articleId })
 }
 
 /**
  * 删除评论
  */
-export const deleteComment = (id: number): Promise<string> => {
+export const deleteComment = (id: number): Promise<void> => {
   return request.delete(`/admin/comment/${id}`)
 }
 

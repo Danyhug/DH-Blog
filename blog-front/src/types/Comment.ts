@@ -11,3 +11,11 @@ export interface Comment {
   isAdmin?: boolean;
   children?: Comment[]; // 子评论
 }
+
+export interface ArticleCommentGroup {
+  articleId: number;
+  articleTitle: string;
+  commentCount: number;
+  latestCommentTime: string;
+  children: Comment[];
+}
