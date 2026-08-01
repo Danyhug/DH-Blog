@@ -413,10 +413,6 @@
                 </el-card>
             </el-tab-pane>
 
-            <el-tab-pane label="AI网关" name="gateway">
-                <GatewaySettings />
-            </el-tab-pane>
-
             <el-tab-pane label="系统配置" name="settings">
                 <el-card shadow="hover" class="mb-5">
                     <template #header>
@@ -444,8 +440,7 @@
             </el-tab-pane>
         </el-tabs>
 
-        <!-- AI 网关有自己的分区保存与测试动作，不走这里的统一保存 -->
-        <div v-if="activeTab !== 'gateway'" class="flex justify-end mt-5 pt-4 border-t border-gray-200">
+        <div class="flex justify-end mt-5 pt-4 border-t border-gray-200">
             <el-button @click="activeTab = 'site'" size="default">取消</el-button>
             <el-button type="primary" @click="saveConfig" size="default">保存设置</el-button>
         </div>
@@ -487,7 +482,6 @@ import {
     type BackupDirInfo
 } from '@/api/admin';
 import { getDirectoryTree } from '@/api/file';
-import GatewaySettings from '@/components/backend/GatewaySettings.vue';
 import type { SystemConfig, BlogConfig, EmailConfig, AIConfig, StorageConfig } from '@/types/SystemConfig';
 import { ElMessageBox } from 'element-plus';
 import { notify } from '@/utils/notification';

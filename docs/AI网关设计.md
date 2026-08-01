@@ -53,8 +53,8 @@ internal/modules/aigateway/
    - `SchemaModels()` 会自动带上迁移，无需额外改动
 2. `internal/middleware/ip.go`
    - `getResourceType` 中让 `gateway` 走与 `heartbeat` 相同的跳过分支（见 §9）
-3. `blog-front/src/views/backend/SystemView.vue`
-   - 新增「AI 网关」tab
+3. `blog-front/src/router/index.ts` 与 `AdminSide.vue`
+   - 后台新增独立菜单「AI 网关」（`/admin/gateway`），位于「系统配置」之上
 4. `blog-front/src/api/` 新增 `gateway.ts`
 
 ---
@@ -427,11 +427,16 @@ func (Usage) TableName() string { return "ai_gateway_usage" }
 | GET | `/api/admin/gateway/logs` | 分页流水，支持按 provider / status / 时间筛选 |
 | GET | `/api/admin/gateway/stats` | 看板聚合数据 |
 
-前端在 `SystemView.vue` 增加「AI 网关」tab，含三块：
+后台侧是独立页面 `blog-front/src/views/backend/GatewayView.vue`（菜单「AI 网关」，路由 `/admin/gateway`），
+按标签页拆开，各标签页组件放在 `blog-front/src/components/backend/gateway/`：
 
-1. **供应商配置** —— key、启用开关、优先级、权重、RPS、月配额、连通性测试
-2. **API Key 管理** —— 创建/吊销/改配额，明文用对话框展示一次并提示复制
-3. **用量看板** —— 今日调用数、各 provider 占比、缓存命中率、失败率、各家剩余月配额
+1. **概览** —— 今日/近 7 天/近 30 天的调用数、成功率、缓存命中率、消耗额度与花费，各 provider 明细，本月配额进度
+2. **供应商** —— key、启用开关、接口地址、优先级、权重、RPS、月配额、附加参数、连通性测试
+3. **调度策略** —— 负载均衡 / 按优先级 / 模型判断（选项与文案由后端下发，避免与选路引擎脱节）
+4. **接入密钥** —— 基础地址与端点速查、API Key 创建/吊销/改配额，明文用对话框展示一次并提示复制
+5. **请求日志** —— 分页流水，可按 provider / status 筛选
+
+当前标签写进地址栏 `?tab=`，刷新后仍停在同一屏。
 
 ---
 
@@ -486,7 +491,7 @@ API Key 一旦写进前端代码就等同公开。
 - [x] 结果缓存
 - [x] 异步流水记账 + 用量计数器
 - [x] `/api/gateway/v1/search`（POST + GET）与 `/providers`
-- [x] 后台管理接口与「AI 网关」tab
+- [x] 后台管理接口与独立的「AI 网关」页面（按标签页拆分）
 - [x] `getResourceType` 跳过 gateway
 
 实现期间对设计做的两处调整：

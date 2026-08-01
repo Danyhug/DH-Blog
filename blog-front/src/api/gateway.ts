@@ -1,4 +1,17 @@
 import request from '@/api/axios'
+import { SERVER_URL } from '@/types/Constant'
+
+/**
+ * gatewayBaseUrl 拼出 agent 侧要填的完整地址。
+ * 生产环境的 SERVER_URL 是相对路径（/api），直接显示出来无法复制使用。
+ */
+export function gatewayBaseUrl(): string {
+  const configured = (window as any).__SERVER_CONFIG__?.SERVER_URL || SERVER_URL || '/api'
+  const absolute = /^https?:\/\//.test(configured)
+    ? configured
+    : `${window.location.origin}${configured.startsWith('/') ? '' : '/'}${configured}`
+  return `${absolute.replace(/\/+$/, '')}/gateway/v1`
+}
 
 /** 搜索供应商配置（后台视图，密钥始终脱敏） */
 export interface GatewayProvider {

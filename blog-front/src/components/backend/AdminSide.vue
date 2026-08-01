@@ -20,6 +20,12 @@
         </el-icon>
         博客管理
       </el-menu-item>
+      <el-menu-item index="/admin/gateway">
+        <el-icon :size="iconSize">
+          <Connection />
+        </el-icon>
+        AI 网关
+      </el-menu-item>
       <el-menu-item index="/admin/system">
         <el-icon :size="iconSize">
           <Setting />
