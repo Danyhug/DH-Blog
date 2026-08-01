@@ -71,6 +71,7 @@ internal/modules/aigateway/
 | POST | `/api/gateway/v1/search` | 统一搜索主入口 |
 | GET | `/api/gateway/v1/search?q=...` | 同上，便于 curl 与轻量 agent |
 | GET | `/api/gateway/v1/providers` | 查询当前可用供应商与剩余配额 |
+| POST | `/api/gateway/v1/mcp` | MCP Server（见 §15） |
 
 ### 3.2 鉴权
 
@@ -512,7 +513,7 @@ API Key 一旦写进前端代码就等同公开。
 - [x] provider 原生格式透传端点（`/tavily/search`、`/brave/web/search`）
 - [x] 请求日志的定时清理（模块自持 ticker，与 share 的 `tokenManager` 同一写法）
 - [ ] Tavily extract / crawl，Brave news / image
-- [ ] 以 MCP Server 形式暴露，供支持 MCP 的 agent 直连
+- [x] 以 MCP Server 形式暴露，供支持 MCP 的 agent 直连（见 §15）
 - [ ] 自描述的 OpenAI tool schema 端点
 - [ ] API Key 的 IP 白名单
 - [ ] 流水落盘归档与更长周期的统计
@@ -698,3 +699,74 @@ Exa 的种子配置默认不限额，于是在 `auto` 模式下它会稳定压�
 
 切换**立即生效**，不需要重启：策略缓存在 Service 里，写库成功后同步更新。
 供应商配置变更触发的 `Reload` 会重新读取该设置，不会把它重置回默认值。
+
+---
+
+## 15. MCP Server（五期）
+
+让 Claude Code 这类 MCP 客户端把网关当成一个工具服务器挂上去，
+而不是靠提示词教模型拼 curl。
+
+### 15.1 传输选择：只做 JSON，不做流
+
+Streamable HTTP 允许服务端用 `application/json` 直接回，也允许升级成 SSE 流。
+网关的每个请求都是"问一次答一次"，没有服务端主动推送的需求，所以只实现 JSON 那一半：
+
+- `POST /api/gateway/v1/mcp` —— 收 JSON-RPC，回 JSON-RPC
+- `GET` / `DELETE` 同路径 —— 回 405，规范里对"不提供流"的服务端就是这么要求的
+
+这样端点是**无状态**的：不发 session id、不持有长连接，博客换个反向代理、
+重启一次进程都不会让已连上的客户端掉线。
+
+### 15.2 支持的方法
+
+| 方法 | 说明 |
+| --- | --- |
+| `initialize` | 回显客户端请求的协议版本（认识的才回显，否则退到 `2025-06-18`） |
+| `notifications/initialized` | 无 id 的通知，回 202 空体 |
+| `ping` | 回空对象 |
+| `tools/list` | 返回唯一的 `web_search` 工具 |
+| `tools/call` | 执行搜索 |
+
+JSON-RPC 批量请求（2025-06-18 已从规范中移除）明确拒绝，比静默只处理第一条诚实。
+
+### 15.3 工具 schema 按 Key 动态生成
+
+`web_search` 的入参与 `POST /search` 的 body 是同一套字段，**校验也共用 `normalizeSearch`**，
+不存在两套规则各自漂移的问题。
+
+其中 `provider` 的枚举值不是写死的，而是按**这把 Key 实际能用到的供应商**生成：
+禁用的、不在 Key 白名单里的都不会出现。工具说明里也会列出各家的能力
+（谁能给直接答案、谁能返回正文），模型据此决定要不要显式指定。
+
+这是把 MCP 放在网关内部而不是写个本地包装脚本的主要收益——本地脚本拿不到这些状态。
+
+### 15.4 错误的分层
+
+| 情况 | 回法 | 理由 |
+| --- | --- | --- |
+| 未知方法 | JSON-RPC `-32601` | 协议层面的错 |
+| 未知工具名、参数非法 | JSON-RPC `-32602` | 同上 |
+| 限流 / 配额 / 上游故障 | `result.isError = true` + 可读文本 | 执行期失败，要让模型看见并自行决定换问法还是放弃 |
+| Key 无效 | HTTP 401 | 连不上就该在传输层拦掉 |
+
+### 15.5 计费与流水
+
+MCP 调用与统一接口走的是同一条 `Service.Search` 路径，
+限速、Key 配额、供应商配额、缓存、熔断、回退全部一致。
+唯一区别是流水里的 `endpoint` 记为 `mcp/search`，后台请求日志可据此单独筛选。
+
+为此把 `Search` 拆成 `Search`（默认标 `search`）与 `SearchFrom`（显式传标签），
+而不是给 `SearchRequest` 加一个与请求内容无关的字段。
+
+### 15.6 接入
+
+后台「AI 网关 → 接入密钥」页直接给出可复制的命令，基础地址按当前站点拼好：
+
+```bash
+claude mcp add --transport http dh-search https://<站点>/api/gateway/v1/mcp \
+  --header "Authorization: Bearer <网关 Key>" --scope user
+```
+
+站点还在 http 时页面会显式警告 Key 以明文传输，但不阻止使用——
+本机或内网直连是合理场景，公网则应尽快换 https。

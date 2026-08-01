@@ -288,12 +288,18 @@ type cachedSearch struct {
 
 // Search runs one gateway search on behalf of an authenticated key.
 func (s *Service) Search(ctx context.Context, key *APIKey, req SearchRequest, clientIP string) (SearchResult, error) {
+	return s.SearchFrom(ctx, key, req, clientIP, "search")
+}
+
+// SearchFrom is Search with an explicit流水标签。统一接口与 MCP 走的是同一条
+// 路径，只有日志里的 endpoint 能区分调用来自哪个入口。
+func (s *Service) SearchFrom(ctx context.Context, key *APIKey, req SearchRequest, clientIP, endpoint string) (SearchResult, error) {
 	started := s.now()
 	requestID := newRequestID()
 
 	entry := RequestLog{
 		CreatedAt: started,
-		Endpoint:  "search",
+		Endpoint:  endpoint,
 		Query:     truncateQuery(req.Query),
 		ClientIP:  clientIP,
 	}

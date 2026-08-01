@@ -47,6 +47,46 @@
             </div>
         </el-card>
 
+        <el-card shadow="hover" class="mb-5">
+            <template #header>
+                <span class="flex items-center">
+                    <el-icon class="mr-2">
+                        <MagicStick />
+                    </el-icon> 接入 Claude Code
+                </span>
+            </template>
+
+            <el-alert v-if="insecureTransport" type="warning" :closable="false" show-icon class="mb-4">
+                <template #title>
+                    当前基础地址是 http，Key 会以明文经过网络。建议只在本机或内网这么连，公网请尽快换成 https。
+                </template>
+            </el-alert>
+
+            <div class="text-sm text-gray-600 mb-2">1. 终端执行（把 Key 换成下面签发的那把）：</div>
+            <div class="code-block">
+                <pre>{{ mcpAddCommand }}</pre>
+                <el-button class="!absolute top-2 right-2" link type="primary" :icon="CopyDocument"
+                    @click="copy(mcpAddCommand, '命令')" />
+            </div>
+
+            <div class="text-sm text-gray-600 mt-4 mb-2">
+                或写进项目的 <code>.mcp.json</code>，Key 从环境变量取、不落进仓库：
+            </div>
+            <div class="code-block">
+                <pre>{{ mcpJson }}</pre>
+                <el-button class="!absolute top-2 right-2" link type="primary" :icon="CopyDocument"
+                    @click="copy(mcpJson, '配置')" />
+            </div>
+
+            <div class="mt-4 text-xs text-gray-400 leading-relaxed">
+                2. 装好后在 Claude Code 里执行 <code>/mcp</code> 应该能看到 <code>dh-search</code>，工具名 <code>web_search</code>，
+                可选的 provider 会按这把 Key 的供应商限制自动裁剪。<br />
+                3. 想让搜索一律走网关，在 <code>~/.claude/settings.json</code> 里加
+                <code>"permissions": { "deny": ["WebSearch"] }</code> 禁掉内置搜索。<br />
+                MCP 调用与统一接口共用限速、配额与缓存，流水里的 endpoint 记为 <code>mcp/search</code>，可在请求日志里单独筛。
+            </div>
+        </el-card>
+
         <el-card shadow="hover">
             <template #header>
                 <div class="flex items-center justify-between">
@@ -131,20 +171,28 @@
         </el-dialog>
 
         <!-- 明文只展示一次 -->
-        <el-dialog v-model="secretDialogVisible" title="请立即保存这个 Key" width="520px" :close-on-click-modal="false">
+        <el-dialog v-model="secretDialogVisible" title="请立即保存这个 Key" width="620px" :close-on-click-modal="false">
             <el-alert type="warning" :closable="false" show-icon class="mb-4" title="明文只显示这一次，关闭后无法再次查看。" />
             <el-input :model-value="createdSecret" readonly />
+
+            <div class="mt-4 mb-2 text-sm text-gray-600">接入 Claude Code，直接复制执行：</div>
+            <div class="code-block">
+                <pre>{{ createdMcpCommand }}</pre>
+                <el-button class="!absolute top-2 right-2" link type="primary" :icon="CopyDocument"
+                    @click="copy(createdMcpCommand, '命令')" />
+            </div>
+
             <template #footer>
-                <el-button type="primary" @click="copySecret">复制并关闭</el-button>
+                <el-button type="primary" @click="copySecret">复制 Key 并关闭</el-button>
             </template>
         </el-dialog>
     </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { ElMessageBox } from 'element-plus';
-import { CopyDocument, Key, Link, Refresh } from '@element-plus/icons-vue';
+import { CopyDocument, Key, Link, MagicStick, Refresh } from '@element-plus/icons-vue';
 import { notify } from '@/utils/notification';
 import { formatTime } from './format';
 import {
@@ -167,8 +215,30 @@ const endpoints = [
     { method: 'GET', path: '/providers', desc: '列出当前可用的供应商及其能力' },
     { method: 'POST', path: '/tavily/search', desc: 'Tavily 原生透传' },
     { method: 'GET', path: '/brave/web/search', desc: 'Brave 原生透传' },
-    { method: 'POST', path: '/exa/search', desc: 'Exa 原生透传' }
+    { method: 'POST', path: '/exa/search', desc: 'Exa 原生透传' },
+    { method: 'POST', path: '/mcp', desc: 'MCP Server，供 Claude Code 等 MCP 客户端挂载，见下方接入说明' }
 ];
+
+const mcpUrl = `${baseUrl}/mcp`;
+// 用户暂时没上 https 时如实提示，而不是假装 Key 传输是安全的
+const insecureTransport = mcpUrl.startsWith('http://');
+
+function mcpCommandFor(key: string) {
+    return `claude mcp add --transport http dh-search ${mcpUrl} \\\n  --header "Authorization: Bearer ${key}" --scope user`;
+}
+
+const mcpAddCommand = mcpCommandFor('<你的网关 Key>');
+
+// 单引号字符串，${DH_GATEWAY_KEY} 是要原样写进配置的占位符，不能被模板插值吃掉
+const mcpJson = JSON.stringify({
+    mcpServers: {
+        'dh-search': {
+            type: 'http',
+            url: mcpUrl,
+            headers: { Authorization: 'Bearer ${DH_GATEWAY_KEY}' }
+        }
+    }
+}, null, 2);
 
 const apiKeys = ref<GatewayApiKey[]>([]);
 const loading = ref(false);
@@ -185,6 +255,9 @@ const createForm = ref<CreateGatewayApiKeyPayload>({
 });
 const secretDialogVisible = ref(false);
 const createdSecret = ref('');
+
+// 刚签发的 Key 直接拼进命令里，省得再手动粘一次
+const createdMcpCommand = computed(() => mcpCommandFor(createdSecret.value));
 
 async function load() {
     loading.value = true;
@@ -260,3 +333,22 @@ async function onDelete(key: GatewayApiKey) {
 
 onMounted(load);
 </script>
+
+<style scoped>
+.code-block {
+    position: relative;
+    padding: 12px 40px 12px 14px;
+    border: 1px solid #e4e7ed;
+    border-radius: 8px;
+    background-color: #fafafa;
+}
+
+.code-block pre {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #476582;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+</style>
