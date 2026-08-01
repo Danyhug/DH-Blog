@@ -7,6 +7,7 @@ import (
 	"dh-blog/internal/config"
 	"dh-blog/internal/dhcache"
 	adminmodule "dh-blog/internal/modules/admin"
+	aigatewaymodule "dh-blog/internal/modules/aigateway"
 	articlemodule "dh-blog/internal/modules/article"
 	commentmodule "dh-blog/internal/modules/comment"
 	filesmodule "dh-blog/internal/modules/files"
@@ -106,6 +107,13 @@ var moduleRegistrations = []moduleRegistration{
 			}), nil
 		},
 	},
+	{
+		Name:            "aigateway",
+		MigrationModels: aigatewaymodule.MigrationModels,
+		Build: func(ctx *buildContext) (router.Module, error) {
+			return ctx.aigateway()
+		},
+	},
 }
 
 // buildContext is the application composition container. Concrete modules are
@@ -128,6 +136,7 @@ type buildContext struct {
 	systemModule  *systemmodule.Module
 	articleModule *articlemodule.Module
 	shareModule   *sharemodule.Module
+	gatewayModule *aigatewaymodule.Module
 }
 
 func newBuildContext(conf *config.Config, db *gorm.DB, paths applicationPaths) *buildContext {
@@ -234,6 +243,29 @@ func (ctx *buildContext) share() *sharemodule.Module {
 	return ctx.shareModule
 }
 
+func (ctx *buildContext) aigateway() (*aigatewaymodule.Module, error) {
+	if ctx.gatewayModule != nil {
+		return ctx.gatewayModule, nil
+	}
+	gateway := ctx.conf.AIGateway
+	module, err := aigatewaymodule.New(aigatewaymodule.Dependencies{
+		DB:    ctx.db,
+		Cache: ctx.cache,
+		Options: aigatewaymodule.Options{
+			CacheTTL:         gateway.CacheTTL,
+			UpstreamTimeout:  gateway.UpstreamTimeout,
+			QueueWait:        gateway.QueueWait,
+			LogRetentionDays: gateway.LogRetentionDays,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	module.SetEnabled(gateway.Enabled)
+	ctx.gatewayModule = module
+	return module, nil
+}
+
 func (ctx *buildContext) buildModules() ([]router.Module, error) {
 	modules := make([]router.Module, 0, len(moduleRegistrations))
 	for _, registration := range moduleRegistrations {
@@ -254,12 +286,15 @@ func (ctx *buildContext) starts() []func() {
 }
 
 func (ctx *buildContext) shutdowns() []func() {
-	shutdowns := make([]func(), 0, 3)
+	shutdowns := make([]func(), 0, 4)
 	if ctx.tasks != nil {
 		shutdowns = append(shutdowns, ctx.tasks.Stop)
 	}
 	if ctx.shareModule != nil {
 		shutdowns = append(shutdowns, ctx.shareModule.Shutdown)
+	}
+	if ctx.gatewayModule != nil {
+		shutdowns = append(shutdowns, ctx.gatewayModule.Shutdown)
 	}
 	return append(shutdowns, ctx.cache.Shutdown)
 }
@@ -267,6 +302,9 @@ func (ctx *buildContext) shutdowns() []func() {
 func (ctx *buildContext) cleanupAfterBuildFailure() {
 	if ctx.shareModule != nil {
 		ctx.shareModule.Shutdown()
+	}
+	if ctx.gatewayModule != nil {
+		ctx.gatewayModule.Shutdown()
 	}
 	ctx.cache.Shutdown()
 }

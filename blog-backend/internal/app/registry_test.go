@@ -13,6 +13,7 @@ func TestModuleRegistrationsAreCompleteAndPreserveRouteOrder(t *testing.T) {
 		"files",
 		"share",
 		"webdav",
+		"aigateway",
 	}
 	if len(moduleRegistrations) != len(expectedOrder) {
 		t.Fatalf("module registration count = %d, want %d", len(moduleRegistrations), len(expectedOrder))

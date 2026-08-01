@@ -50,12 +50,23 @@ type WebDAVServer struct {
 	Prefix  string `yaml:"prefix"`  // WebDAV 路由前缀，默认 "/dav"
 }
 
+// AIGateway 配置 AI 网关（一期：搜索网关）。供应商密钥与配额存在数据库里，
+// 这里只放需要重启才会变、且与部署强相关的运行参数。
+type AIGateway struct {
+	Enabled          bool          `yaml:"enabled"`          // 是否对外开放网关接口
+	CacheTTL         time.Duration `yaml:"cacheTTL"`         // 搜索结果缓存时长，0 表示关闭
+	UpstreamTimeout  time.Duration `yaml:"upstreamTimeout"`  // 单次上游调用超时
+	QueueWait        time.Duration `yaml:"queueWait"`        // 出站限速最长排队时间
+	LogRetentionDays int           `yaml:"logRetentionDays"` // 请求日志保留天数
+}
+
 type Config struct {
 	Server       Server       `yaml:"server"`
 	DataBase     DataBase     `yaml:"database"`
 	JwtSecret    string       `yaml:"jwtSecret"`
 	Upload       Upload       `yaml:"upload"`       // New upload configuration
 	WebDAVServer WebDAVServer `yaml:"webdavServer"` // WebDAV 服务端配置
+	AIGateway    AIGateway    `yaml:"aiGateway"`    // AI 网关配置
 }
 
 // 获取一个随机字符串，用于生成 JWT 密钥
@@ -98,6 +109,13 @@ func DefaultConfig() *Config {
 		WebDAVServer: WebDAVServer{
 			Enabled: true,
 			Prefix:  "/dav",
+		},
+		AIGateway: AIGateway{
+			Enabled:          true,
+			CacheTTL:         time.Minute * 15,
+			UpstreamTimeout:  time.Second * 15,
+			QueueWait:        time.Second * 2,
+			LogRetentionDays: 90,
 		},
 	}
 }
@@ -155,6 +173,13 @@ func Init() (*Config, error) {
 	v.SetDefault("webdavServer", map[string]any{
 		"enabled": defaultCfg.WebDAVServer.Enabled,
 		"prefix":  defaultCfg.WebDAVServer.Prefix,
+	})
+	v.SetDefault("aiGateway", map[string]any{
+		"enabled":          defaultCfg.AIGateway.Enabled,
+		"cacheTTL":         defaultCfg.AIGateway.CacheTTL,
+		"upstreamTimeout":  defaultCfg.AIGateway.UpstreamTimeout,
+		"queueWait":        defaultCfg.AIGateway.QueueWait,
+		"logRetentionDays": defaultCfg.AIGateway.LogRetentionDays,
 	})
 
 	// 2. 尝试读取现有配置文件

@@ -28,6 +28,20 @@ type IPService interface {
 	IsIPBanned(ip string) (bool, error)
 }
 
+// skippedResourceTypes are request kinds that must not reach the access log.
+// Heartbeats are pure noise, and AI gateway traffic is machine-to-machine: it
+// would drown the blog's visitor statistics and trigger one geo-IP lookup per
+// agent call. The gateway keeps its own, richer request log instead.
+var skippedResourceTypes = map[string]struct{}{
+	"heartbeat": {},
+	"gateway":   {},
+}
+
+func skipAccessLog(resourceType string) bool {
+	_, skipped := skippedResourceTypes[resourceType]
+	return skipped
+}
+
 func getResourceType(path string) string {
 	if strings.HasPrefix(path, "/api/user/heart") {
 		return "heartbeat"
@@ -60,7 +74,7 @@ func IPMiddleware(ipService IPService) gin.HandlerFunc {
 		requestURL := c.Request.URL.String()
 
 		go func() {
-			if resourceType == "heartbeat" {
+			if skipAccessLog(resourceType) {
 				return
 			}
 			os, browser := utils.ParseUserAgent(userAgent)
