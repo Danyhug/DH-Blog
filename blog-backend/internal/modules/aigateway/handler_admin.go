@@ -2,6 +2,7 @@ package aigateway
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -85,6 +86,12 @@ func (h *handler) updateSettings(c *gin.Context) {
 		adminFailure(c, http.StatusBadRequest, "未知的调度方式: "+*req.RoutingStrategy)
 		return
 	}
+	// 没接入的调度方式一律拒收。之前允许保存再回落到负载均衡，等于后台显示的和
+	// 实际执行的不是一回事，还不如直接不让选。
+	if !strategy.Implemented() {
+		adminFailure(c, http.StatusBadRequest, "该调度方式尚未接入，暂时不能启用")
+		return
+	}
 	if err := h.service.SetStrategy(c.Request.Context(), strategy); err != nil {
 		adminFailure(c, http.StatusInternalServerError, err.Error())
 		return
@@ -92,27 +99,42 @@ func (h *handler) updateSettings(c *gin.Context) {
 	adminSuccess(c)
 }
 
+// providerKeyView is one upstream credential as the admin page sees it.
+type providerKeyView struct {
+	ID         int        `json:"id"`
+	Label      string     `json:"label"`
+	Masked     string     `json:"masked"`
+	Enabled    bool       `json:"enabled"`
+	Status     string     `json:"status"`
+	LastError  string     `json:"lastError"`
+	LastUsedAt *time.Time `json:"lastUsedAt"`
+	DisabledAt *time.Time `json:"disabledAt"`
+	// InRotation folds enabled + status + the monthly self-recovery into the
+	// one thing the page actually needs to show.
+	InRotation bool `json:"inRotation"`
+}
+
 // providerView is a provider row as the admin page sees it: never the raw key.
 type providerView struct {
-	Name          string  `json:"name"`
-	DisplayName   string  `json:"displayName"`
-	HomeURL       string  `json:"homeUrl"`
-	DocsURL       string  `json:"docsUrl"`
-	ConsoleURL    string  `json:"consoleUrl"`
-	LogoURL       string  `json:"logoUrl"`
-	Billing       string  `json:"billing"`
-	Enabled       bool    `json:"enabled"`
-	APIKeyMasked  string  `json:"apiKeyMasked"`
-	APIKeyPresent bool    `json:"apiKeyPresent"`
-	BaseURL       string  `json:"baseUrl"`
-	Priority      int     `json:"priority"`
-	Weight        int     `json:"weight"`
-	RPS           float64 `json:"rps"`
-	MonthlyQuota  int     `json:"monthlyQuota"`
-	MonthlyUsed   int     `json:"monthlyUsed"`
-	MonthlyCost   int     `json:"monthlyCostMicroUsd"`
-	Extra         string  `json:"extra"`
-	Health        string  `json:"health"`
+	Name         string            `json:"name"`
+	DisplayName  string            `json:"displayName"`
+	HomeURL      string            `json:"homeUrl"`
+	DocsURL      string            `json:"docsUrl"`
+	ConsoleURL   string            `json:"consoleUrl"`
+	LogoURL      string            `json:"logoUrl"`
+	Billing      string            `json:"billing"`
+	Enabled      bool              `json:"enabled"`
+	Keys         []providerKeyView `json:"keys"`
+	ActiveKeys   int               `json:"activeKeys"`
+	BaseURL      string            `json:"baseUrl"`
+	Priority     int               `json:"priority"`
+	Weight       int               `json:"weight"`
+	RPS          float64           `json:"rps"`
+	MonthlyQuota int               `json:"monthlyQuota"`
+	MonthlyUsed  int               `json:"monthlyUsed"`
+	MonthlyCost  int               `json:"monthlyCostMicroUsd"`
+	Extra        string            `json:"extra"`
+	Health       string            `json:"health"`
 }
 
 func (h *handler) listProviders(c *gin.Context) {
@@ -124,13 +146,12 @@ func (h *handler) listProviders(c *gin.Context) {
 	adminSuccess(c, views)
 }
 
-// providerPatch is the admin update payload. APIKey is only written when a
-// non-empty value arrives, so the masked value the page displays can be posted
-// back without erasing the stored credential.
+// providerPatch is the admin update payload. Credentials are deliberately not
+// part of it: they live in their own table and are managed through the
+// /keys endpoints, so there is exactly one way to add or retire one.
 type providerPatch struct {
 	DisplayName  *string  `json:"displayName"`
 	Enabled      *bool    `json:"enabled"`
-	APIKey       *string  `json:"apiKey"`
 	BaseURL      *string  `json:"baseUrl"`
 	Priority     *int     `json:"priority"`
 	Weight       *int     `json:"weight"`
@@ -153,11 +174,6 @@ func (h *handler) updateProvider(c *gin.Context) {
 	}
 	if patch.Enabled != nil {
 		updates["enabled"] = *patch.Enabled
-	}
-	if patch.APIKey != nil {
-		if key := strings.TrimSpace(*patch.APIKey); key != "" {
-			updates["api_key"] = key
-		}
 	}
 	if patch.BaseURL != nil {
 		updates["base_url"] = strings.TrimSpace(*patch.BaseURL)
@@ -215,23 +231,160 @@ func (h *handler) updateProvider(c *gin.Context) {
 }
 
 // testProvider issues one real search so an operator can confirm a credential
-// without waiting for an agent to hit the gateway.
+// without waiting for an agent to hit the gateway. The body is optional: send a
+// draft key to check it before saving, a keyId to check one stored credential,
+// or nothing to check whichever credential is next in rotation.
 func (h *handler) testProvider(c *gin.Context) {
 	name := strings.ToLower(strings.TrimSpace(c.Param("name")))
-	runtime := h.service.runtime(name)
-	if runtime == nil {
-		adminFailure(c, http.StatusNotFound, ErrProviderNotFound.Error())
+	var probe ProviderProbe
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&probe); err != nil {
+			adminFailure(c, http.StatusBadRequest, "参数错误: "+err.Error())
+			return
+		}
+	}
+
+	result, err := h.service.TestProvider(c.Request.Context(), name, probe)
+	if err != nil {
+		adminFailure(c, providerErrorStatus(err), providerErrorMessage(err))
+		return
+	}
+	adminSuccess(c, result)
+}
+
+func providerErrorStatus(err error) int {
+	switch {
+	case errors.Is(err, ErrProviderNotFound), errors.Is(err, ErrProviderKeyNotFound):
+		return http.StatusNotFound
+	default:
+		return http.StatusInternalServerError
+	}
+}
+
+func providerErrorMessage(err error) string {
+	if errors.Is(err, ErrProviderKeyNotFound) {
+		return "该供应商还没有可用的密钥，请先填一个再测试"
+	}
+	return err.Error()
+}
+
+// providerKeyPayload creates or updates one upstream credential.
+type providerKeyPayload struct {
+	Label   *string `json:"label"`
+	APIKey  *string `json:"apiKey"`
+	Enabled *bool   `json:"enabled"`
+	// Revive puts a parked credential back into rotation and clears the reason.
+	Revive bool `json:"revive"`
+}
+
+func (h *handler) createProviderKey(c *gin.Context) {
+	name := strings.ToLower(strings.TrimSpace(c.Param("name")))
+	if _, err := h.service.repo.providerByName(c.Request.Context(), name); err != nil {
+		adminFailure(c, providerErrorStatus(err), err.Error())
 		return
 	}
 
-	started := time.Now()
-	result, err := runtime.provider.Search(c.Request.Context(), searchProbe())
-	latency := int(time.Since(started) / time.Millisecond)
-	if err != nil {
-		adminSuccess(c, gin.H{"ok": false, "latencyMs": latency, "error": err.Error()})
+	var payload providerKeyPayload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		adminFailure(c, http.StatusBadRequest, "参数错误: "+err.Error())
 		return
 	}
-	adminSuccess(c, gin.H{"ok": true, "latencyMs": latency, "resultCount": len(result.Results)})
+	secret := ""
+	if payload.APIKey != nil {
+		secret = strings.TrimSpace(*payload.APIKey)
+	}
+	if secret == "" {
+		adminFailure(c, http.StatusBadRequest, "密钥不能为空")
+		return
+	}
+
+	key := ProviderKey{
+		Provider: name,
+		Label:    labelOrDefault(payload.Label),
+		APIKey:   secret,
+		Enabled:  payload.Enabled == nil || *payload.Enabled,
+		Status:   ProviderKeyActive,
+	}
+	if err := h.service.repo.createProviderKey(c.Request.Context(), &key); err != nil {
+		adminFailure(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.reloadAfterChange(c, key.ID)
+}
+
+func (h *handler) updateProviderKey(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		adminFailure(c, http.StatusBadRequest, "非法的密钥 ID")
+		return
+	}
+	var payload providerKeyPayload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		adminFailure(c, http.StatusBadRequest, "参数错误: "+err.Error())
+		return
+	}
+
+	updates := map[string]any{}
+	if payload.Label != nil {
+		updates["label"] = strings.TrimSpace(*payload.Label)
+	}
+	if payload.APIKey != nil {
+		if secret := strings.TrimSpace(*payload.APIKey); secret != "" {
+			// 换了新密钥就当它是好的，顺手清掉上一把留下的停用原因
+			updates["api_key"] = secret
+			updates["status"] = ProviderKeyActive
+			updates["last_error"] = ""
+			updates["disabled_at"] = nil
+		}
+	}
+	if payload.Enabled != nil {
+		updates["enabled"] = *payload.Enabled
+	}
+	if payload.Revive {
+		updates["status"] = ProviderKeyActive
+		updates["last_error"] = ""
+		updates["disabled_at"] = nil
+	}
+	if len(updates) == 0 {
+		adminSuccess(c)
+		return
+	}
+
+	if err := h.service.repo.updateProviderKey(c.Request.Context(), id, updates); err != nil {
+		adminFailure(c, providerErrorStatus(err), err.Error())
+		return
+	}
+	h.reloadAfterChange(c, id)
+}
+
+func (h *handler) deleteProviderKey(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		adminFailure(c, http.StatusBadRequest, "非法的密钥 ID")
+		return
+	}
+	if err := h.service.repo.deleteProviderKey(c.Request.Context(), id); err != nil {
+		adminFailure(c, providerErrorStatus(err), err.Error())
+		return
+	}
+	h.reloadAfterChange(c, id)
+}
+
+// reloadAfterChange rebuilds the runtimes so a credential change takes effect
+// on the next request instead of after a restart.
+func (h *handler) reloadAfterChange(c *gin.Context, id int) {
+	if err := h.service.Reload(c.Request.Context()); err != nil {
+		adminFailure(c, http.StatusInternalServerError, "已保存但重新加载失败: "+err.Error())
+		return
+	}
+	adminSuccess(c, gin.H{"id": id})
+}
+
+func labelOrDefault(label *string) string {
+	if label == nil {
+		return ""
+	}
+	return strings.TrimSpace(*label)
 }
 
 // apiKeyView never carries the plaintext credential.
@@ -288,6 +441,7 @@ func (h *handler) createAPIKey(c *gin.Context) {
 		Name:             strings.TrimSpace(req.Name),
 		KeyPrefix:        APIKeyPrefixOf(plain),
 		KeyHash:          HashAPIKey(plain),
+		KeyPlain:         plain,
 		Enabled:          true,
 		AllowedProviders: normalizeAllowed(req.AllowedProviders),
 		RateLimitPerMin:  req.RateLimitPerMin,
@@ -314,6 +468,30 @@ type updateKeyRequest struct {
 	RateLimitPerMin  *int    `json:"rateLimitPerMin"`
 	MonthlyQuota     *int    `json:"monthlyQuota"`
 	Note             *string `json:"note"`
+}
+
+// revealAPIKey hands the plaintext back so the same key can be copied again.
+//
+// The gateway stores it alongside the hash on purpose: a key that can only be
+// copied once means a mislaid key forces a reissue plus reconfiguring every
+// agent that used it. Verification still runs off the hash, and this endpoint
+// is the only reader of the column — the list endpoint never carries it.
+func (h *handler) revealAPIKey(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		adminFailure(c, http.StatusBadRequest, "无效的 ID")
+		return
+	}
+	key, err := h.service.repo.apiKeyByID(c.Request.Context(), id)
+	if err != nil {
+		adminFailure(c, http.StatusNotFound, err.Error())
+		return
+	}
+	if key.KeyPlain == "" {
+		adminFailure(c, http.StatusGone, "这把 Key 签发于只存哈希的版本，明文无法找回，请重新签发")
+		return
+	}
+	adminSuccess(c, gin.H{"id": key.ID, "name": key.Name, "apiKey": key.KeyPlain})
 }
 
 func (h *handler) updateAPIKey(c *gin.Context) {

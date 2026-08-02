@@ -13,6 +13,21 @@ export function gatewayBaseUrl(): string {
   return `${absolute.replace(/\/+$/, '')}/gateway/v1`
 }
 
+/** 上游凭据。一个供应商可以配多把，网关轮换使用，被上游拒掉的会自动停止调度 */
+export interface GatewayProviderKey {
+  id: number
+  label: string
+  masked: string
+  enabled: boolean
+  /** active / auth_failed / quota_exceeded */
+  status: string
+  lastError: string
+  lastUsedAt: string | null
+  disabledAt: string | null
+  /** 是否正在参与调度，已折算了启用状态与跨月自愈 */
+  inRotation: boolean
+}
+
 /** 搜索供应商配置（后台视图，密钥始终脱敏） */
 export interface GatewayProvider {
   name: string
@@ -25,8 +40,9 @@ export interface GatewayProvider {
   /** 计费方式说明，三家口径不同，用于避免看板数字被误读 */
   billing: string
   enabled: boolean
-  apiKeyMasked: string
-  apiKeyPresent: boolean
+  keys: GatewayProviderKey[]
+  /** 当前仍在轮换中的密钥数 */
+  activeKeys: number
   baseUrl: string
   priority: number
   weight: number
@@ -39,11 +55,10 @@ export interface GatewayProvider {
   health: 'closed' | 'open' | 'half_open'
 }
 
-/** 供应商配置补丁，字段留空表示不修改 */
+/** 供应商配置补丁，字段留空表示不修改。凭据不在其中，走 keys 接口管理 */
 export interface GatewayProviderPatch {
   displayName?: string
   enabled?: boolean
-  apiKey?: string
   baseUrl?: string
   priority?: number
   weight?: number
@@ -52,11 +67,20 @@ export interface GatewayProviderPatch {
   extra?: string
 }
 
+/** 连通性测试的入参，全部可选：带 apiKey 就是"保存前先测" */
+export interface GatewayProviderProbe {
+  keyId?: number
+  apiKey?: string
+  baseUrl?: string
+  extra?: string
+}
+
 export interface GatewayProviderTestResult {
   ok: boolean
   latencyMs: number
   resultCount?: number
   error?: string
+  keyLabel?: string
 }
 
 /** 网关签发给 agent 的 API Key（不含明文） */
@@ -169,8 +193,24 @@ export function updateGatewayProvider(name: string, data: GatewayProviderPatch) 
   return request({ url: `/admin/gateway/providers/${name}`, method: 'put', data })
 }
 
-export function testGatewayProvider(name: string): Promise<GatewayProviderTestResult> {
-  return request({ url: `/admin/gateway/providers/${name}/test`, method: 'post' })
+export function testGatewayProvider(name: string, probe: GatewayProviderProbe = {}): Promise<GatewayProviderTestResult> {
+  return request({ url: `/admin/gateway/providers/${name}/test`, method: 'post', data: probe })
+}
+
+export function createGatewayProviderKey(name: string, data: { label?: string; apiKey: string }) {
+  return request({ url: `/admin/gateway/providers/${name}/keys`, method: 'post', data })
+}
+
+export function updateGatewayProviderKey(
+  name: string,
+  id: number,
+  data: { label?: string; apiKey?: string; enabled?: boolean; revive?: boolean }
+) {
+  return request({ url: `/admin/gateway/providers/${name}/keys/${id}`, method: 'put', data })
+}
+
+export function deleteGatewayProviderKey(name: string, id: number) {
+  return request({ url: `/admin/gateway/providers/${name}/keys/${id}`, method: 'delete' })
 }
 
 export function getGatewayApiKeys(): Promise<GatewayApiKey[]> {
@@ -179,6 +219,11 @@ export function getGatewayApiKeys(): Promise<GatewayApiKey[]> {
 
 export function createGatewayApiKey(data: CreateGatewayApiKeyPayload): Promise<CreatedGatewayApiKey> {
   return request({ url: '/admin/gateway/keys', method: 'post', data })
+}
+
+/** 再次取出明文，用于重复复制；后端只在这个接口返回它 */
+export function revealGatewayApiKey(id: number): Promise<{ id: number; name: string; apiKey: string }> {
+  return request({ url: `/admin/gateway/keys/${id}/reveal`, method: 'get' })
 }
 
 export function updateGatewayApiKey(id: number, data: Partial<GatewayApiKey>) {

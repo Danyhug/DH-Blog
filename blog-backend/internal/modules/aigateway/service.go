@@ -47,12 +47,107 @@ type Dependencies struct {
 	Options    Options
 }
 
-// providerRuntime pairs a provider adapter with its pacing and health state.
-type providerRuntime struct {
-	config   Provider
+// providerKeyRuntime pairs one upstream credential with the adapter built from
+// it. Adapters are cheap structs, so one per credential costs nothing and keeps
+// the key out of the request-path call signature.
+type providerKeyRuntime struct {
+	config   ProviderKey
 	provider search.Provider
-	limiter  *search.Limiter
-	breaker  *search.Breaker
+}
+
+// providerRuntime holds a provider's credentials plus its pacing and health
+// state. Pacing and health are per provider, not per credential: the rate limit
+// protects the upstream account family, and a broken upstream is broken no
+// matter which key is presented.
+type providerRuntime struct {
+	config Provider
+	// capability and passthrough come from a keyless probe adapter — both are
+	// static per provider, so asking them never requires a live credential.
+	capability  search.Capability
+	passthrough bool
+
+	mu     sync.Mutex
+	keys   []*providerKeyRuntime
+	cursor int
+
+	limiter *search.Limiter
+	breaker *search.Breaker
+}
+
+// pick returns the next usable credential in round-robin order, or nil when the
+// provider has none left.
+func (r *providerRuntime) pick(now time.Time) *providerKeyRuntime {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for range r.keys {
+		candidate := r.keys[r.cursor%len(r.keys)]
+		r.cursor = (r.cursor + 1) % len(r.keys)
+		if candidate.config.Usable(now) {
+			return candidate
+		}
+	}
+	return nil
+}
+
+// firstUsableKey returns a credential without advancing the rotation cursor,
+// for callers that are inspecting rather than serving traffic.
+func (r *providerRuntime) firstUsableKey(now time.Time) *providerKeyRuntime {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, key := range r.keys {
+		if key.config.Usable(now) {
+			return key
+		}
+	}
+	return nil
+}
+
+// usableKeys counts the credentials currently in rotation.
+func (r *providerRuntime) usableKeys(now time.Time) int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	count := 0
+	for _, key := range r.keys {
+		if key.config.Usable(now) {
+			count++
+		}
+	}
+	return count
+}
+
+// park takes a credential out of rotation in memory. It reports false when the
+// key was already parked, so a concurrent second failure does not log twice.
+func (r *providerRuntime) park(id int, status, reason string, now time.Time) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, key := range r.keys {
+		if key.config.ID != id {
+			continue
+		}
+		if key.config.Status == status {
+			return false
+		}
+		key.config.Status = status
+		key.config.LastError = truncateQuery(reason)
+		parked := now
+		key.config.DisabledAt = &parked
+		return true
+	}
+	return false
+}
+
+// revive marks a self-recovered credential active again in memory.
+func (r *providerRuntime) revive(id int) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, key := range r.keys {
+		if key.config.ID == id {
+			key.config.Status = ProviderKeyActive
+			key.config.LastError = ""
+			key.config.DisabledAt = nil
+			return
+		}
+	}
 }
 
 // pruneInterval is how often expired request logs are swept. Retention is
@@ -121,9 +216,18 @@ func (s *Service) Reload(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	credentials, err := s.repo.listProviderKeys(ctx)
+	if err != nil {
+		return err
+	}
 	strategy, err := s.loadStrategy(ctx)
 	if err != nil {
 		return err
+	}
+
+	byProvider := make(map[string][]ProviderKey, len(providers))
+	for _, credential := range credentials {
+		byProvider[credential.Provider] = append(byProvider[credential.Provider], credential)
 	}
 
 	s.mu.Lock()
@@ -132,12 +236,25 @@ func (s *Service) Reload(ctx context.Context) error {
 
 	rebuilt := make(map[string]*providerRuntime, len(providers))
 	for _, config := range providers {
-		adapter, err := s.buildAdapter(config)
+		probe, err := s.buildAdapter(config, "")
 		if err != nil {
 			logrus.Warnf("搜索供应商 %s 初始化失败: %v", config.Name, err)
 			continue
 		}
-		runtime := &providerRuntime{config: config, provider: adapter}
+		_, forwards := probe.(search.Forwarder)
+		runtime := &providerRuntime{
+			config:      config,
+			capability:  probe.Capabilities(),
+			passthrough: forwards,
+		}
+		for _, credential := range byProvider[config.Name] {
+			adapter, err := s.buildAdapter(config, credential.APIKey)
+			if err != nil {
+				logrus.Warnf("供应商 %s 的密钥 %d 初始化失败: %v", config.Name, credential.ID, err)
+				continue
+			}
+			runtime.keys = append(runtime.keys, &providerKeyRuntime{config: credential, provider: adapter})
+		}
 		if previous, ok := s.runtimes[config.Name]; ok {
 			runtime.breaker = previous.breaker
 			if previous.limiter.Rate() == config.RPS {
@@ -156,22 +273,22 @@ func (s *Service) Reload(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) buildAdapter(config Provider) (search.Provider, error) {
+func (s *Service) buildAdapter(config Provider, apiKey string) (search.Provider, error) {
 	switch config.Name {
 	case search.ProviderBrave:
-		return search.NewBrave(config.APIKey, config.BaseURL, s.httpClient), nil
+		return search.NewBrave(apiKey, config.BaseURL, s.httpClient), nil
 	case search.ProviderTavily:
 		var options search.TavilyOptions
 		if err := decodeExtra(config.Extra, &options); err != nil {
 			logrus.Warnf("解析 Tavily 附加配置失败，使用默认值: %v", err)
 		}
-		return search.NewTavily(config.APIKey, config.BaseURL, options, s.httpClient), nil
+		return search.NewTavily(apiKey, config.BaseURL, options, s.httpClient), nil
 	case search.ProviderExa:
 		var options search.ExaOptions
 		if err := decodeExtra(config.Extra, &options); err != nil {
 			logrus.Warnf("解析 Exa 附加配置失败，使用默认值: %v", err)
 		}
-		return search.NewExa(config.APIKey, config.BaseURL, options, s.httpClient), nil
+		return search.NewExa(apiKey, config.BaseURL, options, s.httpClient), nil
 	default:
 		return nil, fmt.Errorf("未知的搜索供应商: %s", config.Name)
 	}
@@ -397,28 +514,28 @@ func (s *Service) search(ctx context.Context, key *APIKey, req SearchRequest, re
 		if !runtime.breaker.Allow() {
 			continue
 		}
-		if err := runtime.limiter.Wait(ctx, s.options.QueueWait); err != nil {
-			// Nothing reached the upstream, so the breaker must not treat this
-			// as evidence either way.
-			runtime.breaker.Release()
-			if errors.Is(err, search.ErrLimiterBusy) {
-				lastErr = err
-				continue
-			}
-			return SearchResult{}, newGatewayError(http.StatusGatewayTimeout, "provider_timeout", err.Error(), name)
-		}
 
 		attempts++
 		entry.Provider = name
-		response, callErr := runtime.provider.Search(ctx, upstream)
+		response, reached, callErr := s.callProvider(ctx, runtime, upstream, now)
 		if callErr == nil {
 			runtime.breaker.Report(true)
 			return s.finish(ctx, key, req, name, order[0], response, requestID, cacheKey, now), nil
 		}
+		if !reached {
+			// Nothing got as far as the upstream, so the breaker must not treat
+			// this as evidence either way.
+			runtime.breaker.Release()
+			if errors.Is(callErr, search.ErrLimiterBusy) || errors.Is(callErr, ErrNoProviderAvailable) {
+				lastErr = callErr
+				continue
+			}
+			return SearchResult{}, newGatewayError(http.StatusGatewayTimeout, "provider_timeout", callErr.Error(), name)
+		}
 
 		runtime.breaker.Report(false)
 		lastErr = callErr
-		s.noteProviderFailure(ctx, name, callErr, now)
+		s.noteProviderFailure(ctx, runtime, callErr, now)
 
 		var providerErr *search.Error
 		if errors.As(callErr, &providerErr) && !providerErr.Retryable() {
@@ -428,6 +545,89 @@ func (s *Service) search(ctx context.Context, key *APIKey, req SearchRequest, re
 	}
 
 	return SearchResult{}, s.exhausted(lastErr)
+}
+
+// callProvider runs one provider attempt, rotating through that provider's
+// credentials. A key the upstream rejects for authentication or quota is parked
+// and the next one takes over, because that is a credential problem rather than
+// a provider outage — falling back to a different provider there would waste a
+// perfectly good upstream.
+//
+// The bool reports whether any call actually reached the upstream, so the
+// caller knows whether the circuit breaker saw real evidence.
+func (s *Service) callProvider(ctx context.Context, runtime *providerRuntime,
+	upstream search.Request, now time.Time) (search.Response, bool, error) {
+
+	reached := false
+	var lastErr error
+	// 轮换上限就是入口处可用的密钥数：每把最多试一次，不会因为轮换把单次请求拖长
+	for remaining := runtime.usableKeys(now); remaining > 0; remaining-- {
+		picked := runtime.pick(now)
+		if picked == nil {
+			break
+		}
+		// 跨月自愈的密钥要把状态写回去，否则后台一直显示它还在停用
+		if picked.config.Recovered(now) {
+			runtime.revive(picked.config.ID)
+			if err := s.repo.reviveProviderKey(ctx, picked.config.ID); err != nil {
+				logrus.Warnf("恢复供应商密钥 %d 状态失败: %v", picked.config.ID, err)
+			}
+		}
+
+		if err := runtime.limiter.Wait(ctx, s.options.QueueWait); err != nil {
+			return search.Response{}, reached, err
+		}
+
+		response, err := picked.provider.Search(ctx, upstream)
+		reached = true
+		if err == nil {
+			if err := s.repo.touchProviderKey(ctx, picked.config.ID, now); err != nil {
+				logrus.Warnf("更新供应商密钥使用时间失败: %v", err)
+			}
+			return response, true, nil
+		}
+
+		lastErr = err
+		if !s.parkKey(ctx, runtime, picked, err, now) {
+			// 不是凭据的问题，换一把也一样，交给上层决定要不要换供应商
+			return search.Response{}, true, err
+		}
+	}
+
+	if lastErr == nil {
+		// 一把可用密钥都没有：这不是调用失败，是这家根本没得用
+		lastErr = ErrNoProviderAvailable
+	}
+	return search.Response{}, reached, lastErr
+}
+
+// parkKey takes a rejected credential out of rotation and reports whether
+// trying the provider's next credential makes sense.
+func (s *Service) parkKey(ctx context.Context, runtime *providerRuntime,
+	picked *providerKeyRuntime, err error, now time.Time) bool {
+
+	var providerErr *search.Error
+	if !errors.As(err, &providerErr) {
+		return false
+	}
+	var status string
+	switch providerErr.Kind {
+	case search.KindAuthFailed:
+		status = ProviderKeyAuthFailed
+	case search.KindQuotaExceeded:
+		status = ProviderKeyQuotaExceeded
+	default:
+		return false
+	}
+
+	if runtime.park(picked.config.ID, status, providerErr.Message, now) {
+		if err := s.repo.parkProviderKey(ctx, picked.config.ID, status, providerErr.Message, now); err != nil {
+			logrus.Warnf("停用供应商密钥 %d 失败: %v", picked.config.ID, err)
+		}
+		logrus.Warnf("供应商 %s 的密钥 %s 已停止调度（%s）: %s",
+			runtime.config.Name, MaskSecret(picked.config.APIKey), status, providerErr.Message)
+	}
+	return true
 }
 
 // finish records usage, caches the payload and assembles the response.
@@ -483,12 +683,20 @@ func (s *Service) finish(ctx context.Context, key *APIKey, req SearchRequest, us
 
 // noteProviderFailure records that an upstream declared its own quota gone, so
 // the routing policy stops picking it for the rest of the month.
-func (s *Service) noteProviderFailure(ctx context.Context, name string, err error, now time.Time) {
+// noteProviderFailure reacts to an upstream saying it is out of allowance.
+//
+// With several credentials per provider this is deliberately conservative: one
+// exhausted key says nothing about the others, so the provider-wide counter is
+// only pushed to its ceiling once no credential is left in rotation.
+func (s *Service) noteProviderFailure(ctx context.Context, runtime *providerRuntime, err error, now time.Time) {
 	var providerErr *search.Error
 	if !errors.As(err, &providerErr) || providerErr.Kind != search.KindQuotaExceeded {
 		return
 	}
-	s.markProviderExhausted(ctx, name, now)
+	if runtime.usableKeys(now) > 0 {
+		return
+	}
+	s.markProviderExhausted(ctx, runtime.config.Name, now)
 }
 
 // markProviderExhausted pushes a provider's monthly counter up to its
@@ -534,9 +742,13 @@ func (s *Service) plan(ctx context.Context, key *APIKey, req SearchRequest, now 
 		if !runtime.config.Enabled {
 			continue
 		}
+		// 一把可用密钥都没有的供应商直接不参与选路：留在候选里只会白白消耗一次尝试
+		if runtime.usableKeys(now) == 0 {
+			continue
+		}
 		candidates = append(candidates, candidate{
 			Name:         runtime.config.Name,
-			Capability:   runtime.provider.Capabilities(),
+			Capability:   runtime.capability,
 			Priority:     runtime.config.Priority,
 			Weight:       runtime.config.Weight,
 			MonthlyQuota: runtime.config.MonthlyQuota,
@@ -617,7 +829,10 @@ func (s *Service) ProviderStatuses(ctx context.Context, key *APIKey) ([]provider
 		if key != nil && !key.Allows(runtime.config.Name) {
 			continue
 		}
-		capability := runtime.provider.Capabilities()
+		if runtime.usableKeys(s.now()) == 0 {
+			continue
+		}
+		capability := runtime.capability
 		meta := search.MetaFor(runtime.config.Name)
 		statuses = append(statuses, providerStatus{
 			Name:           runtime.config.Name,

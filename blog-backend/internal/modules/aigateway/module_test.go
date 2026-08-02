@@ -120,10 +120,11 @@ func newGatewayTestModule(t *testing.T, config gatewayTestConfig) *Module {
 		}
 		server := httptest.NewServer(handler)
 		t.Cleanup(server.Close)
-		updates := map[string]any{"enabled": true, "api_key": "test-key", "base_url": server.URL}
+		updates := map[string]any{"enabled": true, "base_url": server.URL}
 		if err := module.service.repo.updateProvider(context.Background(), name, updates); err != nil {
 			t.Fatalf("启用供应商 %s 失败: %v", name, err)
 		}
+		addTestProviderKey(t, module, name, "test-key")
 	}
 	enable("brave", config.Brave)
 	enable("tavily", config.Tavily)
@@ -133,6 +134,16 @@ func newGatewayTestModule(t *testing.T, config gatewayTestConfig) *Module {
 		t.Fatalf("重新加载供应商失败: %v", err)
 	}
 	return module
+}
+
+// addTestProviderKey stores one upstream credential and returns its ID.
+func addTestProviderKey(t *testing.T, module *Module, provider, secret string) int {
+	t.Helper()
+	key := ProviderKey{Provider: provider, Label: secret, APIKey: secret, Enabled: true, Status: ProviderKeyActive}
+	if err := module.service.repo.createProviderKey(context.Background(), &key); err != nil {
+		t.Fatalf("创建供应商密钥失败: %v", err)
+	}
+	return key.ID
 }
 
 // testDBName turns a (sub)test name into a database name unique to that test.
@@ -623,10 +634,11 @@ func TestGatewayEndpointsDisabledByConfig(t *testing.T) {
 	}
 }
 
-func TestAdminProviderUpdateNeverWipesKeyOnEmptyValue(t *testing.T) {
+func TestAdminProviderUpdateLeavesCredentialsAlone(t *testing.T) {
 	module := newGatewayTestModule(t, gatewayTestConfig{Brave: braveOK("a")})
 	engine := newTestEngine(module)
 
+	// 密钥归 /keys 端点管，供应商补丁即便带上 apiKey 也不该动到凭据
 	request := httptest.NewRequest(http.MethodPut, "/api/admin/gateway/providers/brave",
 		strings.NewReader(`{"apiKey":"","weight":3}`))
 	request.Header.Set("Content-Type", "application/json")
@@ -636,12 +648,17 @@ func TestAdminProviderUpdateNeverWipesKeyOnEmptyValue(t *testing.T) {
 		t.Fatalf("状态码 = %d, body=%s", recorder.Code, recorder.Body.String())
 	}
 
+	keys, err := module.service.repo.listProviderKeys(context.Background())
+	if err != nil {
+		t.Fatalf("listProviderKeys 返回错误: %v", err)
+	}
+	if len(keys) != 1 || keys[0].APIKey != "test-key" {
+		t.Fatalf("密钥被供应商补丁改动了: %+v", keys)
+	}
+
 	provider, err := module.service.repo.providerByName(context.Background(), "brave")
 	if err != nil {
 		t.Fatalf("providerByName 返回错误: %v", err)
-	}
-	if provider.APIKey != "test-key" {
-		t.Fatalf("APIKey = %q, 空值不应覆盖已存密钥", provider.APIKey)
 	}
 	if provider.Weight != 3 {
 		t.Fatalf("Weight = %d, 期望 3", provider.Weight)
@@ -654,10 +671,17 @@ func TestAdminProviderListMasksCredential(t *testing.T) {
 	if err != nil {
 		t.Fatalf("providerViews 返回错误: %v", err)
 	}
+	seen := 0
 	for _, view := range views {
-		if strings.Contains(view.APIKeyMasked, "test-key") {
-			t.Fatalf("管理接口不应返回明文密钥: %q", view.APIKeyMasked)
+		for _, key := range view.Keys {
+			seen++
+			if strings.Contains(key.Masked, "test-key") {
+				t.Fatalf("管理接口不应返回明文密钥: %q", key.Masked)
+			}
 		}
+	}
+	if seen == 0 {
+		t.Fatal("没有任何密钥被展示，用例失去意义")
 	}
 }
 

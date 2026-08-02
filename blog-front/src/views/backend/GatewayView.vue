@@ -98,18 +98,24 @@ onMounted(loadProviders);
     gap: 6px;
 }
 
+:deep(.el-tabs__header) {
+    margin-bottom: 20px;
+}
+
+:deep(.el-tabs__nav-wrap::after) {
+    height: 1px;
+    background-color: #e9edf2;
+}
+
 :deep(.el-tabs__item) {
-    font-size: 15px;
+    font-size: 14px;
     padding: 0 20px;
+    color: #667085;
 }
 
 :deep(.el-tabs__item.is-active) {
     font-weight: 600;
-}
-
-:deep(.el-card__header) {
-    padding: 16px 20px;
-    font-weight: 500;
+    color: #3f8cff;
 }
 
 :deep(.el-input-number) {
@@ -120,9 +126,15 @@ onMounted(loadProviders);
     text-align: left;
 }
 
-:deep(.el-divider__text) {
+/* 表格在这些面板里是内容而不是控件，去掉默认的重边框让整页更干净 */
+:deep(.el-table th.el-table__cell) {
+    background-color: #fbfcfd;
+    color: #667085;
     font-weight: 500;
-    color: #606266;
+}
+
+:deep(.el-table) {
+    --el-table-border-color: #f2f4f7;
 }
 
 :deep(code) {

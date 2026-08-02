@@ -1,19 +1,11 @@
 <template>
     <div>
-        <el-card shadow="hover" class="mb-5">
-            <template #header>
-                <span class="flex items-center">
-                    <el-icon class="mr-2">
-                        <Link />
-                    </el-icon> 接入方式
-                </span>
+        <SectionPanel title="接入方式" subtitle="网关自己的 Key 只应用于服务端或 agent 侧，写进浏览器代码即等同公开">
+            <template #icon>
+                <el-icon>
+                    <Link />
+                </el-icon>
             </template>
-
-            <el-alert type="warning" :closable="false" class="mb-4" show-icon>
-                <template #title>
-                    网关 Key 只应用于服务端或 agent 侧。本站 CORS 允许任意来源，Key 一旦写进浏览器代码即等同公开。
-                </template>
-            </el-alert>
 
             <el-descriptions :column="1" border size="small" class="mb-4">
                 <el-descriptions-item label="基础地址">
@@ -42,18 +34,16 @@
                 <el-table-column prop="desc" label="说明" min-width="320" />
             </el-table>
 
-            <div class="mt-3 text-xs text-gray-400">
+            <p class="mt-3 mb-0 text-xs text-gray-400 leading-relaxed">
                 原生透传保持上游的请求与响应格式，现有 SDK 改 base_url 即可；透传不做跨供应商回退，上游报什么就返回什么。
-            </div>
-        </el-card>
+            </p>
+        </SectionPanel>
 
-        <el-card shadow="hover" class="mb-5">
-            <template #header>
-                <span class="flex items-center">
-                    <el-icon class="mr-2">
-                        <MagicStick />
-                    </el-icon> 接入 Claude Code
-                </span>
+        <SectionPanel title="接入 Claude Code" subtitle="网关自带 MCP Server，装好后工具名为 web_search">
+            <template #icon>
+                <el-icon>
+                    <MagicStick />
+                </el-icon>
             </template>
 
             <el-alert v-if="insecureTransport" type="warning" :closable="false" show-icon class="mb-4">
@@ -62,81 +52,81 @@
                 </template>
             </el-alert>
 
-            <div class="text-sm text-gray-600 mb-2">1. 终端执行（把 Key 换成下面签发的那把）：</div>
+            <div class="step">1. 终端执行（把 Key 换成下面签发的那把）</div>
             <div class="code-block">
                 <pre>{{ mcpAddCommand }}</pre>
-                <el-button class="!absolute top-2 right-2" link type="primary" :icon="CopyDocument"
+                <el-button class="copy-btn" link type="primary" :icon="CopyDocument"
                     @click="copy(mcpAddCommand, '命令')" />
             </div>
 
-            <div class="text-sm text-gray-600 mt-4 mb-2">
-                或写进项目的 <code>.mcp.json</code>，Key 从环境变量取、不落进仓库：
-            </div>
+            <div class="step">或写进项目的 <code>.mcp.json</code>，Key 从环境变量取、不落进仓库</div>
             <div class="code-block">
                 <pre>{{ mcpJson }}</pre>
-                <el-button class="!absolute top-2 right-2" link type="primary" :icon="CopyDocument"
-                    @click="copy(mcpJson, '配置')" />
+                <el-button class="copy-btn" link type="primary" :icon="CopyDocument" @click="copy(mcpJson, '配置')" />
             </div>
 
-            <div class="mt-4 text-xs text-gray-400 leading-relaxed">
-                2. 装好后在 Claude Code 里执行 <code>/mcp</code> 应该能看到 <code>dh-search</code>，工具名 <code>web_search</code>，
+            <p class="mt-4 mb-0 text-xs text-gray-400 leading-relaxed">
+                2. 装好后在 Claude Code 里执行 <code>/mcp</code> 应该能看到 <code>dh-search</code>，
                 可选的 provider 会按这把 Key 的供应商限制自动裁剪。<br />
                 3. 想让搜索一律走网关，在 <code>~/.claude/settings.json</code> 里加
                 <code>"permissions": { "deny": ["WebSearch"] }</code> 禁掉内置搜索。<br />
-                MCP 调用与统一接口共用限速、配额与缓存，流水里的 endpoint 记为 <code>mcp/search</code>，可在请求日志里单独筛。
-            </div>
-        </el-card>
+                MCP 调用与统一接口共用限速、配额与缓存，流水里的 endpoint 记为 <code>mcp/search</code>。
+            </p>
+        </SectionPanel>
 
-        <el-card shadow="hover">
-            <template #header>
-                <div class="flex items-center justify-between">
-                    <span class="flex items-center">
-                        <el-icon class="mr-2">
-                            <Key />
-                        </el-icon> 网关 API Key
-                    </span>
-                    <div class="flex gap-2">
-                        <el-button size="small" :icon="Refresh" @click="load">刷新</el-button>
-                        <el-button type="primary" size="small" @click="openCreateDialog">新建 Key</el-button>
-                    </div>
+        <SectionPanel title="网关 API Key" subtitle="签发给 agent 的凭据，可随时吊销；明文可重复复制" flush>
+            <template #icon>
+                <el-icon>
+                    <Key />
+                </el-icon>
+            </template>
+            <template #extra>
+                <div class="flex gap-2">
+                    <el-button size="small" :icon="Refresh" @click="load">刷新</el-button>
+                    <el-button size="small" type="primary" :icon="Plus" @click="openCreateDialog">新建 Key</el-button>
                 </div>
             </template>
 
             <el-table v-loading="loading" :data="apiKeys" size="default" empty-text="尚未签发 Key">
-                <el-table-column prop="name" label="名称" min-width="140" />
-                <el-table-column prop="keyPrefix" label="前缀" min-width="180" />
-                <el-table-column label="状态" min-width="90">
+                <el-table-column prop="name" label="名称" min-width="130" />
+                <el-table-column label="Key" min-width="210">
+                    <template #default="scope">
+                        <div class="flex items-center gap-1">
+                            <code class="masked">{{ scope.row.keyPrefix }}…</code>
+                            <el-button link type="primary" size="small" :icon="CopyDocument"
+                                :loading="revealing === scope.row.id" @click="onCopyKey(scope.row)" />
+                        </div>
+                    </template>
+                </el-table-column>
+                <el-table-column label="状态" min-width="80">
                     <template #default="scope">
                         <el-switch :model-value="scope.row.enabled"
                             @change="(value: any) => onToggle(scope.row, Boolean(value))" />
                     </template>
                 </el-table-column>
-                <el-table-column label="供应商限制" min-width="130">
+                <el-table-column label="供应商限制" min-width="120">
                     <template #default="scope">{{ scope.row.allowedProviders || '全部' }}</template>
                 </el-table-column>
-                <el-table-column label="限速" min-width="110">
+                <el-table-column label="限速" min-width="100">
                     <template #default="scope">
                         {{ scope.row.rateLimitPerMin ? `${scope.row.rateLimitPerMin} 次/分` : '不限' }}
                     </template>
                 </el-table-column>
-                <el-table-column label="本月用量" min-width="120">
+                <el-table-column label="本月用量" min-width="110">
                     <template #default="scope">
                         {{ scope.row.monthlyUsed }} / {{ scope.row.monthlyQuota || '不限' }}
                     </template>
                 </el-table-column>
-                <el-table-column label="过期时间" min-width="170">
-                    <template #default="scope">{{ scope.row.expireAt ? formatTime(scope.row.expireAt) : '永不过期' }}</template>
-                </el-table-column>
-                <el-table-column label="最后使用" min-width="170">
+                <el-table-column label="最后使用" min-width="160">
                     <template #default="scope">{{ formatTime(scope.row.lastUsedAt) }}</template>
                 </el-table-column>
-                <el-table-column label="操作" width="100">
+                <el-table-column label="操作" width="80">
                     <template #default="scope">
                         <el-button size="small" type="danger" link @click="onDelete(scope.row)">吊销</el-button>
                     </template>
                 </el-table-column>
             </el-table>
-        </el-card>
+        </SectionPanel>
 
         <!-- 新建 Key -->
         <el-dialog v-model="createDialogVisible" title="新建网关 API Key" width="480px">
@@ -170,20 +160,23 @@
             </template>
         </el-dialog>
 
-        <!-- 明文只展示一次 -->
-        <el-dialog v-model="secretDialogVisible" title="请立即保存这个 Key" width="620px" :close-on-click-modal="false">
-            <el-alert type="warning" :closable="false" show-icon class="mb-4" title="明文只显示这一次，关闭后无法再次查看。" />
-            <el-input :model-value="createdSecret" readonly />
+        <!-- 明文展示：列表里点复制也走这个弹窗 -->
+        <el-dialog v-model="secretDialogVisible" :title="`Key · ${secretName}`" width="620px">
+            <el-input :model-value="createdSecret" readonly>
+                <template #append>
+                    <el-button :icon="CopyDocument" @click="copy(createdSecret, 'Key')">复制</el-button>
+                </template>
+            </el-input>
 
-            <div class="mt-4 mb-2 text-sm text-gray-600">接入 Claude Code，直接复制执行：</div>
+            <div class="step mt-4">接入 Claude Code，直接复制执行</div>
             <div class="code-block">
                 <pre>{{ createdMcpCommand }}</pre>
-                <el-button class="!absolute top-2 right-2" link type="primary" :icon="CopyDocument"
+                <el-button class="copy-btn" link type="primary" :icon="CopyDocument"
                     @click="copy(createdMcpCommand, '命令')" />
             </div>
 
             <template #footer>
-                <el-button type="primary" @click="copySecret">复制 Key 并关闭</el-button>
+                <el-button type="primary" @click="secretDialogVisible = false">关闭</el-button>
             </template>
         </el-dialog>
     </div>
@@ -192,14 +185,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { ElMessageBox } from 'element-plus';
-import { CopyDocument, Key, Link, MagicStick, Refresh } from '@element-plus/icons-vue';
+import { CopyDocument, Key, Link, MagicStick, Plus, Refresh } from '@element-plus/icons-vue';
 import { notify } from '@/utils/notification';
+import SectionPanel from './SectionPanel.vue';
 import { formatTime } from './format';
 import {
     createGatewayApiKey,
     deleteGatewayApiKey,
     gatewayBaseUrl,
     getGatewayApiKeys,
+    revealGatewayApiKey,
     updateGatewayApiKey,
     type CreateGatewayApiKeyPayload,
     type GatewayApiKey,
@@ -216,11 +211,11 @@ const endpoints = [
     { method: 'POST', path: '/tavily/search', desc: 'Tavily 原生透传' },
     { method: 'GET', path: '/brave/web/search', desc: 'Brave 原生透传' },
     { method: 'POST', path: '/exa/search', desc: 'Exa 原生透传' },
-    { method: 'POST', path: '/mcp', desc: 'MCP Server，供 Claude Code 等 MCP 客户端挂载，见下方接入说明' }
+    { method: 'POST', path: '/mcp', desc: 'MCP Server，供 Claude Code 等 MCP 客户端挂载' }
 ];
 
 const mcpUrl = `${baseUrl}/mcp`;
-// 用户暂时没上 https 时如实提示，而不是假装 Key 传输是安全的
+// 站点还没上 https 时如实提示，而不是假装 Key 的传输是安全的
 const insecureTransport = mcpUrl.startsWith('http://');
 
 function mcpCommandFor(key: string) {
@@ -242,6 +237,7 @@ const mcpJson = JSON.stringify({
 
 const apiKeys = ref<GatewayApiKey[]>([]);
 const loading = ref(false);
+const revealing = ref(0);
 
 const createDialogVisible = ref(false);
 const creating = ref(false);
@@ -255,8 +251,8 @@ const createForm = ref<CreateGatewayApiKeyPayload>({
 });
 const secretDialogVisible = ref(false);
 const createdSecret = ref('');
+const secretName = ref('');
 
-// 刚签发的 Key 直接拼进命令里，省得再手动粘一次
 const createdMcpCommand = computed(() => mcpCommandFor(createdSecret.value));
 
 async function load() {
@@ -286,11 +282,28 @@ async function onCreate() {
             allowedProviders: createAllowed.value.join(',')
         });
         createDialogVisible.value = false;
-        createdSecret.value = created.apiKey;
-        secretDialogVisible.value = true;
+        showSecret(created.name, created.apiKey);
         await load();
     } finally {
         creating.value = false;
+    }
+}
+
+function showSecret(name: string, secret: string) {
+    secretName.value = name;
+    createdSecret.value = secret;
+    secretDialogVisible.value = true;
+}
+
+// 明文存在库里就是为了这一步：Key 掉了不用重签发、也不用挨个改 agent 的配置
+async function onCopyKey(key: GatewayApiKey) {
+    revealing.value = key.id;
+    try {
+        const revealed = await revealGatewayApiKey(key.id);
+        await copy(revealed.apiKey, 'Key');
+        showSecret(revealed.name, revealed.apiKey);
+    } finally {
+        revealing.value = 0;
     }
 }
 
@@ -301,17 +314,6 @@ async function copy(text: string, label: string) {
     } catch {
         notify.warning('复制失败，请手动选中复制');
     }
-}
-
-async function copySecret() {
-    try {
-        await navigator.clipboard.writeText(createdSecret.value);
-        notify.success('已复制到剪贴板');
-    } catch {
-        notify.warning('复制失败，请手动选中复制');
-        return;
-    }
-    secretDialogVisible.value = false;
 }
 
 async function onToggle(key: GatewayApiKey, enabled: boolean) {
@@ -335,20 +337,44 @@ onMounted(load);
 </script>
 
 <style scoped>
+.step {
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #475467;
+}
+
+.step:not(:first-of-type) {
+    margin-top: 16px;
+}
+
 .code-block {
     position: relative;
     padding: 12px 40px 12px 14px;
-    border: 1px solid #e4e7ed;
-    border-radius: 8px;
-    background-color: #fafafa;
+    border: 1px solid #e9edf2;
+    border-radius: 10px;
+    background-color: #fafbfc;
 }
 
 .code-block pre {
     margin: 0;
     font-size: 12px;
-    line-height: 1.7;
+    line-height: 1.75;
     color: #476582;
     white-space: pre-wrap;
     word-break: break-all;
+}
+
+.copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+}
+
+.masked {
+    padding: 1px 6px;
+    border-radius: 4px;
+    background-color: #f4f6f8;
+    font-size: 12px;
+    color: #667085;
 }
 </style>

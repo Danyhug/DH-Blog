@@ -33,13 +33,68 @@ type Provider struct {
 
 func (Provider) TableName() string { return "ai_gateway_providers" }
 
+// ProviderKey is one upstream credential. A provider may hold several: the
+// gateway rotates through them, and parks the ones the upstream rejects so a
+// dead credential stops being scheduled instead of failing every other request.
+type ProviderKey struct {
+	model.BaseModel `gorm:"embedded"`
+	Provider        string `gorm:"column:provider;index;not null" json:"provider"`
+	// Label is the operator's own note, e.g. which account the key belongs to.
+	Label      string     `gorm:"column:label" json:"label"`
+	APIKey     string     `gorm:"column:api_key;not null" json:"-"`
+	Enabled    bool       `gorm:"column:enabled" json:"enabled"`
+	Status     string     `gorm:"column:status" json:"status"`
+	LastError  string     `gorm:"column:last_error" json:"lastError"`
+	LastUsedAt *time.Time `gorm:"column:last_used_at" json:"lastUsedAt"`
+	DisabledAt *time.Time `gorm:"column:disabled_at" json:"disabledAt"`
+}
+
+func (ProviderKey) TableName() string { return "ai_gateway_provider_keys" }
+
+// Credential states. Anything other than active is out of rotation.
+const (
+	ProviderKeyActive        = "active"
+	ProviderKeyAuthFailed    = "auth_failed"
+	ProviderKeyQuotaExceeded = "quota_exceeded"
+)
+
+// Usable reports whether the credential may be handed to the upstream now.
+//
+// A key parked for quota comes back on its own after the month rolls over,
+// because that is exactly when the upstream allowance resets; a key parked for
+// a rejected credential stays out until someone fixes it, since retrying a
+// wrong key only burns requests.
+func (k *ProviderKey) Usable(now time.Time) bool {
+	if !k.Enabled {
+		return false
+	}
+	switch k.Status {
+	case "", ProviderKeyActive:
+		return true
+	case ProviderKeyQuotaExceeded:
+		return k.DisabledAt == nil || currentPeriod(*k.DisabledAt) != currentPeriod(now)
+	default:
+		return false
+	}
+}
+
+// Recovered reports whether a parked key has become usable again by itself, so
+// the caller can write the status back and let the UI stop showing it as dead.
+func (k *ProviderKey) Recovered(now time.Time) bool {
+	return k.Status == ProviderKeyQuotaExceeded && k.Usable(now)
+}
+
 // APIKey is a credential issued to a downstream agent. Zero means "unlimited"
 // for both allowances, which is why these columns carry no database default.
 type APIKey struct {
-	model.BaseModel  `gorm:"embedded"`
-	Name             string     `gorm:"column:name;not null" json:"name"`
-	KeyPrefix        string     `gorm:"column:key_prefix;uniqueIndex;not null" json:"keyPrefix"`
-	KeyHash          string     `gorm:"column:key_hash;not null" json:"-"`
+	model.BaseModel `gorm:"embedded"`
+	Name            string `gorm:"column:name;not null" json:"name"`
+	KeyPrefix       string `gorm:"column:key_prefix;uniqueIndex;not null" json:"keyPrefix"`
+	KeyHash         string `gorm:"column:key_hash;not null" json:"-"`
+	// KeyPlain lets the admin page hand the same key out again. Verification
+	// still goes through KeyHash — this column is only read by an explicit
+	// reveal action, never by the request path and never by the list endpoint.
+	KeyPlain         string     `gorm:"column:key_plain" json:"-"`
 	Enabled          bool       `gorm:"column:enabled" json:"enabled"`
 	AllowedProviders string     `gorm:"column:allowed_providers" json:"allowedProviders"`
 	RateLimitPerMin  int        `gorm:"column:rate_limit_per_min" json:"rateLimitPerMin"`
@@ -246,5 +301,5 @@ const SettingKeyRoutingStrategy = "routing_strategy"
 
 // MigrationModels declares the database tables owned by this module.
 func MigrationModels() []any {
-	return []any{&Provider{}, &APIKey{}, &RequestLog{}, &Usage{}, &Setting{}}
+	return []any{&Provider{}, &ProviderKey{}, &APIKey{}, &RequestLog{}, &Usage{}, &Setting{}}
 }

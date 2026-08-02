@@ -8,6 +8,7 @@ import (
 
 	"dh-blog/internal/platform/search"
 
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -63,8 +64,102 @@ func (r *repository) ensureDefaults(ctx context.Context) error {
 				return fmt.Errorf("补齐网关设置 %s: %w", key, err)
 			}
 		}
-		return nil
+		return migrateLegacyProviderKeys(tx)
 	})
+}
+
+// migrateLegacyProviderKeys moves the single credential that used to live on
+// the provider row into the credential table, so there is exactly one place a
+// key can come from. The column is cleared on the way out; leaving a copy
+// behind would mean two sources of truth that silently drift apart.
+func migrateLegacyProviderKeys(tx *gorm.DB) error {
+	var providers []Provider
+	if err := tx.Where("api_key <> ''").Find(&providers).Error; err != nil {
+		return fmt.Errorf("读取旧版供应商密钥: %w", err)
+	}
+	for _, provider := range providers {
+		key := ProviderKey{
+			Provider: provider.Name,
+			Label:    "默认",
+			APIKey:   provider.APIKey,
+			Enabled:  true,
+			Status:   ProviderKeyActive,
+		}
+		if err := tx.Create(&key).Error; err != nil {
+			return fmt.Errorf("迁移供应商 %s 的密钥: %w", provider.Name, err)
+		}
+		if err := tx.Model(&Provider{}).Where("name = ?", provider.Name).
+			Update("api_key", "").Error; err != nil {
+			return fmt.Errorf("清理供应商 %s 的旧密钥列: %w", provider.Name, err)
+		}
+		logrus.Infof("已将供应商 %s 的密钥迁移到多密钥表", provider.Name)
+	}
+	return nil
+}
+
+func (r *repository) listProviderKeys(ctx context.Context) ([]ProviderKey, error) {
+	var keys []ProviderKey
+	err := r.db.WithContext(ctx).Order("provider, id").Find(&keys).Error
+	return keys, err
+}
+
+func (r *repository) providerKeyByID(ctx context.Context, id int) (ProviderKey, error) {
+	var key ProviderKey
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&key).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return ProviderKey{}, ErrProviderKeyNotFound
+	}
+	return key, err
+}
+
+func (r *repository) createProviderKey(ctx context.Context, key *ProviderKey) error {
+	return r.db.WithContext(ctx).Create(key).Error
+}
+
+func (r *repository) updateProviderKey(ctx context.Context, id int, updates map[string]any) error {
+	result := r.db.WithContext(ctx).Model(&ProviderKey{}).Where("id = ?", id).Updates(updates)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrProviderKeyNotFound
+	}
+	return nil
+}
+
+func (r *repository) deleteProviderKey(ctx context.Context, id int) error {
+	result := r.db.WithContext(ctx).Where("id = ?", id).Delete(&ProviderKey{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrProviderKeyNotFound
+	}
+	return nil
+}
+
+// parkProviderKey records why a credential left the rotation. Writing the
+// reason matters: "都不通" without a cause sends the operator digging through logs.
+func (r *repository) parkProviderKey(ctx context.Context, id int, status, reason string, now time.Time) error {
+	return r.db.WithContext(ctx).Model(&ProviderKey{}).Where("id = ?", id).Updates(map[string]any{
+		"status":      status,
+		"last_error":  truncateQuery(reason),
+		"disabled_at": now,
+	}).Error
+}
+
+// reviveProviderKey puts a credential back into rotation and clears the reason.
+func (r *repository) reviveProviderKey(ctx context.Context, id int) error {
+	return r.db.WithContext(ctx).Model(&ProviderKey{}).Where("id = ?", id).Updates(map[string]any{
+		"status":      ProviderKeyActive,
+		"last_error":  "",
+		"disabled_at": nil,
+	}).Error
+}
+
+func (r *repository) touchProviderKey(ctx context.Context, id int, now time.Time) error {
+	return r.db.WithContext(ctx).Model(&ProviderKey{}).Where("id = ?", id).
+		Update("last_used_at", now).Error
 }
 
 func defaultSettings() map[string]string {

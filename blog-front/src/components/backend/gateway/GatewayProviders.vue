@@ -1,233 +1,367 @@
 <template>
-    <el-card shadow="hover">
-        <template #header>
-            <div class="flex items-center justify-between">
-                <span class="flex items-center">
-                    <el-icon class="mr-2">
-                        <Connection />
-                    </el-icon> 搜索供应商
-                </span>
+    <div>
+        <SectionPanel title="搜索供应商" subtitle="每家可以配多把密钥，网关轮换使用；被上游拒掉的密钥会自动停止调度">
+            <template #icon>
+                <el-icon>
+                    <Connection />
+                </el-icon>
+            </template>
+            <template #extra>
                 <el-button size="small" :icon="Refresh" @click="emit('refresh')">刷新</el-button>
+            </template>
+
+            <el-empty v-if="!providers.length" description="暂无供应商" :image-size="60" />
+            <div v-else class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
+                <article v-for="provider in providers" :key="provider.name" class="card"
+                    :class="{ 'card--off': !provider.enabled }">
+                    <div class="flex items-center gap-3">
+                        <ProviderLogo :name="provider.name" :src="provider.logoUrl" :size="34" />
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-gray-800 truncate">
+                                    {{ provider.displayName || provider.name }}
+                                </span>
+                                <el-tag v-if="provider.health !== 'closed'" size="small" type="warning" effect="plain">
+                                    {{ provider.health === 'open' ? '已熔断' : '探测中' }}
+                                </el-tag>
+                            </div>
+                            <div class="mt-0.5 text-xs" :class="keyHintClass(provider)">{{ keyHint(provider) }}</div>
+                        </div>
+                        <el-switch :model-value="provider.enabled" :loading="toggling === provider.name"
+                            @change="(value: any) => onToggle(provider, Boolean(value))" />
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="flex items-center justify-between text-xs text-gray-400 mb-1.5">
+                            <span>本月用量</span>
+                            <span class="tabular-nums">
+                                {{ provider.monthlyUsed }} / {{ provider.monthlyQuota || '不限' }}
+                                <template v-if="provider.monthlyCostMicroUsd">
+                                    · {{ formatCost(provider.monthlyCostMicroUsd) }}
+                                </template>
+                            </span>
+                        </div>
+                        <el-progress :percentage="quotaPercentage(provider.monthlyUsed, provider.monthlyQuota)"
+                            :stroke-width="6" :show-text="false"
+                            :status="quotaPercentage(provider.monthlyUsed, provider.monthlyQuota) >= 90 ? 'exception' : undefined" />
+                    </div>
+
+                    <div class="mt-4 flex items-center gap-3 text-xs">
+                        <a :href="provider.consoleUrl" target="_blank" rel="noopener noreferrer" class="link">
+                            去 {{ provider.displayName || provider.name }} 控制台申请密钥
+                        </a>
+                        <a :href="provider.docsUrl" target="_blank" rel="noopener noreferrer" class="link">文档</a>
+                        <el-button class="ml-auto" size="small" type="primary" plain :icon="Setting"
+                            @click="openDrawer(provider)">
+                            配置
+                        </el-button>
+                    </div>
+                </article>
             </div>
-        </template>
+        </SectionPanel>
 
-        <el-empty v-if="!providers.length" description="暂无供应商" :image-size="60" />
-        <el-collapse v-else v-model="expanded">
-            <el-collapse-item v-for="provider in providers" :key="provider.name" :name="provider.name">
-                <template #title>
-                    <div class="flex items-center gap-3 w-full pr-4">
-                        <ProviderLogo :name="provider.name" :src="provider.logoUrl" :size="24" />
+        <el-drawer v-model="drawerVisible" :title="`配置 ${active?.displayName || active?.name || ''}`" size="600px">
+            <div v-if="active" class="drawer">
+                <p class="hint">
+                    <el-icon class="align-middle mr-1">
+                        <InfoFilled />
+                    </el-icon>{{ active.billing }}
+                </p>
 
-                        <span class="font-medium">{{ provider.displayName || provider.name }}</span>
-                        <el-tag :type="provider.enabled ? 'success' : 'info'" size="small">
-                            {{ provider.enabled ? '已启用' : '未启用' }}
-                        </el-tag>
-                        <el-tag v-if="!provider.apiKeyPresent" type="danger" size="small" effect="plain">未配置秘钥</el-tag>
-                        <el-tag v-if="provider.health !== 'closed'" type="warning" size="small">
-                            {{ provider.health === 'open' ? '已熔断' : '半开探测中' }}
-                        </el-tag>
-                        <el-tag v-if="isDirty(provider)" type="warning" size="small" effect="dark">未保存</el-tag>
-                        <span class="text-xs text-gray-400">
-                            本月 {{ provider.monthlyUsed }} / {{ provider.monthlyQuota || '不限' }}
-                            <template v-if="provider.monthlyCostMicroUsd">
-                                · {{ formatCost(provider.monthlyCostMicroUsd) }}
-                            </template>
-                        </span>
+                <h4 class="group-title">
+                    密钥
+                    <span class="group-sub">多把密钥按顺序轮换；上游报鉴权失败或配额耗尽时自动停止调度</span>
+                </h4>
 
-                        <span class="ml-auto flex items-center gap-3 text-xs" @click.stop>
-                            <a :href="provider.homeUrl" target="_blank" rel="noopener noreferrer"
-                                class="text-blue-500 hover:underline">官网</a>
-                            <a :href="provider.docsUrl" target="_blank" rel="noopener noreferrer"
-                                class="text-blue-500 hover:underline">文档</a>
-                            <a :href="provider.consoleUrl" target="_blank" rel="noopener noreferrer"
-                                class="text-blue-500 hover:underline">取密钥</a>
-                        </span>
+                <div v-if="!active.keys.length" class="empty-keys">还没有密钥，先在下面添加一把</div>
+                <div v-for="item in active.keys" :key="item.id" class="key-row">
+                    <span class="dot" :class="item.inRotation ? 'dot--on' : 'dot--off'" />
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-gray-700 truncate">{{ item.label || '未命名' }}</span>
+                            <code class="masked">{{ item.masked }}</code>
+                            <el-tag v-if="item.status !== 'active'" size="small" type="danger" effect="plain">
+                                {{ statusLabel(item.status) }}
+                            </el-tag>
+                            <el-tag v-else-if="!item.enabled" size="small" type="info" effect="plain">已停用</el-tag>
+                        </div>
+                        <div class="mt-0.5 text-xs text-gray-400 truncate">
+                            <template v-if="item.lastError">停用原因：{{ item.lastError }}</template>
+                            <template v-else-if="item.lastUsedAt">最后使用 {{ formatTime(item.lastUsedAt) }}</template>
+                            <template v-else>尚未使用过</template>
+                        </div>
                     </div>
-                </template>
-
-                <el-form v-if="drafts[provider.name]" label-position="top" size="default">
-                    <div class="mb-3 text-xs text-gray-500">
-                        <el-icon class="align-middle mr-1">
-                            <InfoFilled />
-                        </el-icon>{{ provider.billing }}
+                    <div class="flex items-center gap-1 shrink-0">
+                        <el-button size="small" link :loading="testing === `key-${item.id}`"
+                            @click="onTestStored(item)">测试</el-button>
+                        <el-button v-if="item.status !== 'active'" size="small" link type="success"
+                            @click="onPatchKey(item, { revive: true, enabled: true })">恢复</el-button>
+                        <el-button size="small" link @click="onPatchKey(item, { enabled: !item.enabled })">
+                            {{ item.enabled ? '停用' : '启用' }}
+                        </el-button>
+                        <el-button size="small" link type="danger" @click="onDeleteKey(item)">删除</el-button>
                     </div>
+                </div>
 
-                    <el-divider content-position="left">凭据</el-divider>
-                    <el-row :gutter="16">
-                        <el-col :span="6">
-                            <el-form-item label="启用">
-                                <el-switch v-model="drafts[provider.name].enabled" />
+                <div class="add-key">
+                    <div class="flex gap-2">
+                        <el-input v-model="newKey.label" placeholder="标签，例如「主账号」" class="w-40" clearable />
+                        <el-input v-model="newKey.apiKey" placeholder="粘贴上游密钥" show-password clearable />
+                    </div>
+                    <div class="mt-2 flex justify-end gap-2">
+                        <el-button size="small" :loading="testing === 'draft'" :disabled="!newKey.apiKey.trim()"
+                            @click="onTestDraft">
+                            先测一下
+                        </el-button>
+                        <el-button size="small" type="primary" :loading="adding" :disabled="!newKey.apiKey.trim()"
+                            @click="onAddKey">
+                            添加
+                        </el-button>
+                    </div>
+                </div>
+
+                <h4 class="group-title">
+                    参数
+                    <span class="group-sub">改动需要点保存才生效</span>
+                </h4>
+                <el-form label-position="top" size="default">
+                    <el-form-item label="接口地址（留空使用官方地址）">
+                        <el-input v-model="form.baseUrl" placeholder="https://api.tavily.com" clearable />
+                    </el-form-item>
+                    <el-row :gutter="14">
+                        <el-col :span="12">
+                            <el-form-item label="优先级（越小越优先）">
+                                <el-input-number v-model="form.priority" :min="0" :max="999" class="w-full" />
                             </el-form-item>
                         </el-col>
-                        <el-col :span="18">
-                            <el-form-item
-                                :label="`API 秘钥（当前：${provider.apiKeyPresent ? provider.apiKeyMasked : '未配置'}）`">
-                                <el-input v-model="drafts[provider.name].apiKey" show-password :prefix-icon="Key"
-                                    placeholder="留空表示不修改已保存的秘钥" />
+                        <el-col :span="12">
+                            <el-form-item label="权重">
+                                <el-input-number v-model="form.weight" :min="0" :max="100" class="w-full" />
                             </el-form-item>
                         </el-col>
                     </el-row>
-                    <el-form-item label="接口地址（留空使用官方地址）">
-                        <el-input v-model="drafts[provider.name].baseUrl" placeholder="https://api.tavily.com"
-                            clearable />
-                    </el-form-item>
-
-                    <el-divider content-position="left">调度与限额</el-divider>
-                    <el-row :gutter="16">
-                        <el-col :span="6">
-                            <el-form-item label="优先级（越小越优先）">
-                                <el-input-number v-model="drafts[provider.name].priority" :min="0" :max="999"
-                                    class="w-full" />
+                    <el-row :gutter="14">
+                        <el-col :span="12">
+                            <el-form-item label="出站限速（次/秒，0 不限）">
+                                <el-input-number v-model="form.rps" :min="0" :max="100" :step="0.5" class="w-full" />
                             </el-form-item>
                         </el-col>
-                        <el-col :span="6">
-                            <el-form-item label="权重">
-                                <el-input-number v-model="drafts[provider.name].weight" :min="0" :max="100"
-                                    class="w-full" />
-                            </el-form-item>
-                        </el-col>
-                        <el-col :span="6">
-                            <el-form-item label="出站限速（次/秒，0 表示不限）">
-                                <el-input-number v-model="drafts[provider.name].rps" :min="0" :max="100" :step="0.5"
-                                    class="w-full" />
-                            </el-form-item>
-                        </el-col>
-                        <el-col :span="6">
-                            <el-form-item label="月配额（0 表示不限）">
-                                <el-input-number v-model="drafts[provider.name].monthlyQuota" :min="0" :max="1000000"
-                                    class="w-full" />
+                        <el-col :span="12">
+                            <el-form-item label="月配额（0 不限）">
+                                <el-input-number v-model="form.monthlyQuota" :min="0" :max="1000000" class="w-full" />
                             </el-form-item>
                         </el-col>
                     </el-row>
                     <el-form-item label="附加参数（JSON）">
-                        <el-input v-model="drafts[provider.name].extra" placeholder='{"search_depth":"basic"}' />
+                        <el-input v-model="form.extra" placeholder='{"search_depth":"basic"}' />
                     </el-form-item>
-
-                    <div class="text-right">
-                        <el-button v-if="isDirty(provider)" @click="resetDraft(provider)">撤销改动</el-button>
-                        <el-button :loading="testing === provider.name" @click="onTest(provider)">连通性测试</el-button>
-                        <el-button type="primary" :loading="saving === provider.name" @click="onSave(provider)">
-                            保存
-                        </el-button>
-                    </div>
                 </el-form>
-            </el-collapse-item>
-        </el-collapse>
-    </el-card>
+            </div>
+
+            <template #footer>
+                <span v-if="dirty" class="mr-auto text-xs text-orange-500">参数有未保存的改动</span>
+                <el-button @click="drawerVisible = false">关闭</el-button>
+                <el-button type="primary" :loading="saving" :disabled="!dirty" @click="onSaveParams">保存参数</el-button>
+            </template>
+        </el-drawer>
+    </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue';
-import { Connection, InfoFilled, Key, Refresh } from '@element-plus/icons-vue';
+import { computed, reactive, ref, watch } from 'vue';
+import { ElMessageBox } from 'element-plus';
+import { Connection, InfoFilled, Refresh, Setting } from '@element-plus/icons-vue';
 import { notify } from '@/utils/notification';
 import ProviderLogo from './ProviderLogo.vue';
-import { formatCost } from './format';
-import { testGatewayProvider, updateGatewayProvider, type GatewayProvider } from '@/api/gateway';
+import SectionPanel from './SectionPanel.vue';
+import { formatCost, formatTime, quotaPercentage } from './format';
+import {
+    createGatewayProviderKey,
+    deleteGatewayProviderKey,
+    testGatewayProvider,
+    updateGatewayProvider,
+    updateGatewayProviderKey,
+    type GatewayProvider,
+    type GatewayProviderKey
+} from '@/api/gateway';
 
 const props = defineProps<{ providers: GatewayProvider[] }>();
 const emit = defineEmits<{ refresh: [] }>();
 
-/** 表单草稿。列表里的秘钥是脱敏值，直接绑定会把脱敏串当成新秘钥存回去 */
-interface ProviderDraft {
-    enabled: boolean;
-    apiKey: string;
-    baseUrl: string;
-    priority: number;
-    weight: number;
-    rps: number;
-    monthlyQuota: number;
-    extra: string;
-}
-
-const drafts = reactive<Record<string, ProviderDraft>>({});
-const expanded = ref<string[]>([]);
-const saving = ref('');
+const drawerVisible = ref(false);
+const activeName = ref('');
+const toggling = ref('');
+const saving = ref(false);
+const adding = ref(false);
 const testing = ref('');
 
-function draftOf(provider: GatewayProvider): ProviderDraft {
-    return {
-        enabled: provider.enabled,
-        apiKey: '',
-        baseUrl: provider.baseUrl,
-        priority: provider.priority,
-        weight: provider.weight,
-        rps: provider.rps,
-        monthlyQuota: provider.monthlyQuota,
-        extra: provider.extra
-    };
+const newKey = reactive({ label: '', apiKey: '' });
+const form = reactive({ baseUrl: '', priority: 100, weight: 1, rps: 1, monthlyQuota: 0, extra: '' });
+
+// 抽屉始终跟着列表里的最新数据走：加完密钥父组件刷新后，这里立刻能看到
+const active = computed(() => props.providers.find((item) => item.name === activeName.value));
+
+const dirty = computed(() => {
+    const provider = active.value;
+    if (!provider) return false;
+    return form.baseUrl !== provider.baseUrl
+        || form.priority !== provider.priority
+        || form.weight !== provider.weight
+        || form.rps !== provider.rps
+        || form.monthlyQuota !== provider.monthlyQuota
+        || form.extra !== provider.extra;
+});
+
+function keyHint(provider: GatewayProvider) {
+    if (!provider.keys.length) return '未配置密钥';
+    if (provider.activeKeys === provider.keys.length) return `${provider.activeKeys} 把密钥在轮换`;
+    return `${provider.activeKeys}/${provider.keys.length} 把密钥在轮换`;
 }
 
-function isDirty(provider: GatewayProvider) {
-    const draft = drafts[provider.name];
-    if (!draft) return false;
-    return draft.apiKey.trim() !== ''
-        || draft.enabled !== provider.enabled
-        || draft.baseUrl !== provider.baseUrl
-        || draft.priority !== provider.priority
-        || draft.weight !== provider.weight
-        || draft.rps !== provider.rps
-        || draft.monthlyQuota !== provider.monthlyQuota
-        || draft.extra !== provider.extra;
+function keyHintClass(provider: GatewayProvider) {
+    if (!provider.keys.length) return 'text-red-400';
+    return provider.activeKeys === provider.keys.length ? 'text-gray-400' : 'text-orange-500';
 }
 
-function resetDraft(provider: GatewayProvider) {
-    drafts[provider.name] = draftOf(provider);
+function statusLabel(status: string) {
+    if (status === 'auth_failed') return '密钥被拒';
+    if (status === 'quota_exceeded') return '配额用尽';
+    return status;
 }
 
-// 列表刷新常常由"保存另一家"触发，改动过的面板不跟着重置，否则会顺手清掉刚粘贴进去的秘钥
+function openDrawer(provider: GatewayProvider) {
+    activeName.value = provider.name;
+    resetForm(provider);
+    newKey.label = '';
+    newKey.apiKey = '';
+    drawerVisible.value = true;
+}
+
+function resetForm(provider: GatewayProvider) {
+    form.baseUrl = provider.baseUrl;
+    form.priority = provider.priority;
+    form.weight = provider.weight;
+    form.rps = provider.rps;
+    form.monthlyQuota = provider.monthlyQuota;
+    form.extra = provider.extra;
+}
+
+// 列表刷新后，如果参数没被改过就跟着服务端的新值走，改过就保留操作者的输入
 watch(() => props.providers, (list) => {
-    list.forEach((provider) => {
-        if (drafts[provider.name] && isDirty(provider)) return;
-        drafts[provider.name] = draftOf(provider);
-    });
-    if (!expanded.value.length && list.length) {
-        expanded.value = [list[0].name];
-    }
-}, { immediate: true });
+    const provider = list.find((item) => item.name === activeName.value);
+    if (provider && !dirty.value) resetForm(provider);
+});
 
-async function onSave(provider: GatewayProvider) {
-    const draft = drafts[provider.name];
-    if (draft.extra.trim() && !isJson(draft.extra)) {
+async function onToggle(provider: GatewayProvider, enabled: boolean) {
+    toggling.value = provider.name;
+    try {
+        await updateGatewayProvider(provider.name, { enabled });
+        notify.success(enabled ? `${provider.displayName || provider.name} 已启用` : `${provider.displayName || provider.name} 已停用`);
+        emit('refresh');
+    } finally {
+        toggling.value = '';
+    }
+}
+
+async function onSaveParams() {
+    const provider = active.value;
+    if (!provider) return;
+    if (form.extra.trim() && !isJson(form.extra)) {
         notify.warning('附加参数必须是合法 JSON');
         return;
     }
-
-    saving.value = provider.name;
+    saving.value = true;
     try {
         await updateGatewayProvider(provider.name, {
-            enabled: draft.enabled,
-            // 留空表示不修改，后端也会忽略空串
-            apiKey: draft.apiKey,
-            baseUrl: draft.baseUrl,
-            priority: draft.priority,
-            weight: draft.weight,
-            rps: draft.rps,
-            monthlyQuota: draft.monthlyQuota,
-            extra: draft.extra
+            baseUrl: form.baseUrl,
+            priority: form.priority,
+            weight: form.weight,
+            rps: form.rps,
+            monthlyQuota: form.monthlyQuota,
+            extra: form.extra
         });
-        draft.apiKey = '';
-        notify.success(`${provider.displayName || provider.name} 配置已保存`);
+        notify.success('参数已保存');
         emit('refresh');
     } finally {
-        saving.value = '';
+        saving.value = false;
     }
 }
 
-async function onTest(provider: GatewayProvider) {
-    testing.value = provider.name;
+// 草稿测试带上表单里的地址与附加参数，这样改了 baseUrl 也能在保存前验证
+function probeBase() {
+    return { baseUrl: form.baseUrl, extra: form.extra };
+}
+
+function reportProbe(result: { ok: boolean; latencyMs: number; resultCount?: number; error?: string }) {
+    if (result.ok) {
+        notify.success(`连通正常，耗时 ${result.latencyMs}ms，返回 ${result.resultCount ?? 0} 条结果`);
+    } else {
+        notify.error(`连通失败：${result.error}`);
+    }
+}
+
+async function onTestDraft() {
+    const provider = active.value;
+    if (!provider) return;
+    testing.value = 'draft';
     try {
-        const result = await testGatewayProvider(provider.name);
-        if (result.ok) {
-            notify.success(`连通正常，耗时 ${result.latencyMs}ms，返回 ${result.resultCount} 条结果`);
-        } else {
-            notify.error(`连通失败：${result.error}`);
-        }
+        reportProbe(await testGatewayProvider(provider.name, { ...probeBase(), apiKey: newKey.apiKey.trim() }));
     } finally {
         testing.value = '';
     }
 }
 
-// 后端也会校验，这里先拦一道是为了让错误落在输入框旁边而不是一条接口报错
+async function onTestStored(key: GatewayProviderKey) {
+    const provider = active.value;
+    if (!provider) return;
+    testing.value = `key-${key.id}`;
+    try {
+        reportProbe(await testGatewayProvider(provider.name, { ...probeBase(), keyId: key.id }));
+    } finally {
+        testing.value = '';
+    }
+}
+
+async function onAddKey() {
+    const provider = active.value;
+    if (!provider) return;
+    adding.value = true;
+    try {
+        await createGatewayProviderKey(provider.name, {
+            label: newKey.label.trim(),
+            apiKey: newKey.apiKey.trim()
+        });
+        newKey.label = '';
+        newKey.apiKey = '';
+        notify.success('密钥已添加，立即参与轮换');
+        emit('refresh');
+    } finally {
+        adding.value = false;
+    }
+}
+
+async function onPatchKey(key: GatewayProviderKey, patch: { enabled?: boolean; revive?: boolean }) {
+    const provider = active.value;
+    if (!provider) return;
+    await updateGatewayProviderKey(provider.name, key.id, patch);
+    notify.success('已更新');
+    emit('refresh');
+}
+
+async function onDeleteKey(key: GatewayProviderKey) {
+    const provider = active.value;
+    if (!provider) return;
+    try {
+        await ElMessageBox.confirm(`确定删除密钥「${key.label || key.masked}」吗？`, '提示', { type: 'warning' });
+    } catch {
+        return;
+    }
+    await deleteGatewayProviderKey(provider.name, key.id);
+    notify.success('已删除');
+    emit('refresh');
+}
+
+// 后端也会校验，这里先拦一道是为了让错误落在输入框旁边而不是变成一条接口报错
 function isJson(value: string) {
     try {
         JSON.parse(value);
@@ -237,3 +371,121 @@ function isJson(value: string) {
     }
 }
 </script>
+
+<style scoped>
+.card {
+    padding: 16px 18px;
+    border: 1px solid #edf0f3;
+    border-radius: 12px;
+    background-color: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    border-color: #d6e4ff;
+    box-shadow: 0 4px 16px rgba(63, 140, 255, 0.08);
+}
+
+.card--off {
+    background-color: #fbfbfc;
+}
+
+.card--off :deep(.el-progress-bar__inner) {
+    background-color: #dcdfe6;
+}
+
+.link {
+    color: #3f8cff;
+    white-space: nowrap;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
+
+.drawer {
+    padding-bottom: 8px;
+}
+
+.hint {
+    margin: 0 0 18px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background-color: #f7f9fc;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #667085;
+}
+
+.group-title {
+    margin: 0 0 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.group-title:not(:first-of-type) {
+    margin-top: 26px;
+}
+
+.group-sub {
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 400;
+    color: #98a2b3;
+}
+
+.empty-keys {
+    padding: 14px;
+    border: 1px dashed #e4e7ed;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 13px;
+    color: #98a2b3;
+}
+
+.key-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #f0f2f5;
+    border-radius: 10px;
+}
+
+.key-row+.key-row {
+    margin-top: 8px;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.dot--on {
+    background-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.14);
+}
+
+.dot--off {
+    background-color: #d0d5dd;
+}
+
+.masked {
+    padding: 1px 6px;
+    border-radius: 4px;
+    background-color: #f4f6f8;
+    font-size: 12px;
+    color: #667085;
+}
+
+.add-key {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px dashed #dcdfe6;
+    border-radius: 10px;
+    background-color: #fcfcfd;
+}
+</style>

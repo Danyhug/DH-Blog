@@ -2,6 +2,8 @@ package aigateway
 
 import (
 	"context"
+	"strings"
+	"time"
 
 	"dh-blog/internal/platform/search"
 )
@@ -11,9 +13,89 @@ func searchProbe() search.Request {
 	return search.Request{Query: "hello world", MaxResults: 1}
 }
 
+// ProviderProbe describes which credential a connectivity test should use.
+// Every field is optional; the draft ones deliberately never touch the database.
+type ProviderProbe struct {
+	KeyID   int    `json:"keyId"`
+	APIKey  string `json:"apiKey"`
+	BaseURL string `json:"baseUrl"`
+	Extra   string `json:"extra"`
+}
+
+// ProbeResult is what the connectivity test reports back.
+type ProbeResult struct {
+	OK          bool   `json:"ok"`
+	LatencyMS   int    `json:"latencyMs"`
+	ResultCount int    `json:"resultCount"`
+	Error       string `json:"error,omitempty"`
+	KeyLabel    string `json:"keyLabel,omitempty"`
+}
+
+// TestProvider issues one real search so an operator can confirm a credential.
+//
+// The draft fields are the point: a key has to be testable *before* it is
+// saved, otherwise the only way to discover a bad key is to store it and wait
+// for real traffic to fail. Nothing here is persisted, and the probe is built
+// from a throwaway adapter so the live rotation is untouched.
+func (s *Service) TestProvider(ctx context.Context, name string, probe ProviderProbe) (ProbeResult, error) {
+	config, err := s.repo.providerByName(ctx, name)
+	if err != nil {
+		return ProbeResult{}, err
+	}
+	if draft := strings.TrimSpace(probe.BaseURL); draft != "" {
+		config.BaseURL = draft
+	}
+	if draft := strings.TrimSpace(probe.Extra); draft != "" {
+		config.Extra = draft
+	}
+
+	apiKey := strings.TrimSpace(probe.APIKey)
+	label := "未保存的密钥"
+	switch {
+	case apiKey != "":
+		// 用草稿里的密钥，正是"保存前先测"的场景
+	case probe.KeyID > 0:
+		stored, err := s.repo.providerKeyByID(ctx, probe.KeyID)
+		if err != nil {
+			return ProbeResult{}, err
+		}
+		apiKey, label = stored.APIKey, stored.Label
+	default:
+		runtime := s.runtime(name)
+		if runtime == nil {
+			return ProbeResult{}, ErrProviderNotFound
+		}
+		picked := runtime.firstUsableKey(s.now())
+		if picked == nil {
+			return ProbeResult{}, ErrProviderKeyNotFound
+		}
+		apiKey, label = picked.config.APIKey, picked.config.Label
+	}
+	if strings.TrimSpace(apiKey) == "" {
+		return ProbeResult{}, ErrProviderKeyNotFound
+	}
+
+	adapter, err := s.buildAdapter(config, apiKey)
+	if err != nil {
+		return ProbeResult{}, err
+	}
+
+	started := time.Now()
+	response, callErr := adapter.Search(ctx, searchProbe())
+	latency := int(time.Since(started) / time.Millisecond)
+	if callErr != nil {
+		return ProbeResult{OK: false, LatencyMS: latency, Error: callErr.Error(), KeyLabel: label}, nil
+	}
+	return ProbeResult{OK: true, LatencyMS: latency, ResultCount: len(response.Results), KeyLabel: label}, nil
+}
+
 // providerViews assembles the admin provider list, masking every credential.
 func (s *Service) providerViews(ctx context.Context) ([]providerView, error) {
 	providers, err := s.repo.listProviders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	credentials, err := s.repo.listProviderKeys(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -27,6 +109,35 @@ func (s *Service) providerViews(ctx context.Context) ([]providerView, error) {
 		return nil, err
 	}
 
+	now := s.now()
+	keysByProvider := make(map[string][]providerKeyView, len(providers))
+	activeByProvider := make(map[string]int, len(providers))
+	for _, credential := range credentials {
+		rotating := credential.Usable(now)
+		if rotating {
+			activeByProvider[credential.Provider]++
+		}
+		status := credential.Status
+		if status == "" {
+			status = ProviderKeyActive
+		}
+		// 跨月自愈的密钥在页面上就该显示为正常，别让人以为还停着
+		if credential.Recovered(now) {
+			status = ProviderKeyActive
+		}
+		keysByProvider[credential.Provider] = append(keysByProvider[credential.Provider], providerKeyView{
+			ID:         credential.ID,
+			Label:      credential.Label,
+			Masked:     MaskSecret(credential.APIKey),
+			Enabled:    credential.Enabled,
+			Status:     status,
+			LastError:  credential.LastError,
+			LastUsedAt: credential.LastUsedAt,
+			DisabledAt: credential.DisabledAt,
+			InRotation: rotating,
+		})
+	}
+
 	views := make([]providerView, 0, len(providers))
 	for _, provider := range providers {
 		health := string(search.BreakerClosed)
@@ -34,26 +145,30 @@ func (s *Service) providerViews(ctx context.Context) ([]providerView, error) {
 			health = string(runtime.breaker.State())
 		}
 		meta := search.MetaFor(provider.Name)
+		keys := keysByProvider[provider.Name]
+		if keys == nil {
+			keys = []providerKeyView{}
+		}
 		views = append(views, providerView{
-			Name:          provider.Name,
-			DisplayName:   provider.DisplayName,
-			HomeURL:       meta.HomeURL,
-			DocsURL:       meta.DocsURL,
-			ConsoleURL:    meta.ConsoleURL,
-			LogoURL:       meta.LogoURL,
-			Billing:       meta.Billing,
-			Enabled:       provider.Enabled,
-			APIKeyMasked:  MaskSecret(provider.APIKey),
-			APIKeyPresent: provider.APIKey != "",
-			BaseURL:       provider.BaseURL,
-			Priority:      provider.Priority,
-			Weight:        provider.Weight,
-			RPS:           provider.RPS,
-			MonthlyQuota:  provider.MonthlyQuota,
-			MonthlyUsed:   usage[providerSubject(provider.Name)].Count,
-			MonthlyCost:   usage[providerSubject(provider.Name)].CostMicroUSD,
-			Extra:         provider.Extra,
-			Health:        health,
+			Name:         provider.Name,
+			DisplayName:  provider.DisplayName,
+			HomeURL:      meta.HomeURL,
+			DocsURL:      meta.DocsURL,
+			ConsoleURL:   meta.ConsoleURL,
+			LogoURL:      meta.LogoURL,
+			Billing:      meta.Billing,
+			Enabled:      provider.Enabled,
+			Keys:         keys,
+			ActiveKeys:   activeByProvider[provider.Name],
+			BaseURL:      provider.BaseURL,
+			Priority:     provider.Priority,
+			Weight:       provider.Weight,
+			RPS:          provider.RPS,
+			MonthlyQuota: provider.MonthlyQuota,
+			MonthlyUsed:  usage[providerSubject(provider.Name)].Count,
+			MonthlyCost:  usage[providerSubject(provider.Name)].CostMicroUSD,
+			Extra:        provider.Extra,
+			Health:       health,
 		})
 	}
 	return views, nil

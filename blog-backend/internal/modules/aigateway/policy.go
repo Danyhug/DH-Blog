@@ -26,6 +26,8 @@ var (
 	ErrProviderNotAllowed = errors.New("当前 API Key 无权使用该搜索供应商")
 	// ErrNoProviderAvailable means every candidate was filtered out.
 	ErrNoProviderAvailable = errors.New("没有可用的搜索供应商")
+	// ErrProviderKeyNotFound means the referenced upstream credential is gone.
+	ErrProviderKeyNotFound = errors.New("指定的供应商密钥不存在")
 )
 
 // candidate is a provider as the routing policy sees it: configuration plus

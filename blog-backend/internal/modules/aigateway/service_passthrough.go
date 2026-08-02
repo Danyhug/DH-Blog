@@ -105,7 +105,16 @@ func (s *Service) passthrough(ctx context.Context, key *APIKey, provider string,
 	if runtime == nil || !runtime.config.Enabled {
 		return PassthroughResult{}, 0, 0, newGatewayError(http.StatusNotFound, "provider_not_found", ErrProviderNotFound.Error(), provider)
 	}
-	forwarder, ok := runtime.provider.(search.Forwarder)
+	if !runtime.passthrough {
+		return PassthroughResult{}, 0, 0, newGatewayError(http.StatusNotFound, "provider_not_found", "该供应商不支持原生透传", provider)
+	}
+	// 透传不做跨供应商回退，但换一把自家的密钥是合理的，所以这里同样走轮换
+	picked := runtime.pick(now)
+	if picked == nil {
+		return PassthroughResult{}, 0, 0, newGatewayError(http.StatusServiceUnavailable, "no_provider_available",
+			"该供应商没有可用的密钥", provider)
+	}
+	forwarder, ok := picked.provider.(search.Forwarder)
 	if !ok {
 		return PassthroughResult{}, 0, 0, newGatewayError(http.StatusNotFound, "provider_not_found", "该供应商不支持原生透传", provider)
 	}
@@ -150,11 +159,21 @@ func (s *Service) passthrough(ctx context.Context, key *APIKey, provider string,
 	// health, so only server-side failures feed the breaker.
 	healthy := response.OK() || !retryableKind(response.Kind)
 	runtime.breaker.Report(healthy)
-	if response.Kind == search.KindQuotaExceeded {
+	// 凭据被上游拒了就把这把密钥停掉，下一次透传会自动换到另一把
+	if response.Kind == search.KindAuthFailed || response.Kind == search.KindQuotaExceeded {
+		s.parkKey(ctx, runtime, picked, &search.Error{
+			Provider: provider, Kind: response.Kind, Status: response.Status,
+			Message: truncateQuery(string(response.Body)),
+		}, now)
+	}
+	if response.Kind == search.KindQuotaExceeded && runtime.usableKeys(now) == 0 {
 		s.markProviderExhausted(ctx, provider, now)
 	}
 
 	if response.OK() {
+		if err := s.repo.touchProviderKey(ctx, picked.config.ID, now); err != nil {
+			logrus.Warnf("更新供应商密钥使用时间失败: %v", err)
+		}
 		s.accountPassthrough(ctx, key, provider, response.Credits, response.CostMicroUSD, now)
 		if s.options.CacheTTL > 0 && len(response.Body) <= maxCachedPassthroughBody {
 			_ = s.cache.Set(cacheKey, cachedPassthrough{

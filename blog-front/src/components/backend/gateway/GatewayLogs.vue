@@ -1,13 +1,12 @@
 <template>
-    <el-card shadow="hover">
-        <template #header>
-            <div class="flex items-center justify-between">
-                <span class="flex items-center">
-                    <el-icon class="mr-2">
-                        <Document />
-                    </el-icon> 请求流水
-                </span>
-                <div class="flex gap-2">
+    <SectionPanel title="请求流水" subtitle="endpoint 可区分统一接口、原生透传与 MCP 调用" flush>
+        <template #icon>
+            <el-icon>
+                <Document />
+            </el-icon>
+        </template>
+        <template #extra>
+            <div class="flex gap-2">
                     <el-select v-model="provider" placeholder="全部供应商" clearable size="small" class="w-36"
                         @change="load(1)">
                         <el-option v-for="item in providers" :key="item.name"
@@ -17,8 +16,7 @@
                         @change="load(1)">
                         <el-option v-for="option in statusOptions" :key="option" :label="option" :value="option" />
                     </el-select>
-                    <el-button size="small" :icon="Refresh" @click="load(page)">刷新</el-button>
-                </div>
+                <el-button size="small" :icon="Refresh" @click="load(page)">刷新</el-button>
             </div>
         </template>
 
@@ -61,17 +59,18 @@
             <el-table-column prop="error" label="错误" min-width="180" show-overflow-tooltip />
         </el-table>
 
-        <div class="mt-4 flex justify-end">
+        <div class="px-5 py-4 flex justify-end">
             <el-pagination layout="total, prev, pager, next" :total="total" :page-size="pageSize" :current-page="page"
                 @current-change="load" />
         </div>
-    </el-card>
+    </SectionPanel>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { Document, Refresh } from '@element-plus/icons-vue';
 import ProviderLogo from './ProviderLogo.vue';
+import SectionPanel from './SectionPanel.vue';
 import { formatCost, formatTime } from './format';
 import { getGatewayLogs, type GatewayProvider, type GatewayRequestLog } from '@/api/gateway';
 
