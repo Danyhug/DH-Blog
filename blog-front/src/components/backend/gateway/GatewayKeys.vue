@@ -39,7 +39,7 @@
             </p>
         </SectionPanel>
 
-        <SectionPanel title="接入 Claude Code" subtitle="网关自带 MCP Server，装好后工具名为 web_search">
+        <SectionPanel title="接入 Claude Code" subtitle="装好后用它替掉 Claude Code 内置的 WebSearch">
             <template #icon>
                 <el-icon>
                     <MagicStick />
@@ -52,7 +52,7 @@
                 </template>
             </el-alert>
 
-            <div class="step">1. 终端执行（把 Key 换成下面签发的那把）</div>
+            <div class="step">1. 挂上 MCP Server（把 Key 换成下面签发的那把）</div>
             <div class="code-block">
                 <pre>{{ mcpAddCommand }}</pre>
                 <el-button class="copy-btn" link type="primary" :icon="CopyDocument"
@@ -65,11 +65,23 @@
                 <el-button class="copy-btn" link type="primary" :icon="CopyDocument" @click="copy(mcpJson, '配置')" />
             </div>
 
+            <div class="step">
+                2. 禁掉内置搜索，写进 <code>~/.claude/settings.json</code>
+                <span class="step-sub">不禁的话两个搜索工具并存，模型多半仍会用内置那个</span>
+            </div>
+            <div class="code-block">
+                <pre>{{ denyWebSearchJson }}</pre>
+                <el-button class="copy-btn" link type="primary" :icon="CopyDocument"
+                    @click="copy(denyWebSearchJson, '配置')" />
+            </div>
+
             <p class="mt-4 mb-0 text-xs text-gray-400 leading-relaxed">
-                2. 装好后在 Claude Code 里执行 <code>/mcp</code> 应该能看到 <code>dh-search</code>，
-                可选的 provider 会按这把 Key 的供应商限制自动裁剪。<br />
-                3. 想让搜索一律走网关，在 <code>~/.claude/settings.json</code> 里加
-                <code>"permissions": { "deny": ["WebSearch"] }</code> 禁掉内置搜索。<br />
+                3. 在 Claude Code 里执行 <code>/mcp</code> 应该能看到 <code>dh-search</code>，
+                工具名为 <code>web_search</code>，可选的 provider 会按这把 Key 的供应商限制自动裁剪。<br />
+                内置 <code>WebSearch</code> 只给标题和链接，要读正文还得再 <code>WebFetch</code> 一次；
+                这个工具直接带摘要，需要全文时把 <code>include_raw_content</code> 设为 true 即可，省掉那一步。<br />
+                域名过滤同时认 <code>allowed_domains</code> / <code>blocked_domains</code>（内置搜索的叫法）
+                和 <code>include_domains</code> / <code>exclude_domains</code>。<br />
                 MCP 调用与统一接口共用限速、配额与缓存，流水里的 endpoint 记为 <code>mcp/search</code>。
             </p>
         </SectionPanel>
@@ -174,6 +186,9 @@
                 <el-button class="copy-btn" link type="primary" :icon="CopyDocument"
                     @click="copy(createdMcpCommand, '命令')" />
             </div>
+            <p class="mt-3 mb-0 text-xs text-gray-400">
+                装完记得按上面第 2 步禁掉内置 <code>WebSearch</code>，否则两个搜索工具并存。
+            </p>
 
             <template #footer>
                 <el-button type="primary" @click="secretDialogVisible = false">关闭</el-button>
@@ -223,6 +238,11 @@ function mcpCommandFor(key: string) {
 }
 
 const mcpAddCommand = mcpCommandFor('<你的网关 Key>');
+
+// WebSearch 的权限规则不带参数，deny 里写裸工具名就是全部禁用
+const denyWebSearchJson = JSON.stringify({
+    permissions: { deny: ['WebSearch'] }
+}, null, 2);
 
 // 单引号字符串，${DH_GATEWAY_KEY} 是要原样写进配置的占位符，不能被模板插值吃掉
 const mcpJson = JSON.stringify({
@@ -345,6 +365,12 @@ onMounted(load);
 
 .step:not(:first-of-type) {
     margin-top: 16px;
+}
+
+.step-sub {
+    margin-left: 8px;
+    font-size: 12px;
+    color: #98a2b3;
 }
 
 .code-block {

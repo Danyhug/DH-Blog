@@ -171,28 +171,54 @@ func webSearchTool(providers []providerStatus) mcpTool {
 
 func webSearchDescription(providers []providerStatus) string {
 	var builder strings.Builder
-	builder.WriteString("通过博客自建的搜索网关联网检索，返回标题、链接与摘要。适合查文档、查报错原因、查库的最新用法，以及任何需要现网事实的问题。\n")
+	// 说明写成"这就是本环境的联网搜索"，而不是"博客自建的一个网关"。
+	// 后者读起来像个可选的附加工具，模型多半会绕开它去用内置搜索——
+	// 而这个 MCP 存在的意义正是取代内置搜索。
+	builder.WriteString("本环境的联网搜索工具。需要现网信息时用它：查文档与 API 用法、" +
+		"查报错原因、确认某个库的最新版本与用法变更、查新闻与时效性事实，" +
+		"以及任何超出模型已有知识的问题。\n")
+	builder.WriteString("返回标题、链接和摘要。摘要通常已经够回答问题，不必再逐条抓取网页；" +
+		"确实要读全文时把 include_raw_content 设为 true，可以省掉单独的抓取步骤。\n")
+
 	if len(providers) == 0 {
-		builder.WriteString("当前没有可用的搜索供应商，调用会直接失败。")
+		builder.WriteString("注意：当前没有可用的搜索供应商，调用会直接失败。")
 		return builder.String()
 	}
-	builder.WriteString("当前可用供应商：\n")
+
+	answering := make([]string, 0, len(providers))
 	for _, provider := range providers {
-		abilities := make([]string, 0, 2)
 		if provider.SupportsAnswer {
-			abilities = append(abilities, "可返回直接答案")
+			answering = append(answering, provider.Name)
 		}
-		if provider.SupportsRaw {
-			abilities = append(abilities, "可返回网页正文")
-		}
-		if len(abilities) == 0 {
-			builder.WriteString(fmt.Sprintf("- %s\n", provider.Name))
-			continue
-		}
-		builder.WriteString(fmt.Sprintf("- %s：%s\n", provider.Name, strings.Join(abilities, "、")))
 	}
-	builder.WriteString("不填 provider 时由网关按后台配置的调度策略自动选路，通常直接留空即可。")
+	if len(answering) > 0 {
+		builder.WriteString("把 include_answer 设为 true 可以额外要一段直接答案（由 " +
+			strings.Join(answering, "、") + " 提供）。\n")
+	}
+	// provider 是给排障用的旁路，日常调用不该让模型在这上面花心思
+	builder.WriteString("provider 留空即可，网关会自己选路。")
 	return builder.String()
+}
+
+// mcpSearchArguments is the tool-call argument shape.
+//
+// The domain filters are accepted under two names: the ones Claude Code's
+// built-in WebSearch uses, and the gateway's own. A model carrying habits from
+// the built-in tool would otherwise have its filter silently dropped, because
+// json.Unmarshal ignores fields it does not recognise — the search would run
+// unfiltered and look like it worked.
+type mcpSearchArguments struct {
+	searchBody
+	AllowedDomains []string `json:"allowed_domains"`
+	BlockedDomains []string `json:"blocked_domains"`
+}
+
+// merged folds the aliases into the body the HTTP path already validates.
+func (a mcpSearchArguments) merged() searchBody {
+	body := a.searchBody
+	body.IncludeDomains = append(body.IncludeDomains, a.AllowedDomains...)
+	body.ExcludeDomains = append(body.ExcludeDomains, a.BlockedDomains...)
+	return body
 }
 
 // webSearchInputSchema mirrors the HTTP body's fields, minus allow_fallback and
@@ -203,6 +229,15 @@ func webSearchInputSchema(providers []providerStatus) map[string]any {
 	enum = append(enum, providerAuto)
 	for _, provider := range providers {
 		enum = append(enum, provider.Name)
+	}
+
+	domainList := func(description string) map[string]any {
+		return map[string]any{
+			"type":        "array",
+			"description": description,
+			"items":       map[string]any{"type": "string"},
+			"maxItems":    maxDomainFilter,
+		}
 	}
 
 	return map[string]any{
@@ -221,7 +256,7 @@ func webSearchInputSchema(providers []providerStatus) map[string]any {
 			},
 			"provider": map[string]any{
 				"type":        "string",
-				"description": "指定供应商。留空或 auto 表示交给网关选路。",
+				"description": "指定供应商，一般不需要填。留空或 auto 表示交给网关选路。",
 				"enum":        enum,
 			},
 			"topic": map[string]any{
@@ -243,25 +278,18 @@ func webSearchInputSchema(providers []providerStatus) map[string]any {
 				"type":        "string",
 				"description": "语言代码，例如 zh、en。",
 			},
-			"include_domains": map[string]any{
-				"type":        "array",
-				"description": "只在这些域名内搜索，最多 50 项。",
-				"items":       map[string]any{"type": "string"},
-				"maxItems":    maxDomainFilter,
-			},
-			"exclude_domains": map[string]any{
-				"type":        "array",
-				"description": "排除这些域名，最多 50 项。",
-				"items":       map[string]any{"type": "string"},
-				"maxItems":    maxDomainFilter,
-			},
+			"allowed_domains": domainList("只在这些域名内搜索，最多 50 项。"),
+			"blocked_domains": domainList("排除这些域名，最多 50 项。"),
+			// 网关 HTTP 接口用的名字，同时收下，便于照着接口文档写的调用直接可用
+			"include_domains": domainList("allowed_domains 的别名。"),
+			"exclude_domains": domainList("blocked_domains 的别名。"),
 			"include_answer": map[string]any{
 				"type":        "boolean",
 				"description": "让供应商额外给一段直接答案。只有支持该能力的供应商会被选中。",
 			},
 			"include_raw_content": map[string]any{
 				"type":        "boolean",
-				"description": "返回网页正文。内容很长，只在确实要读全文时开启。",
+				"description": "连网页正文一起返回，省掉再抓一次的步骤。内容很长，只在确实要读全文时开启。",
 			},
 		},
 		"required":             []string{"query"},

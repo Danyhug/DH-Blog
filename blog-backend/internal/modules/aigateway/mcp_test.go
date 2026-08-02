@@ -356,3 +356,107 @@ func TestRenderSearchResultWithoutHits(t *testing.T) {
 		t.Errorf("空结果应说明，实际 = %q", text)
 	}
 }
+
+// schemaPropertiesOf pulls the advertised parameter map out of a tool definition.
+func schemaPropertiesOf(t *testing.T, tool mcpTool) map[string]any {
+	t.Helper()
+	schema, ok := tool.InputSchema.(map[string]any)
+	if !ok {
+		t.Fatalf("inputSchema 类型异常: %T", tool.InputSchema)
+	}
+	properties, ok := schema["properties"].(map[string]any)
+	if !ok {
+		t.Fatalf("inputSchema.properties 缺失: %+v", schema)
+	}
+	return properties
+}
+
+func TestMCPToolAdvertisesBuiltInWebSearchParameterNames(t *testing.T) {
+	// 目标是取代 Claude Code 内置的 WebSearch，所以它那套域名参数名必须认，
+	// 否则模型照着旧习惯传 allowed_domains，会被静默忽略、搜索照跑但没过滤
+	module := newGatewayTestModule(t, gatewayTestConfig{Tavily: func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"results":[]}`))
+	}})
+	engine := newTestEngine(module)
+	token := issueTestKey(t, module, nil)
+
+	recorder := doMCP(engine, token, `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`)
+	list := rpcResultAs[mcpToolListResult](t, recorder)
+	properties := schemaPropertiesOf(t, list.Tools[0])
+
+	for _, name := range []string{"allowed_domains", "blocked_domains", "include_domains", "exclude_domains"} {
+		if _, ok := properties[name]; !ok {
+			t.Errorf("schema 缺少参数 %q", name)
+		}
+	}
+}
+
+func TestMCPSearchAcceptsBuiltInDomainFilterNames(t *testing.T) {
+	var received struct {
+		IncludeDomains []string `json:"include_domains"`
+		ExcludeDomains []string `json:"exclude_domains"`
+	}
+	module := newGatewayTestModule(t, gatewayTestConfig{Tavily: func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&received)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"query":"x","results":[]}`))
+	}})
+	engine := newTestEngine(module)
+	token := issueTestKey(t, module, nil)
+
+	body := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"web_search",` +
+		`"arguments":{"query":"go release","provider":"tavily",` +
+		`"allowed_domains":["go.dev"],"blocked_domains":["example.com"]}}}`
+	if recorder := doMCP(engine, token, body); recorder.Code != http.StatusOK {
+		t.Fatalf("状态码 = %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	if len(received.IncludeDomains) != 1 || received.IncludeDomains[0] != "go.dev" {
+		t.Errorf("include_domains = %v, 期望 allowed_domains 被映射过去", received.IncludeDomains)
+	}
+	if len(received.ExcludeDomains) != 1 || received.ExcludeDomains[0] != "example.com" {
+		t.Errorf("exclude_domains = %v, 期望 blocked_domains 被映射过去", received.ExcludeDomains)
+	}
+}
+
+func TestMCPSearchStillAcceptsGatewayDomainFilterNames(t *testing.T) {
+	var received struct {
+		IncludeDomains []string `json:"include_domains"`
+	}
+	module := newGatewayTestModule(t, gatewayTestConfig{Tavily: func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&received)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"query":"x","results":[]}`))
+	}})
+	engine := newTestEngine(module)
+	token := issueTestKey(t, module, nil)
+
+	body := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"web_search",` +
+		`"arguments":{"query":"go release","provider":"tavily","include_domains":["pkg.go.dev"]}}}`
+	if recorder := doMCP(engine, token, body); recorder.Code != http.StatusOK {
+		t.Fatalf("状态码 = %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if len(received.IncludeDomains) != 1 || received.IncludeDomains[0] != "pkg.go.dev" {
+		t.Errorf("include_domains = %v, 期望网关自己的参数名仍然可用", received.IncludeDomains)
+	}
+}
+
+func TestMCPToolDescriptionPresentsItselfAsTheWebSearch(t *testing.T) {
+	// 描述若把自己写成"博客自建网关的一个检索入口"，模型多半会绕开它去用内置搜索
+	module := newGatewayTestModule(t, gatewayTestConfig{Tavily: func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"results":[]}`))
+	}})
+	engine := newTestEngine(module)
+	token := issueTestKey(t, module, nil)
+
+	list := rpcResultAs[mcpToolListResult](t,
+		doMCP(engine, token, `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`))
+	description := list.Tools[0].Description
+
+	if !strings.Contains(description, "联网搜索") {
+		t.Errorf("描述里没说明这是联网搜索工具: %s", description)
+	}
+	if strings.Contains(description, "博客") {
+		t.Errorf("描述不该把自己限定成博客的附属功能: %s", description)
+	}
+}

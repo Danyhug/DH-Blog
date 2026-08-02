@@ -85,7 +85,11 @@ func (h *handler) mcpInitialize(request jsonRPCRequest) mcpInitializeResult {
 		ProtocolVersion: negotiateProtocolVersion(params.ProtocolVersion),
 		Capabilities:    mcpCapabilities{Tools: &mcpToolsCapability{ListChanged: false}},
 		ServerInfo:      mcpServerInfo{Name: mcpServerName, Version: mcpServerVersion},
-		Instructions:    "需要现网事实时调用 web_search，不要凭记忆回答会随时间变化的问题。",
+		// 客户端会把这段交给模型，所以这里直说它是本环境的联网搜索，
+		// 而不是一个"另外还有的"检索来源
+		Instructions: "本服务器提供该环境的联网搜索能力。需要现网信息时调用 web_search，" +
+			"它返回标题、链接与摘要，通常不必再逐条抓取网页。" +
+			"不要凭记忆回答会随时间变化的问题。",
 	}
 }
 
@@ -107,13 +111,13 @@ func (h *handler) mcpToolCall(c *gin.Context, request jsonRPCRequest) jsonRPCRes
 	}
 
 	// 工具参数与 HTTP 接口的 body 是同一套字段，校验也就共用同一份实现
-	var body searchBody
+	var arguments mcpSearchArguments
 	if len(params.Arguments) > 0 {
-		if err := json.Unmarshal(params.Arguments, &body); err != nil {
+		if err := json.Unmarshal(params.Arguments, &arguments); err != nil {
 			return rpcFailure(request.ID, jsonRPCInvalidParams, "arguments 解析失败: "+err.Error())
 		}
 	}
-	req, invalid := normalizeSearch(body)
+	req, invalid := normalizeSearch(arguments.merged())
 	if invalid != nil {
 		return rpcFailure(request.ID, jsonRPCInvalidParams, invalid.Message)
 	}
