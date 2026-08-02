@@ -283,7 +283,7 @@ func (p *ExaProvider) Forward(ctx context.Context, req PassthroughRequest) (Pass
 
 	response, err := forward(ctx, p.client, ProviderExa, p.baseURL+req.Path, req, func(httpReq *http.Request) {
 		httpReq.Header.Set("x-api-key", p.apiKey)
-	})
+	}, nil)
 	if err != nil {
 		return PassthroughResponse{}, err
 	}
@@ -301,3 +301,10 @@ func (p *ExaProvider) Forward(ctx context.Context, req PassthroughRequest) (Pass
 }
 
 var _ Forwarder = (*ExaProvider)(nil)
+
+// ExaProvider deliberately does not implement UsageReporter. Exa reports spend
+// only through admin-api.exa.ai/team-management, which rejects a search key with
+// 401 and wants a separate service credential plus the target key's UUID. What
+// it returns is dollars drawn against a prepaid balance rather than a monthly
+// allowance, so there is also no ceiling to compare a number against. Faking one
+// would be worse than leaving Exa on the gateway's local counter.

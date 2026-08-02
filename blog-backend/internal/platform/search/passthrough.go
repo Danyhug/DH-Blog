@@ -48,9 +48,12 @@ type Forwarder interface {
 }
 
 // forward performs the upstream call shared by both adapters. decorate adds the
-// provider's own authentication headers.
+// provider's own authentication headers; observe, when set, gets the upstream
+// response header so an adapter can harvest quota information that only travels
+// there. Both run for every status, since a rejected call still says something
+// about the credential.
 func forward(ctx context.Context, client *http.Client, provider, endpoint string,
-	req PassthroughRequest, decorate func(*http.Request)) (PassthroughResponse, error) {
+	req PassthroughRequest, decorate func(*http.Request), observe func(http.Header)) (PassthroughResponse, error) {
 
 	target := endpoint
 	if len(req.Query) > 0 {
@@ -76,6 +79,9 @@ func forward(ctx context.Context, client *http.Client, provider, endpoint string
 		return PassthroughResponse{}, newError(provider, classifyTransport(err), 0, err.Error())
 	}
 	defer httpResp.Body.Close()
+	if observe != nil {
+		observe(httpResp.Header)
+	}
 
 	payload, err := io.ReadAll(io.LimitReader(httpResp.Body, maxPassthroughBody))
 	if err != nil {
@@ -101,7 +107,7 @@ func (p *BraveProvider) Forward(ctx context.Context, req PassthroughRequest) (Pa
 
 	response, err := forward(ctx, p.client, ProviderBrave, p.baseURL+req.Path, req, func(httpReq *http.Request) {
 		httpReq.Header.Set("X-Subscription-Token", p.apiKey)
-	})
+	}, p.observeQuota)
 	if err != nil {
 		return PassthroughResponse{}, err
 	}
@@ -123,7 +129,7 @@ func (p *TavilyProvider) Forward(ctx context.Context, req PassthroughRequest) (P
 
 	response, err := forward(ctx, p.client, ProviderTavily, p.baseURL+req.Path, req, func(httpReq *http.Request) {
 		httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
-	})
+	}, nil)
 	if err != nil {
 		return PassthroughResponse{}, err
 	}
@@ -156,3 +162,4 @@ func (p *TavilyProvider) creditsFrom(body []byte) int {
 
 var _ Forwarder = (*BraveProvider)(nil)
 var _ Forwarder = (*TavilyProvider)(nil)
+var _ UsageReporter = (*TavilyProvider)(nil)

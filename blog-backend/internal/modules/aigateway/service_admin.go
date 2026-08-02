@@ -126,23 +126,32 @@ func (s *Service) providerViews(ctx context.Context) ([]providerView, error) {
 			status = ProviderKeyActive
 		}
 		keysByProvider[credential.Provider] = append(keysByProvider[credential.Provider], providerKeyView{
-			ID:         credential.ID,
-			Label:      credential.Label,
-			Masked:     MaskSecret(credential.APIKey),
-			Enabled:    credential.Enabled,
-			Status:     status,
-			LastError:  credential.LastError,
-			LastUsedAt: credential.LastUsedAt,
-			DisabledAt: credential.DisabledAt,
-			InRotation: rotating,
+			ID:               credential.ID,
+			Label:            credential.Label,
+			Masked:           MaskSecret(credential.APIKey),
+			Enabled:          credential.Enabled,
+			Status:           status,
+			LastError:        credential.LastError,
+			LastUsedAt:       credential.LastUsedAt,
+			DisabledAt:       credential.DisabledAt,
+			InRotation:       rotating,
+			UpstreamUsed:     credential.UpstreamUsed,
+			UpstreamLimit:    credential.UpstreamLimit,
+			UpstreamUnit:     credential.UpstreamUnit,
+			UpstreamScope:    credential.UpstreamScope,
+			UpstreamWindow:   credential.UpstreamWindow,
+			UpstreamSyncedAt: credential.UpstreamSyncedAt,
+			UpstreamError:    credential.UpstreamError,
 		})
 	}
 
 	views := make([]providerView, 0, len(providers))
 	for _, provider := range providers {
 		health := string(search.BreakerClosed)
+		reportsUsage := false
 		if runtime := s.runtime(provider.Name); runtime != nil {
 			health = string(runtime.breaker.State())
+			reportsUsage = runtime.reportsUsage
 		}
 		meta := search.MetaFor(provider.Name)
 		keys := keysByProvider[provider.Name]
@@ -150,25 +159,26 @@ func (s *Service) providerViews(ctx context.Context) ([]providerView, error) {
 			keys = []providerKeyView{}
 		}
 		views = append(views, providerView{
-			Name:         provider.Name,
-			DisplayName:  provider.DisplayName,
-			HomeURL:      meta.HomeURL,
-			DocsURL:      meta.DocsURL,
-			ConsoleURL:   meta.ConsoleURL,
-			LogoURL:      meta.LogoURL,
-			Billing:      meta.Billing,
-			Enabled:      provider.Enabled,
-			Keys:         keys,
-			ActiveKeys:   activeByProvider[provider.Name],
-			BaseURL:      provider.BaseURL,
-			Priority:     provider.Priority,
-			Weight:       provider.Weight,
-			RPS:          provider.RPS,
-			MonthlyQuota: provider.MonthlyQuota,
-			MonthlyUsed:  usage[providerSubject(provider.Name)].Count,
-			MonthlyCost:  usage[providerSubject(provider.Name)].CostMicroUSD,
-			Extra:        provider.Extra,
-			Health:       health,
+			Name:              provider.Name,
+			DisplayName:       provider.DisplayName,
+			HomeURL:           meta.HomeURL,
+			DocsURL:           meta.DocsURL,
+			ConsoleURL:        meta.ConsoleURL,
+			LogoURL:           meta.LogoURL,
+			Billing:           meta.Billing,
+			Enabled:           provider.Enabled,
+			Keys:              keys,
+			ActiveKeys:        activeByProvider[provider.Name],
+			BaseURL:           provider.BaseURL,
+			Priority:          provider.Priority,
+			Weight:            provider.Weight,
+			RPS:               provider.RPS,
+			MonthlyQuota:      provider.MonthlyQuota,
+			MonthlyUsed:       usage[providerSubject(provider.Name)].Count,
+			MonthlyCost:       usage[providerSubject(provider.Name)].CostMicroUSD,
+			SupportsUsageSync: reportsUsage,
+			Extra:             provider.Extra,
+			Health:            health,
 		})
 	}
 	return views, nil

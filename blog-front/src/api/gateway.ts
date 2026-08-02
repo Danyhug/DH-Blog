@@ -26,6 +26,22 @@ export interface GatewayProviderKey {
   disabledAt: string | null
   /** 是否正在参与调度，已折算了启用状态与跨月自愈 */
   inRotation: boolean
+  /**
+   * 上游自己报的用量，每 60 分钟同步一次。
+   * 与 monthlyUsed 是两套账：本地只数经过网关的请求，上游数的是这把密钥的全部消耗。
+   */
+  upstreamUsed: number
+  /** 0 表示上游没有给出上限，不能理解为已用尽 */
+  upstreamLimit: number
+  /** credit / request，两家计量单位不同，不能互相换算 */
+  upstreamUnit: string
+  /** key = 这把密钥自己的额度；account = 与同账户其它密钥共享 */
+  upstreamScope: string
+  /** 额度对应的周期，Tavily 是账单周期、Brave 是滚动 30 天，都不是自然月 */
+  upstreamWindow: string
+  upstreamSyncedAt: string | null
+  /** 最近一次同步失败的原因，成功后清空 */
+  upstreamError: string
 }
 
 /** 搜索供应商配置（后台视图，密钥始终脱敏） */
@@ -51,6 +67,8 @@ export interface GatewayProvider {
   monthlyUsed: number
   /** 本月花费，单位为微美元（1e-6 USD），仅 Exa 这类按额计费的供应商非零 */
   monthlyCostMicroUsd: number
+  /** 该供应商是否提供用量接口；为 false 时数字空着是正常的，不是同步坏了 */
+  supportsUsageSync: boolean
   extra: string
   health: 'closed' | 'open' | 'half_open'
 }
@@ -195,6 +213,20 @@ export function updateGatewayProvider(name: string, data: GatewayProviderPatch) 
 
 export function testGatewayProvider(name: string, probe: GatewayProviderProbe = {}): Promise<GatewayProviderTestResult> {
   return request({ url: `/admin/gateway/providers/${name}/test`, method: 'post', data: probe })
+}
+
+/** 一次用量同步的结果。skipped 指没有用量接口或还没数据可报，不算失败 */
+export interface GatewayUsageSyncResult {
+  synced: number
+  skipped: number
+  failed: number
+  parked: string[]
+  revived: string[]
+}
+
+/** 手动触发一次上游用量同步；后台每 60 分钟也会自己跑一次 */
+export function syncGatewayUsage(): Promise<GatewayUsageSyncResult> {
+  return request({ url: '/admin/gateway/usage/sync', method: 'post' })
 }
 
 export function createGatewayProviderKey(name: string, data: { label?: string; apiKey: string }) {

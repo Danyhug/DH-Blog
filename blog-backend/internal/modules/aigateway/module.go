@@ -68,6 +68,8 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 	admin.GET("/providers", m.handler.listProviders)
 	admin.PUT("/providers/:name", m.handler.updateProvider)
 	admin.POST("/providers/:name/test", m.handler.testProvider)
+	// Mounted outside /providers so it cannot collide with the :name wildcard.
+	admin.POST("/usage/sync", m.handler.syncUsage)
 	admin.POST("/providers/:name/keys", m.handler.createProviderKey)
 	admin.PUT("/providers/:name/keys/:id", m.handler.updateProviderKey)
 	admin.DELETE("/providers/:name/keys/:id", m.handler.deleteProviderKey)

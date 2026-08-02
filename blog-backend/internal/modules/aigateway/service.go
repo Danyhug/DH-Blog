@@ -65,6 +65,11 @@ type providerRuntime struct {
 	// static per provider, so asking them never requires a live credential.
 	capability  search.Capability
 	passthrough bool
+	// reportsUsage records whether this provider can be asked what it has
+	// spent. It is per provider rather than per key, and the admin page shows
+	// it so a missing number reads as "this upstream does not tell us" instead
+	// of "the sync is broken".
+	reportsUsage bool
 
 	mu     sync.Mutex
 	keys   []*providerKeyRuntime
@@ -150,6 +155,79 @@ func (r *providerRuntime) revive(id int) {
 	}
 }
 
+// credentialSnapshot is a copy of one credential's routing-relevant state, taken
+// under the runtime lock so background work can walk the list without holding it
+// across an upstream call.
+type credentialSnapshot struct {
+	id       int
+	label    string
+	enabled  bool
+	status   string
+	provider search.Provider
+}
+
+// name identifies a credential in a log line or an admin summary. Labels are
+// optional, so an unlabelled key falls back to its row id rather than showing up
+// as a bare provider name that could be any of several.
+func (c credentialSnapshot) name(provider string) string {
+	label := strings.TrimSpace(c.label)
+	if label == "" {
+		label = fmt.Sprintf("#%d", c.id)
+	}
+	return provider + "/" + label
+}
+
+// credentials copies the credential list for an inspector.
+func (r *providerRuntime) credentials() []credentialSnapshot {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	snapshots := make([]credentialSnapshot, 0, len(r.keys))
+	for _, key := range r.keys {
+		snapshots = append(snapshots, credentialSnapshot{
+			id:       key.config.ID,
+			label:    key.config.Label,
+			enabled:  key.config.Enabled,
+			status:   key.config.Status,
+			provider: key.provider,
+		})
+	}
+	return snapshots
+}
+
+// recordUsage mirrors a synced report into the runtime, so a routing decision
+// taken before the next Reload sees the same numbers the admin page does.
+func (r *providerRuntime) recordUsage(id int, report search.UsageReport, now time.Time) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, key := range r.keys {
+		if key.config.ID != id {
+			continue
+		}
+		synced := now
+		key.config.UpstreamUsed = report.Used
+		key.config.UpstreamLimit = report.Limit
+		key.config.UpstreamUnit = report.Unit
+		key.config.UpstreamScope = report.Scope
+		key.config.UpstreamWindow = report.Window
+		key.config.UpstreamSyncedAt = &synced
+		key.config.UpstreamError = ""
+		return
+	}
+}
+
+// recordUsageError notes that a refresh failed without touching the last known
+// numbers: a stale figure is still more informative than a blank one.
+func (r *providerRuntime) recordUsageError(id int, message string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, key := range r.keys {
+		if key.config.ID == id {
+			key.config.UpstreamError = message
+			return
+		}
+	}
+}
+
 // pruneInterval is how often expired request logs are swept. Retention is
 // measured in days, so a daily pass is granular enough.
 const pruneInterval = 24 * time.Hour
@@ -199,6 +277,8 @@ func newService(deps Dependencies) (*Service, error) {
 	}
 	service.workerWG.Add(1)
 	go service.writeLogs()
+	service.workerWG.Add(1)
+	go service.usageSyncLoop()
 	if service.options.LogRetentionDays > 0 {
 		service.pruner = time.NewTicker(pruneInterval)
 		service.workerWG.Add(1)
@@ -242,10 +322,12 @@ func (s *Service) Reload(ctx context.Context) error {
 			continue
 		}
 		_, forwards := probe.(search.Forwarder)
+		_, reportsUsage := probe.(search.UsageReporter)
 		runtime := &providerRuntime{
-			config:      config,
-			capability:  probe.Capabilities(),
-			passthrough: forwards,
+			config:       config,
+			capability:   probe.Capabilities(),
+			passthrough:  forwards,
+			reportsUsage: reportsUsage,
 		}
 		for _, credential := range byProvider[config.Name] {
 			adapter, err := s.buildAdapter(config, credential.APIKey)

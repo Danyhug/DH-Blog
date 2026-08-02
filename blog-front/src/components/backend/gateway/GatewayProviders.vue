@@ -7,6 +7,7 @@
                 </el-icon>
             </template>
             <template #extra>
+                <el-button size="small" :icon="Odometer" :loading="syncing" @click="onSyncUsage">同步上游用量</el-button>
                 <el-button size="small" :icon="Refresh" @click="emit('refresh')">刷新</el-button>
             </template>
 
@@ -33,7 +34,7 @@
 
                     <div class="mt-4">
                         <div class="flex items-center justify-between text-xs text-gray-400 mb-1.5">
-                            <span>本月用量</span>
+                            <span>本月用量<span class="text-gray-300">（本地计数）</span></span>
                             <span class="tabular-nums">
                                 {{ provider.monthlyUsed }} / {{ provider.monthlyQuota || '不限' }}
                                 <template v-if="provider.monthlyCostMicroUsd">
@@ -44,6 +45,23 @@
                         <el-progress :percentage="quotaPercentage(provider.monthlyUsed, provider.monthlyQuota)"
                             :stroke-width="6" :show-text="false"
                             :status="quotaPercentage(provider.monthlyUsed, provider.monthlyQuota) >= 90 ? 'exception' : undefined" />
+
+                        <!-- 上游口径单独一行：本地只数经过网关的请求，两个数字对不上是正常的 -->
+                        <div class="mt-2 text-xs text-gray-400 flex items-center justify-between gap-2">
+                            <template v-if="upstream(provider)">
+                                <span class="truncate">
+                                    上游口径<span v-if="upstream(provider)!.tightest" class="text-gray-300">（余量最紧的一把）</span>
+                                </span>
+                                <span class="tabular-nums shrink-0" :class="upstream(provider)!.warning ? 'text-orange-500' : ''">
+                                    {{ upstream(provider)!.used }} / {{ upstream(provider)!.limit || '不限' }}
+                                    {{ usageUnitLabel(upstream(provider)!.unit) }}
+                                </span>
+                            </template>
+                            <span v-else-if="!provider.supportsUsageSync" class="text-gray-300">
+                                该供应商不提供用量接口，只能按本地计数
+                            </span>
+                            <span v-else class="text-gray-300">上游用量尚未同步</span>
+                        </div>
                     </div>
 
                     <div class="mt-4 flex items-center gap-3 text-xs">
@@ -66,6 +84,13 @@
                     <el-icon class="align-middle mr-1">
                         <InfoFilled />
                     </el-icon>{{ active.billing }}
+                    <br />
+                    <template v-if="active.supportsUsageSync">
+                        每 60 分钟从上游同步一次真实用量；上游报额度用尽时这把密钥会自动停止调度。
+                    </template>
+                    <template v-else>
+                        该供应商不提供用量接口，只能按网关本地计数——在别处用过同一把密钥这里看不到。
+                    </template>
                 </p>
 
                 <h4 class="group-title">
@@ -89,6 +114,19 @@
                             <template v-if="item.lastError">停用原因：{{ item.lastError }}</template>
                             <template v-else-if="item.lastUsedAt">最后使用 {{ formatTime(item.lastUsedAt) }}</template>
                             <template v-else>尚未使用过</template>
+                        </div>
+                        <!-- 上游报的用量：说清单位、周期和是否与其它密钥共享，避免和本地计数混为一谈 -->
+                        <div v-if="item.upstreamSyncedAt" class="mt-1 text-xs text-gray-400 truncate">
+                            上游：{{ item.upstreamUsed }} / {{ item.upstreamLimit || '不限' }}
+                            {{ usageUnitLabel(item.upstreamUnit) }}
+                            <span class="text-gray-300">
+                                · {{ usageScopeLabel(item.upstreamScope) }}
+                                <template v-if="item.upstreamWindow">· {{ item.upstreamWindow }}</template>
+                                · {{ formatSince(item.upstreamSyncedAt) }}
+                            </span>
+                        </div>
+                        <div v-if="item.upstreamError" class="mt-1 text-xs text-orange-500 truncate">
+                            用量同步失败：{{ item.upstreamError }}
                         </div>
                     </div>
                     <div class="flex items-center gap-1 shrink-0">
@@ -170,14 +208,15 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { ElMessageBox } from 'element-plus';
-import { Connection, InfoFilled, Refresh, Setting } from '@element-plus/icons-vue';
+import { Connection, InfoFilled, Odometer, Refresh, Setting } from '@element-plus/icons-vue';
 import { notify } from '@/utils/notification';
 import ProviderLogo from './ProviderLogo.vue';
 import SectionPanel from './SectionPanel.vue';
-import { formatCost, formatTime, quotaPercentage } from './format';
+import { formatCost, formatSince, formatTime, quotaPercentage, usageScopeLabel, usageUnitLabel } from './format';
 import {
     createGatewayProviderKey,
     deleteGatewayProviderKey,
+    syncGatewayUsage,
     testGatewayProvider,
     updateGatewayProvider,
     updateGatewayProviderKey,
@@ -194,6 +233,7 @@ const toggling = ref('');
 const saving = ref(false);
 const adding = ref(false);
 const testing = ref('');
+const syncing = ref(false);
 
 const newKey = reactive({ label: '', apiKey: '' });
 const form = reactive({ baseUrl: '', priority: 100, weight: 1, rps: 1, monthlyQuota: 0, extra: '' });
@@ -227,6 +267,42 @@ function statusLabel(status: string) {
     if (status === 'auth_failed') return '密钥被拒';
     if (status === 'quota_exceeded') return '配额用尽';
     return status;
+}
+
+/**
+ * upstream 从多把密钥里挑出余量最紧的一把展示。
+ * 这里刻意不做求和：account 口径的额度是同账户共享的，几把密钥加起来会把同一份额度算好几遍。
+ */
+function upstream(provider: GatewayProvider) {
+    const synced = provider.keys.filter((key) => key.upstreamSyncedAt);
+    if (!synced.length) return null;
+    const ratio = (key: GatewayProviderKey) => (key.upstreamLimit ? key.upstreamUsed / key.upstreamLimit : -1);
+    const tightest = synced.reduce((worst, key) => (ratio(key) > ratio(worst) ? key : worst));
+    return {
+        used: tightest.upstreamUsed,
+        limit: tightest.upstreamLimit,
+        unit: tightest.upstreamUnit,
+        tightest: synced.length > 1,
+        warning: ratio(tightest) >= 0.9
+    };
+}
+
+async function onSyncUsage() {
+    syncing.value = true;
+    try {
+        const result = await syncGatewayUsage();
+        const parts = [`已更新 ${result.synced} 把密钥`];
+        if (result.skipped) parts.push(`跳过 ${result.skipped} 把`);
+        if (result.failed) parts.push(`失败 ${result.failed} 把`);
+        if (result.parked.length) parts.push(`停用 ${result.parked.join('、')}`);
+        if (result.revived.length) parts.push(`恢复 ${result.revived.join('、')}`);
+        // 失败不抛错：一家上游读不到用量，不该让另外两家的结果也看不见
+        if (result.failed) notify.warning(parts.join('，'));
+        else notify.success(parts.join('，'));
+        emit('refresh');
+    } finally {
+        syncing.value = false;
+    }
 }
 
 function openDrawer(provider: GatewayProvider) {

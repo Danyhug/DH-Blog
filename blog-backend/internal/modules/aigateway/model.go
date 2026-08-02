@@ -47,6 +47,20 @@ type ProviderKey struct {
 	LastError  string     `gorm:"column:last_error" json:"lastError"`
 	LastUsedAt *time.Time `gorm:"column:last_used_at" json:"lastUsedAt"`
 	DisabledAt *time.Time `gorm:"column:disabled_at" json:"disabledAt"`
+
+	// Upstream* mirror what the provider itself reports for this credential,
+	// refreshed on a timer. They exist because the gateway's own counter only
+	// sees traffic that went through the gateway: the same key called from a
+	// laptop, or anything it spent before the gateway existed, is invisible
+	// locally. UpstreamUnit records what the numbers count, since a Tavily
+	// credit and a Brave request are not the same thing.
+	UpstreamUsed     int        `gorm:"column:upstream_used" json:"upstreamUsed"`
+	UpstreamLimit    int        `gorm:"column:upstream_limit" json:"upstreamLimit"`
+	UpstreamUnit     string     `gorm:"column:upstream_unit" json:"upstreamUnit"`
+	UpstreamScope    string     `gorm:"column:upstream_scope" json:"upstreamScope"`
+	UpstreamWindow   string     `gorm:"column:upstream_window" json:"upstreamWindow"`
+	UpstreamSyncedAt *time.Time `gorm:"column:upstream_synced_at" json:"upstreamSyncedAt"`
+	UpstreamError    string     `gorm:"column:upstream_error" json:"upstreamError"`
 }
 
 func (ProviderKey) TableName() string { return "ai_gateway_provider_keys" }
@@ -58,10 +72,27 @@ const (
 	ProviderKeyQuotaExceeded = "quota_exceeded"
 )
 
+// upstreamUsageTTL bounds how long a synced number may override the calendar
+// guess below. A stale figure must not keep a credential parked forever if the
+// sync itself is what broke.
+const upstreamUsageTTL = 24 * time.Hour
+
+// UpstreamExhausted reports whether the provider's own recent accounting says
+// this credential has nothing left to spend.
+func (k *ProviderKey) UpstreamExhausted(now time.Time) bool {
+	if k.UpstreamLimit <= 0 || k.UpstreamSyncedAt == nil {
+		return false
+	}
+	if now.Sub(*k.UpstreamSyncedAt) > upstreamUsageTTL {
+		return false
+	}
+	return k.UpstreamUsed >= k.UpstreamLimit
+}
+
 // Usable reports whether the credential may be handed to the upstream now.
 //
 // A key parked for quota comes back on its own after the month rolls over,
-// because that is exactly when the upstream allowance resets; a key parked for
+// because that is roughly when an upstream allowance resets; a key parked for
 // a rejected credential stays out until someone fixes it, since retrying a
 // wrong key only burns requests.
 func (k *ProviderKey) Usable(now time.Time) bool {
@@ -72,6 +103,12 @@ func (k *ProviderKey) Usable(now time.Time) bool {
 	case "", ProviderKeyActive:
 		return true
 	case ProviderKeyQuotaExceeded:
+		// A freshly synced number beats the calendar guess. The month rolling
+		// over means nothing to Brave, whose window is a rolling 30 days, and
+		// nothing to a Tavily plan that renews on its own billing date.
+		if k.UpstreamExhausted(now) {
+			return false
+		}
 		return k.DisabledAt == nil || currentPeriod(*k.DisabledAt) != currentPeriod(now)
 	default:
 		return false

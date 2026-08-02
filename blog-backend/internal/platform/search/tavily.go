@@ -228,6 +228,76 @@ func (p *TavilyProvider) normalize(req Request, payload tavilyResponse) Response
 	return Response{Query: query, Answer: strings.TrimSpace(payload.Answer), Results: results, Credits: credits}
 }
 
+// tavilyUsageWindow describes the period /usage counts over. Tavily resets on
+// the subscription's own billing cycle, which is not the calendar month.
+const tavilyUsageWindow = "当前账单周期"
+
+// Usage asks Tavily what this credential has actually spent.
+//
+// The endpoint is free and takes the same bearer token as a search, so this is
+// the cheapest correction available: the gateway's own counter cannot see
+// credits the key spent anywhere else, nor anything spent before the gateway
+// existed.
+func (p *TavilyProvider) Usage(ctx context.Context) (UsageReport, error) {
+	if p.apiKey == "" {
+		return UsageReport{}, newError(ProviderTavily, KindAuthFailed, 0, "未配置 Tavily API Key")
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, p.baseURL+"/usage", nil)
+	if err != nil {
+		return UsageReport{}, newError(ProviderTavily, KindBadRequest, 0, err.Error())
+	}
+	httpReq.Header.Set("Accept", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
+
+	httpResp, err := p.client.Do(httpReq)
+	if err != nil {
+		return UsageReport{}, newError(ProviderTavily, classifyTransport(err), 0, err.Error())
+	}
+	defer httpResp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(httpResp.Body, 1<<20))
+	if err != nil {
+		return UsageReport{}, newError(ProviderTavily, KindUnavailable, httpResp.StatusCode, err.Error())
+	}
+	if httpResp.StatusCode != http.StatusOK {
+		return UsageReport{}, newError(ProviderTavily, tavilyErrorKind(httpResp.StatusCode), httpResp.StatusCode, tavilyErrorMessage(body))
+	}
+
+	var payload struct {
+		Key struct {
+			Usage int  `json:"usage"`
+			Limit *int `json:"limit"`
+		} `json:"key"`
+		Account struct {
+			PlanUsage int  `json:"plan_usage"`
+			PlanLimit *int `json:"plan_limit"`
+		} `json:"account"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return UsageReport{}, newError(ProviderTavily, KindUnavailable, httpResp.StatusCode, "解析 Tavily 用量响应失败: "+err.Error())
+	}
+
+	// A null key limit means the credential has no ceiling of its own, and what
+	// stops it is the plan it belongs to. Reporting the plan's numbers in that
+	// case answers the question the operator is actually asking — how much is
+	// left before this key stops working.
+	if payload.Key.Limit != nil && *payload.Key.Limit > 0 {
+		return UsageReport{
+			Used: payload.Key.Usage, Limit: *payload.Key.Limit,
+			Unit: UsageUnitCredit, Scope: UsageScopeKey, Window: tavilyUsageWindow,
+		}, nil
+	}
+	limit := 0
+	if payload.Account.PlanLimit != nil {
+		limit = *payload.Account.PlanLimit
+	}
+	return UsageReport{
+		Used: payload.Account.PlanUsage, Limit: limit,
+		Unit: UsageUnitCredit, Scope: UsageScopeAccount, Window: tavilyUsageWindow,
+	}, nil
+}
+
 // tavilyErrorKind maps Tavily's status codes, including the two custom quota
 // codes that are not part of the standard HTTP range.
 func tavilyErrorKind(status int) ErrorKind {

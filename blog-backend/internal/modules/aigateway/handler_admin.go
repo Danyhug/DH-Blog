@@ -112,6 +112,18 @@ type providerKeyView struct {
 	// InRotation folds enabled + status + the monthly self-recovery into the
 	// one thing the page actually needs to show.
 	InRotation bool `json:"inRotation"`
+
+	// Upstream* are the provider's own accounting for this credential, last
+	// refreshed at UpstreamSyncedAt. They are reported separately from the
+	// gateway's monthly counter because they measure a different thing: the
+	// upstream sees every call made with the key, the gateway only its own.
+	UpstreamUsed     int        `json:"upstreamUsed"`
+	UpstreamLimit    int        `json:"upstreamLimit"`
+	UpstreamUnit     string     `json:"upstreamUnit"`
+	UpstreamScope    string     `json:"upstreamScope"`
+	UpstreamWindow   string     `json:"upstreamWindow"`
+	UpstreamSyncedAt *time.Time `json:"upstreamSyncedAt"`
+	UpstreamError    string     `json:"upstreamError"`
 }
 
 // providerView is a provider row as the admin page sees it: never the raw key.
@@ -133,8 +145,11 @@ type providerView struct {
 	MonthlyQuota int               `json:"monthlyQuota"`
 	MonthlyUsed  int               `json:"monthlyUsed"`
 	MonthlyCost  int               `json:"monthlyCostMicroUsd"`
-	Extra        string            `json:"extra"`
-	Health       string            `json:"health"`
+	// SupportsUsageSync tells the page whether a blank upstream figure means
+	// "this provider has no usage API" rather than "the sync is failing".
+	SupportsUsageSync bool   `json:"supportsUsageSync"`
+	Extra             string `json:"extra"`
+	Health            string `json:"health"`
 }
 
 func (h *handler) listProviders(c *gin.Context) {
@@ -250,6 +265,13 @@ func (h *handler) testProvider(c *gin.Context) {
 		return
 	}
 	adminSuccess(c, result)
+}
+
+// syncUsage refreshes the upstream usage figures on demand. The same sweep runs
+// hourly on its own; this exists so an operator who just topped up a plan does
+// not have to wait out the timer to see it.
+func (h *handler) syncUsage(c *gin.Context) {
+	adminSuccess(c, h.service.SyncUsage(c.Request.Context()))
 }
 
 func providerErrorStatus(err error) int {

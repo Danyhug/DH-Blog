@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 const braveDefaultBaseURL = "https://api.search.brave.com/res/v1"
@@ -25,6 +26,13 @@ type BraveProvider struct {
 	apiKey  string
 	baseURL string
 	client  *http.Client
+
+	// mu guards the quota snapshot Brave attaches to every response. Brave
+	// publishes no usage endpoint, so the headers of traffic we were going to
+	// send anyway are the only way to learn where the monthly allowance stands
+	// without spending more of it.
+	mu    sync.Mutex
+	usage *UsageReport
 }
 
 // NewBrave builds a Brave adapter. An empty base URL selects the public API.
@@ -66,6 +74,7 @@ func (p *BraveProvider) Search(ctx context.Context, req Request) (Response, erro
 		return Response{}, newError(ProviderBrave, classifyTransport(err), 0, err.Error())
 	}
 	defer httpResp.Body.Close()
+	p.observeQuota(httpResp.Header)
 
 	body, err := io.ReadAll(io.LimitReader(httpResp.Body, 8<<20))
 	if err != nil {
@@ -209,6 +218,74 @@ func (p *BraveProvider) normalize(req Request, payload braveResponse) Response {
 	// Brave bills one request regardless of the result count.
 	return Response{Query: query, Results: results, Credits: 1}
 }
+
+// braveQuotaWindow describes what the long rate-limit window covers. Brave
+// documents it as 2,592,000 seconds — a rolling 30 days, not a calendar month,
+// so the counter does not go back to zero on the 1st.
+const braveQuotaWindow = "最近 30 天"
+
+// observeQuota records the allowance Brave states on every response.
+//
+// The headers carry one value per window, shortest first: "1, 15000" means one
+// request per second and 15,000 per month, so only the last entry is the
+// monthly figure. A limit of 0 means unlimited and is deliberately not stored —
+// recording it as a ceiling would read as "nothing left".
+func (p *BraveProvider) observeQuota(header http.Header) {
+	limit, ok := lastRateLimitValue(header.Get("X-RateLimit-Limit"))
+	if !ok || limit <= 0 {
+		return
+	}
+	remaining, ok := lastRateLimitValue(header.Get("X-RateLimit-Remaining"))
+	if !ok {
+		return
+	}
+	used := limit - remaining
+	if used < 0 {
+		used = 0
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.usage = &UsageReport{
+		Used: used, Limit: limit,
+		Unit: UsageUnitRequest, Scope: UsageScopeKey, Window: braveQuotaWindow,
+	}
+}
+
+// Usage returns the last thing Brave said about this subscription. It issues no
+// request of its own: Brave has no usage endpoint, and polling a search just to
+// read the headers would spend the very quota being measured.
+func (p *BraveProvider) Usage(context.Context) (UsageReport, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.usage == nil {
+		return UsageReport{}, ErrUsageUnavailable
+	}
+	return *p.usage, nil
+}
+
+// lastRateLimitValue reads the final entry of a "1, 15000" rate-limit header,
+// which is the longest window Brave reports.
+func lastRateLimitValue(value string) (int, bool) {
+	parts := strings.Split(value, ",")
+	for index := len(parts) - 1; index >= 0; index-- {
+		field := strings.TrimSpace(parts[index])
+		if field == "" {
+			continue
+		}
+		// A policy header writes "15000;w=2592000"; the count comes first.
+		if semicolon := strings.IndexByte(field, ';'); semicolon >= 0 {
+			field = field[:semicolon]
+		}
+		parsed, err := strconv.Atoi(strings.TrimSpace(field))
+		if err != nil {
+			return 0, false
+		}
+		return parsed, true
+	}
+	return 0, false
+}
+
+var _ UsageReporter = (*BraveProvider)(nil)
 
 // braveErrorMessage pulls the human-readable part out of a Brave error body.
 func braveErrorMessage(body []byte) string {

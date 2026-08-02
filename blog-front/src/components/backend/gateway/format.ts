@@ -26,3 +26,28 @@ export function quotaPercentage(used: number, quota: number) {
   if (!quota) return 0
   return Math.min(100, Math.round((used / quota) * 100))
 }
+
+/** formatSince 把同步时间说成「多久以前」，比一串时间戳更能看出数字新不新 */
+export function formatSince(value: string | null) {
+  if (!value) return '从未同步'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+  const minutes = Math.floor((Date.now() - parsed.getTime()) / 60000)
+  if (minutes < 1) return '刚刚同步'
+  if (minutes < 60) return `${minutes} 分钟前同步`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} 小时前同步`
+  return `${Math.floor(hours / 24)} 天前同步`
+}
+
+/** 上游的计量单位不能混着显示：Tavily 扣 credit，Brave 扣请求数 */
+export function usageUnitLabel(unit: string) {
+  if (unit === 'credit') return 'credit'
+  if (unit === 'request') return '次请求'
+  return unit
+}
+
+/** account 表示这条额度是同账户多把密钥共用的，换一把密钥并不会多出余量 */
+export function usageScopeLabel(scope: string) {
+  return scope === 'account' ? '账户共享额度' : '该密钥独立额度'
+}
