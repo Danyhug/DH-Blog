@@ -78,15 +78,11 @@
                             {{ metaOf(quota.provider)?.displayName || quota.provider }}
                         </span>
                         <span class="ml-auto text-xs text-gray-400 tabular-nums">
-                            {{ quota.monthlyUsed }} / {{ quota.monthlyQuota || '不限' }}
-                            <template v-if="quota.monthlyCostMicroUsd">
-                                · {{ formatCost(quota.monthlyCostMicroUsd) }}
-                            </template>
+                            {{ budgetView(quota).text }}
                         </span>
                     </div>
-                    <el-progress :percentage="quotaPercentage(quota.monthlyUsed, quota.monthlyQuota)"
-                        :stroke-width="8" :show-text="false"
-                        :status="quotaPercentage(quota.monthlyUsed, quota.monthlyQuota) >= 90 ? 'exception' : undefined" />
+                    <el-progress :percentage="budgetView(quota).percent" :stroke-width="8" :show-text="false"
+                        :status="budgetView(quota).percent >= 90 ? 'exception' : undefined" />
                 </div>
             </div>
         </SectionPanel>
@@ -98,7 +94,7 @@ import { computed, onMounted, ref } from 'vue';
 import { Coin, DataAnalysis, Histogram, PieChart, Refresh, Timer } from '@element-plus/icons-vue';
 import ProviderLogo from './ProviderLogo.vue';
 import SectionPanel from './SectionPanel.vue';
-import { formatCost, quotaPercentage } from './format';
+import { budgetView, formatCost } from './format';
 import { getGatewayStats, type GatewayProvider, type GatewayStats } from '@/api/gateway';
 
 const props = defineProps<{ providers: GatewayProvider[] }>();

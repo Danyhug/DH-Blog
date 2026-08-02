@@ -781,12 +781,19 @@ func (s *Service) noteProviderFailure(ctx context.Context, runtime *providerRunt
 	s.markProviderExhausted(ctx, runtime.config.Name, now)
 }
 
-// markProviderExhausted pushes a provider's monthly counter up to its
-// configured ceiling, so quota filtering reflects what the upstream just told
+// markProviderExhausted pushes a provider's monthly counters up to their
+// configured ceilings, so quota filtering reflects what the upstream just told
 // us rather than what we had counted ourselves.
+//
+// Both ceilings are pushed, because either one is enough to keep the provider
+// out of routing and we do not know which of them the upstream was talking
+// about — only that it says there is nothing left.
 func (s *Service) markProviderExhausted(ctx context.Context, name string, now time.Time) {
 	runtime := s.runtime(name)
-	if runtime == nil || runtime.config.MonthlyQuota <= 0 {
+	if runtime == nil {
+		return
+	}
+	if runtime.config.MonthlyQuota <= 0 && runtime.config.MonthlyCostLimit <= 0 {
 		return
 	}
 	period := currentPeriod(now)
@@ -794,11 +801,20 @@ func (s *Service) markProviderExhausted(ctx context.Context, name string, now ti
 	if err != nil {
 		return
 	}
-	remaining := runtime.config.MonthlyQuota - usage[providerSubject(name)].Count
-	if remaining <= 0 {
+	current := usage[providerSubject(name)]
+
+	countGap := 0
+	if runtime.config.MonthlyQuota > 0 && current.Count < runtime.config.MonthlyQuota {
+		countGap = runtime.config.MonthlyQuota - current.Count
+	}
+	costGap := 0
+	if runtime.config.MonthlyCostLimit > 0 && current.CostMicroUSD < runtime.config.MonthlyCostLimit {
+		costGap = runtime.config.MonthlyCostLimit - current.CostMicroUSD
+	}
+	if countGap == 0 && costGap == 0 {
 		return
 	}
-	if err := s.repo.addUsage(ctx, providerSubject(name), period, remaining, 0, 0); err != nil {
+	if err := s.repo.addUsage(ctx, providerSubject(name), period, countGap, 0, costGap); err != nil {
 		logrus.Warnf("标记供应商 %s 配额耗尽失败: %v", name, err)
 	}
 }
@@ -829,13 +845,15 @@ func (s *Service) plan(ctx context.Context, key *APIKey, req SearchRequest, now 
 			continue
 		}
 		candidates = append(candidates, candidate{
-			Name:         runtime.config.Name,
-			Capability:   runtime.capability,
-			Priority:     runtime.config.Priority,
-			Weight:       runtime.config.Weight,
-			MonthlyQuota: runtime.config.MonthlyQuota,
-			Used:         usage[providerSubject(runtime.config.Name)].Count,
-			Healthy:      runtime.breaker.State() != search.BreakerOpen,
+			Name:             runtime.config.Name,
+			Capability:       runtime.capability,
+			Priority:         runtime.config.Priority,
+			Weight:           runtime.config.Weight,
+			MonthlyQuota:     runtime.config.MonthlyQuota,
+			Used:             usage[providerSubject(runtime.config.Name)].Count,
+			MonthlyCostLimit: runtime.config.MonthlyCostLimit,
+			CostUsed:         usage[providerSubject(runtime.config.Name)].CostMicroUSD,
+			Healthy:          runtime.breaker.State() != search.BreakerOpen,
 		})
 	}
 
@@ -917,16 +935,18 @@ func (s *Service) ProviderStatuses(ctx context.Context, key *APIKey) ([]provider
 		capability := runtime.capability
 		meta := search.MetaFor(runtime.config.Name)
 		statuses = append(statuses, providerStatus{
-			Name:           runtime.config.Name,
-			DisplayName:    runtime.config.DisplayName,
-			HomeURL:        meta.HomeURL,
-			DocsURL:        meta.DocsURL,
-			LogoURL:        meta.LogoURL,
-			Healthy:        runtime.breaker.State() != search.BreakerOpen,
-			MonthlyQuota:   runtime.config.MonthlyQuota,
-			MonthlyUsed:    usage[providerSubject(runtime.config.Name)].Count,
-			SupportsAnswer: capability.Answer,
-			SupportsRaw:    capability.RawContent,
+			Name:             runtime.config.Name,
+			DisplayName:      runtime.config.DisplayName,
+			HomeURL:          meta.HomeURL,
+			DocsURL:          meta.DocsURL,
+			LogoURL:          meta.LogoURL,
+			Healthy:          runtime.breaker.State() != search.BreakerOpen,
+			MonthlyQuota:     runtime.config.MonthlyQuota,
+			MonthlyUsed:      usage[providerSubject(runtime.config.Name)].Count,
+			MonthlyCostLimit: runtime.config.MonthlyCostLimit,
+			MonthlyCost:      usage[providerSubject(runtime.config.Name)].CostMicroUSD,
+			SupportsAnswer:   capability.Answer,
+			SupportsRaw:      capability.RawContent,
 		})
 	}
 	return statuses, nil

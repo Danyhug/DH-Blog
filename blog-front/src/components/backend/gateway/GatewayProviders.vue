@@ -35,16 +35,10 @@
                     <div class="mt-4">
                         <div class="flex items-center justify-between text-xs text-gray-400 mb-1.5">
                             <span>本月用量<span class="text-gray-300">（本地计数）</span></span>
-                            <span class="tabular-nums">
-                                {{ provider.monthlyUsed }} / {{ provider.monthlyQuota || '不限' }}
-                                <template v-if="provider.monthlyCostMicroUsd">
-                                    · {{ formatCost(provider.monthlyCostMicroUsd) }}
-                                </template>
-                            </span>
+                            <span class="tabular-nums">{{ budget(provider).text }}</span>
                         </div>
-                        <el-progress :percentage="quotaPercentage(provider.monthlyUsed, provider.monthlyQuota)"
-                            :stroke-width="6" :show-text="false"
-                            :status="quotaPercentage(provider.monthlyUsed, provider.monthlyQuota) >= 90 ? 'exception' : undefined" />
+                        <el-progress :percentage="budget(provider).percent" :stroke-width="6" :show-text="false"
+                            :status="budget(provider).percent >= 90 ? 'exception' : undefined" />
 
                         <!-- 上游口径单独一行：本地只数经过网关的请求，两个数字对不上是正常的 -->
                         <div class="mt-2 text-xs text-gray-400 flex items-center justify-between gap-2">
@@ -185,11 +179,19 @@
                             </el-form-item>
                         </el-col>
                         <el-col :span="12">
-                            <el-form-item label="月配额（0 不限）">
+                            <el-form-item label="月配额（次数，0 不限）">
                                 <el-input-number v-model="form.monthlyQuota" :min="0" :max="1000000" class="w-full" />
                             </el-form-item>
                         </el-col>
                     </el-row>
+                    <el-form-item>
+                        <template #label>
+                            月费用上限（美元，0 不限）
+                            <span class="label-hint">按金额计费的供应商用这个，次数上限说不清预算</span>
+                        </template>
+                        <el-input-number v-model="form.monthlyCostLimitUsd" :min="0" :max="10000" :step="1"
+                            :precision="2" class="w-full" />
+                    </el-form-item>
                     <el-form-item label="附加参数（JSON）">
                         <el-input v-model="form.extra" placeholder='{"search_depth":"basic"}' />
                     </el-form-item>
@@ -212,7 +214,7 @@ import { Connection, InfoFilled, Odometer, Refresh, Setting } from '@element-plu
 import { notify } from '@/utils/notification';
 import ProviderLogo from './ProviderLogo.vue';
 import SectionPanel from './SectionPanel.vue';
-import { formatCost, formatSince, formatTime, quotaPercentage, usageScopeLabel, usageUnitLabel } from './format';
+import { budgetView as budget, formatSince, formatTime, usageScopeLabel, usageUnitLabel } from './format';
 import {
     createGatewayProviderKey,
     deleteGatewayProviderKey,
@@ -236,7 +238,13 @@ const testing = ref('');
 const syncing = ref(false);
 
 const newKey = reactive({ label: '', apiKey: '' });
-const form = reactive({ baseUrl: '', priority: 100, weight: 1, rps: 1, monthlyQuota: 0, extra: '' });
+// 费用上限在表单里用美元，存取时与后端的微美元互转：让人填 10000000 是不合理的
+const form = reactive({
+    baseUrl: '', priority: 100, weight: 1, rps: 1,
+    monthlyQuota: 0, monthlyCostLimitUsd: 0, extra: ''
+});
+
+const MICRO_PER_USD = 1_000_000;
 
 // 抽屉始终跟着列表里的最新数据走：加完密钥父组件刷新后，这里立刻能看到
 const active = computed(() => props.providers.find((item) => item.name === activeName.value));
@@ -249,6 +257,7 @@ const dirty = computed(() => {
         || form.weight !== provider.weight
         || form.rps !== provider.rps
         || form.monthlyQuota !== provider.monthlyQuota
+        || costLimitMicro() !== provider.monthlyCostLimitMicroUsd
         || form.extra !== provider.extra;
 });
 
@@ -319,7 +328,13 @@ function resetForm(provider: GatewayProvider) {
     form.weight = provider.weight;
     form.rps = provider.rps;
     form.monthlyQuota = provider.monthlyQuota;
+    form.monthlyCostLimitUsd = provider.monthlyCostLimitMicroUsd / MICRO_PER_USD;
     form.extra = provider.extra;
+}
+
+// 走整数取整，避免 0.1 这类小数在美元与微美元之间来回转出 999999 这种值
+function costLimitMicro() {
+    return Math.round((form.monthlyCostLimitUsd || 0) * MICRO_PER_USD);
 }
 
 // 列表刷新后，如果参数没被改过就跟着服务端的新值走，改过就保留操作者的输入
@@ -354,6 +369,7 @@ async function onSaveParams() {
             weight: form.weight,
             rps: form.rps,
             monthlyQuota: form.monthlyQuota,
+            monthlyCostLimitMicroUsd: costLimitMicro(),
             extra: form.extra
         });
         notify.success('参数已保存');
@@ -509,6 +525,13 @@ function isJson(value: string) {
     font-size: 12px;
     font-weight: 400;
     color: #98a2b3;
+}
+
+.label-hint {
+    margin-left: 6px;
+    font-size: 12px;
+    font-weight: 400;
+    color: #a8b0bd;
 }
 
 .empty-keys {

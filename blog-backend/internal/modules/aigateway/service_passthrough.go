@@ -119,7 +119,13 @@ func (s *Service) passthrough(ctx context.Context, key *APIKey, provider string,
 		return PassthroughResult{}, 0, 0, newGatewayError(http.StatusNotFound, "provider_not_found", "该供应商不支持原生透传", provider)
 	}
 
-	if quotaExhausted(candidate{MonthlyQuota: runtime.config.MonthlyQuota, Used: s.providerUsed(ctx, provider, now)}) {
+	spent := s.providerSpend(ctx, provider, now)
+	if quotaExhausted(candidate{
+		MonthlyQuota:     runtime.config.MonthlyQuota,
+		Used:             spent.Count,
+		MonthlyCostLimit: runtime.config.MonthlyCostLimit,
+		CostUsed:         spent.CostMicroUSD,
+	}) {
 		return PassthroughResult{}, 0, 0, newGatewayError(http.StatusServiceUnavailable, "no_provider_available",
 			"该供应商本月配额已用尽", provider)
 	}
@@ -215,12 +221,14 @@ func (s *Service) accountPassthrough(ctx context.Context, key *APIKey, provider 
 	}
 }
 
-func (s *Service) providerUsed(ctx context.Context, provider string, now time.Time) int {
+// providerSpend reads this month's counters for one provider. Both numbers come
+// back together because either can be the ceiling that stops it.
+func (s *Service) providerSpend(ctx context.Context, provider string, now time.Time) Usage {
 	usage, err := s.repo.usageFor(ctx, currentPeriod(now), []string{providerSubject(provider)})
 	if err != nil {
-		return 0
+		return Usage{}
 	}
-	return usage[providerSubject(provider)].Count
+	return usage[providerSubject(provider)]
 }
 
 // passthroughCacheKey hashes the forwarded request. Callers reach the same

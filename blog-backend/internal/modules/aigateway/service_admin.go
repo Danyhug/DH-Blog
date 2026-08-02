@@ -176,6 +176,7 @@ func (s *Service) providerViews(ctx context.Context) ([]providerView, error) {
 			MonthlyQuota:      provider.MonthlyQuota,
 			MonthlyUsed:       usage[providerSubject(provider.Name)].Count,
 			MonthlyCost:       usage[providerSubject(provider.Name)].CostMicroUSD,
+			MonthlyCostLimit:  provider.MonthlyCostLimit,
 			SupportsUsageSync: reportsUsage,
 			Extra:             provider.Extra,
 			Health:            health,
@@ -246,12 +247,15 @@ func (s *Service) deleteAPIKey(ctx context.Context, id int) error {
 	return nil
 }
 
-// QuotaRow is one provider's monthly consumption against its ceiling.
+// QuotaRow is one provider's monthly consumption against its ceiling. Both
+// ceilings appear because a provider may be capped by calls, by spend, or
+// neither — and the dashboard should show whichever one is real.
 type QuotaRow struct {
-	Provider     string `json:"provider"`
-	MonthlyQuota int    `json:"monthlyQuota"`
-	MonthlyUsed  int    `json:"monthlyUsed"`
-	MonthlyCost  int    `json:"monthlyCostMicroUsd"`
+	Provider         string `json:"provider"`
+	MonthlyQuota     int    `json:"monthlyQuota"`
+	MonthlyUsed      int    `json:"monthlyUsed"`
+	MonthlyCost      int    `json:"monthlyCostMicroUsd"`
+	MonthlyCostLimit int    `json:"monthlyCostLimitMicroUsd"`
 }
 
 // StatsSummary backs the admin dashboard.
@@ -296,10 +300,11 @@ func (s *Service) stats(ctx context.Context, days int) (StatsSummary, error) {
 	}
 	for _, provider := range providers {
 		summary.Quotas = append(summary.Quotas, QuotaRow{
-			Provider:     provider.Name,
-			MonthlyQuota: provider.MonthlyQuota,
-			MonthlyUsed:  usage[providerSubject(provider.Name)].Count,
-			MonthlyCost:  usage[providerSubject(provider.Name)].CostMicroUSD,
+			Provider:         provider.Name,
+			MonthlyQuota:     provider.MonthlyQuota,
+			MonthlyUsed:      usage[providerSubject(provider.Name)].Count,
+			MonthlyCost:      usage[providerSubject(provider.Name)].CostMicroUSD,
+			MonthlyCostLimit: provider.MonthlyCostLimit,
 		})
 	}
 	return summary, nil

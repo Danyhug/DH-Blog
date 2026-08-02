@@ -227,16 +227,20 @@ var freshnessRangePattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}to\d{4}-\d{2}-
 
 // providerStatus is one row of GET /api/gateway/v1/providers.
 type providerStatus struct {
-	Name           string `json:"name"`
-	DisplayName    string `json:"display_name"`
-	HomeURL        string `json:"home_url"`
-	DocsURL        string `json:"docs_url"`
-	LogoURL        string `json:"logo_url"`
-	Healthy        bool   `json:"healthy"`
-	MonthlyQuota   int    `json:"monthly_quota"`
-	MonthlyUsed    int    `json:"monthly_used"`
-	SupportsAnswer bool   `json:"supports_answer"`
-	SupportsRaw    bool   `json:"supports_raw_content"`
+	Name         string `json:"name"`
+	DisplayName  string `json:"display_name"`
+	HomeURL      string `json:"home_url"`
+	DocsURL      string `json:"docs_url"`
+	LogoURL      string `json:"logo_url"`
+	Healthy      bool   `json:"healthy"`
+	MonthlyQuota int    `json:"monthly_quota"`
+	MonthlyUsed  int    `json:"monthly_used"`
+	// The spend pair is reported next to the call pair because a provider may
+	// be capped by either; both are zero when it is uncapped.
+	MonthlyCostLimit int  `json:"monthly_cost_limit_micro_usd"`
+	MonthlyCost      int  `json:"monthly_cost_micro_usd"`
+	SupportsAnswer   bool `json:"supports_answer"`
+	SupportsRaw      bool `json:"supports_raw_content"`
 }
 
 // Providers handles GET /api/gateway/v1/providers so an agent can see what the

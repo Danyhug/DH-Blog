@@ -145,6 +145,9 @@ type providerView struct {
 	MonthlyQuota int               `json:"monthlyQuota"`
 	MonthlyUsed  int               `json:"monthlyUsed"`
 	MonthlyCost  int               `json:"monthlyCostMicroUsd"`
+	// MonthlyCostLimit is the spend ceiling, 0 when the provider is capped by
+	// call count instead (or not capped at all).
+	MonthlyCostLimit int `json:"monthlyCostLimitMicroUsd"`
 	// SupportsUsageSync tells the page whether a blank upstream figure means
 	// "this provider has no usage API" rather than "the sync is failing".
 	SupportsUsageSync bool   `json:"supportsUsageSync"`
@@ -172,7 +175,11 @@ type providerPatch struct {
 	Weight       *int     `json:"weight"`
 	RPS          *float64 `json:"rps"`
 	MonthlyQuota *int     `json:"monthlyQuota"`
-	Extra        *string  `json:"extra"`
+	// MonthlyCostLimitMicroUSD caps spend rather than calls, for providers
+	// billed by amount. Sent in millionths of a dollar so the wire format needs
+	// no floating point.
+	MonthlyCostLimitMicroUSD *int    `json:"monthlyCostLimitMicroUsd"`
+	Extra                    *string `json:"extra"`
 }
 
 func (h *handler) updateProvider(c *gin.Context) {
@@ -216,6 +223,13 @@ func (h *handler) updateProvider(c *gin.Context) {
 			return
 		}
 		updates["monthly_quota"] = *patch.MonthlyQuota
+	}
+	if patch.MonthlyCostLimitMicroUSD != nil {
+		if *patch.MonthlyCostLimitMicroUSD < 0 {
+			adminFailure(c, http.StatusBadRequest, "月费用上限不能为负数")
+			return
+		}
+		updates["monthly_cost_limit"] = *patch.MonthlyCostLimitMicroUSD
 	}
 	if patch.Extra != nil {
 		extra := strings.TrimSpace(*patch.Extra)

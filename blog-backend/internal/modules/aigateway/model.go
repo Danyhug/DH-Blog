@@ -28,7 +28,13 @@ type Provider struct {
 	Weight          int     `gorm:"column:weight" json:"weight"`
 	RPS             float64 `gorm:"column:rps" json:"rps"`
 	MonthlyQuota    int     `gorm:"column:monthly_quota" json:"monthlyQuota"`
-	Extra           string  `gorm:"column:extra" json:"extra"`
+	// MonthlyCostLimit is a spend ceiling in millionths of a US dollar, for the
+	// providers that bill by amount instead of by call. Exa is the reason it
+	// exists: its free tier is $10 a month and a request costs whatever it
+	// costs, so a request count cannot express the budget that actually runs
+	// out. Zero means no ceiling, like MonthlyQuota.
+	MonthlyCostLimit int    `gorm:"column:monthly_cost_limit" json:"monthlyCostLimitMicroUsd"`
+	Extra            string `gorm:"column:extra" json:"extra"`
 }
 
 func (Provider) TableName() string { return "ai_gateway_providers" }

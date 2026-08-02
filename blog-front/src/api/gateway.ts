@@ -67,6 +67,11 @@ export interface GatewayProvider {
   monthlyUsed: number
   /** 本月花费，单位为微美元（1e-6 USD），仅 Exa 这类按额计费的供应商非零 */
   monthlyCostMicroUsd: number
+  /**
+   * 月费用上限，同样是微美元，0 表示不限。
+   * Exa 按金额计费（免费版每月 $10），单次价格不固定，次数上限说明不了预算。
+   */
+  monthlyCostLimitMicroUsd: number
   /** 该供应商是否提供用量接口；为 false 时数字空着是正常的，不是同步坏了 */
   supportsUsageSync: boolean
   extra: string
@@ -82,6 +87,7 @@ export interface GatewayProviderPatch {
   weight?: number
   rps?: number
   monthlyQuota?: number
+  monthlyCostLimitMicroUsd?: number
   extra?: string
 }
 
@@ -166,6 +172,7 @@ export interface GatewayQuota {
   monthlyQuota: number
   monthlyUsed: number
   monthlyCostMicroUsd: number
+  monthlyCostLimitMicroUsd: number
 }
 
 export interface GatewayStats {

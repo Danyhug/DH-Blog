@@ -33,10 +33,14 @@ func defaultProviders() []Provider {
 		},
 		{
 			Name: search.ProviderExa, DisplayName: "Exa", Enabled: false,
-			// Exa bills per dollar rather than per credit, so the monthly quota
-			// here is a request cap; actual spend is tracked separately.
+			// Exa bills by amount, not by call: a request costs whatever it
+			// costs, so a request cap cannot express the budget that actually
+			// runs out. The ceiling is the free tier's $10 a month instead.
+			// Existing installs keep whatever they had — silently starting to
+			// block traffic on an upgrade would be worse than an open tap.
 			Priority: 100, Weight: 1, RPS: 5, MonthlyQuota: 0,
-			Extra: `{"search_type":"auto"}`,
+			MonthlyCostLimit: 10_000_000,
+			Extra:            `{"search_type":"auto"}`,
 		},
 	}
 }

@@ -39,7 +39,13 @@ type candidate struct {
 	Weight       int
 	MonthlyQuota int
 	Used         int
-	Healthy      bool
+	// MonthlyCostLimit and CostUsed are the same idea in money, both in
+	// millionths of a US dollar. A provider can be capped by either, whichever
+	// runs out first: counting calls says nothing about a pay-as-you-go plan,
+	// and counting dollars says nothing about a plan sold in requests.
+	MonthlyCostLimit int
+	CostUsed         int
+	Healthy          bool
 }
 
 // routeInput is everything the policy needs to order the candidates.
@@ -180,17 +186,16 @@ func keep(pool []candidate, predicate func(candidate) bool) []candidate {
 	return kept
 }
 
-// score blends remaining monthly quota with the configured weight. It is the
-// balanced strategy's ranking function; Priority plays no part, because
+// score blends remaining monthly allowance with the configured weight. It is
+// the balanced strategy's ranking function; Priority plays no part, because
 // expressing a fixed order is what the priority strategy is for.
+//
+// A provider capped both ways is scored on whichever allowance is tighter — the
+// one that will stop it first is the one that describes how much room is left.
 func score(item candidate, maxWeight int) float64 {
-	quotaRatio := 1.0
-	if item.MonthlyQuota > 0 {
-		remaining := item.MonthlyQuota - item.Used
-		if remaining < 0 {
-			remaining = 0
-		}
-		quotaRatio = float64(remaining) / float64(item.MonthlyQuota)
+	quotaRatio := remainingRatio(item.Used, item.MonthlyQuota)
+	if costRatio := remainingRatio(item.CostUsed, item.MonthlyCostLimit); costRatio < quotaRatio {
+		quotaRatio = costRatio
 	}
 	normalizedWeight := 1.0
 	if maxWeight > 0 {
@@ -199,13 +204,29 @@ func score(item candidate, maxWeight int) float64 {
 	return quotaRatio*quotaScoreWeight + normalizedWeight*weightScoreWeight
 }
 
+// remainingRatio is the share of an allowance still unspent, and 1 when there
+// is no ceiling — an uncapped provider is never the one to avoid.
+func remainingRatio(used, limit int) float64 {
+	if limit <= 0 {
+		return 1
+	}
+	remaining := limit - used
+	if remaining < 0 {
+		remaining = 0
+	}
+	return float64(remaining) / float64(limit)
+}
+
 // usable reports whether a candidate is currently eligible at all.
 func usable(item candidate) bool {
 	return item.Healthy && !quotaExhausted(item)
 }
 
 func quotaExhausted(item candidate) bool {
-	return item.MonthlyQuota > 0 && item.Used >= item.MonthlyQuota
+	if item.MonthlyQuota > 0 && item.Used >= item.MonthlyQuota {
+		return true
+	}
+	return item.MonthlyCostLimit > 0 && item.CostUsed >= item.MonthlyCostLimit
 }
 
 func findCandidate(candidates []candidate, name string) *candidate {
