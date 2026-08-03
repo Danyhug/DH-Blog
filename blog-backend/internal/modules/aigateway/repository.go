@@ -42,6 +42,24 @@ func defaultProviders() []Provider {
 			MonthlyCostLimit: 10_000_000,
 			Extra:            `{"search_type":"auto"}`,
 		},
+		{
+			Name: search.ProviderFirecrawl, DisplayName: "Firecrawl", Enabled: false,
+			// Firecrawl bills in credits and states the plan's allowance through
+			// its own usage endpoint, which the hourly sync reads and acts on.
+			// The local ceiling is therefore left open rather than guessed at: a
+			// wrong number here would stop routing before the real allowance ran
+			// out.
+			//
+			// RPS 1 is deliberate even though the free tier allows only 10
+			// searches a minute. Firecrawl counts per minute and tolerates a
+			// burst; this bucket cannot express that, because its capacity is
+			// clamped to 1, so a fractional rate would serialize callers to one
+			// request every six seconds — far stricter than the upstream. A 429
+			// is classified as retryable and falls back to another provider,
+			// which is the cheaper way to absorb the rare overrun.
+			Priority: 100, Weight: 1, RPS: 1, MonthlyQuota: 0,
+			Extra: `{"scrape_format":"markdown"}`,
+		},
 	}
 }
 

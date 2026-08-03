@@ -64,6 +64,24 @@ func (h *handler) ExaPassthrough(c *gin.Context) {
 	})
 }
 
+// FirecrawlPassthrough handles POST /api/gateway/v1/firecrawl/search.
+//
+// Only the search route is forwarded. Firecrawl's scrape and crawl endpoints
+// are a different product with different pricing, and the gateway has no
+// accounting for either — exposing them here would be an unmetered proxy.
+func (h *handler) FirecrawlPassthrough(c *gin.Context) {
+	body, err := readPassthroughBody(c)
+	if err != nil {
+		writeGatewayError(c, err)
+		return
+	}
+	h.forward(c, search.ProviderFirecrawl, "firecrawl/search", search.PassthroughRequest{
+		Method: http.MethodPost,
+		Path:   "/search",
+		Body:   sanitizeJSONBody(body, "apiKey", "api_key"),
+	})
+}
+
 func (h *handler) forward(c *gin.Context, provider, endpoint string, req search.PassthroughRequest) {
 	result, err := h.service.Passthrough(c.Request.Context(), apiKeyFrom(c), provider, endpoint, req, c.ClientIP())
 	if err != nil {

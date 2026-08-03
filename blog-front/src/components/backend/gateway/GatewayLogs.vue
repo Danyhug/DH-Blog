@@ -27,8 +27,7 @@
             <el-table-column label="供应商" min-width="110">
                 <template #default="scope">
                     <div v-if="scope.row.provider" class="flex items-center gap-2">
-                        <ProviderLogo :name="scope.row.provider" :src="metaOf(scope.row.provider)?.logoUrl"
-                            :size="16" />
+                        <ProviderLogo :name="scope.row.provider" :size="16" />
                         <span>{{ scope.row.provider }}</span>
                     </div>
                     <span v-else>-</span>
@@ -74,7 +73,7 @@ import SectionPanel from './SectionPanel.vue';
 import { formatCost, formatTime } from './format';
 import { getGatewayLogs, type GatewayProvider, type GatewayRequestLog } from '@/api/gateway';
 
-const props = defineProps<{ providers: GatewayProvider[] }>();
+defineProps<{ providers: GatewayProvider[] }>();
 
 const logs = ref<GatewayRequestLog[]>([]);
 const total = ref(0);
@@ -89,10 +88,6 @@ const statusOptions = [
     'ok', 'provider_error', 'rate_limited', 'quota_exceeded',
     'invalid_request', 'provider_not_allowed', 'provider_not_found', 'no_provider_available'
 ];
-
-function metaOf(name: string) {
-    return props.providers.find((item) => item.name === name);
-}
 
 // 调用方写错参数和上游真的挂了不是一回事，颜色上分开，免得扫一眼全是红的
 function statusType(value: string) {

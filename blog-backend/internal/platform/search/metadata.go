@@ -5,13 +5,17 @@ package search
 // credential. It is fixed knowledge about the upstream rather than user
 // configuration, so it lives in code next to the adapters instead of in the
 // database.
+//
+// There is deliberately no logo here. A logo is not knowledge the backend has
+// to hold: shipping a URL meant every admin page load fetched four images from
+// four third-party hosts, and a host going away left the page full of broken
+// images. The frontend bundles the marks as static assets instead.
 type Metadata struct {
 	Name        string `json:"name"`
 	DisplayName string `json:"displayName"`
 	HomeURL     string `json:"homeUrl"`
 	DocsURL     string `json:"docsUrl"`
 	ConsoleURL  string `json:"consoleUrl"`
-	LogoURL     string `json:"logoUrl"`
 	// Billing explains what one unit of Credits means for this provider, so
 	// the admin dashboard does not present incomparable numbers as if they
 	// were the same currency.
@@ -25,7 +29,6 @@ var providerMetadata = map[string]Metadata{
 		HomeURL:     "https://brave.com/search/api/",
 		DocsURL:     "https://api-dashboard.search.brave.com/app/documentation",
 		ConsoleURL:  "https://api-dashboard.search.brave.com/app/keys",
-		LogoURL:     "https://cdn.search.brave.com/search-api/web/v1/client/favicon.png",
 		Billing:     "按请求计费，每次调用 1 次额度；免费版 1 次/秒、2000 次/月",
 	},
 	ProviderTavily: {
@@ -34,7 +37,6 @@ var providerMetadata = map[string]Metadata{
 		HomeURL:     "https://tavily.com",
 		DocsURL:     "https://docs.tavily.com/documentation/api-reference/endpoint/search",
 		ConsoleURL:  "https://app.tavily.com/home",
-		LogoURL:     "https://tavily.com/favicon.ico",
 		Billing:     "按 credit 计费，basic/fast 1 credit、advanced 2 credit",
 	},
 	ProviderExa: {
@@ -43,8 +45,15 @@ var providerMetadata = map[string]Metadata{
 		HomeURL:     "https://exa.ai",
 		DocsURL:     "https://docs.exa.ai/reference/search",
 		ConsoleURL:  "https://dashboard.exa.ai/api-keys",
-		LogoURL:     "https://exa.ai/images/favicon-32x32.png",
 		Billing:     "按美元计费，单次费用随搜索类型浮动，网关按微美元记录实际花费",
+	},
+	ProviderFirecrawl: {
+		Name:        ProviderFirecrawl,
+		DisplayName: "Firecrawl",
+		HomeURL:     "https://firecrawl.dev",
+		DocsURL:     "https://docs.firecrawl.dev/api-reference/endpoint/search",
+		ConsoleURL:  "https://www.firecrawl.dev/app/api-keys",
+		Billing:     "按 credit 计费，搜索每 10 条结果 2 credit（不足 10 条按 10 条算）；要正文时每抓一页再加 1 credit",
 	},
 }
 

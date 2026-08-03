@@ -35,8 +35,7 @@
                 <el-table-column label="供应商" min-width="150">
                     <template #default="scope">
                         <div class="flex items-center gap-2">
-                            <ProviderLogo :name="scope.row.provider" :src="metaOf(scope.row.provider)?.logoUrl"
-                                :size="20" />
+                            <ProviderLogo :name="scope.row.provider" :size="20" />
                             <span class="font-medium text-gray-700">
                                 {{ metaOf(scope.row.provider)?.displayName || scope.row.provider }}
                             </span>
@@ -73,7 +72,7 @@
             <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-7 gap-y-5">
                 <div v-for="quota in stats?.quotas ?? []" :key="quota.provider">
                     <div class="mb-2 flex items-center gap-2">
-                        <ProviderLogo :name="quota.provider" :src="metaOf(quota.provider)?.logoUrl" :size="18" />
+                        <ProviderLogo :name="quota.provider" :size="18" />
                         <span class="text-sm text-gray-700">
                             {{ metaOf(quota.provider)?.displayName || quota.provider }}
                         </span>
@@ -105,7 +104,7 @@ const loading = ref(false);
 
 const rangeLabel = computed(() => (days.value === 1 ? '今日' : `近 ${days.value} 天`));
 
-// 统计接口只回名字，展示名与 logo 得从供应商列表里取
+// 统计接口只回名字，展示名得从供应商列表里取（logo 由 ProviderLogo 自己按名字挑）
 function metaOf(name: string) {
     return props.providers.find((item) => item.name === name);
 }

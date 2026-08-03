@@ -226,6 +226,7 @@ const endpoints = [
     { method: 'POST', path: '/tavily/search', desc: 'Tavily 原生透传' },
     { method: 'GET', path: '/brave/web/search', desc: 'Brave 原生透传' },
     { method: 'POST', path: '/exa/search', desc: 'Exa 原生透传' },
+    { method: 'POST', path: '/firecrawl/search', desc: 'Firecrawl 原生透传' },
     { method: 'POST', path: '/mcp', desc: 'MCP Server，供 Claude Code 等 MCP 客户端挂载' }
 ];
 

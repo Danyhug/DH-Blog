@@ -67,10 +67,11 @@ var _ dhcache.Cache = (*testCache)(nil)
 
 // gatewayTestConfig describes the upstreams a test wants to stand up.
 type gatewayTestConfig struct {
-	Brave   http.HandlerFunc
-	Tavily  http.HandlerFunc
-	Exa     http.HandlerFunc
-	Options *Options
+	Brave     http.HandlerFunc
+	Tavily    http.HandlerFunc
+	Exa       http.HandlerFunc
+	Firecrawl http.HandlerFunc
+	Options   *Options
 }
 
 func defaultTestOptions() Options {
@@ -129,6 +130,7 @@ func newGatewayTestModule(t *testing.T, config gatewayTestConfig) *Module {
 	enable("brave", config.Brave)
 	enable("tavily", config.Tavily)
 	enable("exa", config.Exa)
+	enable("firecrawl", config.Firecrawl)
 
 	if err := module.service.Reload(context.Background()); err != nil {
 		t.Fatalf("重新加载供应商失败: %v", err)

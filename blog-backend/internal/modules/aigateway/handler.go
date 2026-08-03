@@ -155,9 +155,9 @@ func normalizeSearch(body searchBody) (SearchRequest, *GatewayError) {
 
 	provider := strings.ToLower(strings.TrimSpace(body.Provider))
 	switch provider {
-	case "", providerAuto, search.ProviderBrave, search.ProviderTavily, search.ProviderExa:
+	case "", providerAuto, search.ProviderBrave, search.ProviderTavily, search.ProviderExa, search.ProviderFirecrawl:
 	default:
-		return SearchRequest{}, invalid("provider 仅支持 auto、brave、tavily、exa")
+		return SearchRequest{}, invalid("provider 仅支持 auto、brave、tavily、exa、firecrawl")
 	}
 
 	maxResults := body.MaxResults
@@ -231,7 +231,6 @@ type providerStatus struct {
 	DisplayName  string `json:"display_name"`
 	HomeURL      string `json:"home_url"`
 	DocsURL      string `json:"docs_url"`
-	LogoURL      string `json:"logo_url"`
 	Healthy      bool   `json:"healthy"`
 	MonthlyQuota int    `json:"monthly_quota"`
 	MonthlyUsed  int    `json:"monthly_used"`

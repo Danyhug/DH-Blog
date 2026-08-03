@@ -371,6 +371,12 @@ func (s *Service) buildAdapter(config Provider, apiKey string) (search.Provider,
 			logrus.Warnf("解析 Exa 附加配置失败，使用默认值: %v", err)
 		}
 		return search.NewExa(apiKey, config.BaseURL, options, s.httpClient), nil
+	case search.ProviderFirecrawl:
+		var options search.FirecrawlOptions
+		if err := decodeExtra(config.Extra, &options); err != nil {
+			logrus.Warnf("解析 Firecrawl 附加配置失败，使用默认值: %v", err)
+		}
+		return search.NewFirecrawl(apiKey, config.BaseURL, options, s.httpClient), nil
 	default:
 		return nil, fmt.Errorf("未知的搜索供应商: %s", config.Name)
 	}
@@ -939,7 +945,6 @@ func (s *Service) ProviderStatuses(ctx context.Context, key *APIKey) ([]provider
 			DisplayName:      runtime.config.DisplayName,
 			HomeURL:          meta.HomeURL,
 			DocsURL:          meta.DocsURL,
-			LogoURL:          meta.LogoURL,
 			Healthy:          runtime.breaker.State() != search.BreakerOpen,
 			MonthlyQuota:     runtime.config.MonthlyQuota,
 			MonthlyUsed:      usage[providerSubject(runtime.config.Name)].Count,

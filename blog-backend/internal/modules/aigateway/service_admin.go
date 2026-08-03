@@ -164,7 +164,6 @@ func (s *Service) providerViews(ctx context.Context) ([]providerView, error) {
 			HomeURL:           meta.HomeURL,
 			DocsURL:           meta.DocsURL,
 			ConsoleURL:        meta.ConsoleURL,
-			LogoURL:           meta.LogoURL,
 			Billing:           meta.Billing,
 			Enabled:           provider.Enabled,
 			Keys:              keys,

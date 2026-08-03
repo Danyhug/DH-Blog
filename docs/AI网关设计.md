@@ -2,7 +2,7 @@
 
 ## 1. 目标
 
-在博客后端内托管 Brave Search、Tavily、Exa 三家搜索供应商，对外暴露一套统一的搜索 API。
+在博客后端内托管 Brave Search、Tavily、Exa、Firecrawl 四家搜索供应商，对外暴露一套统一的搜索 API。
 外部 agent 只需持有网关签发的 API Key，即可发起搜索；**由博客自行决定路由到哪个供应商**，
 除非请求中显式指定 `provider`。
 
@@ -30,7 +30,9 @@ internal/platform/search/
   brave.go         Brave Web Search 适配
   tavily.go        Tavily Search 适配
   exa.go           Exa Search 适配
-  metadata.go      各家的官网 / 文档 / 控制台 / logo / 计费口径（静态元信息）
+  firecrawl.go     Firecrawl Search 适配（搜索 + 可选正文抓取）
+  metadata.go      各家的官网 / 文档 / 控制台 / 计费口径（静态元信息）
+                   logo 不在这里：那是前端打包的静态资源，见 §13.5
   ratelimit.go     出站令牌桶（每 provider 一个，进程内单例）
   breaker.go       熔断器
 
@@ -104,7 +106,7 @@ Authorization: Bearer gw_live_xxxxxxxx...
 | 字段 | 类型 | 默认 | 约束 |
 | --- | --- | --- | --- |
 | `query` | string | — | 必填，1–400 字符 |
-| `provider` | string | `auto` | `auto` / `brave` / `tavily` / `exa` |
+| `provider` | string | `auto` | `auto` / `brave` / `tavily` / `exa` / `firecrawl` |
 | `max_results` | int | 5 | 1–20 |
 | `topic` | string | `general` | `general` / `news` |
 | `freshness` | string | 空 | `day`/`week`/`month`/`year` 或 `YYYY-MM-DDtoYYYY-MM-DD` |
@@ -113,7 +115,7 @@ Authorization: Bearer gw_live_xxxxxxxx...
 | `include_domains` | []string | `[]` | ≤ 50（取各家下限的安全值） |
 | `exclude_domains` | []string | `[]` | ≤ 50 |
 | `include_answer` | bool | false | 触发能力硬过滤 → 仅 Tavily |
-| `include_raw_content` | bool | false | 触发能力硬过滤 → Tavily / Exa |
+| `include_raw_content` | bool | false | 触发能力硬过滤 → Tavily / Exa / Firecrawl |
 | `allow_fallback` | bool | true | 显式指定 provider 时是否允许回退 |
 | `no_cache` | bool | false | 跳过结果缓存 |
 
@@ -205,6 +207,7 @@ type Capability struct {
 - Brave：`{Answer: false, RawContent: false, DomainFilter: false, SearchOperators: true, Pagination: true}`
 - Tavily：`{Answer: true, RawContent: true, DomainFilter: true, SearchOperators: false, Pagination: false}`
 - Exa：`{Answer: false, RawContent: true, DomainFilter: true, SearchOperators: false, Pagination: false}`（详见 §13）
+- Firecrawl：`{Answer: false, RawContent: true, DomainFilter: true, SearchOperators: true, Pagination: false}`（详见 §19）
 
 ### 4.2 上游端点与鉴权
 
@@ -256,7 +259,7 @@ Brave 的 `count` 上限 20、`offset` 上限 9（页码而非条数）。
 | 401 / 403 | `provider_auth_failed` | 否（配置问题，回退无意义但仍换下一家） |
 | 400 / 422 | `provider_bad_request` | 否 |
 | 429 | `provider_rate_limited` | 是 |
-| Tavily 432 / 433、Exa 402 | `provider_quota_exceeded` | 是（同时把该 provider 本月配额标记为耗尽） |
+| Tavily 432 / 433，Exa / Firecrawl 402 | `provider_quota_exceeded` | 是（同时把该 provider 本月配额标记为耗尽） |
 | 5xx | `provider_unavailable` | 是 |
 | 网络超时 | `provider_timeout` | 是 |
 
@@ -270,8 +273,9 @@ Brave 的 `count` 上限 20、`offset` 上限 9（页码而非条数）。
 `allow_fallback=true` 则降级为 auto 流程，否则直接返回错误。
 
 **2. 能力过滤（硬约束）**
-- `include_answer=true` 或 `include_raw_content=true` → 候选集仅保留 `Capability.Answer` / `.RawContent` 为真的（即 Tavily）
-- `query` 含 `site:` / `filetype:` / 成对英文引号 → 优先保留 `SearchOperators` 为真的（Brave）；
+- `include_answer=true` → 候选集仅保留 `Capability.Answer` 为真的（即 Tavily）
+- `include_raw_content=true` → 仅保留 `Capability.RawContent` 为真的（Tavily / Exa / Firecrawl）
+- `query` 含 `site:` / `filetype:` / 成对英文引号 → 优先保留 `SearchOperators` 为真的（Brave / Firecrawl）；
   若因此候选集为空则放宽（Tavily 会把操作符当普通词，属可接受降级）
 
 **3. 健康过滤** — 剔除熔断器处于 open 状态的候选。
@@ -528,6 +532,7 @@ API Key 一旦写进前端代码就等同公开。
 | --- | --- | --- |
 | POST | `/api/gateway/v1/tavily/search` | `POST {tavilyBase}/search` |
 | GET | `/api/gateway/v1/brave/web/search` | `GET {braveBase}/web/search` |
+| POST | `/api/gateway/v1/firecrawl/search` | `POST {firecrawlBase}/search` |
 
 请求体与响应体都是上游的原生格式，现有 SDK 只需把 base URL 指向博客即可接入。
 响应会附加两个信息头：`X-Gateway-Provider`、命中缓存时的 `X-Gateway-Cached: 1`。
@@ -624,22 +629,22 @@ Exa 是**语义检索**而非关键词检索，这决定了两条路由规则：
 
 ### 13.4 供应商展示元信息
 
-后台需要展示每家的 logo 与入口链接。这些是**上游的固定属性而非用户配置**，
+后台需要展示每家的入口链接。这些是**上游的固定属性而非用户配置**，
 所以放在 `internal/platform/search/metadata.go` 的代码常量里，而不是数据库：
 
 ```go
 type Metadata struct {
-    Name, DisplayName, HomeURL, DocsURL, ConsoleURL, LogoURL, Billing string
+    Name, DisplayName, HomeURL, DocsURL, ConsoleURL, Billing string
 }
 ```
 
 - `ConsoleURL` 直接指向各家的密钥页面，省去运维去翻文档
 - `Billing` 是一句话的计费口径说明，避免看板数字被误读
-- logo 用各家官网自己的 favicon；前端加载失败时降级为首字母色块，
-  色相由名称哈希派生，保证同一供应商每次渲染颜色一致
 
-`GET /api/gateway/v1/providers` 也带上 `home_url`/`docs_url`/`logo_url`，
+`GET /api/gateway/v1/providers` 也带上 `home_url`/`docs_url`，
 让 agent 侧也能自描述地展示来源。
+
+logo **不在这里**：见 §19.4。
 
 ### 13.5 一个配置注意事项
 
@@ -958,3 +963,82 @@ Brave 的快照存在 adapter 实例上，任何一次 `Reload()`（改动供应
 **已有安装不回填**：升级只会补出一个值为 0 的新列，行为和升级前一致。
 升级之后突然开始拦流量，比敞着口子更糟——要用就去后台自己设一个。
 Brave 与 Tavily 仍然只设次数上限，它们本来就按次卖。
+
+---
+
+## 19. Firecrawl 适配（八期）
+
+### 19.1 为什么加这一家
+
+前三家里只有 Tavily 和 Exa 能返回正文，而两家给的都是自己抽取过的片段。
+Firecrawl 是抓取器出身：一次调用先跑关键词搜索，再把每条结果的整页正文抓成
+markdown 一起返回。对"查文档、读源码页"这类问题，它省掉的是搜索之后再抓一轮的整个步骤。
+
+代价是贵，所以正文抓取是**按需触发**的：只有 `include_raw_content=true` 才带
+`scrapeOptions`，否则只要 url / title / description。
+
+### 19.2 契约
+
+| | 值 |
+| --- | --- |
+| 端点 | `POST https://api.firecrawl.dev/v2/search` |
+| 鉴权头 | `Authorization: Bearer <key>` |
+| 用量端点 | `GET https://api.firecrawl.dev/v2/team/credit-usage` |
+
+版本号写在 `BaseURL`（默认 `.../v2`）而不是请求路径里：改地址的人多半是要指向
+自建实例，那他也该决定自己说的是哪个版本的协议。
+
+`/search` 的每分钟请求上限（官方 rate-limits）：Free 10、Hobby 100、Standard 500、
+Growth 5000、Scale 10000，按 team 计，同账号所有密钥共享同一个计数器。
+
+种子里 `rps = 1` 是有意为之，哪怕免费档只有 10 次/分钟。Firecrawl 按**每分钟**计数、
+容忍突发，而 `NewLimiter` 的桶容量被钳到 `max(rps, 1)`——填 0.16 并不会得到"每分钟 10 次
+可突发"，而是"每 6 秒一个、毫无余量"，比上游本身严格得多，还会因为 6 秒 > 2 秒排队上限
+而直接把这家踢出候选。偶发超限拿 429 回退（`provider_rate_limited` 属可重试）成本更低。
+
+### 19.3 字段映射
+
+| 统一字段 | Firecrawl |
+| --- | --- |
+| `query` | `query`（上游硬限 500 字符，超长在适配层截断，免得整个请求被拒） |
+| `max_results` | `limit`（1–100） |
+| `topic` | `sources`：`general` → `["web"]`，`news` → `["news"]` |
+| `freshness` | `tbs`：`qdr:d/w/m/y`，自定义区间 → `cdr:1,cd_min:M/D/YYYY,cd_max:M/D/YYYY` |
+| `country` | `country`（2 位 ISO，大写） |
+| `include/exclude_domains` | `includeDomains` / `excludeDomains`（原生） |
+| `include_raw_content` | `scrapeOptions.formats`，格式由 `Extra.scrape_format` 决定（markdown / summary） |
+| `language` | **丢弃**，v2 没有对应参数 |
+
+响应里 web 结果的摘要在 `description`、news 在 `snippet`，正文在 `markdown`；
+两种形状字段互不冲突，用同一个结构体解一次就够。
+
+计费按响应里的 `creditsUsed` 记账，缺失时回落到文档价（每 10 条结果 2 credit，
+不足一档按一档算），且永不记 0——打到了上游就是花了钱。
+
+上游偶尔会用 **HTTP 200 + `success:false`** 报错。当成空结果返回既骗了调用方，
+又照样把这次调用计进用量，所以适配层把它翻回错误。
+
+### 19.4 logo 改为前端静态资源
+
+原先 `Metadata.LogoURL` 存的是各家官网的 favicon 地址，前端直接 `<img src>`。
+问题有两个：每次打开后台都要向四个第三方域名各拉一张图；对方换了路径就满屏破图
+（Brave 的 CDN 已经是拉不通的状态）。
+
+现在四家的官方 logo 以 SVG 存在 `blog-front/src/assets/images/providers/`，
+由 `ProviderLogo.vue` 按 provider 名静态映射。构建时体积都在内联阈值以内，
+会被打成 data URI 进 chunk，运行期零请求、离线可用。
+
+后端因此删掉了 `Metadata.LogoURL`，以及 `providerView.logoUrl` 与
+`GET /providers` 响应里的 `logo_url`——留着就是第二份会漂移的真相。
+认不出名字的 provider 仍降级为首字母色块，色相由名称哈希派生，保证颜色稳定。
+
+新增供应商时记得在 `LOGOS` 里补一条，否则它会以色块示人。
+
+### 19.5 用量同步
+
+Firecrawl 报的是 `remainingCredits` / `planCredits`，用量得自己相减。
+额度挂在 **team** 上而不是单把密钥上，所以 `Scope` 记为 `account`：
+同账号再加一把密钥并不会多出余量，轮换救不了额度耗尽。
+
+`planCredits` 缺失或为 0 时返回 `ErrUsageUnavailable` 而不是编一个上限——
+0 在 `UsageReport` 的约定里表示"没有上限"，硬填会让选路按假数字行事。

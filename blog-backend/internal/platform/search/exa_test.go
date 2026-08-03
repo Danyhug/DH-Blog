@@ -295,13 +295,15 @@ func TestExaForwardReadsCost(t *testing.T) {
 }
 
 func TestMetaForKnownAndUnknownProviders(t *testing.T) {
-	for _, name := range []string{ProviderBrave, ProviderTavily, ProviderExa} {
+	for _, name := range []string{ProviderBrave, ProviderTavily, ProviderExa, ProviderFirecrawl} {
 		meta := MetaFor(name)
-		if meta.HomeURL == "" || meta.DocsURL == "" || meta.LogoURL == "" || meta.Billing == "" {
+		if meta.HomeURL == "" || meta.DocsURL == "" || meta.ConsoleURL == "" || meta.Billing == "" {
 			t.Errorf("%s 的元信息不完整: %+v", name, meta)
 		}
-		if !strings.HasPrefix(meta.HomeURL, "https://") || !strings.HasPrefix(meta.LogoURL, "https://") {
-			t.Errorf("%s 的链接必须是 https: %+v", name, meta)
+		for _, link := range []string{meta.HomeURL, meta.DocsURL, meta.ConsoleURL} {
+			if !strings.HasPrefix(link, "https://") {
+				t.Errorf("%s 的链接必须是 https: %q", name, link)
+			}
 		}
 	}
 	if meta := MetaFor("unknown"); meta.Name != "unknown" || meta.DisplayName != "unknown" {

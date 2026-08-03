@@ -16,7 +16,7 @@
                 <article v-for="provider in providers" :key="provider.name" class="card"
                     :class="{ 'card--off': !provider.enabled }">
                     <div class="flex items-center gap-3">
-                        <ProviderLogo :name="provider.name" :src="provider.logoUrl" :size="34" />
+                        <ProviderLogo :name="provider.name" :size="34" />
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-2">
                                 <span class="font-medium text-gray-800 truncate">

@@ -32,9 +32,10 @@ const (
 
 // Provider names registered by the gateway.
 const (
-	ProviderBrave  = "brave"
-	ProviderTavily = "tavily"
-	ProviderExa    = "exa"
+	ProviderBrave     = "brave"
+	ProviderTavily    = "tavily"
+	ProviderExa       = "exa"
+	ProviderFirecrawl = "firecrawl"
 )
 
 // DefaultTimeout bounds a single upstream call.

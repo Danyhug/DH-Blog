@@ -53,6 +53,7 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 		gateway.POST("/tavily/search", m.handler.TavilyPassthrough)
 		gateway.GET("/brave/web/search", m.handler.BravePassthrough)
 		gateway.POST("/exa/search", m.handler.ExaPassthrough)
+		gateway.POST("/firecrawl/search", m.handler.FirecrawlPassthrough)
 
 		// MCP: lets Claude Code and other MCP clients mount the gateway as a
 		// tool server. GET/DELETE exist only to answer 405 — the gateway never

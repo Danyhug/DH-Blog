@@ -133,7 +133,6 @@ type providerView struct {
 	HomeURL      string            `json:"homeUrl"`
 	DocsURL      string            `json:"docsUrl"`
 	ConsoleURL   string            `json:"consoleUrl"`
-	LogoURL      string            `json:"logoUrl"`
 	Billing      string            `json:"billing"`
 	Enabled      bool              `json:"enabled"`
 	Keys         []providerKeyView `json:"keys"`

@@ -33,11 +33,11 @@ export interface GatewayProviderKey {
   upstreamUsed: number
   /** 0 表示上游没有给出上限，不能理解为已用尽 */
   upstreamLimit: number
-  /** credit / request，两家计量单位不同，不能互相换算 */
+  /** credit / request，各家计量单位不同，不能互相换算 */
   upstreamUnit: string
   /** key = 这把密钥自己的额度；account = 与同账户其它密钥共享 */
   upstreamScope: string
-  /** 额度对应的周期，Tavily 是账单周期、Brave 是滚动 30 天，都不是自然月 */
+  /** 额度对应的周期，Tavily / Firecrawl 是账单周期、Brave 是滚动 30 天，都不是自然月 */
   upstreamWindow: string
   upstreamSyncedAt: string | null
   /** 最近一次同步失败的原因，成功后清空 */
@@ -52,8 +52,7 @@ export interface GatewayProvider {
   homeUrl: string
   docsUrl: string
   consoleUrl: string
-  logoUrl: string
-  /** 计费方式说明，三家口径不同，用于避免看板数字被误读 */
+  /** 计费方式说明，各家口径不同，用于避免看板数字被误读 */
   billing: string
   enabled: boolean
   keys: GatewayProviderKey[]

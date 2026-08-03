@@ -209,7 +209,7 @@ func TestProvidersEndpointExposesMetadata(t *testing.T) {
 		t.Fatalf("providers = %+v", body.Providers)
 	}
 	provider := body.Providers[0]
-	if provider.Name != "exa" || provider.HomeURL == "" || provider.DocsURL == "" || provider.LogoURL == "" {
+	if provider.Name != "exa" || provider.HomeURL == "" || provider.DocsURL == "" {
 		t.Fatalf("元信息缺失: %+v", provider)
 	}
 	if provider.SupportsAnswer {
@@ -233,13 +233,13 @@ func TestAdminProviderViewCarriesMetadataAndCost(t *testing.T) {
 	for _, view := range views {
 		byName[view.Name] = view
 	}
-	// 三家供应商都应有种子行
-	for _, name := range []string{"brave", "tavily", "exa"} {
+	// 每家供应商都应有种子行
+	for _, name := range []string{"brave", "tavily", "exa", "firecrawl"} {
 		view, ok := byName[name]
 		if !ok {
 			t.Fatalf("缺少供应商 %s", name)
 		}
-		if view.LogoURL == "" || view.HomeURL == "" || view.ConsoleURL == "" || view.Billing == "" {
+		if view.HomeURL == "" || view.DocsURL == "" || view.ConsoleURL == "" || view.Billing == "" {
 			t.Errorf("%s 的展示信息不完整: %+v", name, view)
 		}
 	}
