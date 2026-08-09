@@ -43,5 +43,11 @@
     "unplugin-vue-components": "^31.1.0",
     "vite": "^7.3.6",
     "vue-tsc": "^3.3.5"
+  },
+  "overrides": {
+    "@codemirror/state": "6.5.2",
+    "@codemirror/view": "6.39.12",
+    "@codemirror/language": "6.12.1",
+    "@lezer/common": "1.5.0"
   }
 }
