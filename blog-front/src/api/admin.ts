@@ -275,15 +275,6 @@ export const getBackupUrl = (options?: { mode?: 'full', dirs?: string[] }): stri
   return url;
 }
 
-// ********** 文件存储路径配置（兼容旧版） **********
-export const getStoragePath = (): Promise<{path: string}> => {
-  return request.get('/admin/config/storage-path')
-}
-
-export const updateStoragePath = (path: string): Promise<any> => {
-  return request.put('/admin/config/storage-path', {path})
-}
-
 // ********** 系统配置项管理 **********
 // 获取所有系统配置项
 export const getSystemSettings = (): Promise<any[]> => {

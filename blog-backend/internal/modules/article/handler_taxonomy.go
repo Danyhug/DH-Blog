@@ -58,20 +58,6 @@ func (h *Handler) DeleteTag(c *gin.Context) {
 	h.Success(c)
 }
 
-func (h *Handler) GetCategoryByID(c *gin.Context) {
-	id, err := h.getID(c, "id")
-	if err != nil {
-		h.Error(c, err)
-		return
-	}
-	category, err := h.categoryRepository.FindByID(c.Request.Context(), id)
-	if err != nil {
-		h.Error(c, err)
-		return
-	}
-	h.SuccessWithData(c, category)
-}
-
 func (h *Handler) UpdateCategory(c *gin.Context) {
 	var category Category
 	if err := h.bindJSON(c, &category); err != nil {

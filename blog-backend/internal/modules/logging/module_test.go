@@ -39,7 +39,6 @@ func TestModuleRegistersLoggingRoutes(t *testing.T) {
 
 	want := map[string]bool{
 		"GET /api/admin/log/overview/visitLog": false,
-		"GET /api/admin/stats/daily":           false,
 		"GET /api/admin/log/stats/visits":      false,
 		"GET /api/admin/log/stats/monthly":     false,
 		"GET /api/admin/log/stats/daily-chart": false,

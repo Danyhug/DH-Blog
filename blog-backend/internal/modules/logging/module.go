@@ -38,7 +38,6 @@ func MigrationModels() []any {
 func (m *Module) RegisterRoutes(routes *router.Routes) {
 	adminAPI := routes.AdminAPI
 	adminAPI.GET("/log/overview/visitLog", m.handler.GetVisitLogs)
-	adminAPI.GET("/stats/daily", m.handler.GetDailyStats)
 	adminAPI.GET("/log/stats/visits", m.handler.GetVisitStatistics)
 	adminAPI.GET("/log/stats/monthly", m.handler.GetMonthlyVisitStats)
 	adminAPI.GET("/log/stats/daily-chart", m.handler.GetDailyVisitStatsForLastDays)

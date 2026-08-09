@@ -1,7 +1,6 @@
 package logging
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -11,8 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
-
-var ErrInvalidDateFormat = errors.New("无效的日期格式")
 
 type handler struct {
 	repository *Repository
@@ -127,29 +124,6 @@ func (h *handler) toggleIPBan(c *gin.Context, ip string, isBanned bool) {
 		return
 	}
 	respondSuccess(c)
-}
-
-func (h *handler) GetDailyStats(c *gin.Context) {
-	var request struct {
-		StartDate string `form:"startDate" binding:"required"`
-		EndDate   string `form:"endDate" binding:"required"`
-	}
-	if err := c.ShouldBindQuery(&request); err != nil {
-		c.JSON(http.StatusBadRequest, response.Error("无效的查询参数: "+err.Error()))
-		return
-	}
-	startDate, startErr := time.Parse("2006-01-02", request.StartDate)
-	endDate, endErr := time.Parse("2006-01-02", request.EndDate)
-	if startErr != nil || endErr != nil {
-		c.JSON(http.StatusBadRequest, response.Error(ErrInvalidDateFormat.Error()))
-		return
-	}
-	stats, err := h.repository.GetDailyVisitStats(startDate, endDate)
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	respondData(c, stats)
 }
 
 func (h *handler) GetMonthlyVisitStats(c *gin.Context) {

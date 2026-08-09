@@ -302,7 +302,7 @@ func TestModuleRegistersExistingSystemRoutes(t *testing.T) {
 	engine := gin.New()
 	routes := &router.Routes{Engine: engine, PublicAPI: engine.Group("/api"), AdminAPI: engine.Group("/api/admin")}
 	module.RegisterRoutes(routes)
-	want := map[string]bool{"GET /api/admin/config": false, "PUT /api/admin/config/storage": false, "GET /api/admin/config/backup": false, "GET /api/admin/config/storage-path": false, "GET /api/admin/system-setting/list": false, "DELETE /api/admin/system-setting/:id": false, "PUT /api/files/storage-path": false}
+	want := map[string]bool{"GET /api/admin/config": false, "PUT /api/admin/config/storage": false, "GET /api/admin/config/backup": false, "GET /api/admin/system-setting/list": false, "DELETE /api/admin/system-setting/:id": false}
 	for _, route := range engine.Routes() {
 		key := route.Method + " " + route.Path
 		if _, ok := want[key]; ok {

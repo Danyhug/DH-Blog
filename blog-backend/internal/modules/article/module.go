@@ -101,7 +101,6 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 	adminAPI.PUT("/tag", m.handler.UpdateTag)
 	adminAPI.DELETE("/tag/:id", m.handler.DeleteTag)
 	adminAPI.POST("/category", m.handler.CreateCategory)
-	adminAPI.GET("/category/:id", m.handler.GetCategoryByID)
 	adminAPI.PUT("/category", m.handler.UpdateCategory)
 	adminAPI.DELETE("/category/:id", m.handler.DeleteCategory)
 	adminAPI.GET("/category/:id/tags", m.handler.GetCategoryDefaultTags)

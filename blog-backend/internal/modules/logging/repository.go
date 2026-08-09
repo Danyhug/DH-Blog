@@ -213,17 +213,6 @@ func (r *Repository) ClearIPBlacklistCache(ip string) {
 	}
 }
 
-func (r *Repository) GetDailyVisitStats(startDate, endDate time.Time) ([]map[string]interface{}, error) {
-	var stats []map[string]interface{}
-	err := r.db.Model(&AccessLog{}).
-		Select("strftime('%Y-%m-%d', access_date) as date, count(*) as visit_count").
-		Where("access_date BETWEEN ? AND ?", startDate, endDate).
-		Group("date").
-		Order("date DESC").
-		Find(&stats).Error
-	return stats, err
-}
-
 func (r *Repository) GetMonthlyVisitStats(year int) ([]map[string]interface{}, error) {
 	if year == 0 {
 		year = time.Now().Year()

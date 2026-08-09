@@ -83,17 +83,12 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 	config.PUT("/storage", m.handler.updateStorageConfig)
 	config.GET("/backup/dirs", m.handler.getBackupDirs)
 	config.GET("/backup", m.handler.backupData)
-	config.GET("/storage-path", m.handler.getStoragePath)
-	config.PUT("/storage-path", m.handler.updateStoragePath)
 
 	settings := routes.AdminAPI.Group("/system-setting")
 	settings.GET("/list", m.handler.listSettings)
 	settings.POST("", m.handler.addSetting)
 	settings.PUT("", m.handler.updateSetting)
 	settings.DELETE("/:id", m.handler.deleteSetting)
-
-	// Compatibility endpoint kept under the files API, but persistence remains system-owned.
-	routes.AuthenticatedAPI("/api/files").PUT("/storage-path", m.handler.updateStoragePath)
 }
 
 func (m *Module) AIConfigSource() AIConfigSource { return m.ai }

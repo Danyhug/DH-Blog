@@ -3,7 +3,6 @@ package system
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"strconv"
 
@@ -68,49 +67,6 @@ func validateStorageConfig(config StorageConfig) error {
 		return fmt.Errorf("存储路径不是目录: %s", config.FileStoragePath)
 	}
 	return nil
-}
-
-func (h *handler) getStoragePath(c *gin.Context) {
-	success(c, gin.H{"path": h.storage.GetStoragePath()})
-}
-func (h *handler) updateStoragePath(c *gin.Context) {
-	userID, ok := c.Get("userID")
-	if !ok || !isAdminUserID(userID) {
-		failure(c, http.StatusUnauthorized, fmt.Errorf("只有管理员可以更新存储路径"))
-		return
-	}
-	var request struct {
-		Path string `json:"path" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&request); err != nil {
-		failure(c, 400, err)
-		return
-	}
-	config, err := h.service.configByType(c.Request.Context(), ConfigTypeStorage)
-	if err != nil {
-		failure(c, 500, err)
-		return
-	}
-	if err := h.applyStorage(c.Request.Context(), StorageConfig{FileStoragePath: request.Path, WebDAVChunkSize: config.WebDAVChunkSize}); err != nil {
-		failure(c, 400, err)
-		return
-	}
-	success(c, "存储路径已更新，文件表已清空并重新扫描")
-}
-
-func isAdminUserID(value any) bool {
-	switch id := value.(type) {
-	case uint64:
-		return id == 1
-	case uint:
-		return id == 1
-	case int:
-		return id == 1
-	case string:
-		return id == "1"
-	default:
-		return false
-	}
 }
 
 type settingResponse struct {

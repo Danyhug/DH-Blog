@@ -123,7 +123,6 @@ func TestModuleOwnsModelsRoutesAndTaskRegistration(t *testing.T) {
 		"PUT /api/admin/tag":                        false,
 		"DELETE /api/admin/tag/:id":                 false,
 		"POST /api/admin/category":                  false,
-		"GET /api/admin/category/:id":               false,
 		"PUT /api/admin/category":                   false,
 		"DELETE /api/admin/category/:id":            false,
 		"GET /api/admin/category/:id/tags":          false,

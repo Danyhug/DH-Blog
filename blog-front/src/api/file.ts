@@ -177,15 +177,6 @@ export const deleteFile = (fileId: string): Promise<any> => {
 }
 
 /**
- * 更新存储路径
- * @param path 新的存储路径
- * @returns 更新结果
- */
-export const updateStoragePath = (path: string): Promise<any> => {
-  return request.put('/files/storage-path', { path })
-}
-
-/**
  * 获取文件下载链接
  * @param fileId 文件ID
  * @param preview 是否为预览模式（用于音视频流式传输）
