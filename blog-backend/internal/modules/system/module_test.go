@@ -5,8 +5,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"net/http"
-	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -212,54 +210,25 @@ func TestAIConfigSourceReadsUpdatesImmediately(t *testing.T) {
 	}
 }
 
-func TestUpdateConfigsMergesPartialStoragePayload(t *testing.T) {
-	runtime := &storageRuntimeStub{path: t.TempDir(), chunkSize: 5120}
-	module := newSystemTestModule(t, openSystemTestDB(t), runtime)
-	runtime.applyCalls = 0
-
-	gin.SetMode(gin.TestMode)
-	response := httptest.NewRecorder()
-	context, _ := gin.CreateTestContext(response)
-	context.Request = httptest.NewRequest(http.MethodPut, "/api/admin/config", bytes.NewBufferString(`{"webdav_chunk_size":2048}`))
-	context.Request.Header.Set("Content-Type", "application/json")
-	module.handler.updateConfigs(context)
-	if response.Code != http.StatusOK {
-		t.Fatalf("partial update status=%d body=%s", response.Code, response.Body.String())
-	}
-
-	config, err := module.service.config(context.Request.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if config.FileStoragePath != runtime.path || config.WebDAVChunkSize != 2048 {
-		t.Fatalf("partial update overwrote stored values: %+v runtime=%+v", config, runtime)
-	}
-	if runtime.applyCalls != 1 || runtime.chunkSize != 2048 {
-		t.Fatalf("runtime did not receive merged storage config: %+v", runtime)
-	}
-}
-
-func TestUpdateConfigsRejectsNonexistentStoragePathBeforePersisting(t *testing.T) {
+func TestApplyStorageRejectsNonexistentPathBeforePersisting(t *testing.T) {
 	runtime := &storageRuntimeStub{path: t.TempDir(), chunkSize: 5120}
 	module := newSystemTestModule(t, openSystemTestDB(t), runtime)
 	runtime.applyCalls = 0
 	missingPath := filepath.Join(t.TempDir(), "missing")
 
-	gin.SetMode(gin.TestMode)
-	response := httptest.NewRecorder()
-	context, _ := gin.CreateTestContext(response)
-	context.Request = httptest.NewRequest(http.MethodPut, "/api/admin/config", bytes.NewBufferString(`{"file_storage_path":"`+missingPath+`"}`))
-	context.Request.Header.Set("Content-Type", "application/json")
-	module.handler.updateConfigs(context)
-	if response.Code != http.StatusBadRequest {
-		t.Fatalf("invalid storage path status=%d body=%s", response.Code, response.Body.String())
+	if err := module.handler.applyStorage(context.Background(), StorageConfig{FileStoragePath: missingPath, WebDAVChunkSize: 2048}); err == nil {
+		t.Fatal("expected a nonexistent storage path to be rejected")
 	}
-	config, err := module.service.config(context.Request.Context())
+
+	config, err := module.service.configByType(context.Background(), ConfigTypeStorage)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if config.FileStoragePath != runtime.path || runtime.applyCalls != 0 {
-		t.Fatalf("invalid path changed state: config=%+v runtime=%+v", config, runtime)
+	if config.FileStoragePath != runtime.path || config.WebDAVChunkSize != 5120 {
+		t.Fatalf("rejected path was persisted anyway: %+v", config)
+	}
+	if runtime.applyCalls != 0 {
+		t.Fatalf("runtime apply was called for an invalid path: %+v", runtime)
 	}
 }
 
@@ -302,7 +271,7 @@ func TestModuleRegistersExistingSystemRoutes(t *testing.T) {
 	engine := gin.New()
 	routes := &router.Routes{Engine: engine, PublicAPI: engine.Group("/api"), AdminAPI: engine.Group("/api/admin")}
 	module.RegisterRoutes(routes)
-	want := map[string]bool{"GET /api/admin/config": false, "PUT /api/admin/config/storage": false, "GET /api/admin/config/backup": false, "GET /api/admin/system-setting/list": false, "DELETE /api/admin/system-setting/:id": false}
+	want := map[string]bool{"PUT /api/admin/config/storage": false, "GET /api/admin/config/backup": false, "GET /api/admin/system-setting/list": false, "DELETE /api/admin/system-setting/:id": false}
 	for _, route := range engine.Routes() {
 		key := route.Method + " " + route.Path
 		if _, ok := want[key]; ok {

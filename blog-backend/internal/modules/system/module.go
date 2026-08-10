@@ -19,6 +19,12 @@ type StorageRuntime interface {
 
 type AIConfigSource interface {
 	LoadAITaggingConfig(ctx context.Context) (endpoint, apiKey, model, prompt string, err error)
+	LoadAISummaryConfig(ctx context.Context) (endpoint, apiKey, model, prompt string, err error)
+}
+
+// CommentPolicy 把「开放评论」开关暴露给评论模块。
+type CommentPolicy interface {
+	CommentsOpen(ctx context.Context) (bool, error)
 }
 
 type Dependencies struct {
@@ -69,16 +75,16 @@ func New(deps Dependencies) (*Module, error) {
 }
 
 func (m *Module) RegisterRoutes(routes *router.Routes) {
+	// 站点展示信息对前台公开，不需要登录
+	routes.PublicAPI.GET("/config/site", m.handler.getSiteConfig)
+
 	config := routes.AdminAPI.Group("/config")
-	config.GET("", m.handler.getConfigs)
-	config.PUT("", m.handler.updateConfigs)
 	config.GET("/blog", m.handler.getBlogConfig)
 	config.PUT("/blog", m.handler.updateBlogConfig)
-	config.GET("/email", m.handler.getEmailConfig)
-	config.PUT("/email", m.handler.updateEmailConfig)
 	config.GET("/ai", m.handler.getAIConfig)
 	config.PUT("/ai", m.handler.updateAIConfig)
 	config.GET("/ai/prompts", m.handler.getAIPromptTags)
+	config.PUT("/ai/prompts", m.handler.updateAIPromptTags)
 	config.GET("/storage", m.handler.getStorageConfig)
 	config.PUT("/storage", m.handler.updateStorageConfig)
 	config.GET("/backup/dirs", m.handler.getBackupDirs)
@@ -92,3 +98,6 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 }
 
 func (m *Module) AIConfigSource() AIConfigSource { return m.ai }
+
+// CommentPolicy 供评论模块判断是否接受访客评论。
+func (m *Module) CommentPolicy() CommentPolicy { return commentPolicy{service: m.service} }

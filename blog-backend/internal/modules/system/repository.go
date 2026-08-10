@@ -126,12 +126,6 @@ func (r *settingRepository) delete(ctx context.Context, id uint) error {
 	return nil
 }
 
-func (r *settingRepository) find(ctx context.Context, id uint) (Setting, error) {
-	var setting Setting
-	err := r.db.WithContext(ctx).First(&setting, id).Error
-	return setting, err
-}
-
 func (r *settingRepository) updateID(ctx context.Context, id uint, key, value, configType string) error {
 	updates := map[string]any{"setting_key": key, "setting_value": value}
 	if configType != "" {

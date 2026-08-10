@@ -35,7 +35,7 @@
                                         <div class="w-[100px] h-[100px] mb-2.5 rounded overflow-hidden border border-gray-200 shadow-sm" v-if="blogConfig.avatar">
                                             <img :src="blogConfig.avatar" class="w-full h-full object-cover" />
                                         </div>
-                                        <el-input v-model="blogConfig.avatar" placeholder="请输入头像URL或上传图片" clearable
+                                        <el-input v-model="blogConfig.avatar" placeholder="请输入头像图片URL" clearable
                                             :prefix-icon="Picture"></el-input>
                                     </div>
                                 </el-form-item>
@@ -81,102 +81,17 @@
                                 </el-icon> 功能开关设置</span>
                         </div>
                     </template>
-                    <el-form :model="config" label-position="top" size="default">
+                    <el-form :model="blogConfig" label-position="top" size="default">
                         <el-row :gutter="24">
-                            <el-col :span="8">
-                                <el-form-item label="开放博客">
-                                    <div class="flex flex-col items-start">
-                                        <el-switch v-model="config.open_blog" active-color="#13ce66"
-                                            inactive-color="#ff4949">
-                                        </el-switch>
-                                        <div class="text-xs text-gray-400 mt-2">开启后博客将对外可访问</div>
-                                    </div>
-                                </el-form-item>
-                            </el-col>
                             <el-col :span="8">
                                 <el-form-item label="开放评论">
                                     <div class="flex flex-col items-start">
-                                        <el-switch v-model="config.open_comment" active-color="#13ce66"
+                                        <el-switch v-model="blogConfig.open_comment" active-color="#13ce66"
                                             inactive-color="#ff4949">
                                         </el-switch>
-                                        <div class="text-xs text-gray-400 mt-2">开启后访客可以评论文章</div>
+                                        <div class="text-xs text-gray-400 mt-2">关闭后访客无法提交评论，已有评论仍然展示</div>
                                     </div>
                                 </el-form-item>
-                            </el-col>
-                            <el-col :span="8">
-                                <el-form-item label="评论邮件通知">
-                                    <div class="flex flex-col items-start">
-                                        <el-switch v-model="config.comment_email_notify" active-color="#13ce66"
-                                            inactive-color="#ff4949">
-                                        </el-switch>
-                                        <div class="text-xs text-gray-400 mt-2">开启后收到评论将发送邮件通知</div>
-                                    </div>
-                                </el-form-item>
-                            </el-col>
-                        </el-row>
-                    </el-form>
-                </el-card>
-            </el-tab-pane>
-
-            <el-tab-pane label="邮箱设置" name="email">
-                <el-card shadow="hover" class="mb-5">
-                    <template #header>
-                        <div class="flex items-center">
-                            <span><el-icon class="mr-2">
-                                    <Message />
-                                </el-icon> 邮件服务设置</span>
-                        </div>
-                    </template>
-                    <el-form :model="emailConfig" label-position="top" size="default">
-                        <el-row :gutter="24">
-                            <el-col :span="12">
-                                <el-form-item label="SMTP主机">
-                                    <el-input v-model="emailConfig.smtp_host" placeholder="例如: smtp.gmail.com" clearable
-                                        :prefix-icon="Connection"></el-input>
-                                </el-form-item>
-                            </el-col>
-                            <el-col :span="12">
-                                <el-form-item label="SMTP端口">
-                                    <el-input-number v-model="emailConfig.smtp_port" :min="1" :max="65535"
-                                        placeholder="例如: 587" style="width: 100%"></el-input-number>
-                                </el-form-item>
-                            </el-col>
-                        </el-row>
-
-                        <el-row :gutter="24">
-                            <el-col :span="12">
-                                <el-form-item label="SMTP用户">
-                                    <el-input v-model="emailConfig.smtp_user" placeholder="请输入邮箱账号" clearable
-                                        :prefix-icon="User"></el-input>
-                                </el-form-item>
-                            </el-col>
-                            <el-col :span="12">
-                                <el-form-item label="SMTP密码">
-                                    <el-input v-model="emailConfig.smtp_pass" type="password" placeholder="请输入邮箱密码或授权码"
-                                        show-password :prefix-icon="Lock"></el-input>
-                                </el-form-item>
-                            </el-col>
-                        </el-row>
-
-                        <el-row :gutter="24">
-                            <el-col :span="12">
-                                <el-form-item label="SMTP发送者">
-                                    <el-input v-model="emailConfig.smtp_sender" placeholder="发送者名称" clearable
-                                        :prefix-icon="User"></el-input>
-                                </el-form-item>
-                            </el-col>
-                        </el-row>
-
-                        <el-row>
-                            <el-col :span="24">
-                                <div class="flex items-center mt-4">
-                                    <el-button type="primary" size="default">
-                                        <el-icon>
-                                            <Message />
-                                        </el-icon> 测试邮件发送
-                                    </el-button>
-                                    <span class="ml-3 text-[13px] text-gray-400">点击按钮发送测试邮件到当前SMTP用户邮箱</span>
-                                </div>
                             </el-col>
                         </el-row>
                     </el-form>
@@ -382,9 +297,9 @@
 
                         <el-form-item label="提示词选择">
                             <div class="flex flex-wrap gap-3 mb-4">
-                                <el-tag v-for="tag in promptTags" :key="tag.label" class="cursor-pointer transition-all duration-300 px-4 py-2 hover:-translate-y-0.5 hover:shadow"
-                                    :class="{ 'bg-blue-500 text-white border-blue-500': selectedPromptLabel === tag.label }" effect="light" round
-                                    @click="selectPrompt(tag)">
+                                <el-tag v-for="(tag, index) in promptTags" :key="tag.key" class="cursor-pointer transition-all duration-300 px-4 py-2 hover:-translate-y-0.5 hover:shadow"
+                                    :class="{ 'bg-blue-500 text-white border-blue-500': selectedPromptIndex === index }" effect="light" round
+                                    @click="selectPrompt(index)">
                                     <el-icon>
                                         <MagicStick />
                                     </el-icon> {{ tag.label }}
@@ -440,8 +355,8 @@
             </el-tab-pane>
         </el-tabs>
 
-        <div class="flex justify-end mt-5 pt-4 border-t border-gray-200">
-            <el-button @click="activeTab = 'site'" size="default">取消</el-button>
+        <div v-if="canSave" class="flex justify-end mt-5 pt-4 border-t border-gray-200">
+            <el-button @click="reloadCurrentTab" size="default">重置</el-button>
             <el-button type="primary" @click="saveConfig" size="default">保存设置</el-button>
         </div>
 
@@ -471,25 +386,23 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, nextTick } from 'vue';
 import {
-    getSystemConfig,
     getBlogConfig, updateBlogConfig,
-    getEmailConfig, updateEmailConfig,
     getAIConfig, updateAIConfig,
     getStorageConfig, updateStorageConfig,
     getSystemSettings, addSystemSetting, updateSystemSetting, deleteSystemSetting,
-    getAIPromptTags, // 导入获取AI提示词标签的API
+    getAIPromptTags, updateAIPromptTags, // AI提示词的读写
     getBackupUrl, getBackupDirs, // 导入备份相关函数
     type BackupDirInfo
 } from '@/api/admin';
 import { getDirectoryTree } from '@/api/file';
-import type { SystemConfig, BlogConfig, EmailConfig, AIConfig, StorageConfig } from '@/types/SystemConfig';
+import type { BlogConfig, AIConfig, AIPrompt, StorageConfig } from '@/types/SystemConfig';
 import { ElMessageBox } from 'element-plus';
 import { notify } from '@/utils/notification';
 // 导入 Element Plus 图标
 import {
-    Edit, Picture, Link, Connection, User, Lock, Key,
+    Edit, Picture, Link, Connection, Key,
     Folder, FolderOpened, Back, Document, InfoFilled,
-    WarningFilled, Message, Setting, Cpu, MagicStick, Download, Refresh
+    WarningFilled, Setting, Cpu, MagicStick, Download, Refresh
 } from '@element-plus/icons-vue';
 
 // HTML 转义函数
@@ -503,16 +416,14 @@ const escapeHtml = (unsafe: string) => {
 };
 
 const activeTab = ref('site');
-const config = ref<SystemConfig>({});
 const blogConfig = ref<BlogConfig>({});
-const emailConfig = ref<EmailConfig>({});
 const aiConfig = ref<AIConfig>({});
 const storageConfig = ref<StorageConfig>({ webdav_chunk_size: 5120 }); // 默认5MB
 const isEditingPrompt = ref(false);
 const systemSettings = ref<any[]>([]);
 
-const selectedPrompt = ref<{ label: string, prompt: string } | null>(null);
-const selectedPromptLabel = ref('');
+const selectedPrompt = computed(() => promptTags.value[selectedPromptIndex.value] ?? null);
+const selectedPromptIndex = ref(-1);
 const promptInputRef = ref();
 
 const settingDialogVisible = ref(false);
@@ -565,7 +476,7 @@ const currentPath = ref('');
 const selectedPath = ref('');
 const expandedKeys = ref<string[]>([]);
 
-const promptTags = ref<{ label: string, prompt: string }[]>([]);
+const promptTags = ref<AIPrompt[]>([]);
 
 // 备份相关
 const isBackingUp = ref(false);
@@ -645,9 +556,8 @@ const startEditing = async () => {
     promptInputRef.value?.focus();
 };
 
-const selectPrompt = (tag: { label: string, prompt: string }) => {
-    selectedPrompt.value = { ...tag };
-    selectedPromptLabel.value = tag.label;
+const selectPrompt = (index: number) => {
+    selectedPromptIndex.value = index;
     isEditingPrompt.value = false;
 };
 
@@ -739,10 +649,8 @@ watch(activeTab, (tab) => {
 
 // 监听选项卡变化，按需加载不同类型的配置
 watch(activeTab, async (newTab) => {
-    if (newTab === 'site') {
+    if (newTab === 'site' || newTab === 'features') {
         await loadBlogConfig();
-    } else if (newTab === 'email') {
-        await loadEmailConfig();
     } else if (newTab === 'storage') {
         await loadStorageConfig();
     } else if (newTab === 'ai') {
@@ -758,16 +666,6 @@ const loadBlogConfig = async () => {
         blogConfig.value = res;
     } catch (error) {
         notify.error('加载博客配置失败');
-    }
-};
-
-// 加载邮件配置
-const loadEmailConfig = async () => {
-    try {
-        const res = await getEmailConfig();
-        emailConfig.value = res;
-    } catch (error) {
-        notify.error('加载邮件配置失败');
     }
 };
 
@@ -794,17 +692,15 @@ const loadStorageConfig = async () => {
     }
 };
 
-// 加载AI提示词标签
+// 加载AI提示词
 const loadAIPromptTags = async () => {
     try {
         const res = await getAIPromptTags();
         promptTags.value = res;
         // 默认选中第一个
-        if (res.length > 0) {
-            selectPrompt(res[0]);
-        }
+        selectPrompt(res.length > 0 ? 0 : -1);
     } catch (error) {
-        notify.error('加载AI提示词标签失败');
+        notify.error('加载AI提示词失败');
     }
 };
 
@@ -838,17 +734,35 @@ const getSizeDescription = (kb: number) => {
     return '大文件优化'
 }
 
+// 「系统配置」页是独立的增删改表格，不归全局保存按钮管
+const savableTabs = ['site', 'features', 'storage', 'ai'];
+const canSave = computed(() => savableTabs.includes(activeTab.value));
+
+// 重新拉取当前选项卡的配置，用于放弃未保存的修改
+const reloadCurrentTab = async () => {
+    if (activeTab.value === 'site' || activeTab.value === 'features') {
+        await loadBlogConfig();
+    } else if (activeTab.value === 'storage') {
+        await loadStorageConfig();
+    } else if (activeTab.value === 'ai') {
+        await loadAIConfig();
+        await loadAIPromptTags();
+    }
+};
+
 const saveConfig = async () => {
+    if (!canSave.value) return;
     try {
-        if (activeTab.value === 'site') {
+        if (activeTab.value === 'site' || activeTab.value === 'features') {
             await updateBlogConfig(blogConfig.value);
-        } else if (activeTab.value === 'email') {
-            await updateEmailConfig(emailConfig.value);
         } else if (activeTab.value === 'storage') {
             // 直接更新存储配置，不显示确认弹窗
             await updateStorageConfig(storageConfig.value);
         } else if (activeTab.value === 'ai') {
             await updateAIConfig(aiConfig.value);
+            if (promptTags.value.length > 0) {
+                await updateAIPromptTags(promptTags.value);
+            }
         }
         notify.success('保存成功');
     } catch (error) {
@@ -857,51 +771,8 @@ const saveConfig = async () => {
 };
 
 onMounted(async () => {
-    // 首先加载全局配置
-    const res = await getSystemConfig();
-    config.value = res;
-
-    // 初始化各个分类配置
-    blogConfig.value = {
-        blog_title: res.blog_title,
-        signature: res.signature,
-        avatar: res.avatar,
-        github_link: res.github_link,
-        bilibili_link: res.bilibili_link,
-        open_blog: res.open_blog,
-        open_comment: res.open_comment
-    };
-
-    emailConfig.value = {
-        comment_email_notify: res.comment_email_notify,
-        smtp_host: res.smtp_host,
-        smtp_port: res.smtp_port,
-        smtp_user: res.smtp_user,
-        smtp_pass: res.smtp_pass,
-        smtp_sender: res.smtp_sender
-    };
-
-    aiConfig.value = {
-        ai_api_url: res.ai_api_url,
-        ai_api_key: res.ai_api_key,
-        ai_model: res.ai_model,
-    };
-
-    storageConfig.value = {
-        file_storage_path: res.file_storage_path,
-        webdav_chunk_size: res.webdav_chunk_size || 5120
-    };
-
-    // 根据当前选项卡加载对应配置
-    if (activeTab.value === 'site') {
-        await loadBlogConfig();
-    } else if (activeTab.value === 'email') {
-        await loadEmailConfig();
-    } else if (activeTab.value === 'storage') {
-        await loadStorageConfig();
-    } else if (activeTab.value === 'ai') {
-        await loadAIConfig();
-    }
+    // 各分类配置按选项卡按需拉取，不再整体预载一次 /admin/config
+    await reloadCurrentTab();
     // 组件挂载后立即加载AI提示词标签
     await loadAIPromptTags();
     // 加载备份目录列表

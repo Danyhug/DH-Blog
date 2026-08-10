@@ -6,6 +6,7 @@ import request from "@/api/axios";
 import { UserLogin } from "@/types/User";
 import { OverView } from "@/types/DashBoard";
 import { Comment } from "@/types/Comment";
+import { SiteConfig } from "@/types/SystemConfig";
 
 /**
  * 查询文章详情
@@ -127,4 +128,11 @@ export const getCommentList = (
   articleId: number
 ): Promise<PageResult<Comment>> => {
   return request.get("/comment/" + articleId);
+};
+
+/**
+ * 获取站点公开配置（标题、签名、头像、社交链接、评论开关）
+ */
+export const getSiteConfig = (): Promise<SiteConfig> => {
+  return request.get("/config/site");
 };

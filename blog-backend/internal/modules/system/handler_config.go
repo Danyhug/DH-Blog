@@ -1,87 +1,12 @@
 package system
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
-
-func (h *handler) getConfigs(c *gin.Context) {
-	config, err := h.service.config(c.Request.Context())
-	if err != nil {
-		failure(c, 500, err)
-		return
-	}
-	success(c, config)
-}
-
-func (h *handler) updateConfigs(c *gin.Context) {
-	var patch map[string]json.RawMessage
-	if err := c.ShouldBindJSON(&patch); err != nil {
-		failure(c, 400, err)
-		return
-	}
-	old, err := h.service.config(c.Request.Context())
-	if err != nil {
-		failure(c, 500, err)
-		return
-	}
-	config, err := mergeConfigPatch(old, patch)
-	if err != nil {
-		failure(c, 400, err)
-		return
-	}
-	storageChanged := config.FileStoragePath != old.FileStoragePath || config.WebDAVChunkSize != old.WebDAVChunkSize
-	if storageChanged {
-		if err := validateStorageConfig(StorageConfig{FileStoragePath: config.FileStoragePath, WebDAVChunkSize: config.WebDAVChunkSize}); err != nil {
-			failure(c, 400, err)
-			return
-		}
-	}
-	if err := h.service.updateConfig(c.Request.Context(), config); err != nil {
-		failure(c, 500, err)
-		return
-	}
-	if storageChanged {
-		if err := h.storage.ApplyStorageConfig(c.Request.Context(), config.FileStoragePath, config.WebDAVChunkSize); err != nil {
-			if rollbackErr := h.service.updateConfig(context.Background(), old); rollbackErr != nil {
-				failure(c, 500, fmt.Errorf("应用配置失败: %v；回滚设置失败: %w", err, rollbackErr))
-				return
-			}
-			failure(c, 500, fmt.Errorf("应用配置失败，设置已回滚: %w", err))
-			return
-		}
-	}
-	success(c)
-}
-
-func mergeConfigPatch(current Config, patch map[string]json.RawMessage) (Config, error) {
-	encoded, err := json.Marshal(current)
-	if err != nil {
-		return Config{}, err
-	}
-	var merged map[string]json.RawMessage
-	if err := json.Unmarshal(encoded, &merged); err != nil {
-		return Config{}, err
-	}
-	for key, value := range patch {
-		if _, known := merged[key]; known {
-			merged[key] = value
-		}
-	}
-	encoded, err = json.Marshal(merged)
-	if err != nil {
-		return Config{}, err
-	}
-	var result Config
-	if err := json.Unmarshal(encoded, &result); err != nil {
-		return Config{}, fmt.Errorf("无效的配置字段: %w", err)
-	}
-	return result, nil
-}
 
 func (h *handler) getBlogConfig(c *gin.Context) {
 	config, err := h.service.configByType(c.Request.Context(), ConfigTypeBlog)
@@ -89,7 +14,7 @@ func (h *handler) getBlogConfig(c *gin.Context) {
 		failure(c, 500, err)
 		return
 	}
-	success(c, BlogConfig{config.BlogTitle, config.Signature, config.Avatar, config.GithubLink, config.BilibiliLink, config.OpenBlog, config.OpenComment})
+	success(c, BlogConfig{config.BlogTitle, config.Signature, config.Avatar, config.GithubLink, config.BilibiliLink, config.OpenComment})
 }
 func (h *handler) updateBlogConfig(c *gin.Context) {
 	var config BlogConfig
@@ -97,30 +22,8 @@ func (h *handler) updateBlogConfig(c *gin.Context) {
 		failure(c, 400, err)
 		return
 	}
-	values := map[string]string{SettingKeyBlogTitle: config.BlogTitle, SettingKeySignature: config.Signature, SettingKeyAvatar: config.Avatar, SettingKeyGithubLink: config.GithubLink, SettingKeyBilibiliLink: config.BilibiliLink, SettingKeyOpenBlog: strconv.FormatBool(config.OpenBlog), SettingKeyOpenComment: strconv.FormatBool(config.OpenComment)}
+	values := map[string]string{SettingKeyBlogTitle: config.BlogTitle, SettingKeySignature: config.Signature, SettingKeyAvatar: config.Avatar, SettingKeyGithubLink: config.GithubLink, SettingKeyBilibiliLink: config.BilibiliLink, SettingKeyOpenComment: strconv.FormatBool(config.OpenComment)}
 	if err := h.service.settings.updateBatch(c.Request.Context(), values, ConfigTypeBlog); err != nil {
-		failure(c, 500, err)
-		return
-	}
-	success(c)
-}
-
-func (h *handler) getEmailConfig(c *gin.Context) {
-	config, err := h.service.configByType(c.Request.Context(), ConfigTypeEmail)
-	if err != nil {
-		failure(c, 500, err)
-		return
-	}
-	success(c, EmailConfig{config.CommentEmailNotify, config.SmtpHost, config.SmtpPort, config.SmtpUser, config.SmtpPass, config.SmtpSender})
-}
-func (h *handler) updateEmailConfig(c *gin.Context) {
-	var config EmailConfig
-	if err := c.ShouldBindJSON(&config); err != nil {
-		failure(c, 400, err)
-		return
-	}
-	values := map[string]string{SettingKeyCommentEmailNotify: strconv.FormatBool(config.CommentEmailNotify), SettingKeySmtpHost: config.SmtpHost, SettingKeySmtpPort: strconv.Itoa(config.SmtpPort), SettingKeySmtpUser: config.SmtpUser, SettingKeySmtpPass: config.SmtpPass, SettingKeySmtpSender: config.SmtpSender}
-	if err := h.service.settings.updateBatch(c.Request.Context(), values, ConfigTypeEmail); err != nil {
 		failure(c, 500, err)
 		return
 	}
@@ -149,16 +52,64 @@ func (h *handler) updateAIConfig(c *gin.Context) {
 	success(c)
 }
 
+// editablePrompts 限定后台可编辑的提示词，避免任意键被写入。
+var editablePrompts = []AIPrompt{
+	{Key: SettingKeyAIPromptGetTags, Label: "文章标签提取"},
+	{Key: SettingKeyAIPromptGetAbstract, Label: "文章摘要生成"},
+}
+
 func (h *handler) getAIPromptTags(c *gin.Context) {
-	tags, err := h.service.settings.value(c.Request.Context(), SettingKeyAIPromptGetTags)
+	prompts := make([]AIPrompt, 0, len(editablePrompts))
+	for _, item := range editablePrompts {
+		value, err := h.service.settings.value(c.Request.Context(), item.Key)
+		if err != nil {
+			failure(c, 500, err)
+			return
+		}
+		prompts = append(prompts, AIPrompt{Key: item.Key, Label: item.Label, Prompt: value})
+	}
+	success(c, prompts)
+}
+
+func (h *handler) updateAIPromptTags(c *gin.Context) {
+	var prompts []AIPrompt
+	if err := c.ShouldBindJSON(&prompts); err != nil {
+		failure(c, 400, err)
+		return
+	}
+	allowed := make(map[string]bool, len(editablePrompts))
+	for _, item := range editablePrompts {
+		allowed[item.Key] = true
+	}
+	values := make(map[string]string, len(prompts))
+	for _, prompt := range prompts {
+		if !allowed[prompt.Key] {
+			failure(c, 400, fmt.Errorf("未知的提示词: %s", prompt.Key))
+			return
+		}
+		if strings.TrimSpace(prompt.Prompt) == "" {
+			failure(c, 400, fmt.Errorf("提示词内容不能为空: %s", prompt.Label))
+			return
+		}
+		values[prompt.Key] = prompt.Prompt
+	}
+	if len(values) == 0 {
+		success(c)
+		return
+	}
+	if err := h.service.settings.updateBatch(c.Request.Context(), values, ConfigTypeAI); err != nil {
+		failure(c, 500, err)
+		return
+	}
+	success(c)
+}
+
+// getSiteConfig 暴露前台展示所需的站点信息，不需要鉴权。
+func (h *handler) getSiteConfig(c *gin.Context) {
+	config, err := h.service.configByType(c.Request.Context(), ConfigTypeBlog)
 	if err != nil {
 		failure(c, 500, err)
 		return
 	}
-	abstract, err := h.service.settings.value(c.Request.Context(), SettingKeyAIPromptGetAbstract)
-	if err != nil {
-		failure(c, 500, err)
-		return
-	}
-	success(c, []gin.H{{"label": "文章标签提取", "prompt": tags}, {"label": "文章摘要生成", "prompt": abstract}})
+	success(c, BlogConfig{config.BlogTitle, config.Signature, config.Avatar, config.GithubLink, config.BilibiliLink, config.OpenComment})
 }

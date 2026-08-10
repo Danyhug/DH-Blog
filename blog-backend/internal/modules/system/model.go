@@ -4,7 +4,6 @@ import "strconv"
 
 const (
 	ConfigTypeBlog    = "blog"
-	ConfigTypeEmail   = "email"
 	ConfigTypeAI      = "ai"
 	ConfigTypeStorage = "storage"
 )
@@ -15,14 +14,7 @@ const (
 	SettingKeyAvatar              = "avatar"
 	SettingKeyGithubLink          = "github_link"
 	SettingKeyBilibiliLink        = "bilibili_link"
-	SettingKeyOpenBlog            = "open_blog"
 	SettingKeyOpenComment         = "open_comment"
-	SettingKeyCommentEmailNotify  = "comment_email_notify"
-	SettingKeySmtpHost            = "smtp_host"
-	SettingKeySmtpPort            = "smtp_port"
-	SettingKeySmtpUser            = "smtp_user"
-	SettingKeySmtpPass            = "smtp_pass"
-	SettingKeySmtpSender          = "smtp_sender"
 	SettingKeyAIAPIURL            = "ai_api_url"
 	SettingKeyAIAPIKey            = "ai_api_key"
 	SettingKeyAIModel             = "ai_model"
@@ -42,49 +34,40 @@ type Setting struct {
 func (Setting) TableName() string { return "system_settings" }
 
 type Config struct {
-	BlogTitle          string `json:"blog_title"`
-	Signature          string `json:"signature"`
-	Avatar             string `json:"avatar"`
-	GithubLink         string `json:"github_link"`
-	BilibiliLink       string `json:"bilibili_link"`
-	OpenBlog           bool   `json:"open_blog"`
-	OpenComment        bool   `json:"open_comment"`
-	CommentEmailNotify bool   `json:"comment_email_notify"`
-	SmtpHost           string `json:"smtp_host"`
-	SmtpPort           int    `json:"smtp_port"`
-	SmtpUser           string `json:"smtp_user"`
-	SmtpPass           string `json:"smtp_pass"`
-	SmtpSender         string `json:"smtp_sender"`
-	AIAPIURL           string `json:"ai_api_url"`
-	AIAPIKey           string `json:"ai_api_key"`
-	AIModel            string `json:"ai_model"`
-	FileStoragePath    string `json:"file_storage_path"`
-	WebDAVChunkSize    int    `json:"webdav_chunk_size"`
+	BlogTitle       string `json:"blog_title"`
+	Signature       string `json:"signature"`
+	Avatar          string `json:"avatar"`
+	GithubLink      string `json:"github_link"`
+	BilibiliLink    string `json:"bilibili_link"`
+	OpenComment     bool   `json:"open_comment"`
+	AIAPIURL        string `json:"ai_api_url"`
+	AIAPIKey        string `json:"ai_api_key"`
+	AIModel         string `json:"ai_model"`
+	FileStoragePath string `json:"file_storage_path"`
+	WebDAVChunkSize int    `json:"webdav_chunk_size"`
 }
 
+// BlogConfig 同时用于后台编辑和前台公开展示，字段均可公开。
 type BlogConfig struct {
 	BlogTitle    string `json:"blog_title"`
 	Signature    string `json:"signature"`
 	Avatar       string `json:"avatar"`
 	GithubLink   string `json:"github_link"`
 	BilibiliLink string `json:"bilibili_link"`
-	OpenBlog     bool   `json:"open_blog"`
 	OpenComment  bool   `json:"open_comment"`
-}
-
-type EmailConfig struct {
-	CommentEmailNotify bool   `json:"comment_email_notify"`
-	SmtpHost           string `json:"smtp_host"`
-	SmtpPort           int    `json:"smtp_port"`
-	SmtpUser           string `json:"smtp_user"`
-	SmtpPass           string `json:"smtp_pass"`
-	SmtpSender         string `json:"smtp_sender"`
 }
 
 type AIConfig struct {
 	APIURL string `json:"ai_api_url"`
 	APIKey string `json:"ai_api_key"`
 	Model  string `json:"ai_model"`
+}
+
+// AIPrompt 是可在后台编辑的一条提示词。Key 对应 system_settings 中的键。
+type AIPrompt struct {
+	Key    string `json:"key"`
+	Label  string `json:"label"`
+	Prompt string `json:"prompt"`
 }
 
 type StorageConfig struct {
@@ -102,23 +85,8 @@ func configFrom(values map[string]string) Config {
 	return Config{
 		BlogTitle: values[SettingKeyBlogTitle], Signature: values[SettingKeySignature], Avatar: values[SettingKeyAvatar],
 		GithubLink: values[SettingKeyGithubLink], BilibiliLink: values[SettingKeyBilibiliLink],
-		OpenBlog: boolValue(SettingKeyOpenBlog), OpenComment: boolValue(SettingKeyOpenComment),
-		CommentEmailNotify: boolValue(SettingKeyCommentEmailNotify), SmtpHost: values[SettingKeySmtpHost],
-		SmtpPort: intValue(SettingKeySmtpPort), SmtpUser: values[SettingKeySmtpUser], SmtpPass: values[SettingKeySmtpPass],
-		SmtpSender: values[SettingKeySmtpSender], AIAPIURL: values[SettingKeyAIAPIURL], AIAPIKey: values[SettingKeyAIAPIKey],
+		OpenComment: boolValue(SettingKeyOpenComment),
+		AIAPIURL:    values[SettingKeyAIAPIURL], AIAPIKey: values[SettingKeyAIAPIKey],
 		AIModel: values[SettingKeyAIModel], FileStoragePath: values[SettingKeyFileStoragePath], WebDAVChunkSize: chunkSize,
-	}
-}
-
-func (c Config) values() map[string]string {
-	return map[string]string{
-		SettingKeyBlogTitle: c.BlogTitle, SettingKeySignature: c.Signature, SettingKeyAvatar: c.Avatar,
-		SettingKeyGithubLink: c.GithubLink, SettingKeyBilibiliLink: c.BilibiliLink,
-		SettingKeyOpenBlog: strconv.FormatBool(c.OpenBlog), SettingKeyOpenComment: strconv.FormatBool(c.OpenComment),
-		SettingKeyCommentEmailNotify: strconv.FormatBool(c.CommentEmailNotify), SettingKeySmtpHost: c.SmtpHost,
-		SettingKeySmtpPort: strconv.Itoa(c.SmtpPort), SettingKeySmtpUser: c.SmtpUser, SettingKeySmtpPass: c.SmtpPass,
-		SettingKeySmtpSender: c.SmtpSender, SettingKeyAIAPIURL: c.AIAPIURL, SettingKeyAIAPIKey: c.AIAPIKey,
-		SettingKeyAIModel: c.AIModel, SettingKeyFileStoragePath: c.FileStoragePath,
-		SettingKeyWebDAVChunkSize: strconv.Itoa(c.WebDAVChunkSize),
 	}
 }

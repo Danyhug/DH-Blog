@@ -1,9 +1,9 @@
 <template>
   <div class="info">
-    <img src="@/assets/images/logo.jpg" alt="">
+    <img :src="site.avatar || defaultAvatar" :alt="site.blog_title">
     <div class="info-text">
-      <p class="title">Danyhug</p>
-      <p class="sub-title">我们原神玩家是这样的</p>
+      <p class="title">{{ site.blog_title }}</p>
+      <p class="sub-title">{{ site.signature }}</p>
       <ul class="links">
         <li>
           <a href="">
@@ -28,13 +28,13 @@
       </ul>
 
       <ul class="external-links">
-        <li>
-          <a href="https://github.com/Danyhug" target="_blank">
+        <li v-if="site.github_link">
+          <a :href="site.github_link" target="_blank">
             <Icon iconName="icon-github1" iconSize="2.3"></Icon>
           </a>
         </li>
-        <li>
-          <a href="https://space.bilibili.com/38630127" target="_blank">
+        <li v-if="site.bilibili_link">
+          <a :href="site.bilibili_link" target="_blank">
             <Icon iconName="icon-bilibili" iconSize="2.2" style="fill: rgb(250,116,153)"></Icon>
           </a>
         </li>
@@ -48,6 +48,13 @@
 import Pet from '@/components/frontend/Pet.vue'
 import { getOverview } from '@/api/user';
 import { OverView } from '@/types/DashBoard';
+import { useSiteStore } from '@/store';
+import defaultAvatar from '@/assets/images/logo.jpg'
+import { storeToRefs } from 'pinia';
+
+const siteStore = useSiteStore()
+const { site } = storeToRefs(siteStore)
+
 const data = reactive<OverView>({
   articleCount: 0,
   categoryCount: 0,
@@ -56,6 +63,7 @@ const data = reactive<OverView>({
 })
 
 onMounted(async () => {
+  await siteStore.loadSite()
   const overview = await getOverview()
   Object.assign(data, overview)
 })

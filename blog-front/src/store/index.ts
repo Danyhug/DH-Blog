@@ -1,4 +1,4 @@
-import { getArticleCategoryList, getArticleTagList } from "@/api/user";
+import { getArticleCategoryList, getArticleTagList, getSiteConfig } from "@/api/user";
 import { ArticleModel } from "@/types/ArticleModel";
 import { Category } from "@/types/Category";
 import { Tag } from "@/types/Tag";
@@ -7,6 +7,38 @@ import { reactive, ref } from "vue";
 import { MdInit } from "@/types/MdEditor";
 import { Article } from "@/types/Article";
 import { Page } from "@/types/Page";
+import { SiteConfig } from "@/types/SystemConfig";
+
+// 站点公开配置：后台「站点设置」的内容，前台展示用
+export const useSiteStore = defineStore("site", () => {
+  const site = reactive<SiteConfig>({
+    blog_title: "DH-Blog",
+    signature: "",
+    avatar: "",
+    github_link: "",
+    bilibili_link: "",
+    open_comment: true,
+  });
+  const loaded = ref(false);
+
+  const loadSite = async () => {
+    if (loaded.value) return;
+    try {
+      const data = await getSiteConfig();
+      // 后端返回空串时保留默认值，避免页面出现空标题
+      Object.assign(site, {
+        ...data,
+        blog_title: data.blog_title || site.blog_title,
+      });
+    } catch {
+      // 站点配置拉取失败时沿用默认值，不阻塞页面渲染
+    } finally {
+      loaded.value = true;
+    }
+  };
+
+  return { site, loaded, loadSite };
+});
 
 export const useSystemStore = defineStore("system", () => {
   const mdEditorInit = reactive<MdInit>({

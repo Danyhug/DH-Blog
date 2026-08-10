@@ -6,7 +6,7 @@ import { Page, PageResult } from '@/types/Page'
 import { Tag } from '@/types/Tag'
 import { IpStat } from '@/types/IpStat'
 import { ArticleCommentGroup, Comment } from "@/types/Comment";
-import { SystemConfig, BlogConfig, EmailConfig, AIConfig, StorageConfig } from '@/types/SystemConfig';
+import { BlogConfig, AIConfig, AIPrompt, StorageConfig } from '@/types/SystemConfig';
 
 /**
  * 查询文章详情
@@ -193,17 +193,6 @@ export const postBanIp = (ip: string, status: number): Promise<string> => {
 }
 
 
-// ********** 系统配置 **********
-// 获取所有配置
-export const getSystemConfig = (): Promise<SystemConfig> => {
-  return request.get('/admin/config')
-}
-
-// 更新所有配置
-export const updateSystemConfig = (data: SystemConfig): Promise<any> => {
-  return request.put('/admin/config', data)
-}
-
 // ********** 博客基本配置 **********
 export const getBlogConfig = (): Promise<BlogConfig> => {
   return request.get('/admin/config/blog')
@@ -211,15 +200,6 @@ export const getBlogConfig = (): Promise<BlogConfig> => {
 
 export const updateBlogConfig = (data: BlogConfig): Promise<any> => {
   return request.put('/admin/config/blog', data)
-}
-
-// ********** 邮件配置 **********
-export const getEmailConfig = (): Promise<EmailConfig> => {
-  return request.get('/admin/config/email')
-}
-
-export const updateEmailConfig = (data: EmailConfig): Promise<any> => {
-  return request.put('/admin/config/email', data)
 }
 
 // ********** AI配置 **********
@@ -234,8 +214,15 @@ export const updateAIConfig = (data: AIConfig): Promise<any> => {
 /**
  * 获取预定义的AI提示词标签
  */
-export const getAIPromptTags = (): Promise<{ label: string, prompt: string }[]> => {
+export const getAIPromptTags = (): Promise<AIPrompt[]> => {
   return request.get('/admin/config/ai/prompts');
+}
+
+/**
+ * 保存AI提示词
+ */
+export const updateAIPromptTags = (data: AIPrompt[]): Promise<any> => {
+  return request.put('/admin/config/ai/prompts', data);
 }
 
 // ********** 存储配置 **********
