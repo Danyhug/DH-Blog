@@ -95,7 +95,7 @@ func (h *chunkUploadHandler) InitChunkUpload(c *gin.Context) {
 // @Tags 文件上传
 // @Produce json
 // @Param uploadId path string true "上传会话ID"
-// @Success http.StatusOK {object} map[string]interface{} "{"chunks": [0,1,2], "totalChunks": 10}"
+// @Success http.StatusOK {object} map[string]interface{} "{"chunks": [0,1,2], "totalChunks": 10, "chunkSize": 5242880}"
 // @Failure http.StatusOK {object} map[string]string "{"error": "错误信息"}"
 // @Router /files/upload/chunk/{uploadId}/chunks [get]
 func (h *chunkUploadHandler) GetUploadedChunks(c *gin.Context) {
@@ -139,16 +139,23 @@ func (h *chunkUploadHandler) GetUploadedChunks(c *gin.Context) {
 		}
 	}
 
-	// 读取上传信息文件获取总分片数
+	// 读取上传信息文件获取总分片数与分片大小。分片大小必须回传，
+	// 断点续传时客户端要按会话创建时的大小切片，不能用当前配置值。
 	infoFile := filepath.Join(tempDir, "info.txt")
 	var totalChunks int
+	var chunkSize int64
 	if data, err := os.ReadFile(infoFile); err == nil {
 		lines := strings.Split(string(data), "\n")
 		for _, line := range lines {
 			parts := strings.SplitN(line, "=", 2)
-			if len(parts) == 2 && parts[0] == "totalChunks" {
+			if len(parts) != 2 {
+				continue
+			}
+			switch parts[0] {
+			case "totalChunks":
 				fmt.Sscanf(parts[1], "%d", &totalChunks)
-				break
+			case "chunkSize":
+				fmt.Sscanf(parts[1], "%d", &chunkSize)
 			}
 		}
 	}
@@ -156,6 +163,7 @@ func (h *chunkUploadHandler) GetUploadedChunks(c *gin.Context) {
 	c.JSON(http.StatusOK, response.SuccessWithData(gin.H{
 		"chunks":      chunks,
 		"totalChunks": totalChunks,
+		"chunkSize":   chunkSize,
 		"uploadId":    uploadId,
 	}))
 }
@@ -179,8 +187,12 @@ func (h *chunkUploadHandler) CancelChunkUpload(c *gin.Context) {
 	// 获取配置的存储路径
 	storagePath := h.fileService.GetStoragePath()
 	tempDir := filepath.Join(storagePath, "temp", uploadId)
+	// 取消是清理操作，会话已经不在时按成功处理，方便前端无条件调用
 	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
-		c.JSON(http.StatusOK, response.Error("上传会话不存在"))
+		c.JSON(http.StatusOK, response.SuccessWithData(gin.H{
+			"success":  true,
+			"uploadId": uploadId,
+		}))
 		return
 	}
 

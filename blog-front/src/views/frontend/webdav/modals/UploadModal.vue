@@ -177,7 +177,7 @@ interface UploadResult {
 }
 
 const props = defineProps<Props>()
-const emit = defineEmits(['close', 'upload', 'retry'])
+const emit = defineEmits(['close', 'upload', 'retry', 'cancel'])
 
 // 文件相关状态
 const isDragging = ref(false)
@@ -228,9 +228,12 @@ function handleFileDrop(event: DragEvent) {
   }
 }
 
-// 移除文件
+// 移除文件：同时通知父组件清理可能已存在的分片上传会话
 function removeFile(index: number) {
-  selectedFiles.value.splice(index, 1)
+  const [removed] = selectedFiles.value.splice(index, 1)
+  if (removed) {
+    emit('cancel', removed)
+  }
 }
 
 // 上传文件

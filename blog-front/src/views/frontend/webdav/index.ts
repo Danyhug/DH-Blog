@@ -4,7 +4,6 @@ import MobileView from './components/MobileView.vue'
 import FilePreview from './components/FilePreview.vue'
 
 // 模态框组件
-import SettingsModal from './modals/SettingsModal.vue'
 import ShareLinkPopup from './modals/ShareLinkPopup.vue'
 import UploadModal from './modals/UploadModal.vue'
 
@@ -20,7 +19,6 @@ export {
   FilePreview,
 
   // 模态框组件
-  SettingsModal,
   ShareLinkPopup,
   UploadModal,
 

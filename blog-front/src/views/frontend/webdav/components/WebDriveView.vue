@@ -21,8 +21,8 @@
             </div>
           </div>
           <div class="header-right">
-            <button class="icon-btn" @click="openSettings">
-              <SettingsIcon class="icon-sm" />
+            <button class="icon-btn" title="我的分享" @click="showShareManager = true">
+              <ShareIcon class="icon-sm" />
             </button>
           </div>
         </div>
@@ -115,14 +115,14 @@
       </template>
     </div>
 
-    <!-- 设置弹窗 - 按需显示 -->
-    <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
+    <!-- 分享管理 - 按需显示 -->
+    <ShareManagerModal v-if="showShareManager" @close="showShareManager = false" />
 
     <!-- 上传弹窗 - 按需显示 -->
     <div v-if="showUploadModal" class="upload-modal-container">
       <div class="upload-modal-overlay" @click="closeUploadModal"></div>
       <UploadModal ref="uploadModalRef" :upload-progress="uploadProgress" @close="closeUploadModal"
-        @upload="handleUploadFiles" @retry="handleRetryUpload" />
+        @upload="handleUploadFiles" @retry="handleRetryUpload" @cancel="handleCancelUpload" />
     </div>
 
     <!-- 分享链接弹窗 - 按需显示 -->
@@ -205,14 +205,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, provide, type ComponentPublicInstance } from 'vue'
 import type { FileItem } from '../utils/types/file'
-import SettingsModal from '../modals/SettingsModal.vue'
+import ShareManagerModal from '../modals/ShareManagerModal.vue'
 import UploadModal from '../modals/UploadModal.vue'
 import ShareLinkPopup from '../modals/ShareLinkPopup.vue'
 import FilePreview from './FilePreview.vue'
 import {
   HomeIcon,
   ChevronRightIcon,
-  SettingsIcon,
+  ShareIcon,
   PlusIcon,
   UploadIcon,
   SearchIcon,
@@ -230,8 +230,7 @@ import {
   FileSpreadsheetIcon,
   FilePresentationIcon,
 } from '../utils/icons'
-import { listFiles, createFolder, uploadFile, getDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, getUploadedChunks, FileInfo } from '@/api/file'
-import { getSystemConfig } from '@/api/system'
+import { listFiles, createFolder, uploadFile, getDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, getUploadedChunks, cancelChunkUpload, FileInfo } from '@/api/file'
 import { notify } from '@/utils/notification'
 
 // 状态变量
@@ -239,7 +238,10 @@ const uploadProgress = ref(0)
 const currentPath = ref('')
 const currentParentId = ref('')
 const searchQuery = ref('')
-const showSettingsModal = ref(false)
+// 记录每个文件对应的分片上传会话，用于取消时清理服务端临时目录。
+// 上传成功后会话由 complete 接口消费，这里同步移除。
+const uploadSessions = new Map<File, string>()
+const showShareManager = ref(false)
 const showUploadModal = ref(false)
 const showShareLinkPopup = ref(false)
 const isLoading = ref(false)
@@ -519,11 +521,6 @@ function navigateToParent() {
     const parentIndex = pathSegments.value.length - 2;
     navigateToPathSegment(parentIndex);
   }
-}
-
-// 打开设置弹窗
-function openSettings() {
-  showSettingsModal.value = true;
 }
 
 // 打开上传弹窗
@@ -896,19 +893,11 @@ async function handleUploadFiles(files: File[]) {
 
 // 处理大文件分片上传
 async function uploadLargeFile(file: File, fileIndex: number) {
-  // 从系统配置获取分片大小（KB转字节）
-  let chunkSize = 5120 * 1024; // 默认5120KB（5MB）
-  try {
-    const config = await getSystemConfig();
-    if (config && config.webdav_chunk_size) {
-      // 配置中的webdav_chunk_size单位是KB，需要转换为字节
-      chunkSize = config.webdav_chunk_size * 1024; // KB转字节
-    }
-  } catch (error) {
-    console.warn('获取分片大小配置失败，使用默认值:', error);
-  }
+  // 分片大小交给服务端按系统配置决定：新会话传 0 由服务端下发，
+  // 续传会话沿用创建时的值，前台不再读取管理端的 /admin/config。
+  let chunkSize = 0;
   
-  const totalChunks = Math.ceil(file.size / chunkSize);
+  let totalChunks = 0;
   
   try {
     // 获取是否启用断点续传的设置
@@ -935,18 +924,19 @@ async function uploadLargeFile(file: File, fileIndex: number) {
     
     try {
       const chunksResponse = await getUploadedChunks(stableUploadId);
-      if (chunksResponse.totalChunks > 0) {
+      if (chunksResponse.totalChunks > 0 && chunksResponse.chunkSize > 0) {
+        // 续传已有会话：必须沿用会话创建时的分片大小，否则切片边界会错位
         initResponse = {
           uploadId: stableUploadId,
-          chunkSize: chunkSize,
-          totalChunks: totalChunks,
+          chunkSize: chunksResponse.chunkSize,
+          totalChunks: chunksResponse.totalChunks,
           fileName: file.name,
           fileSize: file.size,
           parentId: currentParentId.value
         };
       } else {
         // 会话存在但没有分片，视为新会话
-        initResponse = await initChunkUpload(currentParentId.value, file.name, file.size, chunkSize, stableUploadId);
+        initResponse = await initChunkUpload(currentParentId.value, file.name, file.size, 0, stableUploadId);
         uploadId = initResponse.uploadId;
       }
     } catch (error: any) {
@@ -955,10 +945,15 @@ async function uploadLargeFile(file: File, fileIndex: number) {
       if (!errorMessage.includes('上传会话不存在') && !errorMessage.includes('会话不存在')) {
         console.warn('获取上传会话信息失败:', error);
       }
-      initResponse = await initChunkUpload(currentParentId.value, file.name, file.size, chunkSize, stableUploadId);
+      initResponse = await initChunkUpload(currentParentId.value, file.name, file.size, 0, stableUploadId);
       uploadId = initResponse.uploadId;
     }
     
+    // 会话已确定，采用服务端下发的分片参数
+    chunkSize = initResponse.chunkSize;
+    totalChunks = initResponse.totalChunks;
+    uploadSessions.set(file, uploadId);
+
     // 获取已上传的分片列表（断点续传）
     let uploadedChunks: number[] = [];
     try {
@@ -987,6 +982,7 @@ async function uploadLargeFile(file: File, fileIndex: number) {
       if (completeResponse && completeResponse.id) {
         newUploadedFileIds.value.push(completeResponse.id.toString());
       }
+      uploadSessions.delete(file);
       uploadModalRef.value?.updateFileStatus(fileIndex, 'success');
       return;
     }
@@ -1103,6 +1099,7 @@ async function uploadLargeFile(file: File, fileIndex: number) {
     }
     
     // 更新状态为成功
+    uploadSessions.delete(file);
     uploadModalRef.value?.updateFileStatus(fileIndex, 'success');
   } catch (error) {
     console.error('分片上传失败:', error);
@@ -1119,7 +1116,27 @@ async function handleRetryUpload(failedFiles: File[]) {
 }
 
 // 修改closeUploadModal函数
+// 丢弃一个文件的分片上传会话，顺带清理服务端的临时分片目录
+async function discardUploadSession(file: File) {
+  const uploadId = uploadSessions.get(file);
+  if (!uploadId) return;
+  uploadSessions.delete(file);
+  try {
+    await cancelChunkUpload(uploadId);
+  } catch (error) {
+    console.warn('清理上传会话失败:', error);
+  }
+}
+
+// 用户在上传列表里移除了某个文件
+function handleCancelUpload(file: File) {
+  discardUploadSession(file);
+}
+
 function closeUploadModal() {
+  // 关闭时把没有完成的会话一并清掉，避免临时分片目录堆积
+  const pending = Array.from(uploadSessions.keys());
+  pending.forEach(discardUploadSession);
   // 始终允许关闭上传弹窗
   showUploadModal.value = false;
 }
@@ -1160,7 +1177,32 @@ onUnmounted(() => {
     flex-shrink: 0;
 
     .header-left {
-      .breadcrumb {
+      .header-right {
+      display: flex;
+      gap: 10px;
+
+      .icon-btn {
+        background: none;
+        border: none;
+        padding: 8px;
+        cursor: pointer;
+        border-radius: 50%;
+        color: #666;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background-color: #f0f5ff;
+          color: #2a8aff;
+        }
+
+        .icon-sm {
+          width: 20px;
+          height: 20px;
+        }
+      }
+    }
+
+    .breadcrumb {
         display: flex;
         align-items: center;
         gap: 8px;
@@ -1200,34 +1242,6 @@ onUnmounted(() => {
       }
     }
 
-    .header-right {
-      display: flex;
-      gap: 10px;
-
-      .icon-btn {
-        background: none;
-        border: none;
-        padding: 8px;
-        cursor: pointer;
-        border-radius: 50%;
-        transition: all 0.2s ease;
-
-        &.active {
-          background-color: #e6f0ff;
-          color: #2a8aff;
-        }
-
-        &:hover {
-          background-color: #f0f5ff;
-          transform: translateY(-2px);
-        }
-
-        .icon-sm {
-          width: 20px;
-          height: 20px;
-        }
-      }
-    }
   }
 
   .toolbar {

@@ -79,11 +79,11 @@ export const uploadFile = (parentId: string | undefined, file: File): Promise<an
  * @param parentId 父目录ID
  * @param fileName 文件名
  * @param fileSize 文件大小
- * @param chunkSize 分片大小
+ * @param chunkSize 分片大小（字节）。传 0 表示由服务端按系统配置决定，响应里会回传实际使用的值
  * @param uploadId 指定上传会话ID（用于断点续传）
  * @returns 上传会话ID
  */
-export const initChunkUpload = (parentId: string | undefined, fileName: string, fileSize: number, chunkSize: number = 10 * 1024 * 1024, uploadId?: string): Promise<any> => {
+export const initChunkUpload = (parentId: string | undefined, fileName: string, fileSize: number, chunkSize: number = 0, uploadId?: string): Promise<any> => {
   return request.post('/files/upload/chunk/init', {
     parentId: parentId || '',
     fileName,
@@ -127,7 +127,7 @@ export const completeChunkUpload = (uploadId: string): Promise<any> => {
 /**
  * 获取已上传分片列表
  * @param uploadId 上传会话ID
- * @returns 已上传分片列表和总分片数
+ * @returns 已上传分片列表、总分片数和会话创建时使用的分片大小
  */
 export const getUploadedChunks = (uploadId: string): Promise<any> => {
   return request.get(`/files/upload/chunk/${uploadId}/chunks`)

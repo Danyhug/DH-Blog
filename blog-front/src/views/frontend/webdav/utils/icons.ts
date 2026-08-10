@@ -44,54 +44,6 @@ export const ChevronRightIcon = defineComponent({
   }
 })
 
-export const Grid3X3Icon = defineComponent({
-  render() {
-    return h('svg', {
-      viewBox: '0 0 24 24',
-      fill: 'none',
-      stroke: 'currentColor',
-      'stroke-width': '2'
-    }, [
-      h('rect', { width: '7', height: '7', x: '3', y: '3', rx: '1' }),
-      h('rect', { width: '7', height: '7', x: '14', y: '3', rx: '1' }),
-      h('rect', { width: '7', height: '7', x: '3', y: '14', rx: '1' }),
-      h('rect', { width: '7', height: '7', x: '14', y: '14', rx: '1' })
-    ])
-  }
-})
-
-export const ListIcon = defineComponent({
-  render() {
-    return h('svg', {
-      viewBox: '0 0 24 24',
-      fill: 'none',
-      stroke: 'currentColor',
-      'stroke-width': '2'
-    }, [
-      h('line', { x1: '8', x2: '21', y1: '6', y2: '6' }),
-      h('line', { x1: '8', x2: '21', y1: '12', y2: '12' }),
-      h('line', { x1: '8', x2: '21', y1: '18', y2: '18' }),
-      h('line', { x1: '3', x2: '3.01', y1: '6', y2: '6' }),
-      h('line', { x1: '3', x2: '3.01', y1: '12', y2: '12' }),
-      h('line', { x1: '3', x2: '3.01', y1: '18', y2: '18' })
-    ])
-  }
-})
-
-export const SettingsIcon = defineComponent({
-  render() {
-    return h('svg', {
-      viewBox: '0 0 24 24',
-      fill: 'none',
-      stroke: 'currentColor',
-      'stroke-width': '2'
-    }, [
-      h('path', { d: 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z' }),
-      h('circle', { cx: '12', cy: '12', r: '3' })
-    ])
-}
-})
-
 export const PlusIcon = defineComponent({
   render() {
     return h('svg', {
@@ -223,51 +175,6 @@ export const MusicIcon = defineComponent({
   }
 })
 
-export const MonitorIcon = defineComponent({
-  render() {
-    return h('svg', {
-      viewBox: '0 0 24 24',
-      fill: 'none',
-      stroke: 'currentColor',
-      'stroke-width': '2'
-    }, [
-      h('rect', { width: '20', height: '14', x: '2', y: '3', rx: '2' }),
-      h('line', { x1: '8', x2: '16', y1: '21', y2: '21' }),
-      h('line', { x1: '12', x2: '12', y1: '17', y2: '21' })
-    ])
-  }
-})
-
-export const SmartphoneIcon = defineComponent({
-  render() {
-    return h('svg', {
-      viewBox: '0 0 24 24',
-      fill: 'none',
-      stroke: 'currentColor',
-      'stroke-width': '2'
-    }, [
-      h('rect', { width: '14', height: '20', x: '5', y: '2', rx: '2', ry: '2' }),
-      h('line', { x1: '12', x2: '12.01', y1: '18', y2: '18' })
-    ])
-  }
-})
-
-export const ServerIcon = defineComponent({
-  render() {
-    return h('svg', {
-      viewBox: '0 0 24 24',
-      fill: 'none',
-      stroke: 'currentColor',
-      'stroke-width': '2'
-    }, [
-      h('rect', { width: '20', height: '8', x: '2', y: '2', rx: '2', ry: '2' }),
-      h('rect', { width: '20', height: '8', x: '2', y: '14', rx: '2', ry: '2' }),
-      h('line', { x1: '6', x2: '6.01', y1: '6', y2: '6' }),
-      h('line', { x1: '6', x2: '6.01', y1: '18', y2: '18' })
-    ])
-  }
-})
-
 export const CloudIcon = defineComponent({
   render() {
     return h('svg', {
@@ -291,19 +198,6 @@ export const XIcon = defineComponent({
     }, [
       h('path', { d: 'm18 6-12 12' }),
       h('path', { d: 'm6 6 12 12' })
-    ])
-  }
-})
-
-export const CheckIcon = defineComponent({
-  render() {
-    return h('svg', {
-      viewBox: '0 0 24 24',
-      fill: 'none',
-      stroke: 'currentColor',
-      'stroke-width': '2'
-    }, [
-      h('path', { d: 'M20 6 9 17l-5-5' })
     ])
   }
 })
@@ -433,7 +327,6 @@ export const FilePresentationIcon = defineComponent({
 })
 
 // 导出所有图标类型
-export type IconComponent = typeof HomeIcon
 
 // 锁图标
 export const LockIcon = defineComponent({
@@ -481,16 +374,23 @@ export const EyeOffIcon = defineComponent({
 })
 
 // 时钟图标
-export const ClockIcon = defineComponent({
+
+// 分享管理入口图标（三点连线）
+export const ShareIcon = defineComponent({
   render() {
     return h('svg', {
       viewBox: '0 0 24 24',
       fill: 'none',
       stroke: 'currentColor',
-      'stroke-width': '2'
+      'stroke-width': '2',
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round'
     }, [
-      h('circle', { cx: '12', cy: '12', r: '10' }),
-      h('polyline', { points: '12,6 12,12 16,14' })
+      h('circle', { cx: '18', cy: '5', r: '3' }),
+      h('circle', { cx: '6', cy: '12', r: '3' }),
+      h('circle', { cx: '18', cy: '19', r: '3' }),
+      h('line', { x1: '8.59', y1: '13.51', x2: '15.42', y2: '17.49' }),
+      h('line', { x1: '15.41', y1: '6.51', x2: '8.59', y2: '10.49' })
     ])
   }
 })

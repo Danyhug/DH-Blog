@@ -1,11 +1,10 @@
 # WebDAV 组件
 
-这是一套完整的 WebDAV 云存储界面组件，提供了美观的文件管理、上传、分享和设置功能。
+这是一套完整的 WebDAV 云存储界面组件，提供了美观的文件管理、上传和分享功能。
 
 ## 组件结构
 
 - `WebDAView.vue` - 主视图组件
-- `SettingsModal.vue` - 设置弹窗
 - `ShareLinkPopup.vue` - 分享链接弹窗
 - `UploadModal.vue` - 上传文件弹窗
 - `MobileView.vue` - 移动设备视图
@@ -31,16 +30,16 @@ import { WebDAView } from '@/views/frontend/webdav'
 ```vue
 <template>
   <div>
-    <button @click="showSettings = true">打开设置</button>
-    <SettingsModal v-if="showSettings" @close="showSettings = false" />
+    <button @click="showShare = true">分享文件</button>
+    <ShareLinkPopup v-if="showShare" @close="showShare = false" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { SettingsModal } from '@/views/frontend/webdav'
+import { ShareLinkPopup } from '@/views/frontend/webdav'
 
-const showSettings = ref(false)
+const showShare = ref(false)
 </script>
 ```
 
