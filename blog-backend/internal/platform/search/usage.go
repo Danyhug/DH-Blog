@@ -12,6 +12,10 @@ import (
 const (
 	UsageUnitCredit  = "credit"
 	UsageUnitRequest = "request"
+	// UsageUnitMicroUSD is money, in millionths of a US dollar. Exa bills
+	// against a prepaid balance rather than an allowance of calls, so what it
+	// reports is spend and only a currency can express it.
+	UsageUnitMicroUSD = "micro_usd"
 )
 
 // Scopes a UsageReport can describe. The distinction matters when several
@@ -50,8 +54,9 @@ var ErrUsageUnavailable = errors.New("上游用量暂不可用")
 
 // UsageReporter is implemented by adapters that can state their own
 // consumption. Not every provider can, and none of them are made to pretend:
-// Exa's usage lives behind a separate team-management credential, so its
-// adapter simply does not implement this and the gateway keeps counting locally.
+// Exa only reports through a separate team-management credential, so its
+// adapter reports nothing until that credential is configured and the gateway
+// keeps counting locally in the meantime.
 type UsageReporter interface {
 	Provider
 	Usage(ctx context.Context) (UsageReport, error)

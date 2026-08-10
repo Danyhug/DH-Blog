@@ -11,11 +11,12 @@ import (
 // providerAuto asks the gateway to choose the upstream itself.
 const providerAuto = "auto"
 
-// Weights of the two scoring terms. Remaining quota dominates so a free tier
-// is spent evenly rather than exhausted on whichever provider ranks first.
+// Weights of the two scoring terms. Remaining allowance dominates so a provider
+// approaching its ceiling steps aside; the balance term then spreads whatever
+// traffic is left over the providers that still have room.
 const (
-	quotaScoreWeight  = 0.7
-	weightScoreWeight = 0.3
+	quotaScoreWeight   = 0.7
+	balanceScoreWeight = 0.3
 )
 
 var (
@@ -141,16 +142,16 @@ func sortByStrategy(pool []candidate, strategy RoutingStrategy) {
 	default:
 		// Balanced, and the not-yet-built model strategy, which falls back
 		// here rather than inventing an ordering it cannot justify.
-		maxWeight := 0
-		for _, item := range pool {
-			if item.Weight > maxWeight {
-				maxWeight = item.Weight
-			}
-		}
+		totals := balanceTotalsOf(pool)
 		sort.SliceStable(pool, func(i, j int) bool {
-			left, right := score(pool[i], maxWeight), score(pool[j], maxWeight)
+			left, right := score(pool[i], totals), score(pool[j], totals)
 			if left != right {
 				return left > right
+			}
+			// An untouched pool scores everyone alike, so weight is what says
+			// who should be picked first; the name keeps it deterministic.
+			if pool[i].Weight != pool[j].Weight {
+				return pool[i].Weight > pool[j].Weight
 			}
 			return pool[i].Name < pool[j].Name
 		})
@@ -186,22 +187,68 @@ func keep(pool []candidate, predicate func(candidate) bool) []candidate {
 	return kept
 }
 
-// score blends remaining monthly allowance with the configured weight. It is
-// the balanced strategy's ranking function; Priority plays no part, because
-// expressing a fixed order is what the priority strategy is for.
+// balanceTotals carries the pool-wide figure the balanced strategy needs to
+// turn one candidate's load into a comparable [0,1] number.
+type balanceTotals struct{ maxLoad float64 }
+
+func balanceTotalsOf(pool []candidate) balanceTotals {
+	var totals balanceTotals
+	for _, item := range pool {
+		if load := loadFactor(item); load > totals.maxLoad {
+			totals.maxLoad = load
+		}
+	}
+	return totals
+}
+
+// loadFactor is calls already served per unit of weight — how much of its share
+// a provider has taken. A weight-5 provider has to serve five times the calls of
+// a weight-1 one before the two count as equally loaded, which is what makes
+// weight express a share of traffic rather than a fixed rank.
+func loadFactor(item candidate) float64 {
+	weight := item.Weight
+	if weight <= 0 {
+		weight = 1
+	}
+	return float64(item.Used) / float64(weight)
+}
+
+// score blends how much allowance a provider has left with how far it is behind
+// its share of traffic.
 //
-// A provider capped both ways is scored on whichever allowance is tighter — the
-// one that will stop it first is the one that describes how much room is left.
-func score(item candidate, maxWeight int) float64 {
-	quotaRatio := remainingRatio(item.Used, item.MonthlyQuota)
-	if costRatio := remainingRatio(item.CostUsed, item.MonthlyCostLimit); costRatio < quotaRatio {
-		quotaRatio = costRatio
+// The balance term is what makes this strategy balance at all. Ranking on
+// remaining allowance alone cannot: a provider with no ceiling sits at a
+// permanent 1.0 and strictly dominates one that has a ceiling, so a capped
+// provider loses every comparison from its first unit of spend onward. Exa was
+// exactly that case — the only upstream that reports what a call cost, and so
+// the only one whose score ever moved, always downward.
+//
+// Priority plays no part here; expressing a fixed order is what the priority
+// strategy is for.
+func score(item candidate, totals balanceTotals) float64 {
+	return headroomRatio(item)*quotaScoreWeight + idleRatio(item, totals)*balanceScoreWeight
+}
+
+// headroomRatio is the share of the tighter allowance still unspent. A provider
+// capped both ways is judged on whichever ceiling stops it first: counting calls
+// says nothing about a pay-as-you-go plan, and counting dollars says nothing
+// about a plan sold in requests.
+func headroomRatio(item candidate) float64 {
+	ratio := remainingRatio(item.Used, item.MonthlyQuota)
+	if costRatio := remainingRatio(item.CostUsed, item.MonthlyCostLimit); costRatio < ratio {
+		ratio = costRatio
 	}
-	normalizedWeight := 1.0
-	if maxWeight > 0 {
-		normalizedWeight = float64(item.Weight) / float64(maxWeight)
+	return ratio
+}
+
+// idleRatio is 1 for the least loaded provider in the pool and 0 for the most
+// loaded, so traffic keeps moving towards whoever is furthest behind its weight.
+// An untouched pool scores everyone 1 and leaves the ordering to weight.
+func idleRatio(item candidate, totals balanceTotals) float64 {
+	if totals.maxLoad <= 0 {
+		return 1
 	}
-	return quotaRatio*quotaScoreWeight + normalizedWeight*weightScoreWeight
+	return 1 - loadFactor(item)/totals.maxLoad
 }
 
 // remainingRatio is the share of an allowance still unspent, and 1 when there

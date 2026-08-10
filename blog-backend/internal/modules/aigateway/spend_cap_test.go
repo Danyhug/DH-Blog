@@ -71,7 +71,7 @@ func TestScoreUsesTighterOfTheTwoAllowances(t *testing.T) {
 	onlyCalls := healthyCandidate("exa", exaCapability)
 	onlyCalls.MonthlyQuota, onlyCalls.Used = 1000, 100
 
-	if score(both, 1) >= score(onlyCalls, 1) {
+	if score(both, balanceTotals{}) >= score(onlyCalls, balanceTotals{}) {
 		t.Error("金额快用完时得分不应与只看次数时相同")
 	}
 }
@@ -82,8 +82,8 @@ func TestUncappedProviderScoresAsFullyAvailable(t *testing.T) {
 	full := healthyCandidate("tavily", tavilyCapability)
 	full.MonthlyQuota, full.Used = 1000, 0
 
-	if score(free, 1) != score(full, 1) {
-		t.Errorf("无上限得分 = %v, 满额度得分 = %v, 期望相等", score(free, 1), score(full, 1))
+	if score(free, balanceTotals{}) != score(full, balanceTotals{}) {
+		t.Errorf("无上限得分 = %v, 满额度得分 = %v, 期望相等", score(free, balanceTotals{}), score(full, balanceTotals{}))
 	}
 }
 

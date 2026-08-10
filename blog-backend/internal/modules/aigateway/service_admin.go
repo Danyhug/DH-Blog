@@ -149,9 +149,14 @@ func (s *Service) providerViews(ctx context.Context) ([]providerView, error) {
 	for _, provider := range providers {
 		health := string(search.BreakerClosed)
 		reportsUsage := false
+		// 上游报了花费时选路走上游数字，这里一并回传，让管理页能看出当前用的是哪一个
+		var upstreamCost *int
 		if runtime := s.runtime(provider.Name); runtime != nil {
 			health = string(runtime.breaker.State())
 			reportsUsage = runtime.reportsUsage
+			if cost, ok := runtime.upstreamCostMicroUSD(s.now()); ok {
+				upstreamCost = &cost
+			}
 		}
 		meta := search.MetaFor(provider.Name)
 		keys := keysByProvider[provider.Name]
@@ -176,8 +181,11 @@ func (s *Service) providerViews(ctx context.Context) ([]providerView, error) {
 			MonthlyUsed:       usage[providerSubject(provider.Name)].Count,
 			MonthlyCost:       usage[providerSubject(provider.Name)].CostMicroUSD,
 			MonthlyCostLimit:  provider.MonthlyCostLimit,
+			UpstreamCost:      upstreamCost,
 			SupportsUsageSync: reportsUsage,
-			Extra:             provider.Extra,
+			Extra:             redactExtra(provider.Extra),
+			UsageKeyID:        extraString(provider.Extra, extraKeyUsageKeyID),
+			UsageServiceKey:   MaskSecret(extraString(provider.Extra, extraKeyUsageServiceKey)),
 			Health:            health,
 		})
 	}

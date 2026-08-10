@@ -196,6 +196,74 @@
                         <el-input v-model="form.extra" placeholder='{"search_depth":"basic"}' />
                     </el-form-item>
                 </el-form>
+
+                <h4 class="group-title">
+                    本月用量校准
+                    <span class="group-sub">
+                        本地计数只看得到网关自己发出的请求，和官网账单会有出入；按官网数字改这里即可，是覆盖不是累加
+                    </span>
+                </h4>
+                <p v-if="active.upstreamCostMicroUsd !== null" class="hint">
+                    <el-icon class="align-middle mr-1">
+                        <InfoFilled />
+                    </el-icon>
+                    当前选路用的是上游报的花费 {{ formatUsd(active.upstreamCostMicroUsd) }}，本地数字仅供参考。
+                </p>
+                <el-form label-position="top">
+                    <el-row :gutter="14">
+                        <el-col :span="12">
+                            <el-form-item label="本月调用次数">
+                                <el-input-number v-model="usageForm.count" :min="0" :max="10000000" class="w-full" />
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="12">
+                            <el-form-item label="本月花费（美元）">
+                                <el-input-number v-model="usageForm.costUsd" :min="0" :max="100000" :step="0.01"
+                                    :precision="2" class="w-full" />
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-button size="small" type="primary" plain :loading="savingUsage" :disabled="!usageDirty"
+                        @click="onSaveUsage">
+                        保存用量
+                    </el-button>
+                </el-form>
+
+                <template v-if="supportsUsageCredential">
+                    <h4 class="group-title">
+                        上游用量接口
+                        <span class="group-sub">
+                            Exa 的花费要用团队 service key 查，和搜索密钥不是一把；填齐后每小时同步一次，选路改用上游数字
+                        </span>
+                    </h4>
+                    <el-form label-position="top">
+                        <el-form-item>
+                            <template #label>
+                                Service Key
+                                <span class="label-hint">
+                                    留空表示不修改；已保存的值只显示掩码
+                                    <template v-if="active.usageServiceKeyMasked">（当前 {{ active.usageServiceKeyMasked }}）</template>
+                                </span>
+                            </template>
+                            <el-input v-model="usageCredential.serviceKey" placeholder="在 Exa 控制台创建 team service key"
+                                clearable />
+                        </el-form-item>
+                        <el-form-item label="搜索密钥的 UUID">
+                            <el-input v-model="usageCredential.keyId" placeholder="550e8400-e29b-41d4-a716-446655440000"
+                                clearable />
+                        </el-form-item>
+                        <div class="flex gap-2">
+                            <el-button size="small" type="primary" plain :loading="savingCredential"
+                                @click="onSaveUsageCredential">
+                                保存
+                            </el-button>
+                            <el-button v-if="active.usageServiceKeyMasked" size="small" plain
+                                :loading="savingCredential" @click="onClearUsageCredential">
+                                清除 Service Key
+                            </el-button>
+                        </div>
+                    </el-form>
+                </template>
             </div>
 
             <template #footer>
@@ -222,6 +290,7 @@ import {
     testGatewayProvider,
     updateGatewayProvider,
     updateGatewayProviderKey,
+    updateGatewayProviderUsage,
     type GatewayProvider,
     type GatewayProviderKey
 } from '@/api/gateway';
@@ -243,6 +312,11 @@ const form = reactive({
     baseUrl: '', priority: 100, weight: 1, rps: 1,
     monthlyQuota: 0, monthlyCostLimitUsd: 0, extra: ''
 });
+// 用量校准与上游凭据各自独立保存，避免和参数表单的 dirty 判断纠缠在一起
+const usageForm = reactive({ count: 0, costUsd: 0 });
+const usageCredential = reactive({ serviceKey: '', keyId: '' });
+const savingUsage = ref(false);
+const savingCredential = ref(false);
 
 const MICRO_PER_USD = 1_000_000;
 
@@ -260,6 +334,72 @@ const dirty = computed(() => {
         || costLimitMicro() !== provider.monthlyCostLimitMicroUsd
         || form.extra !== provider.extra;
 });
+
+// 只有 Exa 提供按密钥查花费的团队管理接口，其它家要么没有、要么已经走 UsageReporter
+const supportsUsageCredential = computed(() => active.value?.name === 'exa');
+
+const usageDirty = computed(() => {
+    const provider = active.value;
+    if (!provider) return false;
+    return usageForm.count !== provider.monthlyUsed
+        || usageCostMicro() !== provider.monthlyCostMicroUsd;
+});
+
+function usageCostMicro() {
+    return Math.round((usageForm.costUsd || 0) * MICRO_PER_USD);
+}
+
+function formatUsd(micro: number) {
+    return `$${(micro / MICRO_PER_USD).toFixed(2)}`;
+}
+
+async function onSaveUsage() {
+    const provider = active.value;
+    if (!provider) return;
+    savingUsage.value = true;
+    try {
+        await updateGatewayProviderUsage(provider.name, {
+            count: usageForm.count,
+            costMicroUsd: usageCostMicro()
+        });
+        notify.success('用量已按填写的数字更新');
+        emit('refresh');
+    } finally {
+        savingUsage.value = false;
+    }
+}
+
+async function onSaveUsageCredential() {
+    const provider = active.value;
+    if (!provider) return;
+    savingCredential.value = true;
+    try {
+        // service key 留空表示不改，避免一保存就把已存的密钥清掉
+        await updateGatewayProvider(provider.name, {
+            ...(usageCredential.serviceKey.trim() ? { usageServiceKey: usageCredential.serviceKey.trim() } : {}),
+            usageKeyId: usageCredential.keyId.trim()
+        });
+        usageCredential.serviceKey = '';
+        notify.success('上游用量凭据已保存');
+        emit('refresh');
+    } finally {
+        savingCredential.value = false;
+    }
+}
+
+async function onClearUsageCredential() {
+    const provider = active.value;
+    if (!provider) return;
+    savingCredential.value = true;
+    try {
+        await updateGatewayProvider(provider.name, { usageServiceKey: '' });
+        usageCredential.serviceKey = '';
+        notify.success('已清除 Service Key，用量回到本地统计');
+        emit('refresh');
+    } finally {
+        savingCredential.value = false;
+    }
+}
 
 function keyHint(provider: GatewayProvider) {
     if (!provider.keys.length) return '未配置密钥';
@@ -329,6 +469,10 @@ function resetForm(provider: GatewayProvider) {
     form.rps = provider.rps;
     form.monthlyQuota = provider.monthlyQuota;
     form.monthlyCostLimitUsd = provider.monthlyCostLimitMicroUsd / MICRO_PER_USD;
+    usageForm.count = provider.monthlyUsed;
+    usageForm.costUsd = provider.monthlyCostMicroUsd / MICRO_PER_USD;
+    usageCredential.serviceKey = '';
+    usageCredential.keyId = provider.usageKeyId || '';
     form.extra = provider.extra;
 }
 

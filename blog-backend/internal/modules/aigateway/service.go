@@ -194,6 +194,38 @@ func (r *providerRuntime) credentials() []credentialSnapshot {
 	return snapshots
 }
 
+// upstreamCostMicroUSD totals what the upstreams say has been spent under this
+// provider's credentials, and reports whether any of them said anything usable.
+//
+// A provider whose upstream reports money is judged on the upstream's number
+// rather than the gateway's own tally, because the gateway only ever sees the
+// calls it made: keys shared with something else, or a request issued straight
+// against the provider, are invisible to the local counter and very visible on
+// the bill.
+//
+// The windows do not line up — Exa reports a rolling 30 days while the local
+// counter resets with the calendar month — so a spend cap enforced against this
+// number is a cap on the last 30 days. That is the more conservative reading of
+// a prepaid balance, but it is a different question from the one the local
+// counter answers, which is why both are shown on the admin page.
+func (r *providerRuntime) upstreamCostMicroUSD(now time.Time) (int, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	total, found := 0, false
+	for _, key := range r.keys {
+		config := key.config
+		if config.UpstreamUnit != search.UsageUnitMicroUSD || config.UpstreamSyncedAt == nil {
+			continue
+		}
+		if now.Sub(*config.UpstreamSyncedAt) > upstreamUsageTTL {
+			continue
+		}
+		total += config.UpstreamUsed
+		found = true
+	}
+	return total, found
+}
+
 // recordUsage mirrors a synced report into the runtime, so a routing decision
 // taken before the next Reload sees the same numbers the admin page does.
 func (r *providerRuntime) recordUsage(id int, report search.UsageReport, now time.Time) {
@@ -850,15 +882,21 @@ func (s *Service) plan(ctx context.Context, key *APIKey, req SearchRequest, now 
 		if runtime.usableKeys(now) == 0 {
 			continue
 		}
+		local := usage[providerSubject(runtime.config.Name)]
+		// 上游自己报的花费优先，拿不到或已过期就退回本地累加值
+		costUsed := local.CostMicroUSD
+		if upstream, ok := runtime.upstreamCostMicroUSD(now); ok {
+			costUsed = upstream
+		}
 		candidates = append(candidates, candidate{
 			Name:             runtime.config.Name,
 			Capability:       runtime.capability,
 			Priority:         runtime.config.Priority,
 			Weight:           runtime.config.Weight,
 			MonthlyQuota:     runtime.config.MonthlyQuota,
-			Used:             usage[providerSubject(runtime.config.Name)].Count,
+			Used:             local.Count,
 			MonthlyCostLimit: runtime.config.MonthlyCostLimit,
-			CostUsed:         usage[providerSubject(runtime.config.Name)].CostMicroUSD,
+			CostUsed:         costUsed,
 			Healthy:          runtime.breaker.State() != search.BreakerOpen,
 		})
 	}

@@ -147,11 +147,18 @@ type providerView struct {
 	// MonthlyCostLimit is the spend ceiling, 0 when the provider is capped by
 	// call count instead (or not capped at all).
 	MonthlyCostLimit int `json:"monthlyCostLimitMicroUsd"`
+	// UpstreamCost is the upstream's own spend figure when one is fresh enough
+	// to be driving routing, and null when the local counter is what counts.
+	UpstreamCost *int `json:"upstreamCostMicroUsd"`
 	// SupportsUsageSync tells the page whether a blank upstream figure means
 	// "this provider has no usage API" rather than "the sync is failing".
 	SupportsUsageSync bool   `json:"supportsUsageSync"`
 	Extra             string `json:"extra"`
-	Health            string `json:"health"`
+	// UsageKeyID is safe to echo; UsageServiceKey is only ever the masked form,
+	// because a list endpoint has no business handing back a credential.
+	UsageKeyID      string `json:"usageKeyId"`
+	UsageServiceKey string `json:"usageServiceKeyMasked"`
+	Health          string `json:"health"`
 }
 
 func (h *handler) listProviders(c *gin.Context) {
@@ -179,6 +186,13 @@ type providerPatch struct {
 	// no floating point.
 	MonthlyCostLimitMicroUSD *int    `json:"monthlyCostLimitMicroUsd"`
 	Extra                    *string `json:"extra"`
+	// UsageServiceKey and UsageKeyID address Exa's team-management API, which
+	// reports spend under a credential separate from the search key. They live
+	// inside Extra but are patched by name: the service key is write-only, so
+	// it must never travel back out in the list response the way Extra does.
+	// An empty string clears the option; omitting the field leaves it alone.
+	UsageServiceKey *string `json:"usageServiceKey"`
+	UsageKeyID      *string `json:"usageKeyId"`
 }
 
 func (h *handler) updateProvider(c *gin.Context) {
@@ -238,6 +252,22 @@ func (h *handler) updateProvider(c *gin.Context) {
 		}
 		updates["extra"] = extra
 	}
+	if patch.UsageServiceKey != nil || patch.UsageKeyID != nil {
+		base, err := h.currentExtra(c, name, updates)
+		if err != nil {
+			return
+		}
+		merged, mergeErr := mergeExtra(base, map[string]*string{
+			extraKeyUsageServiceKey: patch.UsageServiceKey,
+			extraKeyUsageKeyID:      patch.UsageKeyID,
+		})
+		if mergeErr != nil {
+			adminFailure(c, http.StatusBadRequest, mergeErr.Error())
+			return
+		}
+		updates["extra"] = merged
+	}
+
 	if len(updates) == 0 {
 		adminSuccess(c)
 		return
@@ -624,4 +654,91 @@ func normalizeAllowed(raw string) string {
 		}
 	}
 	return strings.Join(allowed, ",")
+}
+
+// currentExtra resolves the Extra blob a usage-credential patch should merge
+// into: the value this same request is already setting, when it sets one, and
+// otherwise whatever is stored. It reports failures to the client itself, so a
+// non-nil error means the response has been written.
+func (h *handler) currentExtra(c *gin.Context, name string, updates map[string]any) (string, error) {
+	if pending, ok := updates["extra"].(string); ok {
+		return pending, nil
+	}
+	provider, err := h.service.repo.providerByName(c.Request.Context(), name)
+	if err != nil {
+		if err == ErrProviderNotFound {
+			adminFailure(c, http.StatusNotFound, "供应商不存在")
+		} else {
+			adminFailure(c, http.StatusInternalServerError, "读取供应商配置失败")
+		}
+		return "", err
+	}
+	return provider.Extra, nil
+}
+
+// providerUsagePatch corrects the gateway's own tally for the current period.
+// Every field is optional; omitting one leaves that counter alone.
+type providerUsagePatch struct {
+	Count        *int `json:"count"`
+	Credits      *int `json:"credits"`
+	CostMicroUSD *int `json:"costMicroUsd"`
+}
+
+// updateProviderUsage overwrites this month's local counters for one provider.
+//
+// The local tally only counts what the gateway itself sent, so it drifts from
+// the provider's own billing whenever a key is used elsewhere. Exa is the case
+// that needs this most: its spend is only visible on Exa's dashboard unless a
+// team service key is configured, and routing compares that spend against the
+// monthly cost cap. Being able to type in the real number keeps the cap honest.
+func (h *handler) updateProviderUsage(c *gin.Context) {
+	name := strings.ToLower(strings.TrimSpace(c.Param("name")))
+	if _, err := h.service.repo.providerByName(c.Request.Context(), name); err != nil {
+		if err == ErrProviderNotFound {
+			adminFailure(c, http.StatusNotFound, "供应商不存在")
+			return
+		}
+		adminFailure(c, http.StatusInternalServerError, "读取供应商配置失败")
+		return
+	}
+
+	var patch providerUsagePatch
+	if err := c.ShouldBindJSON(&patch); err != nil {
+		adminFailure(c, http.StatusBadRequest, "参数错误: "+err.Error())
+		return
+	}
+	for label, value := range map[string]*int{
+		"调用次数": patch.Count, "credits": patch.Credits, "费用": patch.CostMicroUSD,
+	} {
+		if value != nil && *value < 0 {
+			adminFailure(c, http.StatusBadRequest, label+"不能为负数")
+			return
+		}
+	}
+
+	period := currentPeriod(h.service.now())
+	subject := providerSubject(name)
+	current, err := h.service.repo.usageFor(c.Request.Context(), period, []string{subject})
+	if err != nil {
+		adminFailure(c, http.StatusInternalServerError, "读取当前用量失败")
+		return
+	}
+	existing := current[subject]
+
+	count, credits, cost := existing.Count, existing.Credits, existing.CostMicroUSD
+	if patch.Count != nil {
+		count = *patch.Count
+	}
+	if patch.Credits != nil {
+		credits = *patch.Credits
+	}
+	if patch.CostMicroUSD != nil {
+		cost = *patch.CostMicroUSD
+	}
+
+	if err := h.service.repo.setUsage(c.Request.Context(), subject, period, count, credits, cost); err != nil {
+		adminFailure(c, http.StatusInternalServerError, "写入用量失败")
+		return
+	}
+	adminSuccess(c)
 }

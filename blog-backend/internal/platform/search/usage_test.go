@@ -219,11 +219,94 @@ func TestLastRateLimitValue(t *testing.T) {
 	}
 }
 
-func TestExaDoesNotReportUsage(t *testing.T) {
-	// Exa 的用量要另一把 service key 才能查，这里明确它不实现该接口，
-	// 免得以后有人以为同步覆盖了三家
-	var provider Provider = NewExa("exa-test", "", ExaOptions{}, nil)
-	if _, ok := provider.(UsageReporter); ok {
-		t.Error("Exa 不应实现 UsageReporter")
+func TestExaReportsNothingWithoutServiceKey(t *testing.T) {
+	// Exa 的用量要另一把 team service key 加目标 key 的 UUID 才查得到。
+	// 没配齐时必须报 ErrUsageUnavailable —— 同步会把它记成「跳过」而不是失败，
+	// 网关继续用本地计数。
+	provider := NewExa("exa-test", "", ExaOptions{}, nil)
+	if _, err := provider.Usage(context.Background()); !errors.Is(err, ErrUsageUnavailable) {
+		t.Errorf("未配置服务密钥时 err = %v, 期望 ErrUsageUnavailable", err)
+	}
+
+	// 只配一半同样不算配好
+	half := NewExa("exa-test", "", ExaOptions{UsageServiceKey: "svc"}, nil)
+	if _, err := half.Usage(context.Background()); !errors.Is(err, ErrUsageUnavailable) {
+		t.Errorf("只配服务密钥时 err = %v, 期望 ErrUsageUnavailable", err)
+	}
+}
+
+func TestExaReportsSpendAsMicroUSD(t *testing.T) {
+	var gotPath, gotKey string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath, gotKey = r.URL.Path, r.Header.Get("x-api-key")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"total_cost_usd": 45.67}`))
+	}))
+	t.Cleanup(server.Close)
+
+	provider := NewExa("exa-search-key", "", ExaOptions{
+		UsageServiceKey: "exa-service-key",
+		UsageKeyID:      "550e8400-e29b-41d4-a716-446655440000",
+		UsageBaseURL:    server.URL,
+	}, nil)
+
+	report, err := provider.Usage(context.Background())
+	if err != nil {
+		t.Fatalf("Usage 返回错误: %v", err)
+	}
+	if gotPath != "/team-management/api-keys/550e8400-e29b-41d4-a716-446655440000/usage" {
+		t.Errorf("请求路径 = %q", gotPath)
+	}
+	// 必须用 service key，不能拿搜索 key 去调
+	if gotKey != "exa-service-key" {
+		t.Errorf("x-api-key = %q, 期望 service key", gotKey)
+	}
+	if report.Used != 45_670_000 {
+		t.Errorf("Used = %d, 期望 45.67 美元换算成的微美元", report.Used)
+	}
+	// Exa 是预付余额制，没有可比的月额度，Limit 必须留空
+	if report.Limit != 0 {
+		t.Errorf("Limit = %d, 期望 0", report.Limit)
+	}
+	if report.Unit != UsageUnitMicroUSD {
+		t.Errorf("Unit = %q, 期望 %q", report.Unit, UsageUnitMicroUSD)
+	}
+	if report.Exhausted() {
+		t.Error("没有上限的报告不应被判为已用尽")
+	}
+}
+
+func TestExaUsageTreatsMissingCostAsUnavailable(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"api_key_name":"Production"}`))
+	}))
+	t.Cleanup(server.Close)
+
+	provider := NewExa("k", "", ExaOptions{
+		UsageServiceKey: "svc", UsageKeyID: "id", UsageBaseURL: server.URL,
+	}, nil)
+	if _, err := provider.Usage(context.Background()); !errors.Is(err, ErrUsageUnavailable) {
+		t.Errorf("账单里还没有数据时 err = %v, 期望 ErrUsageUnavailable", err)
+	}
+}
+
+func TestExaUsageRejectedKeyIsAuthFailure(t *testing.T) {
+	// 拿搜索 key 调这个接口会 401，必须归类成鉴权失败，
+	// 同步才会把这把 key 停用而不是当成临时故障反复重试
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"error":"Invalid API key"}`))
+	}))
+	t.Cleanup(server.Close)
+
+	provider := NewExa("k", "", ExaOptions{
+		UsageServiceKey: "search-key-by-mistake", UsageKeyID: "id", UsageBaseURL: server.URL,
+	}, nil)
+	_, err := provider.Usage(context.Background())
+	var providerErr *Error
+	if !errors.As(err, &providerErr) || providerErr.Kind != KindAuthFailed {
+		t.Fatalf("err = %v, 期望 KindAuthFailed", err)
 	}
 }

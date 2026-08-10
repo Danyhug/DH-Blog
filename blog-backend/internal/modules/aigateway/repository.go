@@ -346,6 +346,22 @@ func (r *repository) addUsage(ctx context.Context, subject, period string, count
 	}).Create(&usage).Error
 }
 
+// setUsage overwrites a period's counters instead of adding to them. It is the
+// manual-correction path: the local tally only ever sees traffic that went
+// through the gateway, so an operator who reads the real figure off the
+// provider's own dashboard needs a way to say what it actually is.
+func (r *repository) setUsage(ctx context.Context, subject, period string, count, credits, costMicroUSD int) error {
+	usage := Usage{Subject: subject, Period: period, Count: count, Credits: credits, CostMicroUSD: costMicroUSD}
+	return r.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "subject"}, {Name: "period"}},
+		DoUpdates: clause.Assignments(map[string]any{
+			"count":          count,
+			"credits":        credits,
+			"cost_micro_usd": costMicroUSD,
+		}),
+	}).Create(&usage).Error
+}
+
 // usageFor returns the counters for the given subjects in one query, keyed by
 // subject. Missing subjects simply have no entry.
 func (r *repository) usageFor(ctx context.Context, period string, subjects []string) (map[string]Usage, error) {

@@ -73,6 +73,15 @@ export interface GatewayProvider {
   monthlyCostLimitMicroUsd: number
   /** 该供应商是否提供用量接口；为 false 时数字空着是正常的，不是同步坏了 */
   supportsUsageSync: boolean
+  /**
+   * 上游自己报的花费（微美元）。非 null 时选路用的是这个数而不是本地累加值；
+   * null 表示没有新鲜的上游数据，当前按本地统计走。
+   */
+  upstreamCostMicroUsd: number | null
+  /** Exa 团队管理接口所需：目标搜索密钥的 UUID，可回显 */
+  usageKeyId: string
+  /** 同上的 service key，只会返回掩码，真实值不出后端 */
+  usageServiceKeyMasked: string
   extra: string
   health: 'closed' | 'open' | 'half_open'
 }
@@ -88,6 +97,16 @@ export interface GatewayProviderPatch {
   monthlyQuota?: number
   monthlyCostLimitMicroUsd?: number
   extra?: string
+  /** Exa 用量接口凭据：传空串表示清除，不传表示不改 */
+  usageServiceKey?: string
+  usageKeyId?: string
+}
+
+/** 本地用量校准补丁，字段留空表示不修改；值是覆盖而不是累加 */
+export interface GatewayUsagePatch {
+  count?: number
+  credits?: number
+  costMicroUsd?: number
 }
 
 /** 连通性测试的入参，全部可选：带 apiKey 就是"保存前先测" */
@@ -215,6 +234,11 @@ export function getGatewayProviders(): Promise<GatewayProvider[]> {
 
 export function updateGatewayProvider(name: string, data: GatewayProviderPatch) {
   return request({ url: `/admin/gateway/providers/${name}`, method: 'put', data })
+}
+
+/** 按供应商官网的真实账单覆盖本月的本地统计 */
+export function updateGatewayProviderUsage(name: string, data: GatewayUsagePatch) {
+  return request.put(`/admin/gateway/providers/${name}/usage`, data)
 }
 
 export function testGatewayProvider(name: string, probe: GatewayProviderProbe = {}): Promise<GatewayProviderTestResult> {

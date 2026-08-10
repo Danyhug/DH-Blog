@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -345,4 +346,77 @@ const SettingKeyRoutingStrategy = "routing_strategy"
 // MigrationModels declares the database tables owned by this module.
 func MigrationModels() []any {
 	return []any{&Provider{}, &ProviderKey{}, &APIKey{}, &RequestLog{}, &Usage{}, &Setting{}}
+}
+
+// Options inside a provider's Extra blob that the admin API manages by name
+// instead of leaving to the free-form JSON, because one of them is a credential
+// and must never be handed back in a list response.
+const (
+	extraKeyUsageServiceKey = "usage_service_key"
+	extraKeyUsageKeyID      = "usage_key_id"
+)
+
+// mergeExtra sets or clears named options inside a provider's Extra JSON while
+// leaving the options it does not know about untouched. A nil value means "no
+// change"; an empty string removes the option.
+func mergeExtra(extra string, values map[string]*string) (string, error) {
+	fields := map[string]any{}
+	if trimmed := strings.TrimSpace(extra); trimmed != "" {
+		if err := json.Unmarshal([]byte(trimmed), &fields); err != nil {
+			return "", fmt.Errorf("解析附加配置失败: %w", err)
+		}
+	}
+	for key, value := range values {
+		if value == nil {
+			continue
+		}
+		if trimmed := strings.TrimSpace(*value); trimmed != "" {
+			fields[key] = trimmed
+		} else {
+			delete(fields, key)
+		}
+	}
+	encoded, err := json.Marshal(fields)
+	if err != nil {
+		return "", err
+	}
+	return string(encoded), nil
+}
+
+// extraString reads one string option out of an Extra blob, returning "" when
+// the blob is absent, malformed, or simply does not carry that option.
+func extraString(extra, key string) string {
+	trimmed := strings.TrimSpace(extra)
+	if trimmed == "" {
+		return ""
+	}
+	fields := map[string]any{}
+	if err := json.Unmarshal([]byte(trimmed), &fields); err != nil {
+		return ""
+	}
+	value, _ := fields[key].(string)
+	return value
+}
+
+// redactExtra masks the credentials inside an Extra blob so the admin list can
+// show the rest of a provider's options without handing back a secret.
+func redactExtra(extra string) string {
+	trimmed := strings.TrimSpace(extra)
+	if trimmed == "" {
+		return extra
+	}
+	fields := map[string]any{}
+	if err := json.Unmarshal([]byte(trimmed), &fields); err != nil {
+		return extra
+	}
+	secret, ok := fields[extraKeyUsageServiceKey].(string)
+	if !ok || secret == "" {
+		return extra
+	}
+	fields[extraKeyUsageServiceKey] = MaskSecret(secret)
+	encoded, err := json.Marshal(fields)
+	if err != nil {
+		return extra
+	}
+	return string(encoded)
 }

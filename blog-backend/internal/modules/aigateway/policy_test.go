@@ -393,3 +393,82 @@ func TestQueryUsesOperators(t *testing.T) {
 		})
 	}
 }
+
+// drainRoute plays n consecutive routing decisions, feeding each pick back as
+// usage so the next decision sees the traffic the previous one created.
+func drainRoute(t *testing.T, rounds int, costPerCall map[string]int, pool ...candidate) map[string]int {
+	t.Helper()
+	picks := make(map[string]int, len(pool))
+	for round := 0; round < rounds; round++ {
+		order, err := route(routeInput{Candidates: append([]candidate(nil), pool...)})
+		if err != nil {
+			t.Fatalf("第 %d 轮 route 返回错误: %v", round, err)
+		}
+		winner := order[0]
+		picks[winner]++
+		for index := range pool {
+			if pool[index].Name != winner {
+				continue
+			}
+			pool[index].Used++
+			pool[index].CostUsed += costPerCall[winner]
+		}
+	}
+	return picks
+}
+
+func TestBalancedKeepsUsingACostCappedProvider(t *testing.T) {
+	// 回归：Exa 是唯一会上报真实费用的供应商，配了费用上限后剩余比例会随消费下降，
+	// 而两个上限都不设的 Firecrawl 恒为 1.0。旧打分只看「剩余比例 + 静态权重」，
+	// 于是 Firecrawl 永远压过 Exa —— Exa 只在第一次打平时按名字排序被选中一次，
+	// 之后再也轮不到。
+	exa := healthyCandidate("exa", exaCapability)
+	exa.MonthlyCostLimit = 10_000_000 // 免费额度 $10
+	firecrawl := healthyCandidate("firecrawl", tavilyCapability)
+
+	picks := drainRoute(t, 20, map[string]int{"exa": 7_000}, exa, firecrawl)
+
+	// 判据必须看份额而不是「有没有被选中过」：旧打分下 Exa 恰好会在第一轮打平时
+	// 被选中一次，用 >0 判定是抓不住这个 bug 的。
+	if picks["exa"] < 5 {
+		t.Fatalf("20 轮选路里 Exa 只拿到 %d 次: %v", picks["exa"], picks)
+	}
+	if picks["firecrawl"] < 5 {
+		t.Fatalf("20 轮选路里 Firecrawl 只拿到 %d 次: %v", picks["firecrawl"], picks)
+	}
+}
+
+func TestBalancedSpreadsTrafficAccordingToWeight(t *testing.T) {
+	// 权重表达的是流量份额：3:1 的配置跑够轮数后应该接近 3:1，而不是让重的那个通吃
+	heavy := healthyCandidate("exa", exaCapability)
+	heavy.Weight = 3
+	light := healthyCandidate("firecrawl", tavilyCapability)
+	light.Weight = 1
+
+	picks := drainRoute(t, 40, map[string]int{}, heavy, light)
+
+	if picks["firecrawl"] == 0 {
+		t.Fatalf("低权重供应商完全没有拿到流量: %v", picks)
+	}
+	ratio := float64(picks["exa"]) / float64(picks["firecrawl"])
+	if ratio < 2 || ratio > 4 {
+		t.Fatalf("流量比例 = %.2f (%v), 期望接近权重比 3:1", ratio, picks)
+	}
+}
+
+func TestBalancedStillYieldsWhenAllowanceRunsLow(t *testing.T) {
+	// 均衡不能盖过余量：快用完的供应商即使最闲，也该排在余量充足的后面
+	nearlySpent := healthyCandidate("exa", exaCapability)
+	nearlySpent.MonthlyCostLimit, nearlySpent.CostUsed = 10_000_000, 9_500_000
+
+	roomy := healthyCandidate("firecrawl", tavilyCapability)
+	roomy.Used = 500 // 用得多得多，但完全没有上限
+
+	order, err := route(routeInput{Candidates: []candidate{nearlySpent, roomy}})
+	if err != nil {
+		t.Fatalf("route 返回错误: %v", err)
+	}
+	if order[0] != "firecrawl" {
+		t.Fatalf("首选 = %q, 余量只剩 5%% 的供应商不该排在最前", order[0])
+	}
+}
