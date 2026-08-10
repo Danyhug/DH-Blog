@@ -57,7 +57,7 @@ var moduleRegistrations = []moduleRegistration{
 		Name:            "comment",
 		MigrationModels: commentmodule.MigrationModels,
 		Build: func(ctx *buildContext) (router.Module, error) {
-			return ctx.comment(), nil
+			return ctx.comment()
 		},
 	},
 	{
@@ -158,11 +158,16 @@ func (ctx *buildContext) user() *usermodule.Module {
 	return ctx.userModule
 }
 
-func (ctx *buildContext) comment() *commentmodule.Module {
-	if ctx.commentModule == nil {
-		ctx.commentModule = commentmodule.New(ctx.db)
+func (ctx *buildContext) comment() (*commentmodule.Module, error) {
+	if ctx.commentModule != nil {
+		return ctx.commentModule, nil
 	}
-	return ctx.commentModule
+	system, err := ctx.system()
+	if err != nil {
+		return nil, err
+	}
+	ctx.commentModule = commentmodule.New(ctx.db, system.CommentPolicy())
+	return ctx.commentModule, nil
 }
 
 func (ctx *buildContext) logging() *loggingmodule.Module {
@@ -219,11 +224,15 @@ func (ctx *buildContext) article() (*articlemodule.Module, error) {
 	if ctx.tasks == nil {
 		ctx.tasks = task.NewTaskManager()
 	}
+	comment, err := ctx.comment()
+	if err != nil {
+		return nil, err
+	}
 	module, err := articlemodule.New(articlemodule.Dependencies{
 		DB:             ctx.db,
 		Cache:          ctx.cache,
 		AI:             ctx.aiService,
-		CommentCounter: ctx.comment(),
+		CommentCounter: comment,
 		Tasks:          ctx.tasks,
 	})
 	if err != nil {

@@ -24,17 +24,33 @@ var (
 	ErrEmptyCommentID      = errors.New("评论 ID 不能为空")
 	ErrParentIDRequired    = errors.New("回复评论需要指定父评论ID")
 	ErrInvalidPagination   = errors.New("无效的分页参数")
+	ErrCommentClosed       = errors.New("评论功能已关闭")
 )
 
 type handler struct {
-	repo *Repository
+	repo   *Repository
+	policy CommentPolicy
 }
 
-func newHandler(repo *Repository) *handler {
-	return &handler{repo: repo}
+func newHandler(repo *Repository, policy CommentPolicy) *handler {
+	return &handler{repo: repo, policy: policy}
 }
 
 func (h *handler) AddComment(c *gin.Context) {
+	// 访客评论受后台「开放评论」开关控制；后台回复走 ReplyComment，不受限制
+	if h.policy != nil {
+		open, err := h.policy.CommentsOpen(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, response.Error(fmt.Sprintf("%s: %v", ErrAddCommentFailed.Error(), err)))
+			return
+		}
+		if !open {
+			// 用 400 而不是 403：前端把 403 当作封禁并跳转错误页
+			c.JSON(http.StatusBadRequest, response.Error(ErrCommentClosed.Error()))
+			return
+		}
+	}
+
 	var comment Comment
 	if err := c.ShouldBindJSON(&comment); err != nil {
 		c.JSON(http.StatusBadRequest, response.Error("无效的请求参数: "+err.Error()))

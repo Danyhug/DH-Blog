@@ -8,6 +8,11 @@ import (
 	"gorm.io/gorm"
 )
 
+// CommentPolicy 提供访客评论开关，由系统配置模块实现。
+type CommentPolicy interface {
+	CommentsOpen(ctx context.Context) (bool, error)
+}
+
 // Module 装配评论模块并注册其 HTTP 路由。
 type Module struct {
 	repository *Repository
@@ -15,11 +20,11 @@ type Module struct {
 }
 
 // New 使用数据库连接完成模块内部装配。
-func New(db *gorm.DB) *Module {
+func New(db *gorm.DB, policy CommentPolicy) *Module {
 	repository := newRepository(db)
 	return &Module{
 		repository: repository,
-		handler:    newHandler(repository),
+		handler:    newHandler(repository, policy),
 	}
 }
 

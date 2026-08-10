@@ -2,6 +2,10 @@ package comment
 
 import (
 	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"dh-blog/internal/router"
@@ -19,6 +23,14 @@ type testArticle struct {
 
 func (testArticle) TableName() string { return "articles" }
 
+// stubPolicy 让测试可以固定评论开关的取值。
+type stubPolicy struct {
+	open bool
+	err  error
+}
+
+func (s stubPolicy) CommentsOpen(context.Context) (bool, error) { return s.open, s.err }
+
 func newTestModule(t *testing.T) *Module {
 	t.Helper()
 
@@ -26,7 +38,7 @@ func newTestModule(t *testing.T) *Module {
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
-	module := New(db)
+	module := New(db, stubPolicy{open: true})
 	if err := db.AutoMigrate(append(MigrationModels(), &testArticle{})...); err != nil {
 		t.Fatalf("migrate comment model: %v", err)
 	}
@@ -187,5 +199,74 @@ func TestRepositoryDeleteCommentDeletesDescendants(t *testing.T) {
 	}
 	if count != 0 {
 		t.Fatalf("comment count after delete = %d, want 0", count)
+	}
+}
+
+func postComment(t *testing.T, module *Module) *httptest.ResponseRecorder {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	routes := &router.Routes{
+		Engine:    engine,
+		PublicAPI: engine.Group("/api"),
+		AdminAPI:  engine.Group("/api/admin"),
+	}
+	module.RegisterRoutes(routes)
+
+	body := `{"articleId":1,"author":"访客","email":"guest@example.com","content":"你好","isPublic":true}`
+	request := httptest.NewRequest(http.MethodPost, "/api/comment", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+	engine.ServeHTTP(recorder, request)
+	return recorder
+}
+
+func TestAddCommentRejectedWhenCommentsClosed(t *testing.T) {
+	module := newTestModule(t)
+	module.handler.policy = stubPolicy{open: false}
+
+	recorder := postComment(t, module)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusBadRequest)
+	}
+	if !strings.Contains(recorder.Body.String(), ErrCommentClosed.Error()) {
+		t.Fatalf("body = %q, want it to mention %q", recorder.Body.String(), ErrCommentClosed.Error())
+	}
+	var count int64
+	if err := module.repository.db.Model(&Comment{}).Count(&count).Error; err != nil {
+		t.Fatalf("count comments: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("comment count = %d, want 0 when comments are closed", count)
+	}
+}
+
+func TestAddCommentAcceptedWhenCommentsOpen(t *testing.T) {
+	module := newTestModule(t)
+	module.handler.policy = stubPolicy{open: true}
+
+	recorder := postComment(t, module)
+
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want %d (body: %s)", recorder.Code, http.StatusCreated, recorder.Body.String())
+	}
+	var count int64
+	if err := module.repository.db.Model(&Comment{}).Count(&count).Error; err != nil {
+		t.Fatalf("count comments: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("comment count = %d, want 1", count)
+	}
+}
+
+func TestAddCommentSurfacesPolicyError(t *testing.T) {
+	module := newTestModule(t)
+	module.handler.policy = stubPolicy{err: errors.New("配置不可用")}
+
+	recorder := postComment(t, module)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusInternalServerError)
 	}
 }
