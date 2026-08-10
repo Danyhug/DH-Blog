@@ -35,6 +35,24 @@ type ShareInfoResponse struct {
 	CreatedAt     string     `json:"create_time"`
 }
 
+// ShareSummary 是分享管理列表/详情的展示结构。
+// 它刻意不包含密码字段：管理端只需要知道有没有设密码，不需要拿到明文。
+type ShareSummary struct {
+	ID               int        `json:"id"`
+	ShareID          string     `json:"share_id"`
+	FileKey          string     `json:"file_key"`
+	FileName         string     `json:"file_name"`
+	FileSize         int64      `json:"file_size"`
+	FileMissing      bool       `json:"file_missing"`
+	HasPassword      bool       `json:"has_password"`
+	ExpireAt         *time.Time `json:"expire_at,omitempty"`
+	IsExpired        bool       `json:"is_expired"`
+	MaxDownloadCount *int       `json:"max_download_count,omitempty"`
+	ViewCount        int64      `json:"view_count"`
+	DownloadCount    int64      `json:"download_count"`
+	CreatedAt        string     `json:"create_time"`
+}
+
 type VerifyPasswordResponse struct {
 	Valid         bool   `json:"valid"`
 	DownloadToken string `json:"download_token,omitempty"`
@@ -103,7 +121,7 @@ type Service interface {
 	VerifyPassword(ctx context.Context, shareID, password string) (*VerifyPasswordResponse, error)
 	DownloadWithToken(ctx context.Context, shareID, token string, clientIP, userAgent, referer string, preview bool) (*filesmodule.File, error)
 	Download(ctx context.Context, shareID string, clientIP, userAgent, referer string) (*filesmodule.File, error)
-	ListShares(ctx context.Context, page, pageSize int) ([]*Share, int64, error)
+	ListShares(ctx context.Context, page, pageSize int) ([]*ShareSummary, int64, error)
 	DeleteShare(ctx context.Context, id int) error
 	GetShareAccessLogs(ctx context.Context, shareID string, page, pageSize int) ([]*ShareAccessLog, int64, error)
 	RecordAccess(ctx context.Context, shareID, actionType, clientIP, userAgent, referer string) error
@@ -367,8 +385,41 @@ func (s *shareService) validateShare(share *Share) error {
 	return nil
 }
 
-func (s *shareService) ListShares(ctx context.Context, page, pageSize int) ([]*Share, int64, error) {
-	return s.shareRepo.ListByPage(ctx, page, pageSize)
+func (s *shareService) ListShares(ctx context.Context, page, pageSize int) ([]*ShareSummary, int64, error) {
+	shares, total, err := s.shareRepo.ListByPage(ctx, page, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+	summaries := make([]*ShareSummary, 0, len(shares))
+	for _, share := range shares {
+		summaries = append(summaries, s.toSummary(ctx, share))
+	}
+	return summaries, total, nil
+}
+
+// toSummary 组装管理端展示结构。文件已被删除时只标记 FileMissing，
+// 不让整个列表因为一个失效分享而查询失败。
+func (s *shareService) toSummary(ctx context.Context, share *Share) *ShareSummary {
+	summary := &ShareSummary{
+		ID:               share.ID,
+		ShareID:          share.ShareID,
+		FileKey:          share.FileKey,
+		HasPassword:      share.HasPassword(),
+		ExpireAt:         share.ExpireAt,
+		IsExpired:        share.IsExpired(),
+		MaxDownloadCount: share.MaxDownloadCount,
+		ViewCount:        share.ViewCount,
+		DownloadCount:    share.DownloadCount,
+		CreatedAt:        share.CreatedAt.Format("2006-01-02 15:04:05"),
+	}
+	file, err := s.fileService.GetDownloadInfo(ctx, 1, share.FileKey)
+	if err != nil {
+		summary.FileMissing = true
+		return summary
+	}
+	summary.FileName = file.Name
+	summary.FileSize = file.Size
+	return summary
 }
 
 func (s *shareService) DeleteShare(ctx context.Context, id int) error {

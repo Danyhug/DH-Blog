@@ -43,6 +43,25 @@ export interface CreateShareRequest {
 }
 
 /**
+ * 分享管理列表项（不含密码，只标记是否设过密码）
+ */
+export interface ShareSummary {
+  id: number
+  share_id: string
+  file_key: string
+  file_name: string
+  file_size: number
+  file_missing: boolean
+  has_password: boolean
+  expire_at?: string
+  is_expired: boolean
+  max_download_count?: number
+  view_count: number
+  download_count: number
+  create_time: string
+}
+
+/**
  * 分享访问日志类型
  */
 export interface ShareAccessLog {
@@ -80,19 +99,10 @@ export const createShare = (data: CreateShareRequest): Promise<ShareInfo> => {
  * @param pageSize 每页数量
  * @returns 分享列表
  */
-export const listShares = (page: number = 1, pageSize: number = 10): Promise<PageResult<ShareInfo>> => {
+export const listShares = (page: number = 1, pageSize: number = 10): Promise<PageResult<ShareSummary>> => {
   return request.get('/files/share', {
     params: { page, pageSize }
   })
-}
-
-/**
- * 获取分享详情（管理）
- * @param id 分享ID
- * @returns 分享详情
- */
-export const getShareDetail = (id: number): Promise<ShareInfo> => {
-  return request.get(`/files/share/${id}`)
 }
 
 /**

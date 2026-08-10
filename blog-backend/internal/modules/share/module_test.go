@@ -2,10 +2,15 @@ package share
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"io"
+	"strings"
 	"testing"
 	"time"
 
 	"dh-blog/internal/model"
+	filesmodule "dh-blog/internal/modules/files"
 	"dh-blog/internal/router"
 
 	"github.com/gin-gonic/gin"
@@ -44,7 +49,6 @@ func TestModuleRegistersShareRoutes(t *testing.T) {
 		"GET /api/share/:shareId/download": false,
 		"POST /api/files/share":            false,
 		"GET /api/files/share":             false,
-		"GET /api/files/share/:id":         false,
 		"DELETE /api/files/share/:id":      false,
 		"GET /api/files/share/:id/logs":    false,
 	}
@@ -157,5 +161,105 @@ func TestShutdownIsIdempotent(t *testing.T) {
 	case <-module.service.tokens.done:
 	default:
 		t.Fatal("token cleanup worker did not stop")
+	}
+}
+
+// stubFileService 只实现分享模块真正会用到的取文件信息，其余方法为空实现。
+type stubFileService struct {
+	files map[string]*filesmodule.File
+}
+
+func (s stubFileService) UploadFile(context.Context, uint64, string, string, int64, io.Reader) (*filesmodule.File, error) {
+	return nil, errors.New("not implemented")
+}
+func (s stubFileService) GetDownloadInfo(_ context.Context, _ uint64, fileID string) (*filesmodule.File, error) {
+	if file, ok := s.files[fileID]; ok {
+		return file, nil
+	}
+	return nil, errors.New("文件不存在")
+}
+func (s stubFileService) GetStoragePath() string                           { return "" }
+func (s stubFileService) EnsureProtectedDirectories(context.Context) error { return nil }
+func (s stubFileService) GetProtectedDirectoryID(context.Context, string) (string, error) {
+	return "", nil
+}
+func (s stubFileService) SyncFilesFromDiskDebounced() {}
+
+func newTestModuleWithFiles(t *testing.T, files map[string]*filesmodule.File) *Module {
+	t.Helper()
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	module := New(Dependencies{DB: db, FileService: stubFileService{files: files}})
+	t.Cleanup(module.Shutdown)
+	if err := db.AutoMigrate(MigrationModels()...); err != nil {
+		t.Fatalf("migrate share models: %v", err)
+	}
+	return module
+}
+
+func TestListSharesResolvesFileAndHidesPassword(t *testing.T) {
+	module := newTestModuleWithFiles(t, map[string]*filesmodule.File{
+		"file-1": {Name: "报告.pdf", Size: 2048},
+	})
+	ctx := context.Background()
+	expired := time.Now().Add(-time.Hour)
+	share := &Share{
+		ShareID:   "abc123",
+		FileKey:   "file-1",
+		Password:  "$2a$10$hashedsecret",
+		ExpireAt:  &expired,
+		CreatedAt: model.JSONTime{Time: time.Now()},
+	}
+	if err := module.repository.Create(ctx, share); err != nil {
+		t.Fatalf("create share: %v", err)
+	}
+
+	summaries, total, err := module.Service().ListShares(ctx, 1, 10)
+	if err != nil {
+		t.Fatalf("list shares: %v", err)
+	}
+	if total != 1 || len(summaries) != 1 {
+		t.Fatalf("list returned %d shares (total %d), want 1", len(summaries), total)
+	}
+	got := summaries[0]
+	if got.FileName != "报告.pdf" || got.FileSize != 2048 {
+		t.Fatalf("file info = %q/%d, want 报告.pdf/2048", got.FileName, got.FileSize)
+	}
+	if !got.HasPassword {
+		t.Fatal("has_password should be true for a password-protected share")
+	}
+	if !got.IsExpired {
+		t.Fatal("is_expired should be true for a share past its expiry")
+	}
+	if got.FileMissing {
+		t.Fatal("file_missing should be false when the file still exists")
+	}
+
+	// 管理端不应该拿到密码：ShareSummary 里根本没有这个字段
+	encoded, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("marshal summary: %v", err)
+	}
+	if strings.Contains(string(encoded), "hashedsecret") || strings.Contains(string(encoded), `"password"`) {
+		t.Fatalf("share summary leaked the password: %s", encoded)
+	}
+}
+
+func TestListSharesFlagsDeletedFiles(t *testing.T) {
+	module := newTestModuleWithFiles(t, map[string]*filesmodule.File{})
+	ctx := context.Background()
+	share := &Share{ShareID: "gone", FileKey: "missing-file", CreatedAt: model.JSONTime{Time: time.Now()}}
+	if err := module.repository.Create(ctx, share); err != nil {
+		t.Fatalf("create share: %v", err)
+	}
+
+	summaries, _, err := module.Service().ListShares(ctx, 1, 10)
+	if err != nil {
+		t.Fatalf("list shares should not fail when the file is gone: %v", err)
+	}
+	if len(summaries) != 1 || !summaries[0].FileMissing {
+		t.Fatalf("summaries = %#v, want one entry flagged as file_missing", summaries)
 	}
 }

@@ -52,7 +52,6 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 	fileAPI := routes.AuthenticatedAPI("/api/files")
 	fileAPI.POST("/share", m.handler.CreateShare)
 	fileAPI.GET("/share", m.handler.ListShares)
-	fileAPI.GET("/share/:id", m.handler.GetShareDetail)
 	fileAPI.DELETE("/share/:id", m.handler.DeleteShare)
 	fileAPI.GET("/share/:id/logs", m.handler.GetAccessLogs)
 }

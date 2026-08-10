@@ -100,32 +100,6 @@ func (h *handler) ListShares(c *gin.Context) {
 	c.JSON(http.StatusOK, response.SuccessWithData(response.Page(total, int64(page), shares)))
 }
 
-// GetShareDetail returns one managed share.
-// @Summary 获取分享详情
-// @Description 根据ID获取分享详细信息
-// @Tags 分享管理
-// @Accept json
-// @Produce json
-// @Param id path int true "分享ID"
-// @Success 200 {object} response.AjaxResult "分享详情"
-// @Failure 400 {object} response.AjaxResult "参数错误"
-// @Failure 401 {object} response.AjaxResult "未授权"
-// @Failure 404 {object} response.AjaxResult "分享不存在"
-// @Router /api/files/share/{id} [get]
-func (h *handler) GetShareDetail(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		response.FailWithCode(c, http.StatusBadRequest, "无效的分享ID")
-		return
-	}
-	share, err := h.service.GetShareDetail(c.Request.Context(), id)
-	if err != nil {
-		response.FailWithCode(c, http.StatusNotFound, "分享不存在")
-		return
-	}
-	c.JSON(http.StatusOK, response.SuccessWithData(share))
-}
-
 // DeleteShare deletes one managed share.
 // @Summary 删除分享
 // @Description 根据ID删除分享
