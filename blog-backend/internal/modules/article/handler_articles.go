@@ -3,6 +3,7 @@ package article
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"dh-blog/internal/response"
 
@@ -29,20 +30,6 @@ func (h *Handler) GetArticleDetail(c *gin.Context) {
 	article.CanAccess = true
 	go h.articleRepository.UpdateArticleViewCount(id)
 	h.SuccessWithData(c, article)
-}
-
-func (h *Handler) GetArticleTitle(c *gin.Context) {
-	id, err := h.getID(c, "id")
-	if err != nil {
-		h.Error(c, err)
-		return
-	}
-	article, err := h.articleRepository.FindByID(c.Request.Context(), id)
-	if err != nil {
-		h.Error(c, err)
-		return
-	}
-	h.SuccessWithData(c, article.Title)
 }
 
 func (h *Handler) UnlockArticle(c *gin.Context) {
@@ -76,6 +63,10 @@ func (h *Handler) SaveArticle(c *gin.Context) {
 	}
 	if h.tasks != nil {
 		h.tasks.SubmitTagGeneration(article.ID, article.Content)
+		// 作者没有手写摘要时才自动生成，避免覆盖手动内容
+		if strings.TrimSpace(article.Summary) == "" {
+			h.tasks.SubmitSummaryGeneration(article.ID, article.Content)
+		}
 	}
 	c.JSON(http.StatusCreated, response.Success())
 }

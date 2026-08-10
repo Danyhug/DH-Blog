@@ -15,7 +15,6 @@ declare module 'vue' {
     AdminSide: typeof import('./src/components/backend/AdminSide.vue')['default']
     ArticleBox: typeof import('./src/components/frontend/ArticleBox.vue')['default']
     ArticleInfoSide: typeof import('./src/components/frontend/Side/ArticleInfoSide.vue')['default']
-    ArticlePreview: typeof import('./src/components/backend/ArticlePreview.vue')['default']
     ArticleTable: typeof import('./src/components/backend/Table/ArticleTable.vue')['default']
     Banner: typeof import('./src/components/frontend/Banner.vue')['default']
     CategoryTable: typeof import('./src/components/backend/Table/CategoryTable.vue')['default']

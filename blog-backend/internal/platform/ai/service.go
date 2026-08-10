@@ -19,12 +19,15 @@ import (
 type AIService interface {
 	// GenerateTags 生成文章标签总结，existingTags 用于提供已有标签上下文。
 	GenerateTags(text string, existingTags []string) ([]string, error)
+	// GenerateSummary 生成用于首页展示的文章摘要。
+	GenerateSummary(text string) (string, error)
 }
 
-// AIConfigSource is the narrow configuration port used by AI tagging.
+// AIConfigSource is the narrow configuration port used by AI tagging and summaries.
 // Implementations must return current values so configuration updates take effect immediately.
 type AIConfigSource interface {
 	LoadAITaggingConfig(ctx context.Context) (endpoint, apiKey, model, prompt string, err error)
+	LoadAISummaryConfig(ctx context.Context) (endpoint, apiKey, model, prompt string, err error)
 }
 
 // OpenAIRequest 定义向OpenAI API发送的请求结构
@@ -61,6 +64,7 @@ type OpenAIService struct {
 }
 
 const tagCacheTTL = 2 * time.Hour
+const summaryCacheTTL = 2 * time.Hour
 
 // NewAIService 创建新的AI服务实例
 func NewAIService(config AIConfigSource, cache dhcache.Cache) AIService {
@@ -242,4 +246,72 @@ func (s *OpenAIService) GenerateTags(text string, existingTags []string) (result
 	logrus.Debug("AI生成的标签已缓存")
 
 	return cleanTags, nil
+}
+
+// 为AI生成的摘要创建缓存键
+func generateSummaryCacheKey(text string) string {
+	shortText := text
+	if len(shortText) > 50 {
+		shortText = shortText[:50]
+	}
+	return "ai:summary:" + shortText
+}
+
+// extractBracketed 取出提示词要求的 [摘要正文] 包裹内容；没有方括号时退回原文。
+func extractBracketed(content string) string {
+	content = strings.TrimSpace(content)
+	start := strings.Index(content, "[")
+	end := strings.LastIndex(content, "]")
+	if start >= 0 && end > start {
+		content = content[start+1 : end]
+	}
+	return strings.TrimSpace(content)
+}
+
+func (s *OpenAIService) GenerateSummary(text string) (string, error) {
+	cacheKey := generateSummaryCacheKey(text)
+	if cached, found := s.cache.Get(cacheKey); found {
+		if summary, ok := cached.(string); ok {
+			logrus.Debug("从缓存获取AI生成的摘要")
+			return summary, nil
+		}
+		logrus.Warn("AI生成的摘要缓存类型转换失败，将重新生成")
+	}
+
+	endpoint, apiKey, model, prompt, err := s.config.LoadAISummaryConfig(context.Background())
+	if err != nil {
+		return "", fmt.Errorf("获取AI配置失败: %w", err)
+	}
+
+	tmpl, err := template.New("summaryPrompt").Parse(prompt)
+	if err != nil {
+		logrus.Errorf("解析摘要提示词模板失败: %v", err)
+		return "", err
+	}
+
+	// 摘要提示词使用 {{.ArticleContent}} 占位符
+	data := struct{ ArticleContent string }{ArticleContent: text}
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		logrus.Errorf("执行摘要提示词模板失败: %v", err)
+		return "", err
+	}
+
+	response, err := s.request(buf.String(), endpoint, apiKey, model)
+	if err != nil {
+		logrus.Errorf("请求OpenAI API失败: %v", err)
+		return "", err
+	}
+	if len(response.Choices) == 0 {
+		return "", fmt.Errorf("AI API 响应中没有 Choices，可能存在错误或无内容")
+	}
+
+	summary := extractBracketed(response.Choices[0].Message.Content)
+	if summary == "" {
+		return "", fmt.Errorf("AI 返回的摘要为空")
+	}
+
+	logrus.Infof("AI生成的摘要: %s", summary)
+	_ = s.cache.Set(cacheKey, summary, summaryCacheTTL)
+	return summary, nil
 }

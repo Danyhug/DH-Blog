@@ -12,14 +12,18 @@
     <el-table-column prop="wordNum" label="字数" />
     <el-table-column prop="createTime" label="发布时间" width="170" />
     <el-table-column prop="updateTime" label="更新时间" width="170" />
-    <el-table-column fixed="right" label="操作" width="150">
+    <el-table-column fixed="right" label="操作" width="190">
       <template #default="scope">
         <el-button link type="primary" size="large" @click.prevent="edit(scope.row.id)">编辑</el-button>
         <el-button link type="success" size="small" @click.prevent="generateTags(scope.row.id)" :loading="generatingTags[scope.row.id]">
           <el-icon><MagicStick /></el-icon> AI标签
         </el-button>
         <br>
-        <el-button link type="danger" size="small">删除</el-button>
+        <el-button link type="warning" size="small" @click.prevent="generateSummary(scope.row.id)" :loading="generatingSummary[scope.row.id]">
+          <el-icon><MagicStick /></el-icon> AI摘要
+        </el-button>
+        <el-button link type="danger" size="small" @click.prevent="removeArticle(scope.row)"
+          :loading="deleting[scope.row.id]">删除</el-button>
       </template>
     </el-table-column>
   </el-table>
@@ -28,13 +32,18 @@
 import { useRouter } from 'vue-router'
 import { reactive } from 'vue'
 import { MagicStick } from '@element-plus/icons-vue'
-import { generateAITags } from '@/api/admin'
+import { ElMessageBox } from 'element-plus'
+import { generateAITags, generateAISummary, deleteArticle } from '@/api/admin'
 import { notify } from '@/utils/notification'
+import { Article } from '@/types/Article'
+import { Tag } from '@/types/Tag'
 
 const props = defineProps(['articles'])
 const router = useRouter()
 // 使用Record类型来定义generatingTags对象
 const generatingTags = reactive<Record<number, boolean>>({})
+const generatingSummary = reactive<Record<number, boolean>>({})
+const deleting = reactive<Record<number, boolean>>({})
 
 const edit = (id: number) => {
   router.push({ name: 'publish', query: { articleId: id } });
@@ -68,5 +77,48 @@ const generateTags = async (id: number) => {
 
 // 定义emit以便通知父组件刷新
 const emit = defineEmits(['refresh'])
+
+const generateSummary = async (id: number) => {
+  try {
+    generatingSummary[id] = true
+    await generateAISummary(id)
+    notify.success({
+      message: '摘要生成任务已提交，稍后刷新页面查看'
+    })
+    emit('refresh')
+  } catch (error) {
+    console.error('生成摘要失败:', error)
+    notify.error({
+      message: '摘要生成失败，请稍后重试'
+    })
+  } finally {
+    generatingSummary[id] = false
+  }
+}
+const removeArticle = async (article: Article<Tag>) => {
+  const id = article.id as number
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除文章「${article.title}」吗？`,
+      '警告',
+      { confirmButtonText: '确定删除', cancelButtonText: '取消', type: 'warning' }
+    )
+  } catch {
+    // 用户取消，不做处理
+    return
+  }
+
+  try {
+    deleting[id] = true
+    await deleteArticle(id)
+    notify.success({ message: '文章已删除' })
+    emit('refresh')
+  } catch (error) {
+    // 失败原因由 axios 拦截器统一提示（如「文章不存在」），这里不再重复弹窗
+    console.error('删除文章失败:', error)
+  } finally {
+    deleting[id] = false
+  }
+}
 
 </script>

@@ -20,6 +20,7 @@ type Cache interface {
 // AIService is the article module's narrow AI dependency.
 type AIService interface {
 	GenerateTags(text string, existingTags []string) ([]string, error)
+	GenerateSummary(text string) (string, error)
 }
 
 // CommentCounter provides the cross-module statistic used by the overview.
@@ -30,11 +31,16 @@ type CommentCounter interface {
 // TagGenerationHandler is registered with the background task scheduler.
 type TagGenerationHandler = func(ctx context.Context, articleID int, content string) error
 
+// SummaryGenerationHandler is registered with the background task scheduler.
+type SummaryGenerationHandler = func(ctx context.Context, articleID int, content string) error
+
 // TagTaskScheduler is the narrow scheduling port used by the article module.
 // The scheduler owns queueing and retries; the article module owns the work.
 type TagTaskScheduler interface {
 	RegisterTagGenerationHandler(handler TagGenerationHandler)
 	SubmitTagGeneration(articleID int, content string)
+	RegisterSummaryGenerationHandler(handler SummaryGenerationHandler)
+	SubmitSummaryGeneration(articleID int, content string)
 }
 
 // Dependencies contains only infrastructure and cross-module ports.
@@ -66,6 +72,7 @@ func New(deps Dependencies) (*Module, error) {
 
 	if deps.Tasks != nil {
 		deps.Tasks.RegisterTagGenerationHandler(handler.ProcessTagGeneration)
+		deps.Tasks.RegisterSummaryGenerationHandler(handler.ProcessSummaryGeneration)
 	}
 
 	return &Module{handler: handler}, nil
@@ -82,7 +89,6 @@ func ensureDefaults(db *gorm.DB) error {
 func (m *Module) RegisterRoutes(routes *router.Routes) {
 	publicAPI := routes.PublicAPI
 	publicAPI.GET("/article/:id", m.handler.GetArticleDetail)
-	publicAPI.GET("/article/title/:id", m.handler.GetArticleTitle)
 	publicAPI.GET("/article/unlock/:id/:password", m.handler.UnlockArticle)
 	publicAPI.POST("/article/list", m.handler.GetPublicArticleList)
 	publicAPI.GET("/article/overview", m.handler.GetOverview)
@@ -96,7 +102,9 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 	adminAPI.POST("/article", m.handler.SaveArticle)
 	adminAPI.PUT("/article", m.handler.UpdateArticle)
 	adminAPI.POST("/article/list", m.handler.GetArticleList)
+	adminAPI.DELETE("/article/:id", m.handler.DeleteArticle)
 	adminAPI.POST("/article/:id/generate-tags", m.handler.GenerateTags)
+	adminAPI.POST("/article/:id/generate-summary", m.handler.GenerateSummary)
 	adminAPI.POST("/tag", m.handler.CreateTag)
 	adminAPI.PUT("/tag", m.handler.UpdateTag)
 	adminAPI.DELETE("/tag/:id", m.handler.DeleteTag)

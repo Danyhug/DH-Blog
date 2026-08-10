@@ -36,3 +36,25 @@ func NewAiGenTask(articleID int, content string) *AiGenTagTask {
 		Content:   content,
 	}
 }
+
+// AiGenSummaryTask AI生成摘要任务
+type AiGenSummaryTask struct {
+	ArticleID int
+	Content   string
+}
+
+func (a *AiGenSummaryTask) Type() string {
+	return "AI_Gen_Summary"
+}
+
+func (a *AiGenSummaryTask) Payload() interface{} {
+	return a
+}
+
+// NewAiGenSummaryTask 创建AI生成摘要任务
+func NewAiGenSummaryTask(articleID int, content string) *AiGenSummaryTask {
+	return &AiGenSummaryTask{
+		ArticleID: articleID,
+		Content:   content,
+	}
+}

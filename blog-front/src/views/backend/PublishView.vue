@@ -43,6 +43,12 @@
   </div>
 
   <el-divider content-position="center">
+    <p class="tip">文章摘要</p>
+  </el-divider>
+  <el-input v-model="article.summary" type="textarea" :autosize="{ minRows: 2, maxRows: 5 }" maxlength="300"
+    show-word-limit placeholder="首页展示用。留空则发布后由 AI 自动生成，也可以在文章管理页手动重新生成" />
+
+  <el-divider content-position="center">
     <p class="tip">文章内容</p>
   </el-divider>
   <MdEditor ref="editor" v-model="article.content" :toolbars="toolbars" :previewTheme="system.mdEditorInit.previewTheme"
@@ -94,6 +100,7 @@ const autoSaveText = ref('')
 const article = reactive<Article<String>>({
   title: '',
   content: ``,
+  summary: '',
   categoryId: -1,
   tags: [],
   thumbnailUrl: '',
@@ -139,6 +146,7 @@ const clear = (manual: boolean = false) => {
   function func() {
     article.title = ''
     article.content = ''
+    article.summary = ''
     article.categoryId = -1
     article.tags = []
     // 清空本地

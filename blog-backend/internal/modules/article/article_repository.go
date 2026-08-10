@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -91,6 +92,15 @@ func (r *ArticleRepository) SaveArticle(article *Article) error {
 func (r *ArticleRepository) UpdateArticle(article *Article) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		article.WordNum = countWords(article.Content)
+		// 编辑器可能没有携带 summary（例如恢复旧草稿），此时保留库里已生成的摘要，
+		// 否则 tx.Save 会用零值把它抹掉。
+		if article.Summary == "" {
+			var stored Article
+			if err := tx.Select("summary").First(&stored, article.ID).Error; err != nil {
+				return fmt.Errorf("读取文章摘要失败: %w", err)
+			}
+			article.Summary = stored.Summary
+		}
 		tags, err := r.resolveTags(tx, article.CategoryID, article.TagNames)
 		if err != nil {
 			return err
@@ -298,6 +308,21 @@ func (r *ArticleRepository) AppendGeneratedTags(ctx context.Context, articleID i
 	})
 }
 
+// SaveGeneratedSummary stores an AI-generated summary for a single article.
+func (r *ArticleRepository) SaveGeneratedSummary(ctx context.Context, articleID int, summary string) error {
+	result := r.db.WithContext(ctx).Model(&Article{}).Where("id = ?", articleID).Update("summary", summary)
+	if result.Error != nil {
+		return fmt.Errorf("保存文章摘要失败: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("保存文章摘要失败: 文章 %d 不存在", articleID)
+	}
+	cacheKey := fmt.Sprintf("%s%d", PrefixArticle, articleID)
+	r.cache.Delete(cacheKey)
+	r.clearArticleListCache()
+	return nil
+}
+
 func (r *ArticleRepository) UpdateArticleViewCount(id int) {
 	if err := r.db.Model(&Article{}).Where("id = ?", id).Update("views", gorm.Expr("views + 1")).Error; err != nil {
 		logrus.Errorf("更新文章浏览次数失败: %d, 错误: %v", id, err)
@@ -364,20 +389,32 @@ func (r *ArticleRepository) FindPublicPage(ctx context.Context, page, pageSize i
 	for i := range articles {
 		articles[i].CanAccess = !articles[i].IsLocked || canAccessLocked
 		articles[i].LockPassword = ""
-		if articles[i].IsLocked {
-			if !canAccessLocked {
-				articles[i].Content = ""
-			}
+		if articles[i].IsLocked && !canAccessLocked {
+			// 未解锁的私密文章不透出任何正文信息
+			articles[i].Content = ""
+			articles[i].Summary = ""
+			continue
 		}
+		if articles[i].Summary == "" {
+			// 还没生成摘要的文章退回截断正文，避免首页空白
+			articles[i].Summary = excerpt(articles[i].Content, summaryFallbackRunes)
+		}
+		// 列表只展示摘要，正文无需下发
+		articles[i].Content = ""
 	}
 	return articles, total, nil
 }
 
 func (r *ArticleRepository) Delete(ctx context.Context, id int) error {
-	err := r.gormRepository.Delete(ctx, id)
-	if err != nil {
-		logrus.Errorf("删除文章失败: %d, 错误: %v", id, err)
-		return err
+	// 直接在这里执行删除而不复用泛型仓储，是为了拿到 RowsAffected：
+	// 删除不存在的文章必须报错，否则接口会对一个无效 id 返回成功。
+	result := r.db.WithContext(ctx).Delete(&Article{}, id)
+	if result.Error != nil {
+		logrus.Errorf("删除文章失败: %d, 错误: %v", id, result.Error)
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrArticleNotFound
 	}
 	cacheKey := fmt.Sprintf("%s%d", PrefixArticle, id)
 	if deleted := r.cache.Delete(cacheKey); !deleted {
@@ -398,3 +435,25 @@ func (r *ArticleRepository) clearArticleListCache() {
 }
 
 func countWords(content string) int { return len(strings.Fields(content)) }
+
+// summaryFallbackRunes 是尚未生成 AI 摘要时，从正文截取的预览长度。
+const summaryFallbackRunes = 120
+
+var (
+	markdownImagePattern = regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`)
+	markdownLinkPattern  = regexp.MustCompile(`\[([^\]]*)\]\([^)]*\)`)
+	markdownNoisePattern = regexp.MustCompile("[#>*`~_]+")
+)
+
+// excerpt 把 Markdown 正文压成一段纯文本预览，供还没有摘要的老文章兜底展示。
+func excerpt(content string, limit int) string {
+	plain := markdownImagePattern.ReplaceAllString(content, "")
+	plain = markdownLinkPattern.ReplaceAllString(plain, "$1")
+	plain = markdownNoisePattern.ReplaceAllString(plain, "")
+	plain = strings.Join(strings.Fields(plain), " ")
+	runes := []rune(plain)
+	if len(runes) <= limit {
+		return plain
+	}
+	return string(runes[:limit]) + "…"
+}

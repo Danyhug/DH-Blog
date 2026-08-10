@@ -37,11 +37,19 @@ export const getArticleList = (data: Page): Promise<PageResult<Article<any>>> =>
 
 /**
  * 更新文章
- * @param data 
- * @returns 
+ * @param data
+ * @returns
  */
 export const updateArticle = (data: Article<any>): Promise<Article<any>> => {
   return request.put('/admin/article', data)
+}
+
+/**
+ * 删除文章
+ * @param id 文章ID
+ */
+export const deleteArticle = (id: number): Promise<any> => {
+  return request.delete('/admin/article/' + id)
 }
 
 // ********** 标签操作 **********
@@ -287,4 +295,12 @@ export const deleteSystemSetting = (id: number): Promise<any> => {
  */
 export const generateAITags = (articleId: number): Promise<Tag[]> => {
   return request.post(`/admin/article/${articleId}/generate-tags`);
+}
+
+/**
+ * 使用AI为文章生成摘要（异步任务，完成后写回文章）
+ * @param articleId 文章ID
+ */
+export const generateAISummary = (articleId: number): Promise<string> => {
+  return request.post(`/admin/article/${articleId}/generate-summary`);
 }

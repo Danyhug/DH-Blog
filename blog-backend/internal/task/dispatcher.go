@@ -278,6 +278,23 @@ func (m *TaskManager) SubmitTagGeneration(articleID int, content string) {
 	m.SubmitTask(NewAiGenTask(articleID, content))
 }
 
+// RegisterSummaryGenerationHandler binds the article module's summary handler
+// to the generic queue, mirroring the tag generation registration.
+func (m *TaskManager) RegisterSummaryGenerationHandler(handler func(context.Context, int, string) error) {
+	m.dispatcher.Register("AI_Gen_Summary", func(ctx context.Context, payload interface{}) error {
+		summaryTask, ok := payload.(*AiGenSummaryTask)
+		if !ok {
+			return fmt.Errorf("无效的任务负载类型")
+		}
+		return handler(ctx, summaryTask.ArticleID, summaryTask.Content)
+	})
+}
+
+// SubmitSummaryGeneration submits the article module's summary work.
+func (m *TaskManager) SubmitSummaryGeneration(articleID int, content string) {
+	m.SubmitTask(NewAiGenSummaryTask(articleID, content))
+}
+
 // Start 启动任务管理器
 func (m *TaskManager) Start() {
 	m.dispatcher.Start()

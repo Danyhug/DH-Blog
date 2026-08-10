@@ -51,3 +51,20 @@ func (h *Handler) GenerateTags(c *gin.Context) {
 	}
 	h.SuccessWithMessage(c, "标签生成任务已提交，稍后将自动更新")
 }
+
+func (h *Handler) GenerateSummary(c *gin.Context) {
+	id, err := h.getID(c, "id")
+	if err != nil {
+		h.Error(c, err)
+		return
+	}
+	article, err := h.articleRepository.FindByID(c.Request.Context(), id)
+	if err != nil {
+		h.Error(c, err)
+		return
+	}
+	if h.tasks != nil {
+		h.tasks.SubmitSummaryGeneration(article.ID, article.Content)
+	}
+	h.SuccessWithMessage(c, "摘要生成任务已提交，稍后将自动更新")
+}

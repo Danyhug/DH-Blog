@@ -33,7 +33,7 @@
               <span class="private-hint">正文需使用密钥解锁后阅读</span>
             </span>
           </div>
-          <p v-else class="text">{{ article.content }}</p>
+          <p v-else class="text">{{ article.summary }}</p>
           <div class="bottom">
             <span class="more">{{ article.isLocked && !article.canAccess ? '解锁...' : 'more...' }}</span>
           </div>

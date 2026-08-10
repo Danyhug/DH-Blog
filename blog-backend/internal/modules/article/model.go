@@ -11,6 +11,7 @@ type Article struct {
 	model.BaseModel `gorm:"embedded"`
 	Title           string `gorm:"column:title;not null" json:"title"`
 	Content         string `gorm:"column:content;not null" json:"content"`
+	Summary         string `gorm:"column:summary" json:"summary"`
 	CategoryID      int    `gorm:"column:category_id" json:"categoryId"`
 	Views           int    `gorm:"column:views;default:0" json:"views"`
 	WordNum         int    `gorm:"column:word_num" json:"wordNum"`
