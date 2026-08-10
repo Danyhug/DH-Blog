@@ -425,6 +425,23 @@ func (r *ArticleRepository) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
+// FindSummaryTargetIDs lists the articles a batch summary run should process.
+// onlyMissing keeps articles that have no summary yet — both the ones never
+// generated and the ones whose generation failed and left the column empty.
+// Locked articles are included: their summary is only shown to signed-in
+// viewers, but it still has to exist.
+func (r *ArticleRepository) FindSummaryTargetIDs(ctx context.Context, onlyMissing bool) ([]int, error) {
+	query := r.db.WithContext(ctx).Model(&Article{}).Order("id DESC")
+	if onlyMissing {
+		query = query.Where("summary IS NULL OR summary = ''")
+	}
+	var ids []int
+	if err := query.Pluck("id", &ids).Error; err != nil {
+		return nil, fmt.Errorf("查询待生成摘要的文章失败: %w", err)
+	}
+	return ids, nil
+}
+
 func (r *ArticleRepository) clearArticleListCache() {
 	cacheKey := fmt.Sprintf("%scount", PrefixArticleList)
 	if deleted := r.cache.Delete(cacheKey); !deleted {

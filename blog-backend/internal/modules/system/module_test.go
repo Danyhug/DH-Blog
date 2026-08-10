@@ -131,7 +131,8 @@ func TestNewUpgradesOnlyLegacyDefaultPrompts(t *testing.T) {
 		customKey     string
 	}{
 		{"tags", SettingKeyAIPromptGetTags, legacyDefaultTagsPrompt, DefaultTagsPrompt, SettingKeyAIPromptGetAbstract},
-		{"abstract", SettingKeyAIPromptGetAbstract, legacyDefaultAbstractPrompt, DefaultAbstractPrompt, SettingKeyAIPromptGetTags},
+		{"abstract-v1", SettingKeyAIPromptGetAbstract, legacyDefaultAbstractPromptV1, DefaultAbstractPrompt, SettingKeyAIPromptGetTags},
+		{"abstract-v2", SettingKeyAIPromptGetAbstract, legacyDefaultAbstractPromptV2, DefaultAbstractPrompt, SettingKeyAIPromptGetTags},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -172,8 +173,15 @@ func TestDefaultAIPromptsKeepRequiredTemplateContracts(t *testing.T) {
 	if !strings.Contains(DefaultTagsPrompt, "JSON") || !strings.Contains(DefaultTagsPrompt, "不得超过 8 个") {
 		t.Fatal("tag prompt is missing structured output constraints")
 	}
-	if !strings.Contains(DefaultAbstractPrompt, "{{.ArticleContent}}") || !strings.Contains(DefaultAbstractPrompt, "本文讲述了") {
-		t.Fatal("abstract prompt is missing its compatibility contract")
+	if !strings.Contains(DefaultAbstractPrompt, "{{.ArticleContent}}") {
+		t.Fatal("abstract prompt is missing its {{.ArticleContent}} placeholder")
+	}
+	if !strings.Contains(DefaultAbstractPrompt, "方括号") || !strings.Contains(DefaultAbstractPrompt, "不得超过 120 个字") {
+		t.Fatal("abstract prompt is missing its output-shape contract")
+	}
+	// 首页展示的是摘要本身，开场套话会让列表读起来不像正常句子。
+	if strings.Contains(DefaultAbstractPrompt, "必须以“本文讲述了”开头") {
+		t.Fatal("abstract prompt still mandates the removed 本文讲述了 opening")
 	}
 }
 

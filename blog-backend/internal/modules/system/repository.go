@@ -33,7 +33,7 @@ func (r *settingRepository) ensureDefaults(ctx context.Context) error {
 			if err := tx.Model(&Setting{}).Where("setting_key = ? AND config_type <> ?", item.Key, item.ConfigType).Update("config_type", item.ConfigType).Error; err != nil {
 				return fmt.Errorf("修复系统设置类型 %s: %w", item.Key, err)
 			}
-			if legacy, ok := legacyPromptDefault(item.Key); ok {
+			for _, legacy := range legacyPromptDefaults(item.Key) {
 				if err := tx.Model(&Setting{}).
 					Where("setting_key = ? AND setting_value = ?", item.Key, legacy).
 					Update("setting_value", item.Value).Error; err != nil {

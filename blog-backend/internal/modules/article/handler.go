@@ -24,6 +24,7 @@ type Handler struct {
 	commentCounter     CommentCounter
 	ai                 AIService
 	tasks              TagTaskScheduler
+	batchSummary       *batchSummaryRunner
 }
 
 func NewHandler(
@@ -41,5 +42,6 @@ func NewHandler(
 		commentCounter:     commentCounter,
 		ai:                 ai,
 		tasks:              tasks,
+		batchSummary:       newBatchSummaryRunner(),
 	}
 }

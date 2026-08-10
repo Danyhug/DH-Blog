@@ -304,3 +304,28 @@ export const generateAITags = (articleId: number): Promise<Tag[]> => {
 export const generateAISummary = (articleId: number): Promise<string> => {
   return request.post(`/admin/article/${articleId}/generate-summary`);
 }
+
+/** 批量生成摘要的模式：替换全部文章 / 只补齐没有摘要的文章 */
+export type BatchSummaryMode = 'overwrite' | 'fill'
+
+/** 批量生成摘要的进度，批次结束后仍返回最后一次的统计 */
+export interface BatchSummaryStatus {
+  running: boolean
+  mode: string
+  total: number
+  done: number
+  failed: number
+}
+
+/**
+ * 启动摘要批量生成（后端并发 5，立即返回，需轮询进度）
+ * @param mode overwrite 替换全部；fill 只补无摘要的文章
+ */
+export const startBatchAISummary = (mode: BatchSummaryMode): Promise<{ started: boolean, total: number }> => {
+  return request.post('/admin/article/summaries/batch', { mode });
+}
+
+/** 查询摘要批量生成进度 */
+export const getBatchAISummaryStatus = (): Promise<BatchSummaryStatus> => {
+  return request.get('/admin/article/summaries/batch');
+}

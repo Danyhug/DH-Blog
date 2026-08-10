@@ -138,7 +138,7 @@ JWT 从 `Authorization` 头（`Bearer ` 前缀可选）或 `?token=` 读取。�
 
 ## 已知的坑
 
-- `docs/` 里的设计文档是**实现前**写的，可能尚未落地（例如 `2026-08-10-文章摘要优化与批量生成设计.md` 描述的批量摘要接口，后端目前并不存在）。以代码为准。
+- `docs/` 里的设计文档是**实现前**写的，可能尚未落地。以代码为准（`2026-08-10-文章摘要优化与批量生成设计.md` 已实现，并按最终实现回写过一次）。
 - CI（`.github/workflows/build.yml`）用 pnpm 且依赖 `blog-front/pnpm-lock.yaml`，但仓库里只有 `bun.lock`，前端安装步骤与本地工具链不一致。
 - `blog-front/README.md` 是旧版遗留（写的是 SpringBoot + MySQL），以根 `README.md` 为准。
 - 首次启动时若 `users` 表为空，程序会在 **stdin** 交互式索要管理员用户名和密码，非交互环境下会卡住。

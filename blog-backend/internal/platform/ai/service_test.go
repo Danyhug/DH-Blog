@@ -118,6 +118,61 @@ func TestGenerateSummaryRejectsEmptyChoices(t *testing.T) {
 	}
 }
 
+func TestGenerateSummaryDoesNotShareCacheBetweenArticlesWithTheSameOpening(t *testing.T) {
+	// 两篇文章共用一段长前言，只在结尾不同 —— 批量生成时最容易踩到的串摘要场景。
+	shared := strings.Repeat("同样的开头", 30)
+	first, second := shared+"第一篇的独有内容", shared+"第二篇的独有内容"
+
+	var requests int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var request OpenAIRequest
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Errorf("decode request: %v", err)
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		requests++
+		summary := "第一篇的摘要"
+		if len(request.Messages) == 1 && strings.Contains(request.Messages[0].Content, "第二篇的独有内容") {
+			summary = "第二篇的摘要"
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"index":0,"message":{"role":"assistant","content":"[` + summary + `]"}}]}`))
+	}))
+	t.Cleanup(server.Close)
+
+	cache := dhcache.NewCache()
+	t.Cleanup(cache.Shutdown)
+	service := NewAIService(testAIConfigSource{
+		endpoint:      server.URL,
+		summaryPrompt: "article={{.ArticleContent}}",
+	}, cache)
+
+	firstSummary, err := service.GenerateSummary(first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondSummary, err := service.GenerateSummary(second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if firstSummary != "第一篇的摘要" || secondSummary != "第二篇的摘要" {
+		t.Fatalf("summaries collided in the cache: %q and %q", firstSummary, secondSummary)
+	}
+	if requests != 2 {
+		t.Fatalf("upstream was called %d times, want one call per distinct article", requests)
+	}
+
+	// 同一篇文章仍然命中缓存，不再打上游。
+	cached, err := service.GenerateSummary(first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cached != "第一篇的摘要" || requests != 2 {
+		t.Fatalf("re-summarising the same article did not hit the cache: %q after %d requests", cached, requests)
+	}
+}
+
 func TestExtractBracketedFallsBackToRawText(t *testing.T) {
 	cases := map[string]string{
 		"[被包裹的摘要]":   "被包裹的摘要",

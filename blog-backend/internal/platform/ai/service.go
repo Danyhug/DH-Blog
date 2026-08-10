@@ -3,6 +3,8 @@ package ai
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -248,13 +250,11 @@ func (s *OpenAIService) GenerateTags(text string, existingTags []string) (result
 	return cleanTags, nil
 }
 
-// 为AI生成的摘要创建缓存键
+// 为AI生成的摘要创建缓存键。
+// 用全文摘要而不是前缀：批量生成时开头相同（同一模板/前言）的文章会互相串摘要。
 func generateSummaryCacheKey(text string) string {
-	shortText := text
-	if len(shortText) > 50 {
-		shortText = shortText[:50]
-	}
-	return "ai:summary:" + shortText
+	sum := sha256.Sum256([]byte(text))
+	return "ai:summary:" + hex.EncodeToString(sum[:])
 }
 
 // extractBracketed 取出提示词要求的 [摘要正文] 包裹内容；没有方括号时退回原文。

@@ -105,6 +105,8 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 	adminAPI.DELETE("/article/:id", m.handler.DeleteArticle)
 	adminAPI.POST("/article/:id/generate-tags", m.handler.GenerateTags)
 	adminAPI.POST("/article/:id/generate-summary", m.handler.GenerateSummary)
+	adminAPI.POST("/article/summaries/batch", m.handler.StartBatchSummary)
+	adminAPI.GET("/article/summaries/batch", m.handler.GetBatchSummaryStatus)
 	adminAPI.POST("/tag", m.handler.CreateTag)
 	adminAPI.PUT("/tag", m.handler.UpdateTag)
 	adminAPI.DELETE("/tag/:id", m.handler.DeleteTag)
@@ -119,3 +121,7 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 func MigrationModels() []any {
 	return []any{&Article{}, &Category{}, &Tag{}, &TagRelation{}}
 }
+
+// Shutdown drains an in-flight batch summary run. The batch owns its own
+// goroutines rather than the shared task queue, so it needs its own hook.
+func (m *Module) Shutdown() { m.handler.StopBatchSummary() }

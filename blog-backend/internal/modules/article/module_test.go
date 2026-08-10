@@ -136,6 +136,8 @@ func TestModuleOwnsModelsRoutesAndTaskRegistration(t *testing.T) {
 		"POST /api/admin/article/list":              false,
 		"DELETE /api/admin/article/:id":             false,
 		"POST /api/admin/article/:id/generate-tags": false,
+		"POST /api/admin/article/summaries/batch":  false,
+		"GET /api/admin/article/summaries/batch":   false,
 		"POST /api/admin/tag":                       false,
 		"PUT /api/admin/tag":                        false,
 		"DELETE /api/admin/tag/:id":                 false,

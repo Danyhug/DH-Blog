@@ -299,6 +299,9 @@ func (ctx *buildContext) shutdowns() []func() {
 	if ctx.tasks != nil {
 		shutdowns = append(shutdowns, ctx.tasks.Stop)
 	}
+	if ctx.articleModule != nil {
+		shutdowns = append(shutdowns, ctx.articleModule.Shutdown)
+	}
 	if ctx.shareModule != nil {
 		shutdowns = append(shutdowns, ctx.shareModule.Shutdown)
 	}

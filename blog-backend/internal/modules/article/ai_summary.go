@@ -48,7 +48,7 @@ func (h *Handler) ProcessSummaryGeneration(ctx context.Context, articleID int, c
 		return fmt.Errorf("AI摘要生成超时: %w", ctx.Err())
 	}
 
-	summary = strings.TrimSpace(summary)
+	summary = normalizeSummary(summary)
 	if summary == "" {
 		return fmt.Errorf("AI 返回的摘要为空")
 	}
@@ -61,4 +61,35 @@ func (h *Handler) ProcessSummaryGeneration(ctx context.Context, articleID int, c
 	}
 	logrus.Infof("成功保存文章 %d 的AI摘要 (总耗时: %v)", articleID, time.Since(start))
 	return nil
+}
+
+// summaryMaxRunes mirrors the length cap stated in the summary prompt. Models
+// overshoot it often enough that the homepage needs a hard guarantee.
+const summaryMaxRunes = 120
+
+// normalizeSummary trims the model output and clamps it to summaryMaxRunes.
+// A clamped summary is cut back to its last sentence end when one survives in
+// the second half, so the homepage shows a finished sentence instead of a word
+// sliced in half.
+func normalizeSummary(summary string) string {
+	summary = strings.TrimSpace(summary)
+	runes := []rune(summary)
+	if len(runes) <= summaryMaxRunes {
+		return summary
+	}
+	clipped := runes[:summaryMaxRunes]
+	if end := lastSentenceEnd(clipped); end >= summaryMaxRunes/2 {
+		clipped = clipped[:end+1]
+	}
+	return strings.TrimSpace(string(clipped))
+}
+
+func lastSentenceEnd(runes []rune) int {
+	for i := len(runes) - 1; i >= 0; i-- {
+		switch runes[i] {
+		case '。', '！', '？', '.', '!', '?':
+			return i
+		}
+	}
+	return -1
 }
