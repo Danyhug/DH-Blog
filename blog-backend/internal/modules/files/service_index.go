@@ -170,11 +170,6 @@ func (s *fileService) scanAndAddFiles(ctx context.Context) error {
 	return nil
 }
 
-// SyncFilesFromDisk 从磁盘同步文件到数据库（立即执行）
-func (s *fileService) SyncFilesFromDisk() error {
-	return s.doSyncFilesFromDisk()
-}
-
 // SyncFilesFromDiskDebounced 从磁盘同步文件到数据库（防抖，非阻塞）
 // 每次调用会重置 5 秒定时器，适合 WebDAV 批量操作时频繁触发
 func (s *fileService) SyncFilesFromDiskDebounced() {

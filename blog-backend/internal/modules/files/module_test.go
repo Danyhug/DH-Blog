@@ -34,7 +34,6 @@ func TestModuleRegistersFileUploadAndPublicRoutes(t *testing.T) {
 		"PUT /api/files/rename/:id":                    false,
 		"DELETE /api/files/:id":                        false,
 		"GET /api/files/directory-tree":                false,
-		"POST /api/files/sync":                         false,
 		"POST /api/files/upload/chunk/init":            false,
 		"POST /api/files/upload/chunk/chunk":           false,
 		"POST /api/files/upload/chunk/complete":        false,

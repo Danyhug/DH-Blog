@@ -72,7 +72,6 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 	fileAPI.PUT("/rename/:id", m.handler.RenameFile)
 	fileAPI.DELETE("/:id", m.handler.DeleteFile)
 	fileAPI.GET("/directory-tree", m.handler.GetDirectoryTree)
-	fileAPI.POST("/sync", m.handler.SyncFiles)
 
 	chunkAPI := fileAPI.Group("/upload/chunk")
 	chunkAPI.POST("/init", m.chunkUploadHandler.InitChunkUpload)

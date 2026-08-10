@@ -283,35 +283,6 @@ func (h *handler) GetDirectoryTree(c *gin.Context) {
 	c.JSON(http.StatusOK, response.SuccessWithData(directoryTree))
 }
 
-// requireAuth 验证用户是否已登录
-func (h *handler) requireAuth() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// 验证JWT或会话
-		// 简化版：从Query或Header中获取userID
-		userIDStr := c.Query("userId")
-		if userIDStr == "" {
-			userIDStr = c.GetHeader("X-User-ID")
-		}
-
-		if userIDStr == "" {
-			response.FailWithCode(c, http.StatusUnauthorized, "未授权")
-			c.Abort()
-			return
-		}
-
-		userID, err := strconv.ParseUint(userIDStr, 10, 64)
-		if err != nil || userID == 0 {
-			response.FailWithCode(c, http.StatusUnauthorized, "无效的用户ID")
-			c.Abort()
-			return
-		}
-
-		// 设置用户ID到上下文
-		c.Set("userID", userID)
-		c.Next()
-	}
-}
-
 // getCurrentUserID 获取当前用户ID
 func (h *handler) getCurrentUserID(c *gin.Context) uint64 {
 	userID, exists := c.Get("userID")
@@ -322,21 +293,3 @@ func (h *handler) getCurrentUserID(c *gin.Context) uint64 {
 }
 
 // SyncFiles 手动同步磁盘文件到数据库
-func (h *handler) SyncFiles(c *gin.Context) {
-	userID := h.getCurrentUserID(c)
-	if userID != 1 {
-		response.FailWithCode(c, http.StatusUnauthorized, "只有管理员可以同步文件")
-		return
-	}
-
-	if err := h.fileService.SyncFilesFromDisk(); err != nil {
-		logrus.Errorf("同步文件失败: %v", err)
-		response.FailWithCode(c, http.StatusInternalServerError, "同步文件失败: "+err.Error())
-		return
-	}
-
-	c.JSON(http.StatusOK, response.AjaxResult{
-		Code: 1,
-		Msg:  "文件同步完成",
-	})
-}
