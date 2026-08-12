@@ -119,13 +119,19 @@ func (s *Service) passthrough(ctx context.Context, key *APIKey, provider string,
 		return PassthroughResult{}, 0, 0, newGatewayError(http.StatusNotFound, "provider_not_found", "该供应商不支持原生透传", provider)
 	}
 
-	spent := s.providerSpend(ctx, provider, now)
-	if quotaExhausted(candidate{
-		MonthlyQuota:     runtime.config.MonthlyQuota,
-		Used:             spent.Count,
-		MonthlyCostLimit: runtime.config.MonthlyCostLimit,
-		CostUsed:         spent.CostMicroUSD,
-	}) {
+	// 配额口径和选路保持一致：按可用密钥汇总，并认上游自己报的花费与余量
+	spend := s.providerAllowance(ctx, runtime, now)
+	check := candidate{
+		MonthlyQuota:     spend.Quota,
+		Used:             spend.Used,
+		MonthlyCostLimit: spend.CostLimit,
+		CostUsed:         spend.CostUsed,
+	}
+	if upstream, ok := runtime.upstreamCostMicroUSD(now); ok {
+		check.CostUsed = upstream
+	}
+	check.UpstreamHeadroom, check.HasUpstreamHeadroom = runtime.upstreamHeadroom(now)
+	if quotaExhausted(check) {
 		return PassthroughResult{}, 0, 0, newGatewayError(http.StatusServiceUnavailable, "no_provider_available",
 			"该供应商本月配额已用尽", provider)
 	}
@@ -180,7 +186,7 @@ func (s *Service) passthrough(ctx context.Context, key *APIKey, provider string,
 		if err := s.repo.touchProviderKey(ctx, picked.config.ID, now); err != nil {
 			logrus.Warnf("更新供应商密钥使用时间失败: %v", err)
 		}
-		s.accountPassthrough(ctx, key, provider, response.Credits, response.CostMicroUSD, now)
+		s.accountPassthrough(ctx, key, provider, picked.config.ID, response.Credits, response.CostMicroUSD, now)
 		if s.options.CacheTTL > 0 && len(response.Body) <= maxCachedPassthroughBody {
 			_ = s.cache.Set(cacheKey, cachedPassthrough{
 				Status: response.Status, ContentType: response.ContentType,
@@ -205,10 +211,18 @@ func retryableKind(kind search.ErrorKind) bool {
 	}
 }
 
-func (s *Service) accountPassthrough(ctx context.Context, key *APIKey, provider string, credits, costMicroUSD int, now time.Time) {
+func (s *Service) accountPassthrough(ctx context.Context, key *APIKey, provider string,
+	providerKeyID, credits, costMicroUSD int, now time.Time) {
+
 	period := currentPeriod(now)
 	if err := s.repo.addUsage(ctx, providerSubject(provider), period, 1, credits, costMicroUSD); err != nil {
 		logrus.Warnf("累计供应商用量失败: %v", err)
+	}
+	// 透传同样要落到具体密钥上，否则密钥级额度只统计得到 /search 的流量
+	if providerKeyID > 0 {
+		if err := s.repo.addUsage(ctx, providerKeySubject(providerKeyID), period, 1, credits, costMicroUSD); err != nil {
+			logrus.Warnf("累计供应商密钥用量失败: %v", err)
+		}
 	}
 	if key == nil {
 		return
@@ -221,14 +235,15 @@ func (s *Service) accountPassthrough(ctx context.Context, key *APIKey, provider 
 	}
 }
 
-// providerSpend reads this month's counters for one provider. Both numbers come
-// back together because either can be the ceiling that stops it.
-func (s *Service) providerSpend(ctx context.Context, provider string, now time.Time) Usage {
-	usage, err := s.repo.usageFor(ctx, currentPeriod(now), []string{providerSubject(provider)})
+// providerAllowance reads this month's counters for one provider and folds them
+// into the ceilings a quota check measures against. Both dimensions come back
+// together because either can be the one that stops it.
+func (s *Service) providerAllowance(ctx context.Context, runtime *providerRuntime, now time.Time) allowance {
+	usage, err := s.repo.usageFor(ctx, currentPeriod(now), usageSubjects([]*providerRuntime{runtime}))
 	if err != nil {
-		return Usage{}
+		return allowance{}
 	}
-	return usage[providerSubject(provider)]
+	return allowanceOf(runtime, now, usage)
 }
 
 // passthroughCacheKey hashes the forwarded request. Callers reach the same

@@ -75,7 +75,8 @@ func (s *Service) TestProvider(ctx context.Context, name string, probe ProviderP
 		return ProbeResult{}, ErrProviderKeyNotFound
 	}
 
-	adapter, err := s.buildAdapter(config, apiKey)
+	// 连通性测试只发搜索请求，用不到上游用量的 key id
+	adapter, err := s.buildAdapter(config, apiKey, "")
 	if err != nil {
 		return ProbeResult{}, err
 	}
@@ -100,9 +101,12 @@ func (s *Service) providerViews(ctx context.Context) ([]providerView, error) {
 		return nil, err
 	}
 
-	subjects := make([]string, 0, len(providers))
+	subjects := make([]string, 0, len(providers)+len(credentials))
 	for _, provider := range providers {
 		subjects = append(subjects, providerSubject(provider.Name))
+	}
+	for _, credential := range credentials {
+		subjects = append(subjects, providerKeySubject(credential.ID))
 	}
 	usage, err := s.repo.usageFor(ctx, currentPeriod(s.now()), subjects)
 	if err != nil {
@@ -125,6 +129,7 @@ func (s *Service) providerViews(ctx context.Context) ([]providerView, error) {
 		if credential.Recovered(now) {
 			status = ProviderKeyActive
 		}
+		spent := usage[providerKeySubject(credential.ID)]
 		keysByProvider[credential.Provider] = append(keysByProvider[credential.Provider], providerKeyView{
 			ID:               credential.ID,
 			Label:            credential.Label,
@@ -135,6 +140,11 @@ func (s *Service) providerViews(ctx context.Context) ([]providerView, error) {
 			LastUsedAt:       credential.LastUsedAt,
 			DisabledAt:       credential.DisabledAt,
 			InRotation:       rotating,
+			MonthlyQuota:     credential.MonthlyQuota,
+			MonthlyCostLimit: credential.MonthlyCostLimit,
+			MonthlyUsed:      spent.Count,
+			MonthlyCost:      spent.CostMicroUSD,
+			UsageKeyID:       credential.UsageKeyID,
 			UpstreamUsed:     credential.UpstreamUsed,
 			UpstreamLimit:    credential.UpstreamLimit,
 			UpstreamUnit:     credential.UpstreamUnit,
@@ -151,12 +161,20 @@ func (s *Service) providerViews(ctx context.Context) ([]providerView, error) {
 		reportsUsage := false
 		// 上游报了花费时选路走上游数字，这里一并回传，让管理页能看出当前用的是哪一个
 		var upstreamCost *int
+		// 生效额度按可用密钥汇总，和选路口径一致；没有运行时就退回供应商级的数字
+		effective := allowance{
+			Quota:     provider.MonthlyQuota,
+			Used:      usage[providerSubject(provider.Name)].Count,
+			CostLimit: provider.MonthlyCostLimit,
+			CostUsed:  usage[providerSubject(provider.Name)].CostMicroUSD,
+		}
 		if runtime := s.runtime(provider.Name); runtime != nil {
 			health = string(runtime.breaker.State())
 			reportsUsage = runtime.reportsUsage
 			if cost, ok := runtime.upstreamCostMicroUSD(s.now()); ok {
 				upstreamCost = &cost
 			}
+			effective = allowanceOf(runtime, s.now(), usage)
 		}
 		meta := search.MetaFor(provider.Name)
 		keys := keysByProvider[provider.Name]
@@ -164,29 +182,32 @@ func (s *Service) providerViews(ctx context.Context) ([]providerView, error) {
 			keys = []providerKeyView{}
 		}
 		views = append(views, providerView{
-			Name:              provider.Name,
-			DisplayName:       provider.DisplayName,
-			HomeURL:           meta.HomeURL,
-			DocsURL:           meta.DocsURL,
-			ConsoleURL:        meta.ConsoleURL,
-			Billing:           meta.Billing,
-			Enabled:           provider.Enabled,
-			Keys:              keys,
-			ActiveKeys:        activeByProvider[provider.Name],
-			BaseURL:           provider.BaseURL,
-			Priority:          provider.Priority,
-			Weight:            provider.Weight,
-			RPS:               provider.RPS,
-			MonthlyQuota:      provider.MonthlyQuota,
-			MonthlyUsed:       usage[providerSubject(provider.Name)].Count,
-			MonthlyCost:       usage[providerSubject(provider.Name)].CostMicroUSD,
-			MonthlyCostLimit:  provider.MonthlyCostLimit,
-			UpstreamCost:      upstreamCost,
-			SupportsUsageSync: reportsUsage,
-			Extra:             redactExtra(provider.Extra),
-			UsageKeyID:        extraString(provider.Extra, extraKeyUsageKeyID),
-			UsageServiceKey:   MaskSecret(extraString(provider.Extra, extraKeyUsageServiceKey)),
-			Health:            health,
+			Name:                      provider.Name,
+			DisplayName:               provider.DisplayName,
+			HomeURL:                   meta.HomeURL,
+			DocsURL:                   meta.DocsURL,
+			ConsoleURL:                meta.ConsoleURL,
+			Billing:                   meta.Billing,
+			Enabled:                   provider.Enabled,
+			Keys:                      keys,
+			ActiveKeys:                activeByProvider[provider.Name],
+			BaseURL:                   provider.BaseURL,
+			Priority:                  provider.Priority,
+			Weight:                    provider.Weight,
+			RPS:                       provider.RPS,
+			MonthlyQuota:              provider.MonthlyQuota,
+			MonthlyUsed:               usage[providerSubject(provider.Name)].Count,
+			MonthlyCost:               usage[providerSubject(provider.Name)].CostMicroUSD,
+			MonthlyCostLimit:          provider.MonthlyCostLimit,
+			EffectiveMonthlyQuota:     effective.Quota,
+			EffectiveMonthlyUsed:      effective.Used,
+			EffectiveMonthlyCost:      effective.CostUsed,
+			EffectiveMonthlyCostLimit: effective.CostLimit,
+			UpstreamCost:              upstreamCost,
+			SupportsUsageSync:         reportsUsage,
+			Extra:                     redactExtra(provider.Extra),
+			UsageServiceKey:           MaskSecret(extraString(provider.Extra, extraKeyUsageServiceKey)),
+			Health:                    health,
 		})
 	}
 	return views, nil
@@ -293,25 +314,22 @@ func (s *Service) stats(ctx context.Context, days int) (StatsSummary, error) {
 		summary.CostMicroUSD += row.CostMicroUSD
 	}
 
-	providers, err := s.repo.listProviders(ctx)
+	// 面板显示的必须是真正在生效的额度：配了密钥级额度就按可用密钥汇总，
+	// 否则运营者看到的上限和选路实际用的是两个数
+	now := s.now()
+	runtimes := s.snapshot()
+	usage, err := s.repo.usageFor(ctx, currentPeriod(now), usageSubjects(runtimes))
 	if err != nil {
 		return StatsSummary{}, err
 	}
-	subjects := make([]string, 0, len(providers))
-	for _, provider := range providers {
-		subjects = append(subjects, providerSubject(provider.Name))
-	}
-	usage, err := s.repo.usageFor(ctx, currentPeriod(s.now()), subjects)
-	if err != nil {
-		return StatsSummary{}, err
-	}
-	for _, provider := range providers {
+	for _, runtime := range runtimes {
+		spend := allowanceOf(runtime, now, usage)
 		summary.Quotas = append(summary.Quotas, QuotaRow{
-			Provider:         provider.Name,
-			MonthlyQuota:     provider.MonthlyQuota,
-			MonthlyUsed:      usage[providerSubject(provider.Name)].Count,
-			MonthlyCost:      usage[providerSubject(provider.Name)].CostMicroUSD,
-			MonthlyCostLimit: provider.MonthlyCostLimit,
+			Provider:         runtime.config.Name,
+			MonthlyQuota:     spend.Quota,
+			MonthlyUsed:      spend.Used,
+			MonthlyCost:      spend.CostUsed,
+			MonthlyCostLimit: spend.CostLimit,
 		})
 	}
 	return summary, nil

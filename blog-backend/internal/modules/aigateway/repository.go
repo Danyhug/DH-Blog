@@ -86,7 +86,10 @@ func (r *repository) ensureDefaults(ctx context.Context) error {
 				return fmt.Errorf("补齐网关设置 %s: %w", key, err)
 			}
 		}
-		return migrateLegacyProviderKeys(tx)
+		if err := migrateLegacyProviderKeys(tx); err != nil {
+			return err
+		}
+		return migrateProviderUsageKeyIDs(tx)
 	})
 }
 
@@ -115,6 +118,53 @@ func migrateLegacyProviderKeys(tx *gorm.DB) error {
 			return fmt.Errorf("清理供应商 %s 的旧密钥列: %w", provider.Name, err)
 		}
 		logrus.Infof("已将供应商 %s 的密钥迁移到多密钥表", provider.Name)
+	}
+	return nil
+}
+
+// migrateProviderUsageKeyIDs moves a provider-wide usage key id down onto the
+// one credential it actually describes.
+//
+// The id addresses a single key at the upstream, so sharing it across a rotation
+// made every credential report that one key's spend, and the gateway then summed
+// them — one account's usage multiplied by the number of keys in rotation. It
+// lands on the oldest credential because that is the one that existed when the
+// id was configured. A provider with no credentials yet keeps the value in Extra
+// so it is not thrown away; the next start picks it up.
+func migrateProviderUsageKeyIDs(tx *gorm.DB) error {
+	var providers []Provider
+	if err := tx.Where("extra LIKE ?", "%"+extraKeyUsageKeyID+"%").Find(&providers).Error; err != nil {
+		return fmt.Errorf("读取旧版上游用量 key id: %w", err)
+	}
+	for _, provider := range providers {
+		usageKeyID := extraString(provider.Extra, extraKeyUsageKeyID)
+		if usageKeyID == "" {
+			continue
+		}
+		var oldest ProviderKey
+		err := tx.Where("provider = ?", provider.Name).Order("id").First(&oldest).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("读取供应商 %s 的密钥: %w", provider.Name, err)
+		}
+		if oldest.UsageKeyID == "" {
+			if err := tx.Model(&ProviderKey{}).Where("id = ?", oldest.ID).
+				Update("usage_key_id", usageKeyID).Error; err != nil {
+				return fmt.Errorf("迁移供应商 %s 的上游用量 key id: %w", provider.Name, err)
+			}
+		}
+		cleared := ""
+		stripped, err := mergeExtra(provider.Extra, map[string]*string{extraKeyUsageKeyID: &cleared})
+		if err != nil {
+			return fmt.Errorf("清理供应商 %s 的旧用量 key id: %w", provider.Name, err)
+		}
+		if err := tx.Model(&Provider{}).Where("name = ?", provider.Name).
+			Update("extra", stripped).Error; err != nil {
+			return fmt.Errorf("清理供应商 %s 的旧用量 key id: %w", provider.Name, err)
+		}
+		logrus.Infof("已将供应商 %s 的上游用量 key id 迁移到密钥 %d", provider.Name, oldest.ID)
 	}
 	return nil
 }

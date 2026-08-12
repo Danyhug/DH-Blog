@@ -17,6 +17,11 @@ const providerAuto = "auto"
 const (
 	quotaScoreWeight   = 0.7
 	balanceScoreWeight = 0.3
+	// operatorBonus moves a provider that honours search operators ahead of one
+	// that does not when the query uses them. Sized to outrank a moderate
+	// difference in remaining allowance but not an account that is nearly spent:
+	// a slightly worse result set is a better outcome than an exhausted upstream.
+	operatorBonus = 0.1
 )
 
 var (
@@ -46,7 +51,19 @@ type candidate struct {
 	// and counting dollars says nothing about a plan sold in requests.
 	MonthlyCostLimit int
 	CostUsed         int
-	Healthy          bool
+	// UpstreamHeadroom is the share of the upstreams' own allowance still
+	// unspent, set only when a recent report said so. It is a ratio rather than
+	// a count because the plans it summarises are sold in different units —
+	// credits, requests, dollars — and only a ratio compares across them.
+	//
+	// It exists because a locally uncapped provider is not the same thing as an
+	// unlimited one. Leaving the local ceiling blank is how an operator says "I
+	// do not know what the allowance is", and reading that as "there is no
+	// allowance" is what let an account the upstream had already reported empty
+	// outscore every provider that did declare a ceiling.
+	UpstreamHeadroom    float64
+	HasUpstreamHeadroom bool
+	Healthy             bool
 }
 
 // routeInput is everything the policy needs to order the candidates.
@@ -114,7 +131,7 @@ func autoOrder(in routeInput, exclude string) []string {
 		return nil
 	}
 
-	sortByStrategy(pool, in.Strategy)
+	sortByStrategy(pool, in.Strategy, in.PrefersOperators)
 
 	order := make([]string, 0, len(pool))
 	for _, item := range pool {
@@ -125,11 +142,12 @@ func autoOrder(in routeInput, exclude string) []string {
 
 // sortByStrategy orders the surviving candidates. Every comparison ends in a
 // name tiebreak so routing stays deterministic for identical configurations.
-func sortByStrategy(pool []candidate, strategy RoutingStrategy) {
+func sortByStrategy(pool []candidate, strategy RoutingStrategy, prefersOperators bool) {
 	switch strategy {
 	case StrategyPriority:
 		// Primary/standby: the configured order is the whole answer, and
-		// remaining quota only matters for the exclusion done earlier.
+		// remaining quota only matters for the exclusion done earlier. An
+		// operator preference does not get to reorder an explicit ranking.
 		sort.SliceStable(pool, func(i, j int) bool {
 			if pool[i].Priority != pool[j].Priority {
 				return pool[i].Priority < pool[j].Priority
@@ -144,7 +162,8 @@ func sortByStrategy(pool []candidate, strategy RoutingStrategy) {
 		// here rather than inventing an ordering it cannot justify.
 		totals := balanceTotalsOf(pool)
 		sort.SliceStable(pool, func(i, j int) bool {
-			left, right := score(pool[i], totals), score(pool[j], totals)
+			left := score(pool[i], totals, prefersOperators)
+			right := score(pool[j], totals, prefersOperators)
 			if left != right {
 				return left > right
 			}
@@ -160,19 +179,19 @@ func sortByStrategy(pool []candidate, strategy RoutingStrategy) {
 
 // filterCapability drops providers that cannot express what the caller asked
 // for. Answer and raw content are hard requirements because silently omitting
-// them would look like an upstream with nothing to say; operator support is a
-// preference, since a provider without it still returns sane results.
+// them would look like an upstream with nothing to say.
+//
+// Operator support is deliberately not filtered on. It is a preference: a
+// provider that ignores site: still answers the query sensibly, whereas keeping
+// only the providers that honour it hands every quoted query to whichever single
+// upstream has the feature, no matter how little that account has left. It is
+// scored instead, in score() below.
 func filterCapability(pool []candidate, in routeInput) []candidate {
 	if in.NeedAnswer {
 		pool = keep(pool, func(item candidate) bool { return item.Capability.Answer })
 	}
 	if in.NeedRawContent {
 		pool = keep(pool, func(item candidate) bool { return item.Capability.RawContent })
-	}
-	if in.PrefersOperators {
-		if preferred := keep(pool, func(item candidate) bool { return item.Capability.SearchOperators }); len(preferred) > 0 {
-			pool = preferred
-		}
 	}
 	return pool
 }
@@ -214,7 +233,7 @@ func loadFactor(item candidate) float64 {
 }
 
 // score blends how much allowance a provider has left with how far it is behind
-// its share of traffic.
+// its share of traffic, plus a nudge when the query wants search operators.
 //
 // The balance term is what makes this strategy balance at all. Ranking on
 // remaining allowance alone cannot: a provider with no ceiling sits at a
@@ -225,18 +244,26 @@ func loadFactor(item candidate) float64 {
 //
 // Priority plays no part here; expressing a fixed order is what the priority
 // strategy is for.
-func score(item candidate, totals balanceTotals) float64 {
-	return headroomRatio(item)*quotaScoreWeight + idleRatio(item, totals)*balanceScoreWeight
+func score(item candidate, totals balanceTotals, prefersOperators bool) float64 {
+	total := headroomRatio(item)*quotaScoreWeight + idleRatio(item, totals)*balanceScoreWeight
+	if prefersOperators && item.Capability.SearchOperators {
+		total += operatorBonus
+	}
+	return total
 }
 
-// headroomRatio is the share of the tighter allowance still unspent. A provider
-// capped both ways is judged on whichever ceiling stops it first: counting calls
-// says nothing about a pay-as-you-go plan, and counting dollars says nothing
-// about a plan sold in requests.
+// headroomRatio is the share of the tightest allowance still unspent. A provider
+// capped several ways is judged on whichever ceiling stops it first: counting
+// calls says nothing about a pay-as-you-go plan, counting dollars says nothing
+// about a plan sold in requests, and neither says anything about an upstream
+// that has been reporting an empty balance since yesterday.
 func headroomRatio(item candidate) float64 {
 	ratio := remainingRatio(item.Used, item.MonthlyQuota)
 	if costRatio := remainingRatio(item.CostUsed, item.MonthlyCostLimit); costRatio < ratio {
 		ratio = costRatio
+	}
+	if item.HasUpstreamHeadroom && item.UpstreamHeadroom < ratio {
+		ratio = item.UpstreamHeadroom
 	}
 	return ratio
 }
@@ -273,7 +300,12 @@ func quotaExhausted(item candidate) bool {
 	if item.MonthlyQuota > 0 && item.Used >= item.MonthlyQuota {
 		return true
 	}
-	return item.MonthlyCostLimit > 0 && item.CostUsed >= item.MonthlyCostLimit
+	if item.MonthlyCostLimit > 0 && item.CostUsed >= item.MonthlyCostLimit {
+		return true
+	}
+	// The upstream saying its allowance is gone is the last word, even if the
+	// credential that reported it has not been parked yet.
+	return item.HasUpstreamHeadroom && item.UpstreamHeadroom <= 0
 }
 
 func findCandidate(candidates []candidate, name string) *candidate {

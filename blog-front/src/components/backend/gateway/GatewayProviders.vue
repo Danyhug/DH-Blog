@@ -109,6 +109,16 @@
                             <template v-else-if="item.lastUsedAt">最后使用 {{ formatTime(item.lastUsedAt) }}</template>
                             <template v-else>尚未使用过</template>
                         </div>
+                        <!-- 这个账号自己的额度与用量：多账号时总额度就是各把之和 -->
+                        <div class="mt-0.5 text-xs text-gray-400 truncate">
+                            本月 {{ item.monthlyUsed }} / {{ item.monthlyQuota || '不限' }}
+                            <template v-if="item.monthlyCostLimitMicroUsd">
+                                · 费用上限 {{ formatUsd(item.monthlyCostLimitMicroUsd) }}
+                            </template>
+                            <template v-if="item.usageKeyId">
+                                <span class="text-gray-300"> · 用量 id 已配</span>
+                            </template>
+                        </div>
                         <!-- 上游报的用量：说清单位、周期和是否与其它密钥共享，避免和本地计数混为一谈 -->
                         <div v-if="item.upstreamSyncedAt" class="mt-1 text-xs text-gray-400 truncate">
                             上游：{{ item.upstreamUsed }} / {{ item.upstreamLimit || '不限' }}
@@ -122,8 +132,38 @@
                         <div v-if="item.upstreamError" class="mt-1 text-xs text-orange-500 truncate">
                             用量同步失败：{{ item.upstreamError }}
                         </div>
+
+                        <!-- 额度是跟着账号走的，所以逐把编辑；用量 id 同理，共用一个会让每把都上报同一份花费 -->
+                        <div v-if="editingKey === item.id" class="mt-2 rounded bg-gray-50 p-2">
+                            <div class="flex flex-wrap items-end gap-2">
+                                <div>
+                                    <div class="mb-1 text-xs text-gray-400">月配额（次数，0 不限）</div>
+                                    <el-input-number v-model="keyForm.monthlyQuota" :min="0" :max="1000000"
+                                        size="small" />
+                                </div>
+                                <div>
+                                    <div class="mb-1 text-xs text-gray-400">月费用上限（美元，0 不限）</div>
+                                    <el-input-number v-model="keyForm.monthlyCostLimitUsd" :min="0" :max="10000"
+                                        :step="1" :precision="2" size="small" />
+                                </div>
+                                <div>
+                                    <div class="mb-1 text-xs text-gray-400">本月已用（次数，覆盖写入）</div>
+                                    <el-input-number v-model="keyForm.monthlyUsed" :min="0" :max="10000000"
+                                        size="small" />
+                                </div>
+                                <div v-if="supportsUsageCredential" class="min-w-60 flex-1">
+                                    <div class="mb-1 text-xs text-gray-400">上游用量接口里这把密钥的 UUID</div>
+                                    <el-input v-model="keyForm.usageKeyId" size="small" clearable
+                                        placeholder="550e8400-e29b-41d4-a716-446655440000" />
+                                </div>
+                                <el-button size="small" type="primary" :loading="savingKey"
+                                    @click="onSaveKeyAllowance(item)">保存</el-button>
+                                <el-button size="small" @click="editingKey = 0">取消</el-button>
+                            </div>
+                        </div>
                     </div>
                     <div class="flex items-center gap-1 shrink-0">
+                        <el-button size="small" link @click="openKeyEditor(item)">额度</el-button>
                         <el-button size="small" link :loading="testing === `key-${item.id}`"
                             @click="onTestStored(item)">测试</el-button>
                         <el-button v-if="item.status !== 'active'" size="small" link type="success"
@@ -156,6 +196,14 @@
                     参数
                     <span class="group-sub">改动需要点保存才生效</span>
                 </h4>
+                <p v-if="usesKeyAllowances" class="hint">
+                    <el-icon class="align-middle mr-1">
+                        <InfoFilled />
+                    </el-icon>
+                    这家已经按密钥配了额度，选路用的是各把密钥的汇总（当前
+                    {{ active.effectiveMonthlyUsed }} / {{ active.effectiveMonthlyQuota || '不限' }}）。
+                    下面这两个供应商级的数字只在所有密钥都没配额度时才生效。
+                </p>
                 <el-form label-position="top" size="default">
                     <el-form-item label="接口地址（留空使用官方地址）">
                         <el-input v-model="form.baseUrl" placeholder="https://api.tavily.com" clearable />
@@ -203,6 +251,13 @@
                         本地计数只看得到网关自己发出的请求，和官网账单会有出入；按官网数字改这里即可，是覆盖不是累加
                     </span>
                 </h4>
+                <p v-if="usesKeyAllowances" class="hint">
+                    <el-icon class="align-middle mr-1">
+                        <InfoFilled />
+                    </el-icon>
+                    这里改的是供应商级的总数。按密钥配了额度之后，选路比的是每把密钥自己的计数，
+                    要校准请用上面每把密钥的「额度」。
+                </p>
                 <p v-if="active.upstreamCostMicroUsd !== null" class="hint">
                     <el-icon class="align-middle mr-1">
                         <InfoFilled />
@@ -233,7 +288,8 @@
                     <h4 class="group-title">
                         上游用量接口
                         <span class="group-sub">
-                            Exa 的花费要用团队 service key 查，和搜索密钥不是一把；填齐后每小时同步一次，选路改用上游数字
+                            Exa 的花费要用团队 service key 查，和搜索密钥不是一把；service key 是团队级的填一次即可，
+                            每把密钥的 UUID 在上面各自填
                         </span>
                     </h4>
                     <el-form label-position="top">
@@ -248,13 +304,9 @@
                             <el-input v-model="usageCredential.serviceKey" placeholder="在 Exa 控制台创建 team service key"
                                 clearable />
                         </el-form-item>
-                        <el-form-item label="搜索密钥的 UUID">
-                            <el-input v-model="usageCredential.keyId" placeholder="550e8400-e29b-41d4-a716-446655440000"
-                                clearable />
-                        </el-form-item>
                         <div class="flex gap-2">
                             <el-button size="small" type="primary" plain :loading="savingCredential"
-                                @click="onSaveUsageCredential">
+                                :disabled="!usageCredential.serviceKey.trim()" @click="onSaveUsageCredential">
                                 保存
                             </el-button>
                             <el-button v-if="active.usageServiceKeyMasked" size="small" plain
@@ -282,7 +334,7 @@ import { Connection, InfoFilled, Odometer, Refresh, Setting } from '@element-plu
 import { notify } from '@/utils/notification';
 import ProviderLogo from './ProviderLogo.vue';
 import SectionPanel from './SectionPanel.vue';
-import { budgetView as budget, formatSince, formatTime, usageScopeLabel, usageUnitLabel } from './format';
+import { budgetView, formatSince, formatTime, usageScopeLabel, usageUnitLabel } from './format';
 import {
     createGatewayProviderKey,
     deleteGatewayProviderKey,
@@ -314,11 +366,28 @@ const form = reactive({
 });
 // 用量校准与上游凭据各自独立保存，避免和参数表单的 dirty 判断纠缠在一起
 const usageForm = reactive({ count: 0, costUsd: 0 });
-const usageCredential = reactive({ serviceKey: '', keyId: '' });
+const usageCredential = reactive({ serviceKey: '' });
 const savingUsage = ref(false);
 const savingCredential = ref(false);
+// 额度按密钥编辑：一把密钥就是一个账号，额度和用量 id 都是跟着账号走的
+const editingKey = ref(0);
+const keyForm = reactive({ monthlyQuota: 0, monthlyCostLimitUsd: 0, monthlyUsed: 0, usageKeyId: '' });
+const savingKey = ref(false);
 
 const MICRO_PER_USD = 1_000_000;
+
+/**
+ * budget 走的是「生效额度」而不是供应商行上的那对数字。
+ * 配了密钥级额度时两者不同，卡片必须显示选路真正在用的那个，否则两个账号看起来只有一个账号的容量。
+ */
+function budget(provider: GatewayProvider) {
+    return budgetView({
+        monthlyUsed: provider.effectiveMonthlyUsed,
+        monthlyQuota: provider.effectiveMonthlyQuota,
+        monthlyCostMicroUsd: provider.effectiveMonthlyCostMicroUsd,
+        monthlyCostLimitMicroUsd: provider.effectiveMonthlyCostLimitMicroUsd
+    });
+}
 
 // 抽屉始终跟着列表里的最新数据走：加完密钥父组件刷新后，这里立刻能看到
 const active = computed(() => props.providers.find((item) => item.name === activeName.value));
@@ -337,6 +406,11 @@ const dirty = computed(() => {
 
 // 只有 Exa 提供按密钥查花费的团队管理接口，其它家要么没有、要么已经走 UsageReporter
 const supportsUsageCredential = computed(() => active.value?.name === 'exa');
+
+// 有任意一把密钥配了自己的额度，选路就改按密钥汇总，供应商级的数字随之失效
+const usesKeyAllowances = computed(() =>
+    (active.value?.keys ?? []).some((key) => key.monthlyQuota > 0 || key.monthlyCostLimitMicroUsd > 0)
+);
 
 const usageDirty = computed(() => {
     const provider = active.value;
@@ -375,10 +449,7 @@ async function onSaveUsageCredential() {
     savingCredential.value = true;
     try {
         // service key 留空表示不改，避免一保存就把已存的密钥清掉
-        await updateGatewayProvider(provider.name, {
-            ...(usageCredential.serviceKey.trim() ? { usageServiceKey: usageCredential.serviceKey.trim() } : {}),
-            usageKeyId: usageCredential.keyId.trim()
-        });
+        await updateGatewayProvider(provider.name, { usageServiceKey: usageCredential.serviceKey.trim() });
         usageCredential.serviceKey = '';
         notify.success('上游用量凭据已保存');
         emit('refresh');
@@ -472,8 +543,8 @@ function resetForm(provider: GatewayProvider) {
     usageForm.count = provider.monthlyUsed;
     usageForm.costUsd = provider.monthlyCostMicroUsd / MICRO_PER_USD;
     usageCredential.serviceKey = '';
-    usageCredential.keyId = provider.usageKeyId || '';
     form.extra = provider.extra;
+    editingKey.value = 0;
 }
 
 // 走整数取整，避免 0.1 这类小数在美元与微美元之间来回转出 999999 这种值
@@ -495,6 +566,41 @@ async function onToggle(provider: GatewayProvider, enabled: boolean) {
         emit('refresh');
     } finally {
         toggling.value = '';
+    }
+}
+
+function openKeyEditor(item: GatewayProviderKey) {
+    // 再点一次收起，省得抽屉里同时摊开好几个编辑框
+    if (editingKey.value === item.id) {
+        editingKey.value = 0;
+        return;
+    }
+    editingKey.value = item.id;
+    keyForm.monthlyQuota = item.monthlyQuota;
+    keyForm.monthlyCostLimitUsd = item.monthlyCostLimitMicroUsd / MICRO_PER_USD;
+    keyForm.monthlyUsed = item.monthlyUsed;
+    keyForm.usageKeyId = item.usageKeyId || '';
+}
+
+async function onSaveKeyAllowance(item: GatewayProviderKey) {
+    const provider = active.value;
+    if (!provider) return;
+    savingKey.value = true;
+    try {
+        await updateGatewayProviderKey(provider.name, item.id, {
+            monthlyQuota: keyForm.monthlyQuota,
+            monthlyCostLimitMicroUsd: Math.round((keyForm.monthlyCostLimitUsd || 0) * MICRO_PER_USD),
+            usageKeyId: keyForm.usageKeyId.trim()
+        });
+        // 已用次数是另一条接口：额度和计数分开写，改额度时不会顺手把计数也覆盖掉
+        if (keyForm.monthlyUsed !== item.monthlyUsed) {
+            await updateGatewayProviderUsage(provider.name, { keyId: item.id, count: keyForm.monthlyUsed });
+        }
+        editingKey.value = 0;
+        notify.success('该密钥的额度已保存');
+        emit('refresh');
+    } finally {
+        savingKey.value = false;
     }
 }
 

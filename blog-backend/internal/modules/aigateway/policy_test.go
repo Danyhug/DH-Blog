@@ -472,3 +472,70 @@ func TestBalancedStillYieldsWhenAllowanceRunsLow(t *testing.T) {
 		t.Fatalf("首选 = %q, 余量只剩 5%% 的供应商不该排在最前", order[0])
 	}
 }
+
+func TestOperatorPreferenceYieldsToAnExhaustedAccount(t *testing.T) {
+	// 带引号的查询以前会把池子换成只剩支持算符的一家，哪怕那家额度快见底了。
+	// 现在它只是加分项：结果集稍差，好过把请求送去一个已经没余量的上游。
+	spent := healthyCandidate("firecrawl", braveCapability)
+	spent.MonthlyQuota, spent.Used = 1000, 950
+
+	roomy := healthyCandidate("tavily", tavilyCapability)
+	roomy.MonthlyQuota, roomy.Used = 1000, 0
+
+	order, err := route(routeInput{PrefersOperators: true, Candidates: []candidate{spent, roomy}})
+	if err != nil {
+		t.Fatalf("route 返回错误: %v", err)
+	}
+	if order[0] != "tavily" {
+		t.Fatalf("首选 = %q, 算符偏好不该盖过快用尽的额度", order[0])
+	}
+	// 不支持算符的那家也还留在队里，回退才有得可用
+	if len(order) != 2 {
+		t.Fatalf("顺序 = %v, 偏好不应把其它供应商挤出候选", order)
+	}
+}
+
+func TestOperatorPreferenceStillWinsAmongEquals(t *testing.T) {
+	// 余量一样时，加分项要真的起作用
+	operators := healthyCandidate("firecrawl", braveCapability)
+	operators.MonthlyQuota, operators.Used = 1000, 100
+	plain := healthyCandidate("tavily", tavilyCapability)
+	plain.MonthlyQuota, plain.Used = 1000, 100
+
+	order, err := route(routeInput{PrefersOperators: true, Candidates: []candidate{plain, operators}})
+	if err != nil {
+		t.Fatalf("route 返回错误: %v", err)
+	}
+	if order[0] != "firecrawl" {
+		t.Fatalf("首选 = %q, 同等余量下应偏向支持算符的一家", order[0])
+	}
+}
+
+func TestUpstreamHeadroomBeatsAnOpenLocalCeiling(t *testing.T) {
+	// 本地没配上限只说明"不知道额度是多少"，不等于"没有额度"。
+	// 上游说快空了就得认，否则它会一路碾压所有老实配了上限的供应商。
+	open := healthyCandidate("firecrawl", braveCapability)
+	open.Used = 500
+	open.UpstreamHeadroom, open.HasUpstreamHeadroom = 0.02, true
+
+	capped := healthyCandidate("tavily", tavilyCapability)
+	capped.MonthlyQuota, capped.Used = 1000, 500
+
+	order, err := route(routeInput{Candidates: []candidate{open, capped}})
+	if err != nil {
+		t.Fatalf("route 返回错误: %v", err)
+	}
+	if order[0] != "tavily" {
+		t.Fatalf("首选 = %q, 上游余量只剩 2%% 的一家不该排在最前", order[0])
+	}
+}
+
+func TestUpstreamExhaustedRemovesCandidate(t *testing.T) {
+	// 上游说没了就是没了，哪怕那把密钥还没来得及被停掉
+	empty := healthyCandidate("firecrawl", braveCapability)
+	empty.UpstreamHeadroom, empty.HasUpstreamHeadroom = 0, true
+
+	if _, err := route(routeInput{Candidates: []candidate{empty}}); err != ErrNoProviderAvailable {
+		t.Fatalf("错误 = %v, 期望上游余量为 0 时不可用", err)
+	}
+}

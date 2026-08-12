@@ -55,6 +55,24 @@ type ProviderKey struct {
 	LastUsedAt *time.Time `gorm:"column:last_used_at" json:"lastUsedAt"`
 	DisabledAt *time.Time `gorm:"column:disabled_at" json:"disabledAt"`
 
+	// MonthlyQuota and MonthlyCostLimit are this credential's own allowance, and
+	// mirror the columns of the same name on Provider. They exist because an
+	// allowance belongs to an account rather than to an upstream: two Tavily
+	// accounts of 1000 credits each add up to 2000, and one provider-level number
+	// cannot express that — it either wastes half the capacity or overruns the
+	// half that is left once a credential drops out. Zero means "no ceiling of
+	// its own"; a provider whose credentials all say zero falls back to the
+	// provider-level pair, so an install that never touches this keeps behaving
+	// exactly as it did.
+	MonthlyQuota     int `gorm:"column:monthly_quota" json:"monthlyQuota"`
+	MonthlyCostLimit int `gorm:"column:monthly_cost_limit" json:"monthlyCostLimitMicroUsd"`
+	// UsageKeyID identifies this credential to the provider's usage API, for the
+	// upstreams that account per key rather than per account. It has to live here
+	// rather than on the provider: one id shared by every credential makes them
+	// all report the same key's figure, and summing those multiplies a single
+	// key's spend by the number of credentials in rotation.
+	UsageKeyID string `gorm:"column:usage_key_id" json:"usageKeyId"`
+
 	// Upstream* mirror what the provider itself reports for this credential,
 	// refreshed on a timer. They exist because the gateway's own counter only
 	// sees traffic that went through the gateway: the same key called from a
@@ -293,6 +311,11 @@ func MaskSecret(secret string) string {
 // Usage subject keys.
 func providerSubject(name string) string { return "provider:" + name }
 func keySubject(id int) string           { return fmt.Sprintf("key:%d", id) }
+
+// providerKeySubject counts one upstream credential's own consumption. The
+// provider-wide counter cannot answer "which account spent what", which is
+// exactly the question a per-account allowance has to be measured against.
+func providerKeySubject(id int) string { return fmt.Sprintf("providerkey:%d", id) }
 
 // currentPeriod is the month bucket used by every quota counter.
 func currentPeriod(now time.Time) string { return now.Format("2006-01") }

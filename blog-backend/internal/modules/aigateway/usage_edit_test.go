@@ -3,12 +3,29 @@ package aigateway
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
 
 	"dh-blog/internal/platform/search"
 )
+
+// providerKeyID returns the credential the test module seeded for one provider.
+func providerKeyID(t *testing.T, module *Module, provider string) int {
+	t.Helper()
+	keys, err := module.service.repo.listProviderKeys(context.Background())
+	if err != nil {
+		t.Fatalf("读取供应商密钥失败: %v", err)
+	}
+	for _, key := range keys {
+		if key.Provider == provider {
+			return key.ID
+		}
+	}
+	t.Fatalf("测试模块没有 %s 的密钥", provider)
+	return 0
+}
 
 // adminPut sends an admin patch and fails the test on an unexpected status.
 func adminPut(t *testing.T, module *Module, path, body string, wantStatus int) string {
@@ -79,10 +96,14 @@ func TestAdminUsageEditRejectsBadInput(t *testing.T) {
 func TestAdminStoresExaUsageCredentialAndMasksIt(t *testing.T) {
 	module := newGatewayTestModule(t, gatewayTestConfig{Exa: exaOK(0.007, "a")})
 
+	// 服务密钥是团队级的，留在供应商上；key UUID 是每把密钥自己的，
+	// 一个 id 发给整条轮换链会让每把密钥都上报同一把的花费
 	adminPut(t, module, "/api/admin/gateway/providers/exa",
-		`{"usageServiceKey":"exa-service-key-1234567890","usageKeyId":"550e8400-uuid"}`, http.StatusOK)
+		`{"usageServiceKey":"exa-service-key-1234567890"}`, http.StatusOK)
+	keyID := providerKeyID(t, module, search.ProviderExa)
+	adminPut(t, module, fmt.Sprintf("/api/admin/gateway/providers/exa/keys/%d", keyID),
+		`{"usageKeyId":"550e8400-uuid"}`, http.StatusOK)
 
-	// 真实值要落进 Extra，适配器才拿得到
 	provider, err := module.service.repo.providerByName(context.Background(), search.ProviderExa)
 	if err != nil {
 		t.Fatalf("providerByName: %v", err)
@@ -90,12 +111,20 @@ func TestAdminStoresExaUsageCredentialAndMasksIt(t *testing.T) {
 	if got := extraString(provider.Extra, extraKeyUsageServiceKey); got != "exa-service-key-1234567890" {
 		t.Fatalf("存储的服务密钥 = %q", got)
 	}
-	if got := extraString(provider.Extra, extraKeyUsageKeyID); got != "550e8400-uuid" {
-		t.Fatalf("存储的 key UUID = %q", got)
+	if got := extraString(provider.Extra, extraKeyUsageKeyID); got != "" {
+		t.Fatalf("供应商 Extra 里还留着 key UUID = %q, 它只该存在密钥上", got)
 	}
 	// 已有的其它选项不能被这次合并覆盖掉
 	if got := extraString(provider.Extra, "search_type"); got != "auto" {
 		t.Fatalf("search_type = %q, 合并不应丢掉原有选项", got)
+	}
+
+	stored, err := module.service.repo.providerKeyByID(context.Background(), keyID)
+	if err != nil {
+		t.Fatalf("providerKeyByID: %v", err)
+	}
+	if stored.UsageKeyID != "550e8400-uuid" {
+		t.Fatalf("密钥上的 key UUID = %q", stored.UsageKeyID)
 	}
 
 	// 列表接口不能把服务密钥原样吐回去
@@ -130,8 +159,11 @@ func TestAdminStoresExaUsageCredentialAndMasksIt(t *testing.T) {
 
 func TestAdminClearsExaUsageCredential(t *testing.T) {
 	module := newGatewayTestModule(t, gatewayTestConfig{Exa: exaOK(0.007, "a")})
+	keyID := providerKeyID(t, module, search.ProviderExa)
 	adminPut(t, module, "/api/admin/gateway/providers/exa",
-		`{"usageServiceKey":"svc-key-abcdefgh","usageKeyId":"uuid"}`, http.StatusOK)
+		`{"usageServiceKey":"svc-key-abcdefgh"}`, http.StatusOK)
+	adminPut(t, module, fmt.Sprintf("/api/admin/gateway/providers/exa/keys/%d", keyID),
+		`{"usageKeyId":"uuid"}`, http.StatusOK)
 	adminPut(t, module, "/api/admin/gateway/providers/exa", `{"usageServiceKey":""}`, http.StatusOK)
 
 	provider, err := module.service.repo.providerByName(context.Background(), search.ProviderExa)
@@ -141,9 +173,13 @@ func TestAdminClearsExaUsageCredential(t *testing.T) {
 	if got := extraString(provider.Extra, extraKeyUsageServiceKey); got != "" {
 		t.Fatalf("服务密钥 = %q, 传空串应清除", got)
 	}
-	// 只清了密钥，key UUID 不该跟着消失
-	if got := extraString(provider.Extra, extraKeyUsageKeyID); got != "uuid" {
-		t.Fatalf("key UUID = %q, 不该被一起清掉", got)
+	// 只清了服务密钥，密钥上的 key UUID 不该跟着消失
+	stored, err := module.service.repo.providerKeyByID(context.Background(), keyID)
+	if err != nil {
+		t.Fatalf("providerKeyByID: %v", err)
+	}
+	if stored.UsageKeyID != "uuid" {
+		t.Fatalf("key UUID = %q, 不该被一起清掉", stored.UsageKeyID)
 	}
 }
 

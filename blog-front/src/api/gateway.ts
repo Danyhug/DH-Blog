@@ -27,6 +27,21 @@ export interface GatewayProviderKey {
   /** 是否正在参与调度，已折算了启用状态与跨月自愈 */
   inRotation: boolean
   /**
+   * 这个账号自己的月额度，0 表示没单独配。
+   * 额度是跟着账号走的：两个各 1000 的账号合起来是 2000，供应商级的一个数字说不出这件事。
+   */
+  monthlyQuota: number
+  /** 同上的费用上限，单位微美元，0 表示不限 */
+  monthlyCostLimitMicroUsd: number
+  /** 这把密钥本月经过网关的用量，密钥级额度就是拿它来衡量的 */
+  monthlyUsed: number
+  monthlyCostMicroUsd: number
+  /**
+   * 上游用量接口里这把密钥的标识（Exa 是搜索密钥的 UUID）。
+   * 必须逐把填：整条轮换链共用一个 id，会让每把密钥都上报同一把的花费。
+   */
+  usageKeyId: string
+  /**
    * 上游自己报的用量，每 60 分钟同步一次。
    * 与 monthlyUsed 是两套账：本地只数经过网关的请求，上游数的是这把密钥的全部消耗。
    */
@@ -71,6 +86,14 @@ export interface GatewayProvider {
    * Exa 按金额计费（免费版每月 $10），单次价格不固定，次数上限说明不了预算。
    */
   monthlyCostLimitMicroUsd: number
+  /**
+   * 选路真正衡量的额度：任何一把密钥配了自己的额度时，它就是这些密钥的汇总，
+   * 否则等于上面的供应商级数字。两者不同是正常的 —— 前者才是"总额度"。
+   */
+  effectiveMonthlyQuota: number
+  effectiveMonthlyUsed: number
+  effectiveMonthlyCostMicroUsd: number
+  effectiveMonthlyCostLimitMicroUsd: number
   /** 该供应商是否提供用量接口；为 false 时数字空着是正常的，不是同步坏了 */
   supportsUsageSync: boolean
   /**
@@ -78,9 +101,8 @@ export interface GatewayProvider {
    * null 表示没有新鲜的上游数据，当前按本地统计走。
    */
   upstreamCostMicroUsd: number | null
-  /** Exa 团队管理接口所需：目标搜索密钥的 UUID，可回显 */
-  usageKeyId: string
-  /** 同上的 service key，只会返回掩码，真实值不出后端 */
+  /** Exa 团队管理接口所需的 service key，只会返回掩码，真实值不出后端。
+   *  对应的密钥 UUID 是逐把配的，见 GatewayProviderKey.usageKeyId */
   usageServiceKeyMasked: string
   extra: string
   health: 'closed' | 'open' | 'half_open'
@@ -97,8 +119,20 @@ export interface GatewayProviderPatch {
   monthlyQuota?: number
   monthlyCostLimitMicroUsd?: number
   extra?: string
-  /** Exa 用量接口凭据：传空串表示清除，不传表示不改 */
+  /** Exa 团队用量接口的 service key：传空串表示清除，不传表示不改 */
   usageServiceKey?: string
+}
+
+/** 上游凭据的补丁，字段留空表示不修改 */
+export interface GatewayProviderKeyPatch {
+  label?: string
+  apiKey?: string
+  enabled?: boolean
+  revive?: boolean
+  /** 这个账号自己的月额度，0 表示不单独限制 */
+  monthlyQuota?: number
+  monthlyCostLimitMicroUsd?: number
+  /** 上游用量接口里这把密钥的标识，传空串表示清除 */
   usageKeyId?: string
 }
 
@@ -107,6 +141,8 @@ export interface GatewayUsagePatch {
   count?: number
   credits?: number
   costMicroUsd?: number
+  /** 只校准某一把上游密钥的计数；不传则改供应商级的总数 */
+  keyId?: number
 }
 
 /** 连通性测试的入参，全部可选：带 apiKey 就是"保存前先测" */
@@ -259,15 +295,11 @@ export function syncGatewayUsage(): Promise<GatewayUsageSyncResult> {
   return request({ url: '/admin/gateway/usage/sync', method: 'post' })
 }
 
-export function createGatewayProviderKey(name: string, data: { label?: string; apiKey: string }) {
+export function createGatewayProviderKey(name: string, data: GatewayProviderKeyPatch & { apiKey: string }) {
   return request({ url: `/admin/gateway/providers/${name}/keys`, method: 'post', data })
 }
 
-export function updateGatewayProviderKey(
-  name: string,
-  id: number,
-  data: { label?: string; apiKey?: string; enabled?: boolean; revive?: boolean }
-) {
+export function updateGatewayProviderKey(name: string, id: number, data: GatewayProviderKeyPatch) {
   return request({ url: `/admin/gateway/providers/${name}/keys/${id}`, method: 'put', data })
 }
 

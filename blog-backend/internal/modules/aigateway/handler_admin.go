@@ -113,6 +113,18 @@ type providerKeyView struct {
 	// one thing the page actually needs to show.
 	InRotation bool `json:"inRotation"`
 
+	// MonthlyQuota / MonthlyCostLimit are this account's own allowance, and
+	// MonthlyUsed / MonthlyCost what the gateway has spent of it. Per credential
+	// rather than per provider because that is the only granularity at which two
+	// accounts of the same provider can be told apart.
+	MonthlyQuota     int `json:"monthlyQuota"`
+	MonthlyCostLimit int `json:"monthlyCostLimitMicroUsd"`
+	MonthlyUsed      int `json:"monthlyUsed"`
+	MonthlyCost      int `json:"monthlyCostMicroUsd"`
+	// UsageKeyID names this credential to the provider's usage API. Safe to echo:
+	// it is an identifier, not a secret.
+	UsageKeyID string `json:"usageKeyId"`
+
 	// Upstream* are the provider's own accounting for this credential, last
 	// refreshed at UpstreamSyncedAt. They are reported separately from the
 	// gateway's monthly counter because they measure a different thing: the
@@ -147,6 +159,15 @@ type providerView struct {
 	// MonthlyCostLimit is the spend ceiling, 0 when the provider is capped by
 	// call count instead (or not capped at all).
 	MonthlyCostLimit int `json:"monthlyCostLimitMicroUsd"`
+	// Effective* are the ceilings routing actually measures against, which are
+	// the per-credential allowances summed over the keys in rotation whenever any
+	// credential declares one. They differ from the provider-level pair above on
+	// purpose: the page has to be able to show that two accounts of 1000 are
+	// 2000, and that parking one of them takes it back to 1000.
+	EffectiveMonthlyQuota     int `json:"effectiveMonthlyQuota"`
+	EffectiveMonthlyUsed      int `json:"effectiveMonthlyUsed"`
+	EffectiveMonthlyCost      int `json:"effectiveMonthlyCostMicroUsd"`
+	EffectiveMonthlyCostLimit int `json:"effectiveMonthlyCostLimitMicroUsd"`
 	// UpstreamCost is the upstream's own spend figure when one is fresh enough
 	// to be driving routing, and null when the local counter is what counts.
 	UpstreamCost *int `json:"upstreamCostMicroUsd"`
@@ -154,9 +175,9 @@ type providerView struct {
 	// "this provider has no usage API" rather than "the sync is failing".
 	SupportsUsageSync bool   `json:"supportsUsageSync"`
 	Extra             string `json:"extra"`
-	// UsageKeyID is safe to echo; UsageServiceKey is only ever the masked form,
-	// because a list endpoint has no business handing back a credential.
-	UsageKeyID      string `json:"usageKeyId"`
+	// UsageServiceKey is only ever the masked form, because a list endpoint has
+	// no business handing back a credential. It stays on the provider because it
+	// is a team credential: it reads every key's usage, so one copy is right.
 	UsageServiceKey string `json:"usageServiceKeyMasked"`
 	Health          string `json:"health"`
 }
@@ -186,13 +207,13 @@ type providerPatch struct {
 	// no floating point.
 	MonthlyCostLimitMicroUSD *int    `json:"monthlyCostLimitMicroUsd"`
 	Extra                    *string `json:"extra"`
-	// UsageServiceKey and UsageKeyID address Exa's team-management API, which
-	// reports spend under a credential separate from the search key. They live
-	// inside Extra but are patched by name: the service key is write-only, so
-	// it must never travel back out in the list response the way Extra does.
-	// An empty string clears the option; omitting the field leaves it alone.
+	// UsageServiceKey addresses Exa's team-management API, which reports spend
+	// under a credential separate from the search key. It lives inside Extra but
+	// is patched by name: the service key is write-only, so it must never travel
+	// back out in the list response the way Extra does. An empty string clears
+	// the option; omitting the field leaves it alone. The matching key id is a
+	// per-credential setting and is patched through the /keys endpoints.
 	UsageServiceKey *string `json:"usageServiceKey"`
-	UsageKeyID      *string `json:"usageKeyId"`
 }
 
 func (h *handler) updateProvider(c *gin.Context) {
@@ -252,14 +273,13 @@ func (h *handler) updateProvider(c *gin.Context) {
 		}
 		updates["extra"] = extra
 	}
-	if patch.UsageServiceKey != nil || patch.UsageKeyID != nil {
+	if patch.UsageServiceKey != nil {
 		base, err := h.currentExtra(c, name, updates)
 		if err != nil {
 			return
 		}
 		merged, mergeErr := mergeExtra(base, map[string]*string{
 			extraKeyUsageServiceKey: patch.UsageServiceKey,
-			extraKeyUsageKeyID:      patch.UsageKeyID,
 		})
 		if mergeErr != nil {
 			adminFailure(c, http.StatusBadRequest, mergeErr.Error())
@@ -338,8 +358,30 @@ type providerKeyPayload struct {
 	Label   *string `json:"label"`
 	APIKey  *string `json:"apiKey"`
 	Enabled *bool   `json:"enabled"`
+	// MonthlyQuota and MonthlyCostLimitMicroUSD are this account's own allowance,
+	// zero meaning it declares none. They are per credential because an allowance
+	// belongs to an account: a provider holding two accounts has the sum of them.
+	MonthlyQuota             *int `json:"monthlyQuota"`
+	MonthlyCostLimitMicroUSD *int `json:"monthlyCostLimitMicroUsd"`
+	// UsageKeyID identifies this credential to the provider's usage API. An empty
+	// string clears it; omitting the field leaves it alone.
+	UsageKeyID *string `json:"usageKeyId"`
 	// Revive puts a parked credential back into rotation and clears the reason.
 	Revive bool `json:"revive"`
+}
+
+// validateKeyAllowance checks the allowance fields so create and update apply
+// one set of rules.
+func validateKeyAllowance(c *gin.Context, payload providerKeyPayload) bool {
+	if payload.MonthlyQuota != nil && *payload.MonthlyQuota < 0 {
+		adminFailure(c, http.StatusBadRequest, "月配额不能为负数")
+		return false
+	}
+	if payload.MonthlyCostLimitMicroUSD != nil && *payload.MonthlyCostLimitMicroUSD < 0 {
+		adminFailure(c, http.StatusBadRequest, "月费用上限不能为负数")
+		return false
+	}
+	return true
 }
 
 func (h *handler) createProviderKey(c *gin.Context) {
@@ -363,12 +405,25 @@ func (h *handler) createProviderKey(c *gin.Context) {
 		return
 	}
 
+	if !validateKeyAllowance(c, payload) {
+		return
+	}
+
 	key := ProviderKey{
 		Provider: name,
 		Label:    labelOrDefault(payload.Label),
 		APIKey:   secret,
 		Enabled:  payload.Enabled == nil || *payload.Enabled,
 		Status:   ProviderKeyActive,
+	}
+	if payload.MonthlyQuota != nil {
+		key.MonthlyQuota = *payload.MonthlyQuota
+	}
+	if payload.MonthlyCostLimitMicroUSD != nil {
+		key.MonthlyCostLimit = *payload.MonthlyCostLimitMicroUSD
+	}
+	if payload.UsageKeyID != nil {
+		key.UsageKeyID = strings.TrimSpace(*payload.UsageKeyID)
 	}
 	if err := h.service.repo.createProviderKey(c.Request.Context(), &key); err != nil {
 		adminFailure(c, http.StatusInternalServerError, err.Error())
@@ -404,6 +459,18 @@ func (h *handler) updateProviderKey(c *gin.Context) {
 	}
 	if payload.Enabled != nil {
 		updates["enabled"] = *payload.Enabled
+	}
+	if !validateKeyAllowance(c, payload) {
+		return
+	}
+	if payload.MonthlyQuota != nil {
+		updates["monthly_quota"] = *payload.MonthlyQuota
+	}
+	if payload.MonthlyCostLimitMicroUSD != nil {
+		updates["monthly_cost_limit"] = *payload.MonthlyCostLimitMicroUSD
+	}
+	if payload.UsageKeyID != nil {
+		updates["usage_key_id"] = strings.TrimSpace(*payload.UsageKeyID)
 	}
 	if payload.Revive {
 		updates["status"] = ProviderKeyActive
@@ -682,6 +749,11 @@ type providerUsagePatch struct {
 	Count        *int `json:"count"`
 	Credits      *int `json:"credits"`
 	CostMicroUSD *int `json:"costMicroUsd"`
+	// KeyID corrects one credential's counter instead of the provider-wide one.
+	// It is what an operator needs once credentials carry allowances of their
+	// own: routing then measures a per-account allowance against the per-account
+	// counter, and correcting the provider-wide total would not move it.
+	KeyID *int `json:"keyId"`
 }
 
 // updateProviderUsage overwrites this month's local counters for one provider.
@@ -718,6 +790,18 @@ func (h *handler) updateProviderUsage(c *gin.Context) {
 
 	period := currentPeriod(h.service.now())
 	subject := providerSubject(name)
+	if patch.KeyID != nil {
+		credential, err := h.service.repo.providerKeyByID(c.Request.Context(), *patch.KeyID)
+		if err != nil {
+			adminFailure(c, providerErrorStatus(err), err.Error())
+			return
+		}
+		if credential.Provider != name {
+			adminFailure(c, http.StatusBadRequest, "该密钥不属于这个供应商")
+			return
+		}
+		subject = providerKeySubject(credential.ID)
+	}
 	current, err := h.service.repo.usageFor(c.Request.Context(), period, []string{subject})
 	if err != nil {
 		adminFailure(c, http.StatusInternalServerError, "读取当前用量失败")

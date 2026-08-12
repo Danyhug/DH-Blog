@@ -120,6 +120,32 @@ func (r *providerRuntime) usableKeys(now time.Time) int {
 	return count
 }
 
+// usableKeyConfigs copies the configuration of the credentials in rotation, for
+// the callers that need to add up what those credentials are allowed to spend.
+func (r *providerRuntime) usableKeyConfigs(now time.Time) []ProviderKey {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	configs := make([]ProviderKey, 0, len(r.keys))
+	for _, key := range r.keys {
+		if key.config.Usable(now) {
+			configs = append(configs, key.config)
+		}
+	}
+	return configs
+}
+
+// keyIDs lists every credential, in rotation or not, so a caller can ask the
+// usage table about all of them in one query.
+func (r *providerRuntime) keyIDs() []int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	ids := make([]int, 0, len(r.keys))
+	for _, key := range r.keys {
+		ids = append(ids, key.config.ID)
+	}
+	return ids
+}
+
 // park takes a credential out of rotation in memory. It reports false when the
 // key was already parked, so a concurrent second failure does not log twice.
 func (r *providerRuntime) park(id int, status, reason string, now time.Time) bool {
@@ -203,6 +229,11 @@ func (r *providerRuntime) credentials() []credentialSnapshot {
 // against the provider, are invisible to the local counter and very visible on
 // the bill.
 //
+// Every credential counts here, including the parked ones: this is money already
+// spent this month, and parking a key does not refund it. That is the opposite
+// of upstreamHeadroom below, which asks what is left to spend and therefore only
+// counts the credentials still in rotation.
+//
 // The windows do not line up — Exa reports a rolling 30 days while the local
 // counter resets with the calendar month — so a spend cap enforced against this
 // number is a cap on the last 30 days. That is the more conservative reading of
@@ -211,7 +242,7 @@ func (r *providerRuntime) credentials() []credentialSnapshot {
 func (r *providerRuntime) upstreamCostMicroUSD(now time.Time) (int, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	total, found := 0, false
+	accountMax, keySum, found := 0, 0, false
 	for _, key := range r.keys {
 		config := key.config
 		if config.UpstreamUnit != search.UsageUnitMicroUSD || config.UpstreamSyncedAt == nil {
@@ -220,10 +251,89 @@ func (r *providerRuntime) upstreamCostMicroUSD(now time.Time) (int, bool) {
 		if now.Sub(*config.UpstreamSyncedAt) > upstreamUsageTTL {
 			continue
 		}
-		total += config.UpstreamUsed
 		found = true
+		// Account-scoped reports all describe the same bill, so several
+		// credentials on one account each report the whole of it. Adding those
+		// up charges the same dollars once per key — which is how a two-key
+		// provider came to look like it had spent twice what it had.
+		if config.UpstreamScope == search.UsageScopeAccount {
+			if config.UpstreamUsed > accountMax {
+				accountMax = config.UpstreamUsed
+			}
+			continue
+		}
+		keySum += config.UpstreamUsed
 	}
-	return total, found
+	if !found {
+		return 0, false
+	}
+	// Mixed scopes cannot be added either, since the account figure already
+	// covers the keys underneath it; the larger of the two is the safer read.
+	if accountMax > keySum {
+		return accountMax, true
+	}
+	return keySum, true
+}
+
+// upstreamHeadroom is the share of the upstreams' own allowance still unspent,
+// expressed as a ratio so credits, requests and dollars land on one scale.
+//
+// This is the only way the gateway learns that an account is nearly empty when
+// the plan is sold in a unit the local counter does not speak. Without it, a
+// provider whose local ceiling was left open scores a permanent 1.0 on the quota
+// term no matter what its upstream says, and eventually beats every provider
+// that does declare a ceiling — including when the upstream has been reporting
+// zero credits left for days.
+//
+// Only credentials in rotation count: a parked one contributes no capacity, and
+// its spent allowance is not something future requests can draw on.
+//
+// Account-scoped credentials draw from one shared pool and the report does not
+// say which account a key belongs to, so they are folded by taking the tightest
+// rather than summed — adding them would invent capacity that does not exist.
+// Key-scoped credentials are independent, so their remainders do add up, and
+// that sum is exactly the "two accounts of 1000 make 2000" the provider-level
+// ceiling could never express.
+func (r *providerRuntime) upstreamHeadroom(now time.Time) (float64, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	tightest, hasAccount := 1.0, false
+	keyRemaining, keyLimit := 0, 0
+	for _, key := range r.keys {
+		config := key.config
+		if !config.Usable(now) || config.UpstreamLimit <= 0 || config.UpstreamSyncedAt == nil {
+			continue
+		}
+		if now.Sub(*config.UpstreamSyncedAt) > upstreamUsageTTL {
+			continue
+		}
+		remaining := config.UpstreamLimit - config.UpstreamUsed
+		if remaining < 0 {
+			remaining = 0
+		}
+		if config.UpstreamScope == search.UsageScopeAccount {
+			hasAccount = true
+			if ratio := float64(remaining) / float64(config.UpstreamLimit); ratio < tightest {
+				tightest = ratio
+			}
+			continue
+		}
+		keyRemaining += remaining
+		keyLimit += config.UpstreamLimit
+	}
+
+	if keyLimit > 0 {
+		byKey := float64(keyRemaining) / float64(keyLimit)
+		if hasAccount && tightest < byKey {
+			return tightest, true
+		}
+		return byKey, true
+	}
+	if hasAccount {
+		return tightest, true
+	}
+	return 0, false
 }
 
 // recordUsage mirrors a synced report into the runtime, so a routing decision
@@ -348,7 +458,7 @@ func (s *Service) Reload(ctx context.Context) error {
 
 	rebuilt := make(map[string]*providerRuntime, len(providers))
 	for _, config := range providers {
-		probe, err := s.buildAdapter(config, "")
+		probe, err := s.buildAdapter(config, "", "")
 		if err != nil {
 			logrus.Warnf("搜索供应商 %s 初始化失败: %v", config.Name, err)
 			continue
@@ -362,7 +472,7 @@ func (s *Service) Reload(ctx context.Context) error {
 			reportsUsage: reportsUsage,
 		}
 		for _, credential := range byProvider[config.Name] {
-			adapter, err := s.buildAdapter(config, credential.APIKey)
+			adapter, err := s.buildAdapter(config, credential.APIKey, credential.UsageKeyID)
 			if err != nil {
 				logrus.Warnf("供应商 %s 的密钥 %d 初始化失败: %v", config.Name, credential.ID, err)
 				continue
@@ -387,7 +497,11 @@ func (s *Service) Reload(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) buildAdapter(config Provider, apiKey string) (search.Provider, error) {
+// buildAdapter builds one provider adapter. usageKeyID belongs to the credential
+// rather than the provider, so it is passed in separately instead of being read
+// out of Extra: it names a single key at the upstream, and one id shared by a
+// whole rotation makes every credential report the same key's spend.
+func (s *Service) buildAdapter(config Provider, apiKey, usageKeyID string) (search.Provider, error) {
 	switch config.Name {
 	case search.ProviderBrave:
 		return search.NewBrave(apiKey, config.BaseURL, s.httpClient), nil
@@ -402,6 +516,9 @@ func (s *Service) buildAdapter(config Provider, apiKey string) (search.Provider,
 		if err := decodeExtra(config.Extra, &options); err != nil {
 			logrus.Warnf("解析 Exa 附加配置失败，使用默认值: %v", err)
 		}
+		// The credential is the only source for this id; a leftover copy in Extra
+		// would be the shared-id bug coming back through a side door.
+		options.UsageKeyID = usageKeyID
 		return search.NewExa(apiKey, config.BaseURL, options, s.httpClient), nil
 	case search.ProviderFirecrawl:
 		var options search.FirecrawlOptions
@@ -637,10 +754,10 @@ func (s *Service) search(ctx context.Context, key *APIKey, req SearchRequest, re
 
 		attempts++
 		entry.Provider = name
-		response, reached, callErr := s.callProvider(ctx, runtime, upstream, now)
+		response, providerKeyID, reached, callErr := s.callProvider(ctx, runtime, upstream, now)
 		if callErr == nil {
 			runtime.breaker.Report(true)
-			return s.finish(ctx, key, req, name, order[0], response, requestID, cacheKey, now), nil
+			return s.finish(ctx, key, req, name, order[0], providerKeyID, response, requestID, cacheKey, now), nil
 		}
 		if !reached {
 			// Nothing got as far as the upstream, so the breaker must not treat
@@ -673,10 +790,12 @@ func (s *Service) search(ctx context.Context, key *APIKey, req SearchRequest, re
 // a provider outage — falling back to a different provider there would waste a
 // perfectly good upstream.
 //
-// The bool reports whether any call actually reached the upstream, so the
-// caller knows whether the circuit breaker saw real evidence.
+// It returns the credential that served the request, so the caller can bill the
+// call to the account that actually paid for it, and a bool reporting whether
+// any call reached the upstream, so the caller knows whether the circuit breaker
+// saw real evidence.
 func (s *Service) callProvider(ctx context.Context, runtime *providerRuntime,
-	upstream search.Request, now time.Time) (search.Response, bool, error) {
+	upstream search.Request, now time.Time) (search.Response, int, bool, error) {
 
 	reached := false
 	var lastErr error
@@ -695,7 +814,7 @@ func (s *Service) callProvider(ctx context.Context, runtime *providerRuntime,
 		}
 
 		if err := runtime.limiter.Wait(ctx, s.options.QueueWait); err != nil {
-			return search.Response{}, reached, err
+			return search.Response{}, 0, reached, err
 		}
 
 		response, err := picked.provider.Search(ctx, upstream)
@@ -704,13 +823,13 @@ func (s *Service) callProvider(ctx context.Context, runtime *providerRuntime,
 			if err := s.repo.touchProviderKey(ctx, picked.config.ID, now); err != nil {
 				logrus.Warnf("更新供应商密钥使用时间失败: %v", err)
 			}
-			return response, true, nil
+			return response, picked.config.ID, true, nil
 		}
 
 		lastErr = err
 		if !s.parkKey(ctx, runtime, picked, err, now) {
 			// 不是凭据的问题，换一把也一样，交给上层决定要不要换供应商
-			return search.Response{}, true, err
+			return search.Response{}, 0, true, err
 		}
 	}
 
@@ -718,7 +837,7 @@ func (s *Service) callProvider(ctx context.Context, runtime *providerRuntime,
 		// 一把可用密钥都没有：这不是调用失败，是这家根本没得用
 		lastErr = ErrNoProviderAvailable
 	}
-	return search.Response{}, reached, lastErr
+	return search.Response{}, 0, reached, lastErr
 }
 
 // parkKey takes a rejected credential out of rotation and reports whether
@@ -752,13 +871,19 @@ func (s *Service) parkKey(ctx context.Context, runtime *providerRuntime,
 
 // finish records usage, caches the payload and assembles the response.
 func (s *Service) finish(ctx context.Context, key *APIKey, req SearchRequest, used, preferred string,
-	response search.Response, requestID, cacheKey string, now time.Time) SearchResult {
+	providerKeyID int, response search.Response, requestID, cacheKey string, now time.Time) SearchResult {
 
 	period := currentPeriod(now)
 	// Usage is written synchronously: quota decisions read it back, and one
 	// small upsert is negligible next to the upstream round trip.
 	if err := s.repo.addUsage(ctx, providerSubject(used), period, 1, response.Credits, response.CostMicroUSD); err != nil {
 		logrus.Warnf("累计供应商用量失败: %v", err)
+	}
+	// 再按上游密钥记一份：密钥级额度只能靠这份计数衡量，供应商级的总数说不出是哪个账号花的
+	if providerKeyID > 0 {
+		if err := s.repo.addUsage(ctx, providerKeySubject(providerKeyID), period, 1, response.Credits, response.CostMicroUSD); err != nil {
+			logrus.Warnf("累计供应商密钥用量失败: %v", err)
+		}
 	}
 	if key != nil {
 		if err := s.repo.addUsage(ctx, keySubject(key.ID), period, 1, response.Credits, response.CostMicroUSD); err != nil {
@@ -857,6 +982,96 @@ func (s *Service) markProviderExhausted(ctx context.Context, name string, now ti
 	}
 }
 
+// allowance is what one provider may spend this month, after folding the
+// credentials in rotation into a single pair of ceilings.
+type allowance struct {
+	Quota     int
+	Used      int
+	CostLimit int
+	CostUsed  int
+}
+
+// dimension accumulates one kind of ceiling across a provider's credentials.
+type dimension struct {
+	limit  int
+	used   int
+	capped bool // at least one credential declared a ceiling of its own
+	open   bool // at least one credential declared none
+}
+
+func (d *dimension) add(limit, used int) {
+	d.used += used
+	if limit > 0 {
+		d.limit += limit
+		d.capped = true
+		return
+	}
+	d.open = true
+}
+
+// resolve folds the per-credential figures into one ceiling and the consumption
+// measured against it.
+//
+// Falling back to the provider-level pair when no credential declared anything
+// is what keeps existing installs behaving exactly as they did: per-account
+// allowances are something an operator opts into by filling them in. One
+// uncapped credential makes the whole total uncapped, because summing only the
+// ceilings we do know would understate the capacity and stop routing to a
+// provider that still has room.
+//
+// The consumption side switches to the per-credential counters along with the
+// ceiling, so the two always measure the same thing. Those counters only start
+// filling once this version is running, so a provider given per-account
+// allowances mid-month reads as less used than it was until the month rolls
+// over. Mixing in the provider-wide total instead would be worse: it includes
+// the credentials that have since been parked, and charges their spend against
+// the allowance of the ones still in rotation.
+func (d dimension) resolve(providerLimit, providerUsed int) (limit, used int) {
+	if !d.capped {
+		return providerLimit, providerUsed
+	}
+	if d.open {
+		return 0, d.used
+	}
+	return d.limit, d.used
+}
+
+// allowanceOf turns a provider's credentials into the single allowance the
+// routing policy scores.
+//
+// Capacity belongs to the accounts behind the credentials rather than to the
+// provider: two accounts of 1000 calls each are 2000, and become 1000 again the
+// moment one of them is parked. A single provider-level number can express
+// neither — set to 1000 it wastes half the capacity, set to 2000 it keeps
+// scheduling against an account that is no longer there.
+func allowanceOf(runtime *providerRuntime, now time.Time, usage map[string]Usage) allowance {
+	var quota, cost dimension
+	for _, key := range runtime.usableKeyConfigs(now) {
+		spent := usage[providerKeySubject(key.ID)]
+		quota.add(key.MonthlyQuota, spent.Count)
+		cost.add(key.MonthlyCostLimit, spent.CostMicroUSD)
+	}
+	provider := usage[providerSubject(runtime.config.Name)]
+
+	var result allowance
+	result.Quota, result.Used = quota.resolve(runtime.config.MonthlyQuota, provider.Count)
+	result.CostLimit, result.CostUsed = cost.resolve(runtime.config.MonthlyCostLimit, provider.CostMicroUSD)
+	return result
+}
+
+// usageSubjects lists every counter the allowance calculation reads, so they can
+// be fetched in one query instead of one per credential.
+func usageSubjects(runtimes []*providerRuntime) []string {
+	subjects := make([]string, 0, len(runtimes)*2)
+	for _, runtime := range runtimes {
+		subjects = append(subjects, providerSubject(runtime.config.Name))
+		for _, id := range runtime.keyIDs() {
+			subjects = append(subjects, providerKeySubject(id))
+		}
+	}
+	return subjects
+}
+
 // plan asks the routing policy for an ordered candidate list.
 func (s *Service) plan(ctx context.Context, key *APIKey, req SearchRequest, now time.Time) ([]string, error) {
 	runtimes := s.snapshot()
@@ -864,11 +1079,7 @@ func (s *Service) plan(ctx context.Context, key *APIKey, req SearchRequest, now 
 		return nil, newGatewayError(http.StatusServiceUnavailable, "no_provider_available", ErrNoProviderAvailable.Error(), "")
 	}
 
-	subjects := make([]string, 0, len(runtimes))
-	for _, runtime := range runtimes {
-		subjects = append(subjects, providerSubject(runtime.config.Name))
-	}
-	usage, err := s.repo.usageFor(ctx, currentPeriod(now), subjects)
+	usage, err := s.repo.usageFor(ctx, currentPeriod(now), usageSubjects(runtimes))
 	if err != nil {
 		return nil, err
 	}
@@ -882,23 +1093,25 @@ func (s *Service) plan(ctx context.Context, key *APIKey, req SearchRequest, now 
 		if runtime.usableKeys(now) == 0 {
 			continue
 		}
-		local := usage[providerSubject(runtime.config.Name)]
+		spend := allowanceOf(runtime, now, usage)
 		// 上游自己报的花费优先，拿不到或已过期就退回本地累加值
-		costUsed := local.CostMicroUSD
+		costUsed := spend.CostUsed
 		if upstream, ok := runtime.upstreamCostMicroUSD(now); ok {
 			costUsed = upstream
 		}
-		candidates = append(candidates, candidate{
+		item := candidate{
 			Name:             runtime.config.Name,
 			Capability:       runtime.capability,
 			Priority:         runtime.config.Priority,
 			Weight:           runtime.config.Weight,
-			MonthlyQuota:     runtime.config.MonthlyQuota,
-			Used:             local.Count,
-			MonthlyCostLimit: runtime.config.MonthlyCostLimit,
+			MonthlyQuota:     spend.Quota,
+			Used:             spend.Used,
+			MonthlyCostLimit: spend.CostLimit,
 			CostUsed:         costUsed,
 			Healthy:          runtime.breaker.State() != search.BreakerOpen,
-		})
+		}
+		item.UpstreamHeadroom, item.HasUpstreamHeadroom = runtime.upstreamHeadroom(now)
+		candidates = append(candidates, item)
 	}
 
 	input := routeInput{
