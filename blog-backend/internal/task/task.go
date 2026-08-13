@@ -29,6 +29,9 @@ func (a *AiGenTagTask) Payload() interface{} {
 	return a
 }
 
+// Target reports the article this task writes back to.
+func (a *AiGenTagTask) Target() int { return a.ArticleID }
+
 // NewAiGenTask 创建AI生成标签任务
 func NewAiGenTask(articleID int, content string) *AiGenTagTask {
 	return &AiGenTagTask{
@@ -50,6 +53,9 @@ func (a *AiGenSummaryTask) Type() string {
 func (a *AiGenSummaryTask) Payload() interface{} {
 	return a
 }
+
+// Target reports the article this task writes back to.
+func (a *AiGenSummaryTask) Target() int { return a.ArticleID }
 
 // NewAiGenSummaryTask 创建AI生成摘要任务
 func NewAiGenSummaryTask(articleID int, content string) *AiGenSummaryTask {

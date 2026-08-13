@@ -72,16 +72,20 @@ func ValidLoginMiddleware(parser TokenParser) gin.HandlerFunc {
 	}
 }
 
+// extractToken reads the token from the Authorization header, falling back to
+// the query string for transports that cannot set headers — file downloads and
+// the admin event WebSocket, since the browser's WebSocket API has no way to
+// send one.
+//
+// Both sources are normalised the same way. The frontend stores the token with
+// the "Bearer " prefix the login endpoint returns, so a query carrying it
+// verbatim used to fail while the identical header succeeded; call sites papered
+// over that by stripping the prefix themselves, one copy at a time.
 func extractToken(c *gin.Context) string {
-	authHeader := c.Request.Header.Get("Authorization")
-	if authHeader != "" {
-		if strings.HasPrefix(authHeader, "Bearer ") {
-			return authHeader[7:]
-		}
-		return authHeader
+	if authHeader := c.Request.Header.Get("Authorization"); authHeader != "" {
+		return strings.TrimPrefix(authHeader, "Bearer ")
 	}
-
-	return c.Query("token")
+	return strings.TrimPrefix(c.Query("token"), "Bearer ")
 }
 
 func setJWTContext(c *gin.Context, token *jwt.Token) {

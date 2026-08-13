@@ -10,6 +10,7 @@ import (
 	aigatewaymodule "dh-blog/internal/modules/aigateway"
 	articlemodule "dh-blog/internal/modules/article"
 	commentmodule "dh-blog/internal/modules/comment"
+	eventlogmodule "dh-blog/internal/modules/eventlog"
 	filesmodule "dh-blog/internal/modules/files"
 	loggingmodule "dh-blog/internal/modules/logging"
 	sharemodule "dh-blog/internal/modules/share"
@@ -114,6 +115,13 @@ var moduleRegistrations = []moduleRegistration{
 			return ctx.aigateway()
 		},
 	},
+	{
+		Name:            "eventlog",
+		MigrationModels: eventlogmodule.MigrationModels,
+		Build: func(ctx *buildContext) (router.Module, error) {
+			return ctx.eventlog(), nil
+		},
+	},
 }
 
 // buildContext is the application composition container. Concrete modules are
@@ -137,6 +145,7 @@ type buildContext struct {
 	articleModule *articlemodule.Module
 	shareModule   *sharemodule.Module
 	gatewayModule *aigatewaymodule.Module
+	eventModule   *eventlogmodule.Module
 }
 
 func newBuildContext(conf *config.Config, db *gorm.DB, paths applicationPaths) *buildContext {
@@ -177,6 +186,16 @@ func (ctx *buildContext) logging() *loggingmodule.Module {
 	return ctx.loggingModule
 }
 
+// eventlog is built ahead of the modules that report into it. Route order puts
+// it last, but everything that publishes an event resolves it through here
+// first — which is exactly what the lazy container is for.
+func (ctx *buildContext) eventlog() *eventlogmodule.Module {
+	if ctx.eventModule == nil {
+		ctx.eventModule = eventlogmodule.New(ctx.db)
+	}
+	return ctx.eventModule
+}
+
 func (ctx *buildContext) files() *filesmodule.Module {
 	if ctx.filesModule == nil {
 		ctx.filesModule = filesmodule.New(filesmodule.Dependencies{
@@ -184,6 +203,7 @@ func (ctx *buildContext) files() *filesmodule.Module {
 			StaticFilesPath:    ctx.paths.StaticFilesPath,
 			InitialStoragePath: ctx.paths.DefaultStoragePath,
 			InitialChunkSizeKB: 5120,
+			Events:             ctx.eventlog().SyncReporter(),
 		})
 	}
 	return ctx.filesModule
@@ -223,6 +243,9 @@ func (ctx *buildContext) article() (*articlemodule.Module, error) {
 	}
 	if ctx.tasks == nil {
 		ctx.tasks = task.NewTaskManager()
+		// Without this the queue's only account of a job that burned all ten
+		// retries is a line in the server log.
+		ctx.tasks.SetObserver(ctx.eventlog().TaskObserver())
 	}
 	comment, err := ctx.comment()
 	if err != nil {
@@ -266,6 +289,7 @@ func (ctx *buildContext) aigateway() (*aigatewaymodule.Module, error) {
 			QueueWait:        gateway.QueueWait,
 			LogRetentionDays: gateway.LogRetentionDays,
 		},
+		Events: ctx.eventlog().GatewayReporter(),
 	})
 	if err != nil {
 		return nil, err
@@ -295,7 +319,7 @@ func (ctx *buildContext) starts() []func() {
 }
 
 func (ctx *buildContext) shutdowns() []func() {
-	shutdowns := make([]func(), 0, 4)
+	shutdowns := make([]func(), 0, 5)
 	if ctx.tasks != nil {
 		shutdowns = append(shutdowns, ctx.tasks.Stop)
 	}
@@ -308,6 +332,11 @@ func (ctx *buildContext) shutdowns() []func() {
 	if ctx.gatewayModule != nil {
 		shutdowns = append(shutdowns, ctx.gatewayModule.Shutdown)
 	}
+	// The event feed closes after everything that publishes into it, so the
+	// last thing a task says on its way out still gets written.
+	if ctx.eventModule != nil {
+		shutdowns = append(shutdowns, ctx.eventModule.Shutdown)
+	}
 	return append(shutdowns, ctx.cache.Shutdown)
 }
 
@@ -317,6 +346,9 @@ func (ctx *buildContext) cleanupAfterBuildFailure() {
 	}
 	if ctx.gatewayModule != nil {
 		ctx.gatewayModule.Shutdown()
+	}
+	if ctx.eventModule != nil {
+		ctx.eventModule.Shutdown()
 	}
 	ctx.cache.Shutdown()
 }

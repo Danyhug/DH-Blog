@@ -19,6 +19,16 @@ type Dependencies struct {
 	StaticFilesPath    string
 	InitialStoragePath string
 	InitialChunkSizeKB int
+	// Events is optional. Without it the debounced disk sync stays invisible,
+	// which matters because it truncates and rebuilds the entire file table.
+	Events EventReporter
+}
+
+// EventReporter records background disk-sync activity for the admin event
+// feed. A nil reporter simply means nobody is watching.
+type EventReporter interface {
+	SyncStarted()
+	SyncFinished(err error)
 }
 
 // Module owns file persistence, business logic, HTTP handlers, and routes.
@@ -34,6 +44,9 @@ type Module struct {
 func New(deps Dependencies) *Module {
 	repository := newRepository(deps.DB)
 	service := newService(repository, deps.InitialStoragePath, deps.InitialChunkSizeKB)
+	if service != nil {
+		service.events = deps.Events
+	}
 	return &Module{
 		repository:         repository,
 		service:            service,

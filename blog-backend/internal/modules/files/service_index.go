@@ -193,11 +193,17 @@ func (s *fileService) SyncFilesFromDiskDebounced() {
 }
 
 // doSyncFilesFromDisk 实际执行文件同步
-func (s *fileService) doSyncFilesFromDisk() error {
+func (s *fileService) doSyncFilesFromDisk() (err error) {
 	s.syncExecMu.Lock()
 	defer s.syncExecMu.Unlock()
 
 	logrus.Info("开始从磁盘同步文件到数据库")
+	// Announced only after the lock is taken, so the feed reflects work that
+	// is actually running rather than work that is queued behind another sync.
+	if s.events != nil {
+		s.events.SyncStarted()
+		defer func() { s.events.SyncFinished(err) }()
+	}
 
 	ctx := context.Background()
 

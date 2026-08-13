@@ -46,6 +46,9 @@ type Dispatcher struct {
 	mu        sync.RWMutex
 	startOnce sync.Once
 	stopOnce  sync.Once
+	// observer reports lifecycle transitions to whoever wired one in. Set
+	// during composition, before Start, so it needs no lock of its own.
+	observer Observer
 }
 
 // NewDispatcher 创建一个新的任务调度器
@@ -64,6 +67,11 @@ func NewDispatcher(maxWorkers int, queueSize int) *Dispatcher {
 // Register 注册任务处理函数
 func (d *Dispatcher) Register(taskType string, handler Handler) {
 	d.taskHandlers[taskType] = handler
+}
+
+// SetObserver installs the lifecycle observer. Call it before Start.
+func (d *Dispatcher) SetObserver(observer Observer) {
+	d.observer = observer
 }
 
 // Submit 用于提交任务
@@ -89,6 +97,9 @@ func (d *Dispatcher) Submit(task Task) {
 
 	d.queue <- retryableTask
 	logrus.Debugf("提交任务: %s", task.Type())
+	if d.observer != nil {
+		d.observer.TaskQueued(task.Type(), targetOf(task))
+	}
 }
 
 // submitRetry 提交重试任务
@@ -183,6 +194,10 @@ func (d *Dispatcher) worker(workID int) {
 			handler, ok := d.taskHandlers[task.Type()]
 			if !ok {
 				logrus.Errorf("任务类型 %s 没有对应的处理函数", task.Type())
+				if d.observer != nil {
+					d.observer.TaskFailed(task.Type(), targetOf(task), retryableTask.RetryCount,
+						fmt.Errorf("任务类型 %s 没有对应的处理函数", task.Type()))
+				}
 				continue
 			}
 
@@ -204,6 +219,10 @@ func (d *Dispatcher) worker(workID int) {
 				if retryableTask.RetryCount < MaxRetries {
 					logrus.Warnf("处理任务 %s 失败: %v, 将进行重试 (%d/%d)",
 						task.Type(), err, retryableTask.RetryCount+1, MaxRetries)
+					if d.observer != nil {
+						d.observer.TaskRetrying(task.Type(), targetOf(task),
+							retryableTask.RetryCount+1, err)
+					}
 					d.submitRetry(retryableTask)
 				} else {
 					// 超过最大重试次数
@@ -213,6 +232,10 @@ func (d *Dispatcher) worker(workID int) {
 					// 这里可以添加失败后的处理逻辑，如通知管理员等
 					elapsed := time.Since(retryableTask.OriginalTime)
 					logrus.Errorf("任务 %s 最终失败，总耗时 %v", task.Type(), elapsed)
+					if d.observer != nil {
+						d.observer.TaskFailed(task.Type(), targetOf(task),
+							retryableTask.RetryCount, err)
+					}
 				}
 			} else {
 				// 任务成功
@@ -221,6 +244,9 @@ func (d *Dispatcher) worker(workID int) {
 						task.Type(), retryableTask.RetryCount)
 				} else {
 					logrus.Infof("任务 %s 处理完成", task.Type())
+				}
+				if d.observer != nil {
+					d.observer.TaskSucceeded(task.Type(), targetOf(task), retryableTask.RetryCount)
 				}
 			}
 		case <-d.quit:
@@ -293,6 +319,12 @@ func (m *TaskManager) RegisterSummaryGenerationHandler(handler func(context.Cont
 // SubmitSummaryGeneration submits the article module's summary work.
 func (m *TaskManager) SubmitSummaryGeneration(articleID int, content string) {
 	m.SubmitTask(NewAiGenSummaryTask(articleID, content))
+}
+
+// SetObserver installs the lifecycle observer for every queued task. Call it
+// before Start.
+func (m *TaskManager) SetObserver(observer Observer) {
+	m.dispatcher.SetObserver(observer)
 }
 
 // Start 启动任务管理器

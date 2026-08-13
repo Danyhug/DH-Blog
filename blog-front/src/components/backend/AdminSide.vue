@@ -38,6 +38,12 @@
         </el-icon>
         评论管理
       </el-menu-item>
+      <el-menu-item index="/admin/events">
+        <el-icon :size="iconSize">
+          <Monitor />
+        </el-icon>
+        运行日志
+      </el-menu-item>
     </el-menu>
 
     <div class="tool">

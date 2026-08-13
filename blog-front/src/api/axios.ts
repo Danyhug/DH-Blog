@@ -12,7 +12,8 @@ interface AjaxResult<T> {
 }
 
 // 获取服务器配置（如果有）
-const getServerUrl = () => {
+// 导出给 WebSocket 复用：它要基于同一个 base 拼出 ws:// 地址
+export const getServerUrl = () => {
   // 检查是否有服务器注入的配置
   if (window && (window as any).__SERVER_CONFIG__) {
     return (window as any).__SERVER_CONFIG__.SERVER_URL;

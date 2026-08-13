@@ -23,6 +23,7 @@ const DashBoardView = () => import(/* webpackChunkName: "dashboard" */ '../views
 const CommentView = () => import(/* webpackChunkName: "comment" */ '../views/backend/CommentView.vue');
 const SystemView = () => import(/* webpackChunkName: "system" */ '../views/backend/SystemView.vue');
 const GatewayView = () => import(/* webpackChunkName: "gateway" */ '../views/backend/GatewayView.vue');
+const EventLogView = () => import(/* webpackChunkName: "eventlog" */ '../views/backend/EventLogView.vue');
 
 
 import NProgress from 'nprogress'
@@ -64,6 +65,8 @@ const routes = [
         { path: 'system', component: SystemView, name: 'system', meta: { title: '后台 系统设置' } },
         // 评论管理
         { path: 'comment', component: CommentView, name: 'comment', meta: { title: '后台 评论管理' } },
+        // 运行日志（服务器输出 + 后台任务留档）
+        { path: 'events', component: EventLogView, name: 'events', meta: { title: '后台 运行日志' } },
       ]
   },
   // 登录页面

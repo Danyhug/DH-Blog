@@ -49,6 +49,11 @@ func (s *Service) usageSyncLoop() {
 			if result.Failed > 0 || len(result.Parked) > 0 || len(result.Revived) > 0 {
 				logrus.Infof("上游用量同步完成: 更新 %d, 跳过 %d, 失败 %d, 停用 %v, 恢复 %v",
 					result.Synced, result.Skipped, result.Failed, result.Parked, result.Revived)
+				// Only the noteworthy sweeps reach the feed. A quiet hourly
+				// sync that changed nothing is not news.
+				if s.events != nil {
+					s.events.UsageSyncFinished(result.Failed, result.Parked, result.Revived)
+				}
 			}
 		}
 	}

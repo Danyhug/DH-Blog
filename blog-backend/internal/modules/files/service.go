@@ -17,6 +17,9 @@ type fileService struct {
 	filePath    string // 实际存储文件的基础路径
 	chunkSizeKB int
 
+	// events reports disk syncs to the admin feed; nil when nothing listens.
+	events EventReporter
+
 	// SyncFilesFromDisk 防抖相关
 	syncMu     sync.Mutex
 	syncTimer  *time.Timer

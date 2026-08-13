@@ -45,6 +45,15 @@ type Dependencies struct {
 	Cache      dhcache.Cache
 	HTTPClient *http.Client
 	Options    Options
+	// Events is optional. Without it the hourly usage sync can pull a
+	// credential out of rotation with nobody the wiser.
+	Events EventReporter
+}
+
+// EventReporter records rotation changes made by the background usage sync for
+// the admin event feed. A nil reporter simply means nobody is watching.
+type EventReporter interface {
+	UsageSyncFinished(failed int, parked, revived []string)
 }
 
 // providerKeyRuntime pairs one upstream credential with the adapter built from
@@ -389,6 +398,9 @@ type Service struct {
 	rates *minuteCounters
 	now   func() time.Time
 
+	// events reports background rotation changes; nil when nothing listens.
+	events EventReporter
+
 	logs     chan RequestLog
 	pruner   *time.Ticker
 	stop     chan struct{}
@@ -405,6 +417,7 @@ func newService(deps Dependencies) (*Service, error) {
 		runtimes:   make(map[string]*providerRuntime),
 		rates:      newMinuteCounters(),
 		now:        time.Now,
+		events:     deps.Events,
 		logs:       make(chan RequestLog, logBuffer),
 		stop:       make(chan struct{}),
 	}
