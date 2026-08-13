@@ -12,13 +12,13 @@ import (
 
 // AccessRecord is the transport-neutral request data persisted by the logging
 // module. Keeping it here prevents the global middleware from depending on a
-// business module's database model.
+// business module's database model. Geo-location is resolved by the logging
+// module itself, not here.
 type AccessRecord struct {
 	IPAddress    string
 	AccessDate   time.Time
 	UserAgent    string
 	RequestURL   string
-	City         string
 	ResourceType string
 }
 
@@ -80,30 +80,16 @@ func IPMiddleware(ipService IPService) gin.HandlerFunc {
 			os, browser := utils.ParseUserAgent(userAgent)
 			ua := os + "; " + browser
 
-			// 获取IP所在城市
-			city, err := utils.GetIPLocation(ip)
-			if err != nil {
-				logrus.Warnf("获取IP地理位置信息失败: %v", err)
-				city = "未知/未知"
-			}
-
-			// 如果是本地网络，格式化为符合前端期望的格式
-			if city == "本地网络" {
-				city = "本地网络/本地/内网"
-			}
-
-			// 创建访问日志
+			// 创建访问日志。City 归属地由 logging 模块负责解析与缓存
 			record := AccessRecord{
 				IPAddress:    ip,
 				AccessDate:   time.Now(),
 				UserAgent:    ua,
 				RequestURL:   requestURL,
-				City:         city,
 				ResourceType: resourceType,
 			}
 
-			err = ipService.RecordRequest(record)
-			if err != nil {
+			if err := ipService.RecordRequest(record); err != nil {
 				logrus.Errorf("保存访问日志时出错: %v", err)
 				return
 			}

@@ -36,3 +36,16 @@ type IPBlacklist struct {
 func (IPBlacklist) TableName() string {
 	return "ip_blacklist"
 }
+
+// IPCityCache persists the last resolved geo location per IP so repeated
+// visits never re-query the external IP-location API.
+type IPCityCache struct {
+	IP        string    `gorm:"column:ip;primaryKey" json:"ip"`
+	City      string    `gorm:"column:city;not null" json:"city"`
+	UpdatedAt time.Time `gorm:"column:updated_at" json:"updatedAt"`
+}
+
+// TableName keeps the cache table consistent with the access-log naming.
+func (IPCityCache) TableName() string {
+	return "ip_city_cache"
+}

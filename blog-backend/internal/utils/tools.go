@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"golang.org/x/text/encoding/simplifiedchinese"
 )
 
 // GetClientIP 获取客户端真实 IP 地址
@@ -88,7 +90,11 @@ func ParseUserAgent(userAgentString string) (os, browser string) {
 	return os, browser
 }
 
-// IPLocationResponse IP地理位置API响应结构
+// geoQueryClient is shared by all IP-location lookups; a 3s timeout keeps one
+// failed lookup bounded while the access-log goroutines wait on it.
+var geoQueryClient = &http.Client{Timeout: 3 * time.Second}
+
+// IPLocationResponse IP地理位置API响应结构（ip-api.com）
 type IPLocationResponse struct {
 	Status      string  `json:"status"`
 	Country     string  `json:"country"`
@@ -106,79 +112,125 @@ type IPLocationResponse struct {
 	Query       string  `json:"query"`
 }
 
-// GetIPLocation 查询IP所在城市
+// PconlineResponse whois.pconline.com.cn 的响应结构，正文为 GBK 编码。
+type PconlineResponse struct {
+	IP   string `json:"ip"`
+	Pro  string `json:"pro"`
+	City string `json:"city"`
+	Addr string `json:"addr"`
+	Err  string `json:"err"`
+}
+
+// GetIPLocation 查询IP所在城市。部署在国内时 ip-api.com 经常不可达，因此先查
+// 国内可达的太平洋IP库（whois.pconline.com.cn），失败再回退到 ip-api.com。
 func GetIPLocation(ip string) (string, error) {
 	// 如果是本地IP或者内网IP，直接返回
 	if ip == "127.0.0.1" || ip == "localhost" || strings.HasPrefix(ip, "192.168.") || strings.HasPrefix(ip, "10.") {
 		return "本地网络", nil
 	}
 
-	// 创建HTTP客户端，设置超时时间
-	client := &http.Client{
-		Timeout: 5 * time.Second,
+	if city, err := queryPconline(ip); err == nil {
+		return city, nil
+	}
+	return queryIPAPI(ip)
+}
+
+// queryPconline 查询太平洋IP库，返回 "运营商/省份/城市" 格式。
+func queryPconline(ip string) (string, error) {
+	url := fmt.Sprintf("https://whois.pconline.com.cn/ipJson.jsp?ip=%s&json=true", ip)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("构造太平洋IP库请求失败: %w", err)
+	}
+	// 该接口会识别 UA 且响应为 GBK 编码
+	req.Header.Set("User-Agent", "Mozilla/5.0")
+
+	resp, err := geoQueryClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("请求太平洋IP库失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("读取太平洋IP库响应失败: %w", err)
+	}
+	utf8Body, err := simplifiedchinese.GBK.NewDecoder().Bytes(body)
+	if err != nil {
+		return "", fmt.Errorf("解码太平洋IP库响应失败: %w", err)
 	}
 
-	// 构建API请求URL
+	var loc PconlineResponse
+	if err := json.Unmarshal(utf8Body, &loc); err != nil {
+		return "", fmt.Errorf("解析太平洋IP库响应失败: %w", err)
+	}
+	// 国外 IP 该库不准确（pro/city 为空），视为失败交给 ip-api.com 兜底
+	if loc.Err != "" || (loc.Pro == "" && loc.City == "") {
+		return "", fmt.Errorf("太平洋IP库未返回有效位置: %s", loc.Err)
+	}
+
+	// addr 形如 "北京市 联通"，最后一段是运营商
+	ispType := "其他"
+	if parts := strings.Split(loc.Addr, " "); len(parts) > 0 {
+		ispType = classifyISP(parts[len(parts)-1])
+	}
+	return buildLocation(ispType, loc.Pro, loc.City, ""), nil
+}
+
+// queryIPAPI 查询 ip-api.com 作为国外 IP 的兜底。
+func queryIPAPI(ip string) (string, error) {
 	url := fmt.Sprintf("http://ip-api.com/json/%s?lang=zh-CN", ip)
 
-	// 发送HTTP请求
-	resp, err := client.Get(url)
+	resp, err := geoQueryClient.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("请求IP地理位置API失败: %w", err)
 	}
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(resp.Body)
+	defer resp.Body.Close()
 
-	// 读取响应内容
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("读取API响应失败: %w", err)
 	}
 
-	// 解析JSON响应
 	var location IPLocationResponse
 	if err := json.Unmarshal(body, &location); err != nil {
 		return "", fmt.Errorf("解析API响应失败: %w", err)
 	}
 
-	// 检查API响应状态
 	if location.Status != "success" {
 		return "", fmt.Errorf("IP地理位置API返回错误状态: %s", location.Status)
 	}
+	return buildLocation(classifyISP(location.ISP), location.RegionName, location.City, location.Country), nil
+}
 
-	// 解析运营商信息
-	isp := location.ISP
-	// 判断运营商类型
-	ispType := "其他"
-	if strings.Contains(isp, "China Unicom") || strings.Contains(isp, "联通") {
-		ispType = "中国联通"
-	} else if strings.Contains(isp, "China Telecom") || strings.Contains(isp, "电信") {
-		ispType = "中国电信"
-	} else if strings.Contains(isp, "China Mobile") || strings.Contains(isp, "移动") {
-		ispType = "中国移动"
-	} else if strings.Contains(isp, "China") {
-		ispType = "中国网络"
+// classifyISP 把供应商名称归一成前端展示的运营商类型
+func classifyISP(isp string) string {
+	switch {
+	case strings.Contains(isp, "China Unicom"), strings.Contains(isp, "联通"):
+		return "中国联通"
+	case strings.Contains(isp, "China Telecom"), strings.Contains(isp, "Chinanet"), strings.Contains(isp, "电信"):
+		return "中国电信"
+	case strings.Contains(isp, "China Mobile"), strings.Contains(isp, "移动"):
+		return "中国移动"
+	case strings.Contains(isp, "China"):
+		return "中国网络"
+	default:
+		return "其他"
 	}
+}
 
-	// 构建符合前端格式的地理位置信息: "运营商/省份/城市" 或 "运营商/城市"
+// buildLocation 拼接 "运营商/省份/城市"，直辖市等省市相同时去重
+func buildLocation(ispType, region, city, country string) string {
 	result := ispType
-
-	// 添加省份（如果有）
-	if location.RegionName != "" {
-		result += "/" + location.RegionName
+	switch {
+	case region != "" && city != "" && city != region:
+		return result + "/" + region + "/" + city
+	case region != "":
+		return result + "/" + region
+	case city != "":
+		return result + "/" + city
+	case country != "":
+		return result + "/" + country
 	}
-
-	// 添加城市（如果有）
-	if location.City != "" {
-		result += "/" + location.City
-	} else if location.RegionName != "" {
-		// 如果没有城市但有省份，则省份后不加斜杠
-		return result, nil
-	} else {
-		// 如果既没有省份也没有城市，则加上国家名称
-		result += "/" + location.Country
-	}
-
-	return result, nil
+	return result
 }

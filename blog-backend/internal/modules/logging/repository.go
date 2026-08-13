@@ -9,11 +9,16 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
 	ipBlacklistCacheKeyPrefix = "ip:blacklist:"
 	ipBlacklistCacheExpire    = 10 * time.Minute
+	ipCityCacheKeyPrefix      = "ip:city:"
+	ipCityCacheExpire         = 10 * time.Minute
+	// ipCityRefreshAfter 超过该时间后重新向外部IP库确认归属，防止运营商长期迁移
+	ipCityRefreshAfter        = 30 * 24 * time.Hour
 	defaultAccessLogBatchSize = 100
 )
 
@@ -158,6 +163,52 @@ func (r *Repository) GetVisitStatistics() (map[string]int64, error) {
 
 func getIPBlacklistCacheKey(ip string) string {
 	return ipBlacklistCacheKeyPrefix + ip
+}
+
+func getIPCityCacheKey(ip string) string {
+	return ipCityCacheKeyPrefix + ip
+}
+
+// ResolveCity returns the geo location for an IP through three layers:
+// in-memory cache, the ip_city_cache table, and the external lookup (whose
+// result is written back to both). It is called per request, so the cache
+// layers exist to keep external API calls close to zero.
+func (r *Repository) ResolveCity(ip string, lookup func(string) (string, error)) (string, error) {
+	cacheKey := getIPCityCacheKey(ip)
+	if cached, found := r.cache.Get(cacheKey); found {
+		if city, ok := cached.(string); ok {
+			return city, nil
+		}
+		logrus.Warnf("IP城市缓存类型转换失败: %s, 将从数据库重新获取", ip)
+	}
+
+	var entry IPCityCache
+	if err := r.db.Where("ip = ?", ip).First(&entry).Error; err == nil && time.Since(entry.UpdatedAt) < ipCityRefreshAfter {
+		_ = r.cache.Set(cacheKey, entry.City, ipCityCacheExpire)
+		return entry.City, nil
+	}
+
+	city, err := lookup(ip)
+	if err != nil {
+		return "", err
+	}
+	// 本地网络无需入库，其余结果写回两级缓存
+	if city != "本地网络" {
+		if err := r.UpsertCity(ip, city); err != nil {
+			logrus.Errorf("保存IP城市缓存失败: %s, 错误: %v", ip, err)
+		}
+	}
+	_ = r.cache.Set(cacheKey, city, ipCityCacheExpire)
+	return city, nil
+}
+
+// UpsertCity stores or refreshes an IP's geo location.
+func (r *Repository) UpsertCity(ip, city string) error {
+	entry := IPCityCache{IP: ip, City: city, UpdatedAt: time.Now()}
+	return r.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "ip"}},
+		DoUpdates: clause.AssignmentColumns([]string{"city", "updated_at"}),
+	}).Create(&entry).Error
 }
 
 func (r *Repository) BanIP(ip, reason string, expireTime time.Time) error {

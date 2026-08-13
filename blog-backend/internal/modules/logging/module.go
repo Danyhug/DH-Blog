@@ -32,7 +32,7 @@ func (m *Module) IPService() middleware.IPService {
 
 // MigrationModels declares the database tables owned by this module.
 func MigrationModels() []any {
-	return []any{&AccessLog{}, &IPBlacklist{}}
+	return []any{&AccessLog{}, &IPBlacklist{}, &IPCityCache{}}
 }
 
 func (m *Module) RegisterRoutes(routes *router.Routes) {

@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -130,5 +131,121 @@ func TestRepositoryBanAndUnbanIPUpdatesCache(t *testing.T) {
 	}
 	if history != 1 {
 		t.Fatalf("ban history after unban = %d, want 1", history)
+	}
+}
+
+func TestResolveCityCachesLookupResult(t *testing.T) {
+	module, db, cache := newTestModule(t)
+	repository := module.repository
+	ip := "203.0.113.9"
+	lookupCalls := 0
+	lookup := func(string) (string, error) {
+		lookupCalls++
+		return "中国移动/测试省/测试市", nil
+	}
+
+	city, err := repository.ResolveCity(ip, lookup)
+	if err != nil {
+		t.Fatalf("first resolve: %v", err)
+	}
+	if city != "中国移动/测试省/测试市" || lookupCalls != 1 {
+		t.Fatalf("first resolve = %q, calls = %d; want resolved city, 1 call", city, lookupCalls)
+	}
+
+	// 内存缓存命中，不再调外部
+	city, err = repository.ResolveCity(ip, lookup)
+	if err != nil || city != "中国移动/测试省/测试市" || lookupCalls != 1 {
+		t.Fatalf("memory-cached resolve = %q, calls = %d; want cached city, 1 call", city, lookupCalls)
+	}
+
+	// 清掉内存缓存，仍应命中数据库
+	cache.Delete(getIPCityCacheKey(ip))
+	city, err = repository.ResolveCity(ip, lookup)
+	if err != nil || city != "中国移动/测试省/测试市" || lookupCalls != 1 {
+		t.Fatalf("db-cached resolve = %q, calls = %d; want cached city, 1 call", city, lookupCalls)
+	}
+
+	var entry IPCityCache
+	if err := db.Where("ip = ?", ip).First(&entry).Error; err != nil {
+		t.Fatalf("read ip_city_cache: %v", err)
+	}
+	if entry.City != "中国移动/测试省/测试市" {
+		t.Fatalf("persisted city = %q", entry.City)
+	}
+}
+
+func TestResolveCitySkipsLookupForLocalNetwork(t *testing.T) {
+	module, db, _ := newTestModule(t)
+	repository := module.repository
+	lookupCalls := 0
+	lookup := func(string) (string, error) {
+		lookupCalls++
+		return "本地网络", nil
+	}
+
+	city, err := repository.ResolveCity("127.0.0.1", lookup)
+	if err != nil {
+		t.Fatalf("resolve local ip: %v", err)
+	}
+	if city != "本地网络" {
+		t.Fatalf("local resolve = %q, want 本地网络", city)
+	}
+	var count int64
+	if err := db.Model(&IPCityCache{}).Where("ip = ?", "127.0.0.1").Count(&count).Error; err != nil {
+		t.Fatalf("count local city cache: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("local ip persisted %d rows, want 0", count)
+	}
+}
+
+func TestResolveCityRefreshesStaleDatabaseEntry(t *testing.T) {
+	module, db, cache := newTestModule(t)
+	repository := module.repository
+	ip := "203.0.113.10"
+	if err := db.Create(&IPCityCache{IP: ip, City: "旧省/旧市", UpdatedAt: time.Now().Add(-60 * 24 * time.Hour)}).Error; err != nil {
+		t.Fatalf("seed stale city: %v", err)
+	}
+	lookupCalls := 0
+	lookup := func(string) (string, error) {
+		lookupCalls++
+		return "新省/新市", nil
+	}
+
+	city, err := repository.ResolveCity(ip, lookup)
+	if err != nil {
+		t.Fatalf("resolve stale ip: %v", err)
+	}
+	if city != "新省/新市" || lookupCalls != 1 {
+		t.Fatalf("stale resolve = %q, calls = %d; want refreshed city, 1 call", city, lookupCalls)
+	}
+	if cached, ok := cache.Get(getIPCityCacheKey(ip)); !ok || cached != "新省/新市" {
+		t.Fatalf("refreshed cache = %#v, %v; want 新省/新市, true", cached, ok)
+	}
+	var entry IPCityCache
+	if err := db.Where("ip = ?", ip).First(&entry).Error; err != nil {
+		t.Fatalf("read refreshed city: %v", err)
+	}
+	if entry.City != "新省/新市" {
+		t.Fatalf("refreshed db city = %q", entry.City)
+	}
+}
+
+func TestResolveCityPropagatesLookupError(t *testing.T) {
+	module, db, _ := newTestModule(t)
+	repository := module.repository
+	lookup := func(string) (string, error) {
+		return "", fmt.Errorf("外部IP库不可达")
+	}
+
+	if _, err := repository.ResolveCity("203.0.113.11", lookup); err == nil {
+		t.Fatal("ResolveCity() error = nil, want lookup error")
+	}
+	var count int64
+	if err := db.Model(&IPCityCache{}).Where("ip = ?", "203.0.113.11").Count(&count).Error; err != nil {
+		t.Fatalf("count failed city cache: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("failed lookup persisted %d rows, want 0", count)
 	}
 }
