@@ -45,8 +45,13 @@ func main() {
 		Handler: application.Router,
 	}
 
-	// 设置日志级别为 Debug
-	logrus.SetLevel(logrus.DebugLevel)
+	// 按配置设置日志级别，未配置或非法时回退到 info
+	level, err := logrus.ParseLevel(conf.LogLevel)
+	if err != nil {
+		logrus.Warnf("无法解析日志级别 %q，使用默认级别 info", conf.LogLevel)
+		level = logrus.InfoLevel
+	}
+	logrus.SetLevel(level)
 
 	// 启动 HTTP 服务器（在新的 goroutine 中）
 	go func() {

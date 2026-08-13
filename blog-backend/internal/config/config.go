@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/viper"
 )
 
@@ -67,6 +67,7 @@ type Config struct {
 	Upload       Upload       `yaml:"upload"`       // New upload configuration
 	WebDAVServer WebDAVServer `yaml:"webdavServer"` // WebDAV 服务端配置
 	AIGateway    AIGateway    `yaml:"aiGateway"`    // AI 网关配置
+	LogLevel     string       `yaml:"logLevel"`     // 日志级别: debug/info/warn/error，默认 info
 }
 
 // 获取一个随机字符串，用于生成 JWT 密钥
@@ -117,6 +118,7 @@ func DefaultConfig() *Config {
 			QueueWait:        time.Second * 2,
 			LogRetentionDays: 90,
 		},
+		LogLevel: "info",
 	}
 }
 
@@ -181,6 +183,7 @@ func Init() (*Config, error) {
 		"queueWait":        defaultCfg.AIGateway.QueueWait,
 		"logRetentionDays": defaultCfg.AIGateway.LogRetentionDays,
 	})
+	v.SetDefault("logLevel", defaultCfg.LogLevel)
 
 	// 2. 尝试读取现有配置文件
 	readErr := v.ReadInConfig()

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"dh-blog/internal/config"
@@ -18,6 +19,20 @@ import (
 // ErrMigrationModelsRequired 表示初始化数据库时未提供权威迁移模型清单。
 var ErrMigrationModelsRequired = errors.New("数据库迁移模型不能为空")
 
+// gormLogLevel maps the config log level to a GORM logger level. Per-SQL
+// output is debug-grade noise: only `debug` enables it, other levels degrade
+// to warn (slow queries and errors only) or error (errors only).
+func gormLogLevel(level string) logger.LogLevel {
+	switch strings.ToLower(level) {
+	case "debug":
+		return logger.Info
+	case "error":
+		return logger.Error
+	default:
+		return logger.Warn
+	}
+}
+
 // Init 初始化数据库连接并执行自动迁移。
 func Init(conf *config.Config, migrationModels ...any) (*gorm.DB, error) {
 	if len(migrationModels) == 0 {
@@ -28,9 +43,9 @@ func Init(conf *config.Config, migrationModels ...any) (*gorm.DB, error) {
 		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
 		logger.Config{
 			SlowThreshold:             time.Second, // Slow SQL threshold
-			LogLevel:                  logger.Info, // Log level
-			IgnoreRecordNotFoundError: true,        // Ignore ErrRecordNotFound error for logger
-			Colorful:                  true,        // Disable color
+			LogLevel:                  gormLogLevel(conf.LogLevel),
+			IgnoreRecordNotFoundError: true, // Ignore ErrRecordNotFound error for logger
+			Colorful:                  true, // Disable color
 		},
 	)
 
