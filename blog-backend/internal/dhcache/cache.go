@@ -3,8 +3,6 @@ package dhcache
 import (
 	"sync"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -84,8 +82,7 @@ func (d *DHCache) SetNx(key string, value interface{}, duration ...time.Duration
 
 // janitor 定时清理过期数据
 func (d *DHCache) janitor() {
-	logrus.Infof("DHCache 清洁工 [启动]")
-	// 每15秒扫描一次对象，看是否需要被回收
+	// 每60秒扫描一次对象，看是否需要被回收
 	tick := time.NewTicker(gcTime)
 	defer tick.Stop()
 
@@ -93,7 +90,6 @@ func (d *DHCache) janitor() {
 		select {
 		case <-tick.C:
 			d.mu.Lock()
-			logrus.Info("DHCache 清洁工 [正在工作中]")
 			now := time.Now()
 			for index, v := range d.items {
 				if now.After(v.ExpireTime) {
@@ -102,9 +98,7 @@ func (d *DHCache) janitor() {
 				}
 			}
 			d.mu.Unlock()
-			logrus.Info("DHCache 清洁工 [工作完成]")
 		case <-d.gcStop:
-			logrus.Info("DHCache 清洁工 [停止]")
 			return
 		}
 	}
