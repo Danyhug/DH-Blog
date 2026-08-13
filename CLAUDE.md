@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 DH-Blog 是一个个人内容管理系统（博客 + 个人网盘 + WebDAV + AI 搜索网关）。最终产物是**单个自包含可执行文件**：Vue 前端通过 `go:embed` 打进 Go 后端，运行时在可执行文件同级自建 `data/` 目录（SQLite、config.yaml、上传文件）。
 
-- `blog-backend/` — Go 1.25 + Gin + GORM(SQLite) + Viper，模块名 `dh-blog`
+- `blog-backend/` — Go 1.26 + Gin + GORM(SQLite) + Viper，模块名 `dh-blog`
 - `blog-front/` — Vue 3 + TS + Vite + Element Plus + Tailwind v4，包管理器是 **bun**
 - `blog-deploy/` — 跨平台打包脚本 + 本地开发运行目录
 - `docs/` — 中文设计文档，**写在实现之前**，不代表已落地

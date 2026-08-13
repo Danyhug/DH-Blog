@@ -28,7 +28,7 @@ export default defineConfig({
 
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, './src')
+      "@": path.resolve(import.meta.dirname, './src')
     },
   },
 
@@ -37,10 +37,17 @@ export default defineConfig({
     outDir: 'dist', // Ensure the output directory is 'dist'
     emptyOutDir: true, // 构建前清空输出目录
     target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'], // 更新target配置，使用现代浏览器列表
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          vendor: ['vue', 'vue-router', 'pinia', 'element-plus', 'md-editor-v3']
+        // Vite 8 起改用 Rolldown，对象写法的 manualChunks 已移除，等价配置是 codeSplitting.groups。
+        // 依赖默认递归归组，因此这几个包的传递依赖同样会落到 vendor。
+        codeSplitting: {
+          groups: [
+            {
+              name: 'vendor',
+              test: /node_modules[\\/](vue-router|vue|pinia|element-plus|md-editor-v3)[\\/]/
+            }
+          ]
         }
       }
     }
