@@ -20,7 +20,11 @@ go test ./...                                      # 全部测试
 go test ./internal/modules/article -run TestXxx -v # 单个测试
 go vet ./...
 go build ./cmd/blog-backend
+golangci-lint run ./...                            # standard 全集（errcheck/govet/ineffassign/staticcheck/unused），配置 .golangci.yml
+deadcode -test ./...                               # 全程序可达性分析（x/tools/cmd/deadcode），CI 与本地同款
 ```
+
+`golangci-lint` 与 `deadcode` 都在 CI 的 lint job 里跑，本地改完应先跑通再推。
 
 **编译前必须先准备嵌入目录**：`internal/frontend/dist/` 被 gitignore，而 `embed.go` 声明了 `//go:embed all:dist`。全新 checkout 直接编译会失败：
 
@@ -50,6 +54,7 @@ bun install
 bun run dev              # Vite dev server；.env 指向 http://localhost:2233/api
 bun run build:type-check # vue-tsc 类型检查 + 构建，前端唯一的自动化验证手段
 bun run build
+bunx knip                # 死代码检查（未使用的文件/导出/依赖），配置 knip.json，CI 同步执行
 ```
 
 统一用 **bun**，不要用 npm/pnpm。前端没有测试框架，也没有 ESLint/Prettier 配置。
@@ -139,6 +144,6 @@ JWT 从 `Authorization` 头（`Bearer ` 前缀可选）或 `?token=` 读取。�
 ## 已知的坑
 
 - `docs/` 里的设计文档是**实现前**写的，可能尚未落地。以代码为准（`2026-08-10-文章摘要优化与批量生成设计.md` 已实现，并按最终实现回写过一次）。
-- CI（`.github/workflows/build.yml`）用 pnpm 且依赖 `blog-front/pnpm-lock.yaml`，但仓库里只有 `bun.lock`，前端安装步骤与本地工具链不一致。
+- CI 的 lint job 跑 `bunx knip`（前端）、`golangci-lint` 与 `deadcode -test`（后端），其中 golangci-lint 需要先放好 `internal/frontend/dist` 占位文件（见上文）。
 - `blog-front/README.md` 是旧版遗留（写的是 SpringBoot + MySQL），以根 `README.md` 为准。
 - 首次启动时若 `users` 表为空，程序会在 **stdin** 交互式索要管理员用户名和密码，非交互环境下会卡住。

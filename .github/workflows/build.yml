@@ -24,6 +24,52 @@ env:
   FRONTEND_DIR: blog-front
 
 jobs:
+  lint:
+    name: 🔍 Lint & Dead Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 📦 Install frontend dependencies
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: bun install --frozen-lockfile
+
+      - name: ✂️ Knip unused files/exports/dependencies
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: bunx knip
+
+      - name: ⚙️ Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
+
+      # embed 声明了 all:dist，dist 被 gitignore，不占位 golangci-lint 无法加载 internal/frontend
+      - name: 📁 Prepare embed dir
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: |
+          mkdir -p internal/frontend/dist
+          printf '<!doctype html>' > internal/frontend/dist/index.html
+
+      - name: 🔍 golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12
+          working-directory: ${{ env.BACKEND_DIR }}
+
+      - name: 🧟 Dead code (whole-program reachability)
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: |
+          go install golang.org/x/tools/cmd/deadcode@latest
+          $(go env GOPATH)/bin/deadcode -test ./...
+
   build-and-upload-separately:
     name: 🛠️ Build for ${{ matrix.os }}/${{ matrix.arch }}
     runs-on: ubuntu-latest
