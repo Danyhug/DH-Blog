@@ -211,7 +211,7 @@ export interface GatewayRequestLog {
   clientIp: string
 }
 
-export interface GatewayProviderStats {
+interface GatewayProviderStats {
   provider: string
   total: number
   succeeded: number
@@ -221,7 +221,7 @@ export interface GatewayProviderStats {
   avgLatency: number
 }
 
-export interface GatewayQuota {
+interface GatewayQuota {
   provider: string
   monthlyQuota: number
   monthlyUsed: number

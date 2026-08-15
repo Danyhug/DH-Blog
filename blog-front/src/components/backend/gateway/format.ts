@@ -22,7 +22,7 @@ export function fallbackColor(name: string) {
 }
 
 /** 配额为 0 表示不限量，此时进度条恒为 0 而不是满格 */
-export function quotaPercentage(used: number, quota: number) {
+function quotaPercentage(used: number, quota: number) {
   if (!quota) return 0
   return Math.min(100, Math.round((used / quota) * 100))
 }

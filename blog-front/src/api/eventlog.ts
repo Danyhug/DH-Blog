@@ -1,7 +1,7 @@
 import request from './axios'
 
 /** 事件状态，与后端 eventlog/model.go 的常量一一对应 */
-export type EventStatus = 'queued' | 'running' | 'success' | 'retrying' | 'failed'
+type EventStatus = 'queued' | 'running' | 'success' | 'retrying' | 'failed'
 
 /** 一条后台事件 */
 export interface BackgroundEvent {
