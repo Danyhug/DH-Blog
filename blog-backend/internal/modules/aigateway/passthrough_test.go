@@ -390,7 +390,7 @@ func TestPassthroughCacheKeySeparatesProvidersAndRoutes(t *testing.T) {
 	if key("tavily", "/search", `{"a":1}`) == key("tavily", "/search", `{"a":2}`) {
 		t.Error("不同请求体必须使用不同的缓存键")
 	}
-	if key("tavily", "/search", `{"a":1}`) != key("tavily", "/search", `{"a":1}`) {
+	if once := key("tavily", "/search", `{"a":1}`); once != key("tavily", "/search", `{"a":1}`) {
 		t.Error("相同请求必须命中同一个缓存键")
 	}
 }

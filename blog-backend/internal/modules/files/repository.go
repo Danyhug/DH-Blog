@@ -18,13 +18,11 @@ type fileRepository interface {
 	FindByPath(ctx context.Context, userID uint64, path string) (*File, error)                           // 根据存储路径查找文件
 	FindByUserIDAndName(ctx context.Context, userID uint64, parentID string, name string) (*File, error) // 根据用户ID、父目录和文件名查找文件
 
-	// BatchDelete 统计和批量操作
-	BatchDelete(ctx context.Context, ids []int) error                                            // 批量删除文件
-	CountByUserID(ctx context.Context, userID uint64) (int64, error)                             // 统计用户的文件总数
-	CountByUserIDAndParentID(ctx context.Context, userID uint64, parentID string) (int64, error) // 统计用户在特定目录下的文件数量
-	TruncateFiles(ctx context.Context) error                                                     // 清空文件表
-	Snapshot(ctx context.Context) ([]File, error)                                                // 保存完整索引快照
-	RestoreSnapshot(ctx context.Context, files []File) error                                     // 原样恢复索引和 ID
+	// CountByUserID 统计和批量操作
+	CountByUserID(ctx context.Context, userID uint64) (int64, error) // 统计用户的文件总数
+	TruncateFiles(ctx context.Context) error                        // 清空文件表
+	Snapshot(ctx context.Context) ([]File, error)                   // 保存完整索引快照
+	RestoreSnapshot(ctx context.Context, files []File) error        // 原样恢复索引和 ID
 }
 
 // Repository 是文件模块的 GORM 持久化实现。
@@ -135,18 +133,6 @@ func (r *Repository) FindByUserIDAndName(ctx context.Context, userID uint64, par
 	return &file, nil
 }
 
-// BatchDelete 批量删除文件
-// 参数:
-//   - ctx: 上下文
-//   - ids: 要删除的文件ID列表
-//
-// 返回:
-//   - error: 错误信息
-func (r *Repository) BatchDelete(ctx context.Context, ids []int) error {
-	return r.db.WithContext(ctx).
-		Delete(&File{}, ids).Error
-}
-
 // CountByUserID 统计用户的文件总数
 // 参数:
 //   - ctx: 上下文
@@ -161,30 +147,6 @@ func (r *Repository) CountByUserID(ctx context.Context, userID uint64) (int64, e
 	err := r.db.WithContext(ctx).
 		Model(&File{}).
 		Where("user_id = ?", userID).
-		Count(&count).Error
-
-	if err != nil {
-		return 0, err
-	}
-
-	return count, nil
-}
-
-// CountByUserIDAndParentID 统计用户在特定目录下的文件数量
-// 参数:
-//   - ctx: 上下文
-//   - userID: 用户ID
-//   - parentID: 父目录ID
-//
-// 返回:
-//   - int64: 文件数量
-//   - error: 错误信息
-func (r *Repository) CountByUserIDAndParentID(ctx context.Context, userID uint64, parentID string) (int64, error) {
-	var count int64
-
-	err := r.db.WithContext(ctx).
-		Model(&File{}).
-		Where("user_id = ? AND parent_id = ?", userID, parentID).
 		Count(&count).Error
 
 	if err != nil {

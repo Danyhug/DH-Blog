@@ -437,30 +437,3 @@ func (s *fileService) GetProtectedDirectoryID(ctx context.Context, dirName strin
 
 	return fmt.Sprintf("%d", file.ID), nil
 }
-
-// IsProtectedDirectory 检查指定文件ID是否为根目录下的固定目录
-func (s *fileService) IsProtectedDirectory(ctx context.Context, fileID string) bool {
-	id, err := parseFileID(fileID)
-	if err != nil {
-		return false
-	}
-
-	file, err := s.repo.FindByID(ctx, id)
-	if err != nil || file == nil {
-		return false
-	}
-
-	// 必须是根目录下的文件夹
-	if !file.IsFolder || file.ParentID != "" {
-		return false
-	}
-
-	// 检查名称是否在固定目录列表中
-	for _, name := range protectedDirectories {
-		if file.Name == name {
-			return true
-		}
-	}
-
-	return false
-}

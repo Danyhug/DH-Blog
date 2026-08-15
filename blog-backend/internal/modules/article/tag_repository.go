@@ -47,24 +47,6 @@ func (r *TagRepository) GetAllTagNamesWithCache(ctx context.Context) ([]string, 
 	return names, nil
 }
 
-func (r *TagRepository) GetAllTagsWithCache(ctx context.Context) ([]Tag, error) {
-	if cached, found := r.cache.Get(TagsListCacheKey); found {
-		if tags, ok := cached.([]Tag); ok {
-			logrus.Debug("从缓存获取标签列表")
-			return tags, nil
-		}
-		logrus.Warn("标签列表缓存类型转换失败，将从数据库重新获取")
-	}
-
-	var tags []Tag
-	if err := r.db.WithContext(ctx).Find(&tags).Error; err != nil {
-		return nil, fmt.Errorf("获取标签列表失败: %w", err)
-	}
-	_ = r.cache.Set(TagsListCacheKey, tags, TagCacheExpireMedium)
-	logrus.Debug("标签列表已缓存")
-	return tags, nil
-}
-
 func (r *TagRepository) ClearTagCache() {
 	if deleted := r.cache.Delete(TagsListCacheKey); !deleted {
 		logrus.Warn("清除标签列表缓存失败: 缓存中未找到")

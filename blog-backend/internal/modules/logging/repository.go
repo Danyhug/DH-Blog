@@ -68,15 +68,6 @@ func (r *Repository) SaveAccessLog(log *AccessLog) error {
 	return nil
 }
 
-// SaveAccessLogAsync persists an access log without blocking its caller.
-func (r *Repository) SaveAccessLogAsync(log *AccessLog) {
-	go func() {
-		if err := r.SaveAccessLog(log); err != nil {
-			logrus.Errorf("异步保存访问日志失败: %v", err)
-		}
-	}()
-}
-
 func (r *Repository) flushAccessLogs(logs []AccessLog) error {
 	if len(logs) == 0 {
 		return nil
@@ -254,14 +245,6 @@ func (r *Repository) IsIPBanned(ip string) (bool, error) {
 	_ = r.cache.Set(cacheKey, isBanned, ipBlacklistCacheExpire)
 	logrus.Debugf("IP %s 的黑名单状态已缓存: %v", ip, isBanned)
 	return isBanned, nil
-}
-
-func (r *Repository) ClearIPBlacklistCache(ip string) {
-	if deleted := r.cache.Delete(getIPBlacklistCacheKey(ip)); !deleted {
-		logrus.Warnf("清除IP黑名单缓存失败: %s, 缓存中未找到", ip)
-	} else {
-		logrus.Debugf("已清除IP %s 的黑名单缓存", ip)
-	}
 }
 
 func (r *Repository) GetMonthlyVisitStats(year int) ([]map[string]interface{}, error) {

@@ -49,7 +49,7 @@ func (h *handler) backupData(c *gin.Context) {
 	defer os.Remove(path)
 	writer := zip.NewWriter(temp)
 	writer.RegisterCompressor(zip.Deflate, func(out io.Writer) (io.WriteCloser, error) { return flate.NewWriter(out, flate.BestCompression) })
-	if err := addFileToZip(writer, databasePath, "dhblog.db"); err == nil {
+	if err = addFileToZip(writer, databasePath, "dhblog.db"); err == nil {
 		err = h.addBackupDirectories(writer, c.Query("mode"), c.Query("dirs"))
 	}
 	if closeErr := writer.Close(); err == nil {
