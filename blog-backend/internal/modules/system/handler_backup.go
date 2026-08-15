@@ -46,7 +46,7 @@ func (h *handler) backupData(c *gin.Context) {
 		return
 	}
 	path := temp.Name()
-	defer os.Remove(path)
+	defer func() { _ = os.Remove(path) }()
 	writer := zip.NewWriter(temp)
 	writer.RegisterCompressor(zip.Deflate, func(out io.Writer) (io.WriteCloser, error) { return flate.NewWriter(out, flate.BestCompression) })
 	if err = addFileToZip(writer, databasePath, "dhblog.db"); err == nil {
@@ -108,7 +108,7 @@ func addFileToZip(writer *zip.Writer, source, name string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	entry, err := writer.Create(name)
 	if err != nil {
 		return err

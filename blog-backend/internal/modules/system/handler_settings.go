@@ -10,7 +10,7 @@ import (
 )
 
 func toSettingResponse(setting Setting) settingResponse {
-	return settingResponse{setting.ID, setting.SettingKey, setting.SettingValue, setting.ConfigType}
+	return settingResponse(setting)
 }
 func (h *handler) listSettings(c *gin.Context) {
 	settings, err := h.service.settings.all(c.Request.Context())

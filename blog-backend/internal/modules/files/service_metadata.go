@@ -102,7 +102,7 @@ func (s *fileService) UploadFile(ctx context.Context, userID uint64, parentID st
 		logrus.Errorf("创建文件失败: %v", err)
 		return nil, fmt.Errorf("创建文件失败")
 	}
-	defer outFile.Close()
+	defer func() { _ = outFile.Close() }()
 
 	// 写入文件内容
 	written, err := io.Copy(outFile, fileContent)

@@ -94,7 +94,7 @@ func (p *TavilyProvider) Search(ctx context.Context, req Request) (Response, err
 	if err != nil {
 		return Response{}, newError(ProviderTavily, classifyTransport(err), 0, err.Error())
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	responseBody, err := io.ReadAll(io.LimitReader(httpResp.Body, 8<<20))
 	if err != nil {
@@ -254,7 +254,7 @@ func (p *TavilyProvider) Usage(ctx context.Context) (UsageReport, error) {
 	if err != nil {
 		return UsageReport{}, newError(ProviderTavily, classifyTransport(err), 0, err.Error())
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	body, err := io.ReadAll(io.LimitReader(httpResp.Body, 1<<20))
 	if err != nil {

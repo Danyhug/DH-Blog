@@ -302,14 +302,14 @@ func webSearchInputSchema(providers []providerStatus) map[string]any {
 // agent actually acts on (link, snippet) stay readable.
 func renderSearchResult(result SearchResult) string {
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("来源 %s", result.Provider))
+	fmt.Fprintf(&builder, "来源 %s", result.Provider)
 	if result.Meta.FallbackFrom != "" {
-		builder.WriteString(fmt.Sprintf("（由 %s 回退）", result.Meta.FallbackFrom))
+		fmt.Fprintf(&builder, "（由 %s 回退）", result.Meta.FallbackFrom)
 	}
 	if result.Meta.Cached {
 		builder.WriteString(" · 缓存命中")
 	}
-	builder.WriteString(fmt.Sprintf(" · 耗时 %dms\n", result.Meta.LatencyMS))
+	fmt.Fprintf(&builder, " · 耗时 %dms\n", result.Meta.LatencyMS)
 
 	if result.Answer != "" {
 		builder.WriteString("\n答案：" + result.Answer + "\n")
@@ -321,9 +321,9 @@ func renderSearchResult(result SearchResult) string {
 	}
 
 	for index, item := range result.Results {
-		builder.WriteString(fmt.Sprintf("\n%d. %s\n   %s\n", index+1, item.Title, item.URL))
+		fmt.Fprintf(&builder, "\n%d. %s\n   %s\n", index+1, item.Title, item.URL)
 		if item.PublishedAt != nil {
-			builder.WriteString(fmt.Sprintf("   发布于 %s\n", item.PublishedAt.Format("2006-01-02")))
+			fmt.Fprintf(&builder, "   发布于 %s\n", item.PublishedAt.Format("2006-01-02"))
 		}
 		if item.Content != "" {
 			builder.WriteString("   " + collapseWhitespace(item.Content) + "\n")

@@ -78,7 +78,7 @@ func forward(ctx context.Context, client *http.Client, provider, endpoint string
 	if err != nil {
 		return PassthroughResponse{}, newError(provider, classifyTransport(err), 0, err.Error())
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 	if observe != nil {
 		observe(httpResp.Header)
 	}

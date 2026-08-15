@@ -75,9 +75,9 @@ func (h *chunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 			case "fileName":
 				fileName = parts[1]
 			case "fileSize":
-				fmt.Sscanf(parts[1], "%d", &fileSize)
+				fileSize, _ = strconv.Atoi(strings.TrimSpace(parts[1]))
 			case "totalChunks":
-				fmt.Sscanf(parts[1], "%d", &totalChunks)
+				totalChunks, _ = strconv.Atoi(strings.TrimSpace(parts[1]))
 			case "parentId":
 				parentId = strings.TrimSpace(parts[1])
 			}
@@ -149,7 +149,7 @@ func (h *chunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 		c.JSON(http.StatusOK, response.Error("创建最终文件失败"))
 		return
 	}
-	defer finalFile.Close()
+	defer func() { _ = finalFile.Close() }()
 
 	// 根据文件大小选择最优的合并策略
 	var hasher hash.Hash
@@ -181,7 +181,9 @@ func (h *chunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 	}
 
 	// 确保所有数据写入磁盘
-	finalFile.Sync()
+	if err := finalFile.Sync(); err != nil {
+		logrus.Warnf("同步文件到磁盘失败: %v", err)
+	}
 
 	// 验证文件完整性
 	if totalSize != int64(fileSize) {
@@ -198,7 +200,9 @@ func (h *chunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 	// 异步清理临时目录（避免阻塞响应）
 	go func() {
 		time.Sleep(5 * time.Second) // 延迟清理，确保客户端已收到响应
-		os.RemoveAll(tempDir)
+		if err := os.RemoveAll(tempDir); err != nil {
+			logrus.Warnf("清理上传临时目录失败: %v", err)
+		}
 	}()
 
 	// 创建文件数据库记录
@@ -215,7 +219,7 @@ func (h *chunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 	// 保存到数据库
 	if err := h.db.Create(file).Error; err != nil {
 		// 删除已创建的文件
-		os.Remove(finalPath)
+		_ = os.Remove(finalPath)
 		c.JSON(http.StatusOK, response.Error("保存文件记录失败"))
 		return
 	}

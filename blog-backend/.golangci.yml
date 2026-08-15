@@ -1,0 +1,5 @@
+version: "2"
+
+# 聚焦死代码与常见 bug：standard 集 = errcheck, govet, ineffassign, staticcheck, unused。
+linters:
+  default: standard

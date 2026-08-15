@@ -29,7 +29,7 @@ func (h *chunkUploadHandler) mergeChunksSequential(tempDir string, totalChunks i
 		}
 
 		n, err := io.CopyBuffer(writer, chunk, buffer)
-		chunk.Close()
+		_ = chunk.Close()
 
 		if err != nil {
 			return 0, fmt.Errorf("合并分片 %d 失败: %v", i, err)
@@ -39,7 +39,9 @@ func (h *chunkUploadHandler) mergeChunksSequential(tempDir string, totalChunks i
 
 		// 定期刷新到磁盘
 		if i > 0 && i%50 == 0 {
-			finalFile.Sync()
+			if err := finalFile.Sync(); err != nil {
+				logrus.Warnf("刷新分片合并文件到磁盘失败: %v", err)
+			}
 		}
 	}
 
@@ -63,7 +65,7 @@ func (h *chunkUploadHandler) mergeChunksBuffered(tempDir string, totalChunks int
 		}
 
 		n, err := io.CopyBuffer(writer, chunk, buffer)
-		chunk.Close()
+		_ = chunk.Close()
 
 		if err != nil {
 			return 0, fmt.Errorf("合并分片 %d 失败: %v", i, err)
@@ -73,7 +75,9 @@ func (h *chunkUploadHandler) mergeChunksBuffered(tempDir string, totalChunks int
 
 		// 更频繁的磁盘刷新
 		if i > 0 && i%25 == 0 {
-			finalFile.Sync()
+			if err := finalFile.Sync(); err != nil {
+				logrus.Warnf("刷新分片合并文件到磁盘失败: %v", err)
+			}
 		}
 	}
 
@@ -140,7 +144,7 @@ func (h *chunkUploadHandler) mergeChunksConcurrent(tempDir string, totalChunks i
 					chunkSize := stat.Size()
 
 					batchSize += chunkSize
-					chunk.Close()
+					_ = chunk.Close()
 				}
 
 				results <- batchSize
@@ -188,14 +192,16 @@ func (h *chunkUploadHandler) mergeChunksConcurrent(tempDir string, totalChunks i
 		}
 
 		_, err = io.CopyBuffer(writer, chunk, buffer)
-		chunk.Close()
+		_ = chunk.Close()
 
 		if err != nil {
 			return 0, fmt.Errorf("合并分片 %d 失败: %v", i, err)
 		}
 
 		if i > 0 && i%100 == 0 {
-			finalFile.Sync()
+			if err := finalFile.Sync(); err != nil {
+				logrus.Warnf("刷新分片合并文件到磁盘失败: %v", err)
+			}
 		}
 	}
 

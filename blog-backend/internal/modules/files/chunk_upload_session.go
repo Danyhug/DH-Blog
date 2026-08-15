@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -153,9 +154,9 @@ func (h *chunkUploadHandler) GetUploadedChunks(c *gin.Context) {
 			}
 			switch parts[0] {
 			case "totalChunks":
-				fmt.Sscanf(parts[1], "%d", &totalChunks)
+				totalChunks, _ = strconv.Atoi(strings.TrimSpace(parts[1]))
 			case "chunkSize":
-				fmt.Sscanf(parts[1], "%d", &chunkSize)
+				chunkSize, _ = strconv.ParseInt(strings.TrimSpace(parts[1]), 10, 64)
 			}
 		}
 	}

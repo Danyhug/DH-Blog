@@ -149,7 +149,7 @@ func queryPconline(ip string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("请求太平洋IP库失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -185,7 +185,7 @@ func queryIPAPI(ip string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("请求IP地理位置API失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

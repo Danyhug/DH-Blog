@@ -73,7 +73,7 @@ func (p *BraveProvider) Search(ctx context.Context, req Request) (Response, erro
 	if err != nil {
 		return Response{}, newError(ProviderBrave, classifyTransport(err), 0, err.Error())
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 	p.observeQuota(httpResp.Header)
 
 	body, err := io.ReadAll(io.LimitReader(httpResp.Body, 8<<20))

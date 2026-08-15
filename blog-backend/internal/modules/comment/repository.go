@@ -188,12 +188,12 @@ func buildCommentTreeAndSort(allComments []Comment) []*Comment {
 	}
 
 	sort.Slice(rootComments, func(i, j int) bool {
-		return rootComments[i].CreatedAt.Time.After(rootComments[j].CreatedAt.Time)
+		return rootComments[i].CreatedAt.After(rootComments[j].CreatedAt.Time)
 	})
 	var sortChildren func(comments []*Comment)
 	sortChildren = func(comments []*Comment) {
 		sort.Slice(comments, func(i, j int) bool {
-			return comments[i].CreatedAt.Time.After(comments[j].CreatedAt.Time)
+			return comments[i].CreatedAt.After(comments[j].CreatedAt.Time)
 		})
 		for _, item := range comments {
 			sortChildren(item.Children)
