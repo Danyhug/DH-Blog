@@ -174,6 +174,10 @@ export interface GatewayApiKey {
   expireAt: string | null
   lastUsedAt: string | null
   note: string
+  /** 能力范围，逗号分隔；空串表示仅搜索 */
+  scopes?: string
+  /** 用这把 Key 写文章时显示的署名 */
+  authorName?: string
 }
 
 export interface CreateGatewayApiKeyPayload {
@@ -183,6 +187,8 @@ export interface CreateGatewayApiKeyPayload {
   monthlyQuota?: number
   expireDays?: number
   note?: string
+  scopes?: string
+  authorName?: string
 }
 
 /** 创建接口是唯一能拿到明文 Key 的地方 */

@@ -7,6 +7,14 @@
         <el-tag type="primary">{{ scope.row.categoryName }}</el-tag>
       </template>
     </el-table-column>
+    <el-table-column label="作者">
+      <template #default="scope">
+        <el-tag v-if="scope.row.authorType === 'agent'" size="small" type="warning" effect="plain">
+          AI · {{ scope.row.authorName }}
+        </el-tag>
+        <span v-else class="text-gray-400">站长</span>
+      </template>
+    </el-table-column>
 
     <el-table-column prop="views" label="浏览数" />
     <el-table-column prop="wordNum" label="字数" />

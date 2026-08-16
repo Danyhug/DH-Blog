@@ -14,4 +14,7 @@ export interface Article<T> {
   isLocked?: boolean;
   canAccess?: boolean;
   lockPassword?: string;
+  // 署名：authorType === 'agent' 表示由 AI agent 写入/修改，作者名为快照
+  authorType?: string;
+  authorName?: string;
 }

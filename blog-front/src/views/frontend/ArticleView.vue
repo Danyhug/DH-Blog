@@ -15,6 +15,9 @@
       <span>
         阅读次数 {{ viewnum }} 次
       </span>
+      <el-tag v-if="authorType === 'agent'" size="small" type="warning" effect="plain" class="ml-2">
+        AI · {{ authorName }}
+      </el-tag>
     </div>
   </div>
   <div class="comment" :style="{ display: store.aritcleModel.isFullPreview ? 'none' : '' }">
@@ -42,6 +45,8 @@ export default {
       created: '',
       update: '',
       viewnum: 0,
+      authorType: '',
+      authorName: '',
       store: useUserStore(),
       system: useSystemStore(),
       scrollElement: document.documentElement,
@@ -85,6 +90,8 @@ export default {
       this.created = article.createTime ? formatDate(article.createTime) : ''
       this.update = article.updateTime ? formatDate(article.updateTime) : ''
       this.viewnum = article.views || 0
+      this.authorType = article.authorType || ''
+      this.authorName = article.authorName || ''
 
       // 更改pinia内容
       this.store.homeHeaderInfo = {

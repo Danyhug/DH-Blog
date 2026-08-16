@@ -19,6 +19,9 @@
               <Icon iconName="icon-browse" iconSize="1.35"></Icon>
               {{ article.views }} 次
             </span>
+            <span v-if="article.authorType === 'agent'">
+              <el-tag size="small" type="warning" effect="plain">AI · {{ article.authorName }}</el-tag>
+            </span>
           </div>
           <p class="title">
             <span class="title-link">{{ article.title }}</span>

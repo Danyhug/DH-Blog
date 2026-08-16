@@ -119,6 +119,24 @@
                 <el-table-column label="供应商限制" min-width="120">
                     <template #default="scope">{{ scope.row.allowedProviders || '全部' }}</template>
                 </el-table-column>
+                <el-table-column label="能力" min-width="160">
+                    <template #default="scope">
+                        <template v-if="scope.row.scopes">
+                            <el-tag v-for="s in scope.row.scopes.split(',')" :key="s" size="small"
+                                effect="plain" class="mr-1">
+                                {{ scopeLabel(s) }}
+                            </el-tag>
+                        </template>
+                        <span v-else class="text-gray-400">仅搜索</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="署名" min-width="130">
+                    <template #default="scope">
+                        <span :class="scope.row.authorName ? '' : 'text-gray-400'">
+                            {{ scope.row.authorName || '—' }}
+                        </span>
+                    </template>
+                </el-table-column>
                 <el-table-column label="限速" min-width="100">
                     <template #default="scope">
                         {{ scope.row.rateLimitPerMin ? `${scope.row.rateLimitPerMin} 次/分` : '不限' }}
@@ -151,6 +169,17 @@
                         <el-option v-for="provider in providers" :key="provider.name"
                             :label="provider.displayName || provider.name" :value="provider.name" />
                     </el-select>
+                </el-form-item>
+                <el-form-item label="能力范围">
+                    <el-select v-model="createScopes" multiple placeholder="留空 = 仅搜索" class="w-full">
+                        <el-option v-for="opt in scopeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+                    </el-select>
+                    <div class="text-xs text-gray-400 mt-1">
+                        content:write 才能创建/修改文章与传图；留空 = 仅搜索。
+                    </div>
+                </el-form-item>
+                <el-form-item label="署名">
+                    <el-input v-model="createForm.authorName" placeholder="写文章时显示的作者名，留空用 Key 名" clearable />
                 </el-form-item>
                 <el-form-item label="限速（次/分）">
                     <el-input-number v-model="createForm.rateLimitPerMin" :min="0" :max="10000" class="w-full" />
@@ -263,12 +292,21 @@ const revealing = ref(0);
 const createDialogVisible = ref(false);
 const creating = ref(false);
 const createAllowed = ref<string[]>([]);
+// 能力范围三档固定，值即后端的 scope 字符串
+const scopeOptions = [
+    { value: 'search', label: '联网搜索（默认）' },
+    { value: 'content:read', label: '读取文章' },
+    { value: 'content:write', label: '写入文章' }
+];
+const createScopes = ref<string[]>([]);
+const scopeLabel = (s: string) => scopeOptions.find(o => o.value === s)?.label || s;
 const createForm = ref<CreateGatewayApiKeyPayload>({
     name: '',
     rateLimitPerMin: 60,
     monthlyQuota: 0,
     expireDays: 0,
-    note: ''
+    note: '',
+    authorName: ''
 });
 const secretDialogVisible = ref(false);
 const createdSecret = ref('');
@@ -286,8 +324,9 @@ async function load() {
 }
 
 function openCreateDialog() {
-    createForm.value = { name: '', rateLimitPerMin: 60, monthlyQuota: 0, expireDays: 0, note: '' };
+    createForm.value = { name: '', rateLimitPerMin: 60, monthlyQuota: 0, expireDays: 0, note: '', authorName: '' };
     createAllowed.value = [];
+    createScopes.value = [];
     createDialogVisible.value = true;
 }
 
@@ -300,7 +339,8 @@ async function onCreate() {
     try {
         const created = await createGatewayApiKey({
             ...createForm.value,
-            allowedProviders: createAllowed.value.join(',')
+            allowedProviders: createAllowed.value.join(','),
+            scopes: createScopes.value.join(',')
         });
         createDialogVisible.value = false;
         showSecret(created.name, created.apiKey);
