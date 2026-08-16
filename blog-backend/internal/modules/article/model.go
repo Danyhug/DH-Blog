@@ -23,10 +23,10 @@ type Article struct {
 	AuthorName string `gorm:"column:author_name" json:"authorName"`
 	// AuthorKeyID 溯源到具体凭证，也是「谁能免授权改这篇」的判据。
 	// json:"-" 是因为公开接口不该泄露内部 key id。
-	AuthorKeyID int  `gorm:"column:author_key_id;index" json:"-"`
-	IsLocked    bool `gorm:"column:is_locked;default:false" json:"isLocked"`
-	LockPassword    string `gorm:"column:lock_password" json:"lockPassword"`
-	CanAccess       bool   `gorm:"-" json:"canAccess"`
+	AuthorKeyID  int    `gorm:"column:author_key_id;index" json:"-"`
+	IsLocked     bool   `gorm:"column:is_locked;default:false" json:"isLocked"`
+	LockPassword string `gorm:"column:lock_password" json:"lockPassword"`
+	CanAccess    bool   `gorm:"-" json:"canAccess"`
 
 	Tags     []*Tag   `gorm:"many2many:article_tags;" json:"tags"`
 	TagNames []string `gorm:"-" json:"tagNames,omitempty"`
