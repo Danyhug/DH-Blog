@@ -8,6 +8,7 @@ import (
 
 	"dh-blog/internal/model"
 
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -146,9 +147,15 @@ func (s *contentService) Get(ctx context.Context, id int) (*ArticleDetail, error
 	if article.CategoryID > 0 {
 		category, err := s.categoryByID(article.CategoryID)
 		if err != nil {
-			return nil, err
+			// 分类被软删除时与 List 一致容忍（空名），仅真实查询失败才报错。
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				categoryName = ""
+			} else {
+				return nil, err
+			}
+		} else {
+			categoryName = category.Name
 		}
-		categoryName = category.Name
 	}
 
 	return &ArticleDetail{
@@ -320,6 +327,7 @@ func (s *contentService) tagsByArticleIDs(ctx context.Context, ids []int) map[in
 		Where("article_tags.article_id IN ?", ids).
 		Select("article_tags.article_id, tags.name").
 		Scan(&rows).Error; err != nil {
+		logrus.Warnf("批量查询标签失败，文章 %v 的标签将留空: %v", ids, err)
 		return result
 	}
 	for _, row := range rows {
@@ -339,6 +347,7 @@ func (s *contentService) categoriesByIDs(ctx context.Context, ids []int) map[int
 	}
 	var categories []Category
 	if err := s.db.WithContext(ctx).Where("id IN ?", ids).Find(&categories).Error; err != nil {
+		logrus.Warnf("批量查询分类失败，分类名将留空: %v", err)
 		return result
 	}
 	for i := range categories {

@@ -304,8 +304,8 @@ func TestContentServiceUpdateChangesCategoryByName(t *testing.T) {
 	if err := svc.db.First(&exists, id).Error; err != nil {
 		t.Fatalf("article should still exist after a failed category update: %v", err)
 	}
-	if defaultCategory.ID == 0 {
-		t.Fatal("unreachable; guard against accidental variable removal")
+	if exists.CategoryID == defaultCategory.ID {
+		t.Fatalf("article fell back to default category %d after a failed category update", defaultCategory.ID)
 	}
 }
 
