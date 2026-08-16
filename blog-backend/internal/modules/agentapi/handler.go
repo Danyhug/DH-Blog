@@ -9,6 +9,7 @@ import (
 	"dh-blog/internal/response"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 // grantHandler serves the admin surface for temporary edit grants. Every
@@ -37,8 +38,16 @@ func (h *grantHandler) createGrant(c *gin.Context) {
 		return
 	}
 	grant, err := h.service.Grant(req.ArticleID, req.Note)
+	if errors.Is(err, ErrGrantInvalidArticleID) {
+		response.FailWithCode(c, http.StatusBadRequest, err.Error())
+		return
+	}
 	if err != nil {
-		response.FailWithCode(c, http.StatusInternalServerError, err.Error())
+		// Grant failures other than the client-side articleId guard wrap
+		// internal details (token generation, persistence), so the client gets
+		// a stable Chinese message and the real error stays in the server log.
+		logrus.Errorf("签发授权失败: %v", err)
+		response.FailWithCode(c, http.StatusInternalServerError, "签发授权失败")
 		return
 	}
 	c.JSON(http.StatusOK, response.SuccessWithData(gin.H{

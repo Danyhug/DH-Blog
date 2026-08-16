@@ -28,6 +28,9 @@ var (
 	ErrGrantRevoked = errors.New("该授权已被吊销")
 	// ErrGrantWrongArticle means the grant is bound to another article.
 	ErrGrantWrongArticle = errors.New("该授权只允许修改指定的文章")
+	// ErrGrantInvalidArticleID means the requested article binding is
+	// impossible. A negative id is a client mistake, not a missing row.
+	ErrGrantInvalidArticleID = errors.New("articleId 不能为负数")
 )
 
 // grantTTL is how long an issued grant stays valid. One hour matches the
@@ -94,7 +97,7 @@ func newGrantService(repo *grantRepository) *grantService {
 // grows without a timer of its own.
 func (s *grantService) Grant(articleID int, note string) (*EditGrant, error) {
 	if articleID < 0 {
-		return nil, errors.New("articleId 不能为负数")
+		return nil, ErrGrantInvalidArticleID
 	}
 	// Sweep is best-effort housekeeping: a failing cleanup must not block
 	// issuing the new grant.

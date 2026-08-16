@@ -70,8 +70,8 @@ func TestGrantIssuesWellFormedToken(t *testing.T) {
 
 func TestGrantRejectsNegativeArticleID(t *testing.T) {
 	service, _ := newTestService(t, fixedNow())
-	if _, err := service.Grant(-1, ""); err == nil {
-		t.Fatal("expected an error for a negative articleId")
+	if _, err := service.Grant(-1, ""); !errors.Is(err, ErrGrantInvalidArticleID) {
+		t.Fatalf("grant(-1) err = %v, want ErrGrantInvalidArticleID", err)
 	}
 }
 

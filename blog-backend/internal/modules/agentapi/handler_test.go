@@ -115,6 +115,41 @@ func TestHandlerCreateGrantRejectsMalformedBody(t *testing.T) {
 	}
 }
 
+func TestHandlerCreateGrantRejectsNegativeArticleID(t *testing.T) {
+	module, _ := newTestModule(t, fixedNow())
+	engine := grantEngine(t, module)
+
+	recorder, payload := doRequest(t, engine, http.MethodPost, "/api/admin/agent/grants", `{"articleId":-1}`)
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if msg, _ := payload["msg"].(string); !strings.Contains(msg, "articleId 不能为负数") {
+		t.Fatalf("msg = %q, want articleId 不能为负数", msg)
+	}
+}
+
+func TestHandlerGrantsRejectNonNumericID(t *testing.T) {
+	module, _ := newTestModule(t, fixedNow())
+	engine := grantEngine(t, module)
+
+	cases := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodGet, "/api/admin/agent/grants/abc/reveal"},
+		{http.MethodDelete, "/api/admin/agent/grants/abc"},
+	}
+	for _, tc := range cases {
+		recorder, payload := doRequest(t, engine, tc.method, tc.path, "")
+		if recorder.Code != http.StatusBadRequest {
+			t.Fatalf("%s %s status = %d, want 400, body = %s", tc.method, tc.path, recorder.Code, recorder.Body.String())
+		}
+		if msg, _ := payload["msg"].(string); msg != "无效的 ID" {
+			t.Fatalf("%s %s msg = %q, want 无效的 ID", tc.method, tc.path, msg)
+		}
+	}
+}
+
 func TestHandlerListGrantsShowsPrefixNotPlaintext(t *testing.T) {
 	module, db := newTestModule(t, fixedNow())
 	engine := grantEngine(t, module)
@@ -181,6 +216,34 @@ func TestHandlerRevealGrant(t *testing.T) {
 	recorder, _ = doRequest(t, engine, http.MethodGet, "/api/admin/agent/grants/4242/reveal", "")
 	if recorder.Code != http.StatusNotFound {
 		t.Fatalf("reveal unknown status = %d, want 404", recorder.Code)
+	}
+}
+
+// TestHandlerRevealExpiredUnsweptGrant pins today's behaviour: Reveal checks
+// only revocation, not expiry, so a grant that expired but was never swept
+// (no new grant issued since) still yields its plaintext. The sweep happens
+// as a side effect of Grant, not of Reveal.
+func TestHandlerRevealExpiredUnsweptGrantStillReturnsPlaintext(t *testing.T) {
+	module, db := newTestModule(t, fixedNow())
+	engine := grantEngine(t, module)
+
+	_, created := doRequest(t, engine, http.MethodPost, "/api/admin/agent/grants", `{"note":"x"}`)
+	data, _ := created["data"].(map[string]any)
+	id := int(data["id"].(float64))
+	token, _ := data["token"].(string)
+
+	past := fixedNow().Add(-time.Minute)
+	if err := db.Model(&EditGrant{}).Where("id = ?", id).Update("expire_at", past).Error; err != nil {
+		t.Fatalf("backdate grant: %v", err)
+	}
+
+	recorder, payload := doRequest(t, engine, http.MethodGet, fmt.Sprintf("/api/admin/agent/grants/%d/reveal", id), "")
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body = %s", recorder.Code, recorder.Body.String())
+	}
+	revealed, _ := payload["data"].(map[string]any)
+	if revealed["token"] != token {
+		t.Fatalf("reveal = %v, want %q", revealed["token"], token)
 	}
 }
 
