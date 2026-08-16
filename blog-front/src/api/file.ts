@@ -50,31 +50,6 @@ export const listFiles = (parentId?: string): Promise<any> => {
 }
 
 /**
- * 上传文件
- * @param parentId 父目录ID，为空则上传到根目录
- * @param file 文件对象
- * @returns 上传结果
- */
-export const uploadFile = (parentId: string | undefined, file: File): Promise<any> => {
-  const formData = new FormData()
-  
-  // 将文件添加到FormData
-  formData.append('file', file)
-  
-  // 如果有父目录ID，添加到请求中
-  if (parentId) {
-    formData.append('parentId', parentId)
-  }
-  
-  // 使用封装好的request发送请求，让拦截器处理错误和响应
-  return request.post('/files/upload', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
-  })
-}
-
-/**
  * 初始化分片上传
  * @param parentId 父目录ID
  * @param fileName 文件名
@@ -130,7 +105,9 @@ export const completeChunkUpload = (uploadId: string): Promise<any> => {
  * @returns 已上传分片列表、总分片数和会话创建时使用的分片大小
  */
 export const getUploadedChunks = (uploadId: string): Promise<any> => {
-  return request.get(`/files/upload/chunk/${uploadId}/chunks`)
+  // uploadId 内含原始文件名，其中的 #、?、% 会截断或改写 URL 路径，
+  // 必须编码，后端 gin 会先解码再取 Param。
+  return request.get(`/files/upload/chunk/${encodeURIComponent(uploadId)}/chunks`)
 }
 
 /**
@@ -139,7 +116,7 @@ export const getUploadedChunks = (uploadId: string): Promise<any> => {
  * @returns 取消结果
  */
 export const cancelChunkUpload = (uploadId: string): Promise<any> => {
-  return request.delete(`/files/upload/chunk/${uploadId}`)
+  return request.delete(`/files/upload/chunk/${encodeURIComponent(uploadId)}`)
 }
 
 /**

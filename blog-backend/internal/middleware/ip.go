@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"net/url"
 	"strings"
 	"time"
 
@@ -26,6 +27,19 @@ type AccessRecord struct {
 type IPService interface {
 	RecordRequest(AccessRecord) error
 	IsIPBanned(ip string) (bool, error)
+}
+
+// redactedRequestURL returns the request URL with credentials-bearing query
+// parameters masked. Downloads carry the JWT in ?token=, and writing it into
+// the access-log table would persist a login credential in plaintext.
+func redactedRequestURL(u *url.URL) string {
+	clone := *u
+	query := clone.Query()
+	if query.Has("token") {
+		query.Set("token", "***")
+		clone.RawQuery = query.Encode()
+	}
+	return clone.String()
 }
 
 // skippedResourceTypes are request kinds that must not reach the access log.
@@ -71,7 +85,7 @@ func IPMiddleware(ipService IPService) gin.HandlerFunc {
 		ip := utils.GetClientIP(c.Request)
 		resourceType := getResourceType(c.Request.URL.Path)
 		userAgent := c.Request.UserAgent()
-		requestURL := c.Request.URL.String()
+		requestURL := redactedRequestURL(c.Request.URL)
 
 		go func() {
 			if skipAccessLog(resourceType) {

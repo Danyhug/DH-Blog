@@ -19,8 +19,8 @@ type Dependencies struct {
 	StaticFilesPath    string
 	InitialStoragePath string
 	InitialChunkSizeKB int
-	// Events is optional. Without it the debounced disk sync stays invisible,
-	// which matters because it truncates and rebuilds the entire file table.
+	// Events is optional. Without it the debounced disk sync stays invisible
+	// in the admin event feed.
 	Events EventReporter
 }
 
@@ -51,7 +51,7 @@ func New(deps Dependencies) *Module {
 		repository:         repository,
 		service:            service,
 		handler:            newHandler(service),
-		chunkUploadHandler: newChunkUploadHandler(service, deps.DB),
+		chunkUploadHandler: newChunkUploadHandler(service),
 		staticFilesPath:    deps.StaticFilesPath,
 	}
 }
@@ -104,7 +104,35 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 		}
 
 		filePath := strings.TrimPrefix(c.Param("filepath"), "/")
-		fullPath := filepath.Join(storagePath, "博客", filePath)
+		// 公开静态路由不允许任何形式的穿越段，即使经过 URL 编码。
+		cleanRel := filepath.Clean(filePath)
+		if cleanRel == ".." || strings.HasPrefix(cleanRel, ".."+string(filepath.Separator)) || filepath.IsAbs(cleanRel) {
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+
+		blogRoot := filepath.Join(storagePath, "博客")
+		fullPath := filepath.Join(blogRoot, cleanRel)
+		if fullPath != blogRoot && !strings.HasPrefix(fullPath, blogRoot+string(filepath.Separator)) {
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
 		c.File(fullPath)
 	})
+}
+
+// Start launches background maintenance (expired upload-session cleanup).
+// Safe to call multiple times.
+func (m *Module) Start() {
+	if m.service != nil {
+		m.service.StartTempJanitor()
+	}
+}
+
+// Shutdown stops background maintenance. Safe to call multiple times,
+// including when Start was never called.
+func (m *Module) Shutdown() {
+	if m.service != nil {
+		m.service.StopTempJanitor()
+	}
 }

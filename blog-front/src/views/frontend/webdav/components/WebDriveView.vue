@@ -230,7 +230,7 @@ import {
   FileSpreadsheetIcon,
   FilePresentationIcon,
 } from '../utils/icons'
-import { listFiles, createFolder, uploadFile, getDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, getUploadedChunks, cancelChunkUpload, FileInfo } from '@/api/file'
+import { listFiles, createFolder, getDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, getUploadedChunks, cancelChunkUpload, FileInfo } from '@/api/file'
 import { notify } from '@/utils/notification'
 
 // 状态变量
@@ -740,11 +740,26 @@ function shareFile(file: FileItem) {
   closeContextMenu();
 }
 
+// 通过隐藏 iframe 触发下载。window.open 连续打开多个标签页会被
+// 浏览器弹窗拦截，iframe 方式批量下载不受影响。
+function triggerDownload(url: string) {
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.src = url;
+  document.body.appendChild(iframe);
+  // 留出足够时间让浏览器完成下载调度后移除
+  setTimeout(() => {
+    if (iframe.parentNode) {
+      iframe.parentNode.removeChild(iframe);
+    }
+  }, 10000);
+}
+
 // 下载文件
 function downloadFile(file: FileItem) {
   if (file.type === 'file' && file.id) {
     const downloadUrl = getDownloadUrl(file.id);
-    window.open(downloadUrl, '_blank');
+    triggerDownload(downloadUrl);
   }
   closeContextMenu();
 }
@@ -765,11 +780,11 @@ function downloadSelectedFiles() {
     return;
   }
 
-  // 逐个下载所有选中的文件
-  selectedFileItems.forEach(file => {
+  // 逐个下载所有选中的文件，间隔触发避免浏览器一次性拦截并发请求
+  selectedFileItems.forEach((file, index) => {
     if (file.id) {
       const downloadUrl = getDownloadUrl(file.id);
-      window.open(downloadUrl, '_blank');
+      setTimeout(() => triggerDownload(downloadUrl), index * 500);
     }
   });
 
@@ -900,20 +915,7 @@ async function uploadLargeFile(file: File, fileIndex: number) {
   let totalChunks = 0;
   
   try {
-    // 获取是否启用断点续传的设置
-    const enableResumeUpload = (uploadModalRef.value as any)?.enableResumeUpload ?? true;
-    
-    // 如果不启用断点续传，直接使用普通上传
-    if (!enableResumeUpload) {
-      const response = await uploadFile(currentParentId.value, file);
-      if (response && response.id) {
-        newUploadedFileIds.value.push(response.id.toString());
-      }
-      uploadModalRef.value?.updateFileStatus(fileIndex, 'success', undefined, 1, 1);
-      return;
-    }
-    
-    // 网盘项目不限制文件大小，通过分片上传支持任意大小的文件
+    // 所有文件统一走分片上传，支持断点续传，不限制文件大小
     
     // 生成基于文件名的稳定uploadId，支持断点续传
     const stableUploadId = `upload_${currentParentId.value || 'root'}_${file.name}_${file.size}`;
@@ -996,8 +998,9 @@ async function uploadLargeFile(file: File, fileIndex: number) {
     // 上传未完成的分片
     let completedCount = 0;
     
-    // 获取用户配置的重试次数
-    const maxRetries = (uploadModalRef.value as any)?.maxRetries ?? 0;
+    // 获取用户配置的重试次数。0 表示无限重试，负数按 0 处理，
+    // 防止手输负数时重试循环一次都不执行。
+    const maxRetries = Math.max(0, (uploadModalRef.value as any)?.maxRetries ?? 0);
     
     // 分批处理，避免内存溢出
     // 优化批次大小：默认5个分片，根据文件大小智能调整
@@ -1014,16 +1017,37 @@ async function uploadLargeFile(file: File, fileIndex: number) {
     const BATCH_SIZE = getOptimalBatchSize(file.size); // 智能批次大小
     const CHUNK_DELAY = 10; // 分片间延迟10ms，减少CPU占用
     
+    // 只有值得重试的失败才重试：
+    // - 无 response 的 AxiosError：请求没到达服务端（断网、超时、网关抖动）
+    // - 5xx / 429：服务端临时故障或限流，重试可能成功
+    // axios 拦截器对业务错误（HTTP 200 但 code≠1）reject 的是普通 Error，
+    // 「上传会话不存在」这类永久性失败会立刻终止而不是每 3 秒空转一次。
+    const isRetryableError = (error: any) => {
+      if (error?.isAxiosError !== true) {
+        return false;
+      }
+      if (!error.response) {
+        return true;
+      }
+      const status = error.response.status;
+      return status >= 500 || status === 429;
+    };
+    
     // 带重试的分片上传函数
     const uploadChunkWithRetry = async (chunkIndex: number, chunk: Blob) => {
       let retryCount = 0;
       const isInfiniteRetry = maxRetries === 0;
       
-      while (isInfiniteRetry || retryCount < maxRetries) {
+      while (true) {
         try {
           await uploadChunk(uploadId, chunkIndex, chunk);
           return; // 上传成功，退出重试循环
         } catch (error) {
+          if (!isRetryableError(error)) {
+            // 业务错误或 HTTP 错误：重试没有意义，直接抛出
+            throw error;
+          }
+          
           retryCount++;
           
           if (!isInfiniteRetry && retryCount >= maxRetries) {

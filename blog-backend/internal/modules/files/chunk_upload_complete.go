@@ -2,6 +2,7 @@ package files
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"hash"
 	"net/http"
@@ -16,6 +17,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
+
+// sha256FileThreshold 超过该大小的文件在合并时计算 SHA256 并存入 FileHash。
+const sha256FileThreshold = 100 * 1024 * 1024
 
 // CompleteChunkUpload 完成分片上传
 // @Summary 完成分片上传
@@ -41,6 +45,10 @@ func (h *chunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 		c.JSON(http.StatusOK, response.Error("uploadId不能为空"))
 		return
 	}
+	if err := validateUploadID(req.UploadId); err != nil {
+		c.JSON(http.StatusOK, response.Error(err.Error()))
+		return
+	}
 
 	userID := h.getUserID(c)
 	if userID == 0 {
@@ -48,44 +56,33 @@ func (h *chunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 		return
 	}
 
-	// 获取配置的存储路径
 	baseDir := h.fileService.GetStoragePath()
-	tempDir := filepath.Join(baseDir, "temp", req.UploadId)
-	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
+	tempDir := filepath.Join(baseDir, tempDirName, req.UploadId)
+	info, err := readChunkSessionInfo(tempDir)
+	if err != nil {
 		c.JSON(http.StatusOK, response.Error("上传会话不存在"))
 		return
 	}
-
-	// 读取上传信息文件
-	infoFile := filepath.Join(tempDir, "info.txt")
-	infoData, err := os.ReadFile(infoFile)
-	if err != nil {
-		c.JSON(http.StatusOK, response.Error("读取上传信息失败"))
+	if !info.hasUserID {
+		c.JSON(http.StatusOK, response.Error("上传会话已失效，请重新初始化"))
+		return
+	}
+	if !info.belongsTo(userID) {
+		c.JSON(http.StatusForbidden, response.Error("无权操作此上传会话"))
 		return
 	}
 
-	// 解析上传信息
-	var fileName, parentId string
-	var fileSize, totalChunks int
-	lines := strings.Split(string(infoData), "\n")
-	for _, line := range lines {
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) == 2 {
-			switch parts[0] {
-			case "fileName":
-				fileName = parts[1]
-			case "fileSize":
-				fileSize, _ = strconv.Atoi(strings.TrimSpace(parts[1]))
-			case "totalChunks":
-				totalChunks, _ = strconv.Atoi(strings.TrimSpace(parts[1]))
-			case "parentId":
-				parentId = strings.TrimSpace(parts[1])
-			}
-		}
+	fileName := strings.TrimSpace(info.fileName)
+	if err := validateFileName(fileName); err != nil {
+		c.JSON(http.StatusOK, response.Error("会话中的文件名非法"))
+		return
+	}
+	if info.fileSize <= 0 || info.totalChunks <= 0 || info.chunkSize <= 0 {
+		c.JSON(http.StatusOK, response.Error("上传会话参数非法"))
+		return
 	}
 
-	parentId = strings.TrimSpace(parentId)
-
+	parentId := strings.TrimSpace(info.parentID)
 	var parentStoragePath string
 	if parentId != "" {
 		parentNumeric, err := strconv.Atoi(parentId)
@@ -94,38 +91,54 @@ func (h *chunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 			return
 		}
 
-		var parent File
-		if err := h.db.First(&parent, parentNumeric).Error; err != nil {
+		parent, err := h.fileService.findFolderByID(c.Request.Context(), parentNumeric)
+		if err != nil {
 			c.JSON(http.StatusOK, response.Error("父目录不存在"))
 			return
 		}
-
-		if !parent.IsFolder {
-			c.JSON(http.StatusOK, response.Error("父目录不是文件夹"))
+		// 目录只能归属上传者自己，防止把文件塞进别人的文件夹。
+		if parent.UserID != userID {
+			c.JSON(http.StatusForbidden, response.Error("无权操作此父目录"))
 			return
 		}
-
 		parentStoragePath = parent.StoragePath
 	}
 
-	// 获取已上传的分片文件
-	files, err := filepath.Glob(filepath.Join(tempDir, "chunk_*"))
+	// 逐索引校验分片完整性与大小：只数数量会放过"缺一块多一块"的组合。
+	lastChunkExpected := info.fileSize - info.chunkSize*(int64(info.totalChunks)-1)
+	for i := 0; i < info.totalChunks; i++ {
+		expected := info.chunkSize
+		if i == info.totalChunks-1 {
+			expected = lastChunkExpected
+		}
+		chunkPath := filepath.Join(tempDir, fmt.Sprintf("chunk_%d", i))
+		stat, err := os.Stat(chunkPath)
+		if err != nil {
+			c.JSON(http.StatusOK, response.Error(fmt.Sprintf("分片 %d 缺失", i)))
+			return
+		}
+		if stat.Size() > expected {
+			c.JSON(http.StatusOK, response.Error(fmt.Sprintf("分片 %d 大小非法", i)))
+			return
+		}
+		if i != info.totalChunks-1 && stat.Size() != expected {
+			c.JSON(http.StatusOK, response.Error(fmt.Sprintf("分片 %d 大小非法", i)))
+			return
+		}
+	}
+
+	// 与 CreateFolder/UploadFile 保持一致：同名直接报错，不静默改名。
+	conflict, err := h.fileService.hasNameConflict(c.Request.Context(), userID, parentId, fileName)
 	if err != nil {
-		c.JSON(http.StatusOK, response.Error("读取分片失败"))
+		c.JSON(http.StatusOK, response.Error("检查同名文件失败"))
+		return
+	}
+	if conflict {
+		c.JSON(http.StatusOK, response.Error("同名文件已存在"))
 		return
 	}
 
-	// 检查分片完整性
-	if len(files) != totalChunks {
-		c.JSON(http.StatusOK, response.Error("分片不完整"))
-		return
-	}
-
-	// 创建最终存储路径 - 使用配置的存储路径
 	relativeDir := sanitizeRelativePath(parentStoragePath)
-	if parentId != "" && relativeDir == "" {
-		relativeDir = sanitizeRelativePath(parentId)
-	}
 	storageDir := filepath.Join(baseDir, relativeDir)
 	if err := os.MkdirAll(storageDir, 0755); err != nil {
 		c.JSON(http.StatusOK, response.Error("创建存储目录失败"))
@@ -134,67 +147,46 @@ func (h *chunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 
 	finalPath := filepath.Join(storageDir, fileName)
 
-	// 检查是否已存在同名文件
-	if _, err := os.Stat(finalPath); err == nil {
-		ext := filepath.Ext(fileName)
-		nameWithoutExt := strings.TrimSuffix(fileName, ext)
-		fileName = fmt.Sprintf("%s_%d%s", nameWithoutExt, time.Now().Unix(), ext)
-		finalPath = filepath.Join(storageDir, fileName)
-	}
-
-	// 合并所有分片 - 优化大文件合并性能
-	finalFile, err := os.Create(finalPath)
+	// O_EXCL 原子创建：hasNameConflict 只查了索引，WebDAV 刚写入、防抖同步
+	// 尚未落库的文件不在索引里，直接 os.Create 会把它们静默截断。
+	finalFile, err := os.OpenFile(finalPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	if err != nil {
+		if os.IsExist(err) {
+			c.JSON(http.StatusOK, response.Error("同名文件已存在"))
+			return
+		}
 		logrus.Error("创建最终文件失败: ", err)
 		c.JSON(http.StatusOK, response.Error("创建最终文件失败"))
 		return
 	}
 	defer func() { _ = finalFile.Close() }()
 
-	// 根据文件大小选择最优的合并策略
 	var hasher hash.Hash
-
-	// 为大文件添加SHA256校验
-	if fileSize > 100*1024*1024 { // 100MB以上文件计算哈希
+	if info.fileSize > sha256FileThreshold {
 		hasher = sha256.New()
 	}
 
-	// 使用缓冲区减少内存占用
-	buffer := make([]byte, 64*1024*1024) // 64MB缓冲区，根据现代系统优化
-
-	// 优化的合并策略：根据分片数量选择不同算法
-	var totalSize int64
-	if totalChunks <= 100 {
-		// 小文件：顺序合并，减少复杂度
-		totalSize, err = h.mergeChunksSequential(tempDir, totalChunks, finalFile, buffer, hasher)
-	} else if totalChunks <= 1000 {
-		// 中等文件：带缓冲的顺序合并
-		totalSize, err = h.mergeChunksBuffered(tempDir, totalChunks, finalFile, buffer, hasher)
-	} else {
-		// 大文件：并发合并（8GB文件可能有8000+分片）
-		totalSize, err = h.mergeChunksConcurrent(tempDir, totalChunks, finalFile, buffer, hasher)
-	}
-
+	buffer := make([]byte, 1024*1024)
+	totalSize, err := mergeChunks(tempDir, info.totalChunks, finalFile, buffer, hasher)
 	if err != nil {
+		_ = os.Remove(finalPath)
 		c.JSON(http.StatusOK, response.Error(err.Error()))
 		return
 	}
 
-	// 确保所有数据写入磁盘
 	if err := finalFile.Sync(); err != nil {
 		logrus.Warnf("同步文件到磁盘失败: %v", err)
 	}
 
-	// 验证文件完整性
-	if totalSize != int64(fileSize) {
-		c.JSON(http.StatusOK, response.Error(fmt.Sprintf("文件大小不匹配：期望 %d，实际 %d", fileSize, totalSize)))
+	if totalSize != info.fileSize {
+		_ = os.Remove(finalPath)
+		c.JSON(http.StatusOK, response.Error(fmt.Sprintf("文件大小不匹配：期望 %d，实际 %d", info.fileSize, totalSize)))
 		return
 	}
 
-	// 验证SHA256（如果计算了）
+	var fileHash string
 	if hasher != nil {
-		expectedHash := hasher.Sum(nil)
-		_ = expectedHash // 可以存储到数据库用于后续验证
+		fileHash = hex.EncodeToString(hasher.Sum(nil))
 	}
 
 	// 异步清理临时目录（避免阻塞响应）
@@ -205,20 +197,18 @@ func (h *chunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 		}
 	}()
 
-	// 创建文件数据库记录
 	file := &File{
-		UserID:      uint64(userID),
+		UserID:      userID,
 		ParentID:    parentId,
 		Name:        fileName,
 		IsFolder:    false,
 		Size:        totalSize,
 		StoragePath: filepath.Join(relativeDir, fileName),
-		MimeType:    h.getMimeType(fileName),
+		MimeType:    getMimeType(fileName),
+		FileHash:    fileHash,
 	}
 
-	// 保存到数据库
-	if err := h.db.Create(file).Error; err != nil {
-		// 删除已创建的文件
+	if err := h.fileService.createFileRecord(c.Request.Context(), file); err != nil {
 		_ = os.Remove(finalPath)
 		c.JSON(http.StatusOK, response.Error("保存文件记录失败"))
 		return
@@ -255,27 +245,4 @@ func sanitizeRelativePath(input string) string {
 		return ""
 	}
 	return cleaned
-}
-
-// getMimeType 获取文件MIME类型
-func (h *chunkUploadHandler) getMimeType(filename string) string {
-	ext := strings.ToLower(filepath.Ext(filename))
-	switch ext {
-	case ".jpg", ".jpeg":
-		return "image/jpeg"
-	case ".png":
-		return "image/png"
-	case ".gif":
-		return "image/gif"
-	case ".pdf":
-		return "application/pdf"
-	case ".txt":
-		return "text/plain"
-	case ".doc", ".docx":
-		return "application/msword"
-	case ".xls", ".xlsx":
-		return "application/vnd.ms-excel"
-	default:
-		return "application/octet-stream"
-	}
 }

@@ -157,20 +157,6 @@ func (h *handler) GetDailyVisitStatsForLastDays(c *gin.Context) {
 	respondData(c, stats)
 }
 
-// SaveAccessLog retains the former controller middleware behavior for callers
-// that need request logging after a handler has run.
-func (h *handler) SaveAccessLog() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Next()
-		_ = h.repository.SaveAccessLog(&AccessLog{
-			IPAddress:  c.ClientIP(),
-			AccessDate: time.Now().Truncate(24 * time.Hour),
-			UserAgent:  c.Request.UserAgent(),
-			RequestURL: c.Request.URL.String(),
-		})
-	}
-}
-
 func queryInt(c *gin.Context, key string, defaultValue int) int {
 	value, err := strconv.Atoi(c.Query(key))
 	if err != nil {

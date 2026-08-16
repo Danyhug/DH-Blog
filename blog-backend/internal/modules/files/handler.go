@@ -2,6 +2,7 @@ package files
 
 import (
 	"fmt"
+	"mime"
 	"net/http"
 	"strconv"
 
@@ -150,8 +151,9 @@ func (h *handler) DownloadFile(c *gin.Context) {
 		disposition = "inline"
 	}
 
-	// 设置响应头
-	c.Header("Content-Disposition", fmt.Sprintf("%s; filename=%s", disposition, fileName))
+	// 设置响应头。mime.FormatMediaType 会为非 ASCII 文件名生成 RFC 5987 的
+	// filename*= 编码，避免中文文件名在浏览器里乱码。
+	c.Header("Content-Disposition", mime.FormatMediaType(disposition, map[string]string{"filename": fileName}))
 	c.Header("Content-Type", contentType)
 	// c.File 内部使用 http.ServeFile，自动支持 Range 请求
 	c.File(fileInfo.StoragePath)
@@ -291,5 +293,3 @@ func (h *handler) getCurrentUserID(c *gin.Context) uint64 {
 	}
 	return userID.(uint64)
 }
-
-// SyncFiles 手动同步磁盘文件到数据库

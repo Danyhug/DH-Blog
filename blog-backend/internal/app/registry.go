@@ -312,14 +312,18 @@ func (ctx *buildContext) buildModules() ([]router.Module, error) {
 }
 
 func (ctx *buildContext) starts() []func() {
-	if ctx.tasks == nil {
-		return nil
+	starts := make([]func(), 0, 2)
+	if ctx.tasks != nil {
+		starts = append(starts, ctx.tasks.Start)
 	}
-	return []func(){ctx.tasks.Start}
+	if ctx.filesModule != nil {
+		starts = append(starts, ctx.filesModule.Start)
+	}
+	return starts
 }
 
 func (ctx *buildContext) shutdowns() []func() {
-	shutdowns := make([]func(), 0, 5)
+	shutdowns := make([]func(), 0, 6)
 	if ctx.tasks != nil {
 		shutdowns = append(shutdowns, ctx.tasks.Stop)
 	}
@@ -331,6 +335,9 @@ func (ctx *buildContext) shutdowns() []func() {
 	}
 	if ctx.gatewayModule != nil {
 		shutdowns = append(shutdowns, ctx.gatewayModule.Shutdown)
+	}
+	if ctx.filesModule != nil {
+		shutdowns = append(shutdowns, ctx.filesModule.Shutdown)
 	}
 	// The event feed closes after everything that publishes into it, so the
 	// last thing a task says on its way out still gets written.

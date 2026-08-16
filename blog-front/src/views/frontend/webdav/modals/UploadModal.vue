@@ -99,15 +99,7 @@
       </div>
 
       <div v-if="selectedFiles.length > 0 && !isUploading" class="upload-options">
-        <label class="resume-upload-option">
-          <input 
-            type="checkbox" 
-            v-model="enableResumeUpload"
-            class="checkbox-input"
-          />
-          <span class="checkbox-label">启用断点续传（网络中断时自动恢复上传）</span>
-        </label>
-        <div v-if="enableResumeUpload" class="retry-config-option">
+        <div class="retry-config-option">
           <label class="retry-label">
             重试次数（0表示无限重试）：
             <input 
@@ -185,7 +177,6 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const selectedFiles = ref<File[]>([])
 const isUploading = ref(false)
 const uploadResults = ref<UploadResult[]>([])
-const enableResumeUpload = ref(true) // 默认启用断点续传
 const maxRetries = ref(0) // 默认无限重试（0表示无限重试）
 
 // 排序上传结果：失败的在上方，成功的在下方
@@ -345,7 +336,6 @@ defineExpose({
     }
   },
   uploadResults,
-  enableResumeUpload,
   maxRetries
 })
 </script>
@@ -683,14 +673,6 @@ defineExpose({
   border: 1px solid #e2e8f0;
 }
 
-.resume-upload-option {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  user-select: none;
-}
-
 .retry-config-option {
   margin-top: 0.75rem;
   margin-left: 1.5rem;
@@ -717,19 +699,6 @@ defineExpose({
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-}
-
-.checkbox-input {
-  width: 1rem;
-  height: 1rem;
-  accent-color: #3b82f6;
-  cursor: pointer;
-}
-
-.checkbox-label {
-  font-size: 0.875rem;
-  color: #475569;
-  cursor: pointer;
 }
 
 .upload-actions {

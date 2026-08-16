@@ -180,7 +180,7 @@ func checkPassword(hashedPassword, password string) bool {
 }
 
 func (s *shareService) CreateShare(ctx context.Context, req *CreateShareRequest) (*Share, error) {
-	file, err := s.fileService.GetDownloadInfo(ctx, 1, req.FileKey)
+	file, err := s.fileService.GetDownloadInfoForShare(ctx, req.FileKey)
 	if err != nil {
 		logrus.Errorf("获取文件信息失败: %v", err)
 		return nil, errors.New("文件不存在")
@@ -226,7 +226,7 @@ func (s *shareService) GetShareInfo(ctx context.Context, shareID string) (*Share
 		return nil, errors.New("分享不存在")
 	}
 
-	file, err := s.fileService.GetDownloadInfo(ctx, 1, share.FileKey)
+	file, err := s.fileService.GetDownloadInfoForShare(ctx, share.FileKey)
 	if err != nil {
 		logrus.Errorf("获取文件信息失败: %v", err)
 		return nil, errors.New("文件不存在")
@@ -319,7 +319,7 @@ func (s *shareService) DownloadWithToken(ctx context.Context, shareID, token str
 		return nil, err
 	}
 
-	file, err := s.fileService.GetDownloadInfo(ctx, 1, share.FileKey)
+	file, err := s.fileService.GetDownloadInfoForShare(ctx, share.FileKey)
 	if err != nil {
 		logrus.Errorf("获取文件信息失败: %v", err)
 		return nil, errors.New("文件不存在")
@@ -359,7 +359,7 @@ func (s *shareService) Download(ctx context.Context, shareID string, clientIP, u
 		return nil, err
 	}
 
-	file, err := s.fileService.GetDownloadInfo(ctx, 1, share.FileKey)
+	file, err := s.fileService.GetDownloadInfoForShare(ctx, share.FileKey)
 	if err != nil {
 		logrus.Errorf("获取文件信息失败: %v", err)
 		return nil, errors.New("文件不存在")
@@ -412,7 +412,7 @@ func (s *shareService) toSummary(ctx context.Context, share *Share) *ShareSummar
 		DownloadCount:    share.DownloadCount,
 		CreatedAt:        share.CreatedAt.Format("2006-01-02 15:04:05"),
 	}
-	file, err := s.fileService.GetDownloadInfo(ctx, 1, share.FileKey)
+	file, err := s.fileService.GetDownloadInfoForShare(ctx, share.FileKey)
 	if err != nil {
 		summary.FileMissing = true
 		return summary

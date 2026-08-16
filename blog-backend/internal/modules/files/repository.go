@@ -20,9 +20,15 @@ type fileRepository interface {
 
 	// CountByUserID 统计和批量操作
 	CountByUserID(ctx context.Context, userID uint64) (int64, error) // 统计用户的文件总数
-	TruncateFiles(ctx context.Context) error                        // 清空文件表
-	Snapshot(ctx context.Context) ([]File, error)                   // 保存完整索引快照
-	RestoreSnapshot(ctx context.Context, files []File) error        // 原样恢复索引和 ID
+	TruncateFiles(ctx context.Context) error                         // 清空文件表
+	Snapshot(ctx context.Context) ([]File, error)                    // 保存完整索引快照
+	RestoreSnapshot(ctx context.Context, files []File) error         // 原样恢复索引和 ID
+	ListAll(ctx context.Context) ([]*File, error)                    // 读取全部记录（含软删残留，供增量同步清理）
+	HardDelete(ctx context.Context, id int) error                    // 物理删除单条记录
+
+	// Transaction 在单个数据库事务内执行 fn。磁盘同步对账要逐条增删索引，
+	// 不包事务的话中途失败会留下半同步状态。
+	Transaction(ctx context.Context, fn func(repo fileRepository) error) error
 }
 
 // Repository 是文件模块的 GORM 持久化实现。
@@ -183,5 +189,24 @@ func (r *Repository) RestoreSnapshot(ctx context.Context, files []File) error {
 			return nil
 		}
 		return tx.Session(&gorm.Session{SkipHooks: true}).Unscoped().Create(&files).Error
+	})
+}
+
+// ListAll 返回包括软删残留在内的全部记录，供增量同步对账使用。
+func (r *Repository) ListAll(ctx context.Context) ([]*File, error) {
+	var files []*File
+	err := r.db.WithContext(ctx).Unscoped().Find(&files).Error
+	return files, err
+}
+
+// HardDelete 物理删除记录，跳过 GORM 的软删除。
+func (r *Repository) HardDelete(ctx context.Context, id int) error {
+	return r.db.WithContext(ctx).Unscoped().Delete(&File{}, id).Error
+}
+
+// Transaction 在单个数据库事务内执行 fn，fn 收到的 repo 走同一事务。
+func (r *Repository) Transaction(ctx context.Context, fn func(repo fileRepository) error) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return fn(&Repository{db: tx})
 	})
 }

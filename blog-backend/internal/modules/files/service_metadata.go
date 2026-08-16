@@ -2,13 +2,16 @@ package files
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 func (s *fileService) ListFiles(ctx context.Context, userID uint64, parentID string) ([]*File, error) {
@@ -181,12 +184,73 @@ func (s *fileService) GetDownloadInfo(ctx context.Context, userID uint64, fileID
 	return file, nil
 }
 
+func (s *fileService) GetDownloadInfoForShare(ctx context.Context, fileID string) (*File, error) {
+	id, err := parseFileID(fileID)
+	if err != nil {
+		return nil, fmt.Errorf("无效的文件ID")
+	}
+
+	file, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		logrus.Errorf("查找文件失败: %v", err)
+		return nil, fmt.Errorf("文件不存在")
+	}
+
+	if file.IsFolder {
+		return nil, fmt.Errorf("不能下载文件夹")
+	}
+
+	fullPath := filepath.Join(s.GetStoragePath(), file.StoragePath)
+	if _, err := os.Stat(fullPath); err != nil {
+		logrus.Errorf("物理文件不存在: %v", err)
+		return nil, fmt.Errorf("文件已损坏或不存在")
+	}
+
+	file.StoragePath = fullPath
+	return file, nil
+}
+
+// findFolderByID 供 chunk 上传完成流程查询父目录，仅接受文件夹。
+func (s *fileService) findFolderByID(ctx context.Context, id int) (*File, error) {
+	folder, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("父目录不存在")
+	}
+	if !folder.IsFolder {
+		return nil, fmt.Errorf("父目录不是文件夹")
+	}
+	return folder, nil
+}
+
+// hasNameConflict 检查同一用户同一目录下是否已有同名条目。
+// FindByUserIDAndName 用 GORM First 查询，"查无此名"会返回 gorm.ErrRecordNotFound，
+// 这是正常路径（无冲突），必须转成 (false, nil)，否则会变成"同名检查失败"。
+func (s *fileService) hasNameConflict(ctx context.Context, userID uint64, parentID, name string) (bool, error) {
+	existing, err := s.repo.FindByUserIDAndName(ctx, userID, parentID, name)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return existing != nil, nil
+}
+
+// createFileRecord 保存 chunk 上传完成后的文件索引记录。
+func (s *fileService) createFileRecord(ctx context.Context, file *File) error {
+	return s.repo.Create(ctx, file)
+}
+
 func (s *fileService) RenameFile(ctx context.Context, userID uint64, fileID string, newName string) error {
 	// 解析fileID
 	id, err := parseFileID(fileID)
 	if err != nil {
 		logrus.Errorf("解析文件ID失败: %v", err)
 		return fmt.Errorf("无效的文件ID")
+	}
+
+	if err := validateFileName(newName); err != nil {
+		return fmt.Errorf("新名称无效: %v", err)
 	}
 
 	// 获取文件信息
@@ -291,9 +355,16 @@ func (s *fileService) DeleteFile(ctx context.Context, userID uint64, fileID stri
 	return nil
 }
 
-// 辅助函数：根据文件名获取MIME类型
+// 辅助函数：根据文件名获取MIME类型。
+// mime.TypeByExtension 依赖系统 mime 表（Windows 打包环境可能缺失常见音视频类型），
+// 因此用回退表兜底，保证 mp3/mp4 等预览类型在所有平台可用。
 func getMimeType(fileName string) string {
 	ext := strings.ToLower(filepath.Ext(fileName))
+	if ext != "" {
+		if mimeType := mime.TypeByExtension(ext); mimeType != "" {
+			return mimeType
+		}
+	}
 
 	switch ext {
 	case ".jpg", ".jpeg":
@@ -302,12 +373,18 @@ func getMimeType(fileName string) string {
 		return "image/png"
 	case ".gif":
 		return "image/gif"
+	case ".webp":
+		return "image/webp"
 	case ".pdf":
 		return "application/pdf"
-	case ".doc", ".docx":
+	case ".doc":
 		return "application/msword"
-	case ".xls", ".xlsx":
+	case ".docx":
+		return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	case ".xls":
 		return "application/vnd.ms-excel"
+	case ".xlsx":
+		return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	case ".txt":
 		return "text/plain"
 	case ".html", ".htm":
@@ -316,6 +393,8 @@ func getMimeType(fileName string) string {
 		return "audio/mpeg"
 	case ".mp4":
 		return "video/mp4"
+	case ".mkv":
+		return "video/x-matroska"
 	default:
 		return "application/octet-stream"
 	}

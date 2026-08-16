@@ -24,6 +24,97 @@ type fileService struct {
 	syncMu     sync.Mutex
 	syncTimer  *time.Timer
 	syncExecMu sync.Mutex // 保护实际同步操作，防止并发执行
+
+	// temp janitor 清理过期上传会话。stop/done 只在 Start 里创建，
+	// started 由 tempJanitorMu 保护，避免 Stop 无锁读 Start 写入的字段。
+	tempJanitorMu       sync.Mutex
+	tempJanitorStarted  bool
+	tempJanitorStop     chan struct{}
+	tempJanitorDone     chan struct{}
+	tempJanitorStopOnce sync.Once
+}
+
+// 过期上传会话的清理参数。complete 接口会删除成功会话，
+// janitor 负责兜底清理被放弃的会话与服务重启残留。
+const (
+	tempSessionMaxAge   = 24 * time.Hour
+	tempCleanupInterval = 6 * time.Hour
+)
+
+// StartTempJanitor 启动过期上传会话清理循环，可安全重复调用。
+func (s *fileService) StartTempJanitor() {
+	s.tempJanitorMu.Lock()
+	defer s.tempJanitorMu.Unlock()
+	if s.tempJanitorStarted {
+		return
+	}
+	s.tempJanitorStarted = true
+	s.tempJanitorStop = make(chan struct{})
+	s.tempJanitorDone = make(chan struct{})
+	go s.tempJanitorLoop()
+}
+
+// StopTempJanitor 停止清理循环。未启动时直接返回，重复调用安全。
+func (s *fileService) StopTempJanitor() {
+	s.tempJanitorMu.Lock()
+	started := s.tempJanitorStarted
+	stop := s.tempJanitorStop
+	done := s.tempJanitorDone
+	s.tempJanitorMu.Unlock()
+
+	if !started {
+		return
+	}
+	s.tempJanitorStopOnce.Do(func() { close(stop) })
+	<-done
+}
+
+func (s *fileService) tempJanitorLoop() {
+	defer close(s.tempJanitorDone)
+	s.cleanupTempSessions()
+	ticker := time.NewTicker(tempCleanupInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			s.cleanupTempSessions()
+		case <-s.tempJanitorStop:
+			return
+		}
+	}
+}
+
+// cleanupTempSessions 删除超过 tempSessionMaxAge 未改动的上传会话目录。
+func (s *fileService) cleanupTempSessions() {
+	baseDir := s.GetStoragePath()
+	if baseDir == "" {
+		return
+	}
+	tempRoot := filepath.Join(baseDir, tempDirName)
+	entries, err := os.ReadDir(tempRoot)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			logrus.Warnf("读取上传临时目录失败: %v", err)
+		}
+		return
+	}
+	cutoff := time.Now().Add(-tempSessionMaxAge)
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		if info.ModTime().Before(cutoff) {
+			if err := os.RemoveAll(filepath.Join(tempRoot, entry.Name())); err != nil {
+				logrus.Warnf("清理过期上传会话失败: %s, 错误: %v", entry.Name(), err)
+			} else {
+				logrus.Infof("已清理过期上传会话: %s", entry.Name())
+			}
+		}
+	}
 }
 
 var protectedDirectories = [...]string{"博客"}
@@ -35,6 +126,10 @@ type Service interface {
 
 	// GetDownloadInfo 返回经过访问校验的下载元信息。
 	GetDownloadInfo(ctx context.Context, userID uint64, fileID string) (*File, error)
+
+	// GetDownloadInfoForShare 返回经过磁盘存在性校验的下载元信息，不校验文件属主。
+	// share 模块在令牌校验通过后调用：公开分享的受众并不是文件属主。
+	GetDownloadInfoForShare(ctx context.Context, fileID string) (*File, error)
 
 	// GetStoragePath 获取当前存储路径。
 	GetStoragePath() string

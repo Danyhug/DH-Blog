@@ -1,7 +1,7 @@
 package share
 
 import (
-	"fmt"
+	"mime"
 	"net/http"
 	"strconv"
 	"time"
@@ -291,7 +291,7 @@ func (h *handler) Download(c *gin.Context) {
 	if preview {
 		disposition = "inline"
 	}
-	c.Header("Content-Disposition", fmt.Sprintf("%s; filename=%s", disposition, file.Name))
+	c.Header("Content-Disposition", mime.FormatMediaType(disposition, map[string]string{"filename": file.Name}))
 	c.Header("Content-Type", contentType)
 	c.File(file.StoragePath)
 }

@@ -1,7 +1,10 @@
 package webdav
 
 import (
+	"context"
 	"net/http"
+	"os"
+	"strings"
 
 	"dh-blog/internal/router"
 
@@ -11,6 +14,56 @@ import (
 )
 
 const basicAuthRealm = `Basic realm="DH-Blog WebDAV"`
+
+// tempDirName 是 files 模块分片上传的临时目录，必须对 WebDAV 客户端隐藏，
+// 否则其他用户的上传分片与会话信息可被任意浏览、篡改或删除。
+const tempDirName = "temp"
+
+// tempFilterFS 包装存储根目录，屏蔽分片上传的 temp 目录。
+type tempFilterFS struct {
+	webdav.Dir
+}
+
+// blockedTempPath 判断 WebDAV 路径（'/' 分隔）是否指向 temp 目录或其内部。
+func blockedTempPath(name string) bool {
+	clean := strings.Trim(name, "/")
+	return clean == tempDirName || strings.HasPrefix(clean, tempDirName+"/")
+}
+
+func (f tempFilterFS) Mkdir(ctx context.Context, name string, perm os.FileMode) error {
+	if blockedTempPath(name) {
+		return os.ErrNotExist
+	}
+	return f.Dir.Mkdir(ctx, name, perm)
+}
+
+func (f tempFilterFS) OpenFile(ctx context.Context, name string, flag int, perm os.FileMode) (webdav.File, error) {
+	if blockedTempPath(name) {
+		return nil, os.ErrNotExist
+	}
+	return f.Dir.OpenFile(ctx, name, flag, perm)
+}
+
+func (f tempFilterFS) RemoveAll(ctx context.Context, name string) error {
+	if blockedTempPath(name) {
+		return os.ErrNotExist
+	}
+	return f.Dir.RemoveAll(ctx, name)
+}
+
+func (f tempFilterFS) Rename(ctx context.Context, oldName, newName string) error {
+	if blockedTempPath(oldName) || blockedTempPath(newName) {
+		return os.ErrNotExist
+	}
+	return f.Dir.Rename(ctx, oldName, newName)
+}
+
+func (f tempFilterFS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
+	if blockedTempPath(name) {
+		return nil, os.ErrNotExist
+	}
+	return f.Dir.Stat(ctx, name)
+}
 
 var writeMethods = map[string]bool{
 	http.MethodPut:    true,
@@ -100,7 +153,7 @@ func (m *Module) serveHTTP() gin.HandlerFunc {
 
 		davHandler := &webdav.Handler{
 			Prefix:     m.prefix,
-			FileSystem: webdav.Dir(storagePath),
+			FileSystem: tempFilterFS{Dir: webdav.Dir(storagePath)},
 			LockSystem: m.lockSystem,
 			Logger: func(r *http.Request, err error) {
 				if err != nil {
@@ -121,3 +174,6 @@ func abortUnauthorized(c *gin.Context) {
 	c.Header("WWW-Authenticate", basicAuthRealm)
 	c.AbortWithStatus(http.StatusUnauthorized)
 }
+
+// Ensure the wrapper satisfies the FileSystem contract at compile time.
+var _ webdav.FileSystem = tempFilterFS{}

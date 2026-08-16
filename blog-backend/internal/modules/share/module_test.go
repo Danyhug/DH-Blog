@@ -178,6 +178,12 @@ func (s stubFileService) GetDownloadInfo(_ context.Context, _ uint64, fileID str
 	}
 	return nil, errors.New("文件不存在")
 }
+func (s stubFileService) GetDownloadInfoForShare(_ context.Context, fileID string) (*filesmodule.File, error) {
+	if file, ok := s.files[fileID]; ok {
+		return file, nil
+	}
+	return nil, errors.New("文件不存在")
+}
 func (s stubFileService) GetStoragePath() string                           { return "" }
 func (s stubFileService) EnsureProtectedDirectories(context.Context) error { return nil }
 func (s stubFileService) GetProtectedDirectoryID(context.Context, string) (string, error) {
