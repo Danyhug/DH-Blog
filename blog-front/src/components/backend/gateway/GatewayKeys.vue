@@ -171,11 +171,12 @@
                     </el-select>
                 </el-form-item>
                 <el-form-item label="能力范围">
-                    <el-select v-model="createScopes" multiple placeholder="留空 = 仅搜索" class="w-full">
+                    <el-select v-model="createScopes" multiple placeholder="留空 = 纯搜索 Key" class="w-full">
                         <el-option v-for="opt in scopeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
                     </el-select>
                     <div class="text-xs text-gray-400 mt-1">
-                        content:write 才能创建/修改文章与传图；留空 = 仅搜索。
+                        联网搜索对任何 Key 始终可用，无需勾选；下方只配置内容能力（留空即为纯搜索 Key）。
+                        content:write 才能创建/修改文章与传图。
                     </div>
                 </el-form-item>
                 <el-form-item label="署名">
@@ -292,14 +293,20 @@ const revealing = ref(0);
 const createDialogVisible = ref(false);
 const creating = ref(false);
 const createAllowed = ref<string[]>([]);
-// 能力范围三档固定，值即后端的 scope 字符串
+// 搜索恒为基线能力，前端不再把它做成可勾选项；这里只配置内容权限。
+// 若一条存量 Key 的 scopes 里仍有 search（后端 NormalizeScopes 仍接受它），
+// scopeLabel 的映射把这种旧值渲染成可读文案。
 const scopeOptions = [
-    { value: 'search', label: '联网搜索（默认）' },
     { value: 'content:read', label: '读取文章' },
     { value: 'content:write', label: '写入文章' }
 ];
+const scopeLabels: Record<string, string> = {
+    search: '联网搜索',
+    'content:read': '读取文章',
+    'content:write': '写入文章'
+};
 const createScopes = ref<string[]>([]);
-const scopeLabel = (s: string) => scopeOptions.find(o => o.value === s)?.label || s;
+const scopeLabel = (s: string) => scopeLabels[s] || s;
 const createForm = ref<CreateGatewayApiKeyPayload>({
     name: '',
     rateLimitPerMin: 60,
