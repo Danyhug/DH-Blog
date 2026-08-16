@@ -159,6 +159,10 @@ type toolFixture struct {
 }
 
 func newToolFixture(t *testing.T) *toolFixture {
+	return newToolFixtureWithEvents(t, &recordingEvents{})
+}
+
+func newToolFixtureWithEvents(t *testing.T, events *recordingEvents) *toolFixture {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
 	if err != nil {
@@ -179,14 +183,20 @@ func newToolFixture(t *testing.T) *toolFixture {
 	}
 	images := &stubImages{url: "/api/uploads/blog/x.png"}
 	tasks := &recordingTasks{}
-	events := &recordingEvents{}
+	// A nil *recordingEvents must reach New() as an untyped nil interface;
+	// assigning the typed nil straight into the interface field would produce
+	// a non-nil interface and bypass the noop fallback.
+	var reporter ContentReporter
+	if events != nil {
+		reporter = events
+	}
 
 	agentModule, err := New(Dependencies{
 		DB:       db,
 		Articles: module.ContentService(),
 		Images:   images,
 		Tasks:    tasks,
-		Events:   events,
+		Events:   reporter,
 	})
 	if err != nil {
 		t.Fatalf("build agentapi module: %v", err)
@@ -474,6 +484,22 @@ func TestListArticlesEditableFlag(t *testing.T) {
 	if _, ok := byTitle["我的文章"]["createdAt"].(string); !ok {
 		t.Fatalf("createdAt is not a string: %#v", byTitle["我的文章"]["createdAt"])
 	}
+
+	// A zero-value identity uses the same bare key comparison update_article
+	// applies, so a zero-key article counts as its own and the hint never
+	// disagrees with the write path.
+	_, zeroData, _ := callTool(t, tool, identity(0, scopeContentRead), nil)
+	zeroByTitle := map[string]map[string]any{}
+	for _, item := range zeroData["articles"].([]any) {
+		a := item.(map[string]any)
+		zeroByTitle[a["title"].(string)] = a
+	}
+	if zeroByTitle["站长的文章"]["editable"] != true {
+		t.Fatalf("zero-key article editable for a zero-key identity = %v, want true", zeroByTitle["站长的文章"]["editable"])
+	}
+	if zeroByTitle["我的文章"]["editable"] != false {
+		t.Fatalf("key-7 article editable for a zero-key identity = %v, want false", zeroByTitle["我的文章"]["editable"])
+	}
 }
 
 func TestGetArticleReturnsFullContent(t *testing.T) {
@@ -547,6 +573,25 @@ func TestCreateArticlePersistsAuthorAndReturnsID(t *testing.T) {
 	}
 	if len(fixture.events.created) != 1 || fixture.events.created[0].id != id {
 		t.Fatalf("created events = %#v", fixture.events.created)
+	}
+}
+
+func TestCreateArticleNilEventsFallsBackToNoop(t *testing.T) {
+	fixture := newToolFixtureWithEvents(t, nil)
+	tool := fixture.tool(t, "create_article")
+	_, data, _ := callTool(t, tool, identity(7, scopeContentWrite), map[string]any{
+		"title": "无事件回退", "content": "正文",
+	})
+	id := int(data["id"].(float64))
+	if id <= 0 || data["title"] != "无事件回退" {
+		t.Fatalf("create with nil events = %#v", data)
+	}
+	stored, err := fixture.articles.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("load created article: %v", err)
+	}
+	if stored.AuthorKeyID != 7 {
+		t.Fatalf("authorKeyID = %d, want 7", stored.AuthorKeyID)
 	}
 }
 
@@ -838,6 +883,23 @@ func TestUploadImageRejectsOversize(t *testing.T) {
 	}
 	if fixture.images.calls != 0 {
 		t.Fatal("oversize payload reached the image store")
+	}
+}
+
+func TestUploadImageRejectsRawBase64OverCeiling(t *testing.T) {
+	fixture := newToolFixture(t)
+	tool := fixture.tool(t, "upload_image")
+	// A payload far above the 5MB ceiling: its raw base64 text exceeds
+	// maxUploadBase64Len, so the tool rejects it before even decoding.
+	oversize := make([]byte, 10<<20)
+	result, _, text := callTool(t, tool, identity(7, scopeContentWrite), map[string]any{
+		"file_name": "huge.png", "data": base64.StdEncoding.EncodeToString(oversize),
+	})
+	if !result.IsError || !strings.Contains(text, "5MB") {
+		t.Fatalf("huge payload: result=%#v text=%q", result, text)
+	}
+	if fixture.images.calls != 0 {
+		t.Fatal("huge payload reached the image store")
 	}
 }
 

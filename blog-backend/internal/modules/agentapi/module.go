@@ -83,14 +83,17 @@ type Module struct {
 	tools   []mcp.Tool
 }
 
-// New builds the module. DB and Articles are required; Events may be nil and
-// falls back to a no-op reporter.
+// New builds the module. DB, Articles, Images and Tasks are required; Events
+// may be nil and falls back to a no-op reporter.
 func New(deps Dependencies) (*Module, error) {
 	if deps.DB == nil {
 		return nil, fmt.Errorf("agentapi: DB is required")
 	}
 	if deps.Articles == nil {
 		return nil, fmt.Errorf("agentapi: Articles is required")
+	}
+	if deps.Images == nil {
+		return nil, fmt.Errorf("agentapi: Images is required")
 	}
 	if deps.Tasks == nil {
 		return nil, fmt.Errorf("agentapi: Tasks is required")

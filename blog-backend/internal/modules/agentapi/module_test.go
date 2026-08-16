@@ -1,11 +1,13 @@
 package agentapi
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
 	"time"
 
+	article "dh-blog/internal/modules/article"
 	"dh-blog/internal/router"
 
 	"github.com/gin-gonic/gin"
@@ -23,6 +25,24 @@ func TestModuleRejectsNilArticlesDependency(t *testing.T) {
 		t.Fatal("New with nil Articles should fail")
 	}
 }
+
+func TestModuleRejectsNilImagesDependency(t *testing.T) {
+	db := openTestDB(t)
+	if _, err := New(Dependencies{DB: db, Articles: stubArticles{}}); err == nil {
+		t.Fatal("New with nil Images should fail")
+	}
+}
+
+// stubArticles satisfies the Articles port with no-ops; New() only checks it
+// for nil, so the methods are never called here.
+type stubArticles struct{}
+
+func (stubArticles) List(context.Context, string, int, int) ([]article.ArticleBrief, int64, error) {
+	return nil, 0, nil
+}
+func (stubArticles) Get(context.Context, int) (*article.ArticleDetail, error) { return nil, nil }
+func (stubArticles) Create(context.Context, article.CreateInput) (int, error) { return 0, nil }
+func (stubArticles) Update(context.Context, article.UpdateInput) error        { return nil }
 
 func TestModuleMigrationModelsContainEditGrant(t *testing.T) {
 	models := MigrationModels()

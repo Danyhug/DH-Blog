@@ -28,6 +28,12 @@ const (
 	toolUploadImage    = "upload_image"
 	authorTypeAgent    = "agent"
 	maxUploadImageSize = 5 << 20
+	// maxUploadBase64Len is the raw base64 text ceiling checked before
+	// decoding: N bytes encode to about N*4/3 chars, so ceil plus slack covers
+	// every payload that can still decode to ≤ maxUploadImageSize, and anything
+	// longer is rejected without allocating the decoded buffer. The post-decode
+	// size check stays the exact authority.
+	maxUploadBase64Len = (maxUploadImageSize/3)*4 + 8
 	// listArticleMaxPageSize caps how many rows one listing can ask for. 50
 	// keeps a page cheap while still covering a whole writing session.
 	listArticleMaxPageSize = 50
@@ -49,9 +55,12 @@ func requireIdentity(ctx context.Context, scope string) (Identity, string) {
 }
 
 // editableOf reports whether the given author key can rewrite the article
-// without a temporary grant: only the key that created it.
+// without a temporary grant: only the key that created it. The comparison is
+// deliberately the same bare one update_article applies, so the hint can never
+// disagree with the write path (production key ids start at 1; zero-value
+// articles only surface through test fixtures).
 func editableOf(authorKeyID, keyID int) bool {
-	return authorKeyID != 0 && authorKeyID == keyID
+	return authorKeyID == keyID
 }
 
 // timeText renders an article's created time in the repo's canonical format.
@@ -505,6 +514,9 @@ func (t *uploadImageTool) Call(ctx context.Context, raw json.RawMessage) mcp.Res
 	var args uploadImageArgs
 	if err := json.Unmarshal(raw, &args); err != nil {
 		return mcp.ToolError("arguments 解析失败: " + err.Error())
+	}
+	if len(args.Data) > maxUploadBase64Len {
+		return mcp.ToolError(fmt.Sprintf("图片超过大小限制（解码后 %dMB）", maxUploadImageSize>>20))
 	}
 	data, err := base64.StdEncoding.DecodeString(args.Data)
 	if err != nil {
