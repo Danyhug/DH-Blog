@@ -532,6 +532,8 @@ type apiKeyView struct {
 	ExpireAt         *time.Time `json:"expireAt"`
 	LastUsedAt       *time.Time `json:"lastUsedAt"`
 	Note             string     `json:"note"`
+	Scopes           string     `json:"scopes"`
+	AuthorName       string     `json:"authorName"`
 }
 
 func (h *handler) listAPIKeys(c *gin.Context) {
@@ -550,6 +552,8 @@ type createKeyRequest struct {
 	MonthlyQuota     int    `json:"monthlyQuota"`
 	ExpireDays       int    `json:"expireDays"`
 	Note             string `json:"note"`
+	Scopes           string `json:"scopes"`
+	AuthorName       string `json:"authorName"`
 }
 
 func (h *handler) createAPIKey(c *gin.Context) {
@@ -560,6 +564,12 @@ func (h *handler) createAPIKey(c *gin.Context) {
 	}
 	if strings.TrimSpace(req.Name) == "" {
 		adminFailure(c, http.StatusBadRequest, "名称不能为空")
+		return
+	}
+
+	scopes, err := NormalizeScopes(req.Scopes)
+	if err != nil {
+		adminFailure(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -579,6 +589,8 @@ func (h *handler) createAPIKey(c *gin.Context) {
 		RateLimitPerMin:  req.RateLimitPerMin,
 		MonthlyQuota:     req.MonthlyQuota,
 		Note:             strings.TrimSpace(req.Note),
+		Scopes:           scopes,
+		Byline:           strings.TrimSpace(req.AuthorName),
 	}
 	if req.ExpireDays > 0 {
 		expire := time.Now().AddDate(0, 0, req.ExpireDays)
@@ -600,6 +612,10 @@ type updateKeyRequest struct {
 	RateLimitPerMin  *int    `json:"rateLimitPerMin"`
 	MonthlyQuota     *int    `json:"monthlyQuota"`
 	Note             *string `json:"note"`
+	// Scopes and AuthorName are pointers so "leave alone" and "clear back to
+	// empty" stay distinguishable, matching the style of the fields above.
+	Scopes     *string `json:"scopes"`
+	AuthorName *string `json:"authorName"`
 }
 
 // revealAPIKey hands the plaintext back so the same key can be copied again.
@@ -656,6 +672,17 @@ func (h *handler) updateAPIKey(c *gin.Context) {
 	}
 	if req.Note != nil {
 		updates["note"] = strings.TrimSpace(*req.Note)
+	}
+	if req.Scopes != nil {
+		scopes, err := NormalizeScopes(*req.Scopes)
+		if err != nil {
+			adminFailure(c, http.StatusBadRequest, err.Error())
+			return
+		}
+		updates["scopes"] = scopes
+	}
+	if req.AuthorName != nil {
+		updates["author_name"] = strings.TrimSpace(*req.AuthorName)
 	}
 	if len(updates) == 0 {
 		adminSuccess(c)

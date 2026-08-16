@@ -244,6 +244,8 @@ func (s *Service) apiKeyViews(ctx context.Context) ([]apiKeyView, error) {
 			ExpireAt:         key.ExpireAt,
 			LastUsedAt:       key.LastUsedAt,
 			Note:             key.Note,
+			Scopes:           key.Scopes,
+			AuthorName:       key.Byline,
 		})
 	}
 	return views, nil
