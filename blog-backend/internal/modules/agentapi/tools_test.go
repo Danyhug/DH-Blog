@@ -121,6 +121,12 @@ type recordingEvents struct {
 		agent, title, reason string
 		id                   int
 	}
+	grants []grantCall
+}
+
+type grantCall struct {
+	articleID int
+	note      string
 }
 
 func (e *recordingEvents) ArticleCreated(agent, title string, articleID int) {
@@ -143,6 +149,10 @@ func (e *recordingEvents) ArticleUpdateDenied(agent, title string, articleID int
 		agent, title, reason string
 		id                   int
 	}{agent, title, reason, articleID})
+}
+
+func (e *recordingEvents) GrantIssued(articleID int, note string) {
+	e.grants = append(e.grants, grantCall{articleID: articleID, note: note})
 }
 
 // toolFixture assembles the tool layer with real article and grant services

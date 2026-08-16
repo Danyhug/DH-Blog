@@ -55,6 +55,9 @@ type ContentReporter interface {
 	ArticleCreated(agent, title string, articleID int)
 	ArticleUpdated(agent, title string, articleID int, viaGrant bool)
 	ArticleUpdateDenied(agent, title string, articleID int, reason string)
+	// GrantIssued fires when the admin signs a temporary edit-authorization, so
+	// the audit feed shows non-agent activity too.
+	GrantIssued(articleID int, note string)
 }
 
 // noopContentReporter swallows events. Deliberate: the report stream does not
@@ -64,6 +67,7 @@ type noopContentReporter struct{}
 func (noopContentReporter) ArticleCreated(string, string, int)              {}
 func (noopContentReporter) ArticleUpdated(string, string, int, bool)        {}
 func (noopContentReporter) ArticleUpdateDenied(string, string, int, string) {}
+func (noopContentReporter) GrantIssued(int, string)                         {}
 
 // Dependencies wires agentapi into the application. Every collaborator is a
 // narrow port defined here, so the module never reaches into another module's
@@ -104,7 +108,7 @@ func New(deps Dependencies) (*Module, error) {
 	service := newGrantService(&grantRepository{db: deps.DB})
 	return &Module{
 		service: service,
-		handler: newGrantHandler(service),
+		handler: newGrantHandler(service, deps.Events),
 		tools: []mcp.Tool{
 			&listArticlesTool{articles: deps.Articles},
 			&getArticleTool{articles: deps.Articles},

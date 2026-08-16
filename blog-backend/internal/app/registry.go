@@ -322,7 +322,9 @@ func (ctx *buildContext) agentapi() (*agentapimodule.Module, error) {
 		Articles: article.ContentService(),
 		Images:   blogImageSaver{files: ctx.files().Service()},
 		Tasks:    ctx.tasks,
-		// Events 由 Task 8 接入 eventlog；nil 时 agentapi 内部用 no-op
+		// Agent write actions land in the event feed, where a denied edit is
+		// the one visible sign that an agent reached for something forbidden.
+		Events: ctx.eventlog().ContentReporter(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("初始化 Agent 内容写入模块失败: %w", err)

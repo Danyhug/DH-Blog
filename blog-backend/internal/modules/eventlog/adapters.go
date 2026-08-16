@@ -1,6 +1,7 @@
 package eventlog
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -173,4 +174,57 @@ func errorDetail(err error) string {
 		return string(runes[:maxDetail]) + "…"
 	}
 	return detail
+}
+
+// ContentReporter adapts the service to the agent module's reporter port.
+// Agent write actions have the same "nobody was watching" character as the
+// rest of the feed, and a denied edit is the only signal that an agent tried
+// to touch something it should not have.
+type ContentReporter struct{ service *Service }
+
+const (
+	kindAgentWrite = "agent_write"
+	kindEditGrant  = "edit_grant"
+)
+
+func (r *ContentReporter) ArticleCreated(agent, title string, articleID int) {
+	r.service.Publish(Event{
+		Source: SourceArticle, Kind: kindAgentWrite, Status: StatusSuccess,
+		TargetID: articleID,
+		Title:    fmt.Sprintf("%s 发布了《%s》", agent, title),
+	})
+}
+
+// ArticleUpdated distinguishes the two flavours in the title, because a grant
+// bypass is who-authorized-this information, and titles are frozen at publish
+// time so the distinction survives later rewording of the code.
+func (r *ContentReporter) ArticleUpdated(agent, title string, articleID int, viaGrant bool) {
+	if viaGrant {
+		title = fmt.Sprintf("%s 持临时授权修改了《%s》", agent, title)
+	} else {
+		title = fmt.Sprintf("%s 修改了《%s》", agent, title)
+	}
+	r.service.Publish(Event{
+		Source: SourceArticle, Kind: kindAgentWrite, Status: StatusSuccess,
+		TargetID: articleID,
+		Title:    title,
+	})
+}
+
+func (r *ContentReporter) ArticleUpdateDenied(agent, title string, articleID int, reason string) {
+	r.service.Publish(Event{
+		Source: SourceArticle, Kind: kindAgentWrite, Status: StatusFailed,
+		TargetID: articleID,
+		Title:    fmt.Sprintf("%s 尝试修改《%s》被拒绝", agent, title),
+		Detail:   errorDetail(errors.New(reason)),
+	})
+}
+
+func (r *ContentReporter) GrantIssued(articleID int, note string) {
+	r.service.Publish(Event{
+		Source: SourceArticle, Kind: kindEditGrant, Status: StatusRunning,
+		TargetID: articleID,
+		Title:    "已签发 AI 修改授权，1 小时后失效",
+		Detail:   strings.TrimSpace(note),
+	})
 }

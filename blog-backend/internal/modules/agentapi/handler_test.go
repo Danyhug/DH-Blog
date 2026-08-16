@@ -17,9 +17,13 @@ import (
 )
 
 func newTestModule(t *testing.T, now time.Time) (*Module, *gorm.DB) {
+	return newTestModuleWithEvents(t, now, noopContentReporter{})
+}
+
+func newTestModuleWithEvents(t *testing.T, now time.Time, events ContentReporter) (*Module, *gorm.DB) {
 	t.Helper()
 	service, repo := newTestService(t, now)
-	return &Module{service: service, handler: newGrantHandler(service)}, repo.db
+	return &Module{service: service, handler: newGrantHandler(service, events)}, repo.db
 }
 
 func grantEngine(t *testing.T, module *Module) *gin.Engine {
@@ -102,6 +106,37 @@ func TestHandlerCreateGrantAcceptsArticleBinding(t *testing.T) {
 	data, _ := payload["data"].(map[string]any)
 	if articleID, _ := data["articleId"].(float64); articleID != 42 {
 		t.Fatalf("articleId = %v, want 42", data["articleId"])
+	}
+}
+
+// TestHandlerCreateGrantFiresAuditEvent pins the one place the admin's own
+// action is audible: signing a grant publishes GrantIssued, so the feed shows
+// non-agent activity too.
+func TestHandlerCreateGrantFiresAuditEvent(t *testing.T) {
+	events := &recordingEvents{}
+	module, db := newTestModuleWithEvents(t, fixedNow(), events)
+	engine := grantEngine(t, module)
+
+	recorder, payload := doRequest(t, engine, http.MethodPost, "/api/admin/agent/grants", `{"note":"让 Claude 改错别字","articleId":42}`)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if code, _ := payload["code"].(float64); code != 1 {
+		t.Fatalf("code = %v, want 1", payload["code"])
+	}
+	if len(events.grants) != 1 {
+		t.Fatalf("GrantIssued calls = %d, want 1", len(events.grants))
+	}
+	if events.grants[0].articleID != 42 || events.grants[0].note != "让 Claude 改错别字" {
+		t.Fatalf("grant call = %#v, want article 42 / note", events.grants[0])
+	}
+
+	var stored EditGrant
+	if err := db.First(&stored).Error; err != nil {
+		t.Fatalf("load stored grant: %v", err)
+	}
+	if stored.ArticleID != 42 {
+		t.Fatalf("stored article = %d, want 42", stored.ArticleID)
 	}
 }
 

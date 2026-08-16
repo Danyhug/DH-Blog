@@ -17,10 +17,11 @@ import (
 // reaches the same logic through GrantService, never through these routes.
 type grantHandler struct {
 	service *grantService
+	events  ContentReporter
 }
 
-func newGrantHandler(service *grantService) *grantHandler {
-	return &grantHandler{service: service}
+func newGrantHandler(service *grantService, events ContentReporter) *grantHandler {
+	return &grantHandler{service: service, events: events}
 }
 
 type createGrantRequest struct {
@@ -50,6 +51,9 @@ func (h *grantHandler) createGrant(c *gin.Context) {
 		response.FailWithCode(c, http.StatusInternalServerError, "签发授权失败")
 		return
 	}
+	// The feed is the only place the admin's own consent is visibly on the
+	// record — the agent's later edits would otherwise look self-authorized.
+	h.events.GrantIssued(grant.ArticleID, grant.Note)
 	c.JSON(http.StatusOK, response.SuccessWithData(gin.H{
 		"id":        grant.ID,
 		"token":     grant.TokenPlain,

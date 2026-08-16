@@ -43,6 +43,10 @@ func (m *Module) SyncReporter() *SyncReporter { return &SyncReporter{service: m.
 // through.
 func (m *Module) GatewayReporter() *GatewayReporter { return &GatewayReporter{service: m.service} }
 
+// ContentReporter returns the adapter the agent module reports write actions
+// through.
+func (m *Module) ContentReporter() *ContentReporter { return &ContentReporter{service: m.service} }
+
 func (m *Module) RegisterRoutes(routes *router.Routes) {
 	events := routes.AdminAPI.Group("/events")
 	events.GET("", m.handler.list)
