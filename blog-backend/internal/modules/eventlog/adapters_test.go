@@ -60,7 +60,7 @@ func TestContentReporterFiresTheFiveAuditEvents(t *testing.T) {
 		Source: SourceArticle, Kind: kindAgentWrite, Status: StatusFailed,
 		TargetID: 14, Title: "Claude 尝试修改《加密的文章》被拒绝",
 		Detail: "这篇文章不是本 Agent 创建的，修改需要临时授权 Token",
-		msg: "denied",
+		msg:    "denied",
 	})
 	// The grant-issued event must not be mistaken for a background job that
 	// succeeded or failed: it is administrative work in flight.
