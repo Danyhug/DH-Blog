@@ -286,6 +286,16 @@ func TestIdentityFromMissingContext(t *testing.T) {
 	}
 }
 
+func TestIdentityContextNilIsNotAnIdentity(t *testing.T) {
+	if _, ok := IdentityFrom(IdentityContext(context.Background(), nil)); ok {
+		t.Fatal("storing a bare nil must not arm the context with an identity")
+	}
+	var typedNil *testIdentity
+	if _, ok := IdentityFrom(IdentityContext(context.Background(), typedNil)); ok {
+		t.Fatal("storing a typed nil pointer must not report an identity, or requireIdentity panics on HasScope")
+	}
+}
+
 func TestModuleMCPToolsAreFiveAndScoped(t *testing.T) {
 	fixture := newToolFixture(t)
 	if len(fixture.tools) != 5 {

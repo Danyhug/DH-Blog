@@ -7,7 +7,11 @@ import (
 	"testing"
 
 	"dh-blog/internal/modules/agentapi"
+	"dh-blog/internal/modules/article"
 	"dh-blog/internal/platform/mcp"
+
+	"github.com/glebarez/sqlite"
+	"gorm.io/gorm"
 )
 
 // fakeToolSource hands the module a fixed tool table, standing in for the
@@ -146,4 +150,137 @@ func TestAPIKeyAuthorNameFallsBackToName(t *testing.T) {
 	if got := key.AuthorName(); got != "署名" {
 		t.Errorf("AuthorName = %q, 期望 %q", got, "署名")
 	}
+}
+
+// --- real agentapi module integration ---
+
+// stubAgentArticles is the smallest article-persistence stand-in the real agent
+// module accepts at construction; the scope test never dispatches a tool call,
+// so every method is a no-op.
+type stubAgentArticles struct{}
+
+func (stubAgentArticles) List(context.Context, string, int, int) ([]article.ArticleBrief, int64, error) {
+	return nil, 0, nil
+}
+func (stubAgentArticles) Get(context.Context, int) (*article.ArticleDetail, error) {
+	return &article.ArticleDetail{}, nil
+}
+func (stubAgentArticles) Create(context.Context, article.CreateInput) (int, error) {
+	return 1, nil
+}
+func (stubAgentArticles) Update(context.Context, article.UpdateInput) error { return nil }
+
+// stubAgentImages and stubAgentTasks are the other two collaborators the agent
+// module requires; Events stays nil and falls back to the module's no-op.
+type stubAgentImages struct{}
+
+func (stubAgentImages) SaveBlogImage(context.Context, string, []byte) (string, error) {
+	return "", nil
+}
+
+type stubAgentTasks struct{}
+
+func (stubAgentTasks) SubmitTagGeneration(int, string)     {}
+func (stubAgentTasks) SubmitSummaryGeneration(int, string) {}
+
+// newRealAgentModule builds the actual agentapi module with real MCPTools(),
+// standing in for what the registry wires in production. The gateway must accept
+// its tool table exactly like the fakes above, and the tool names / scopes are
+// the literal wire contract this test pins down.
+func newRealAgentModule(t *testing.T) *agentapi.Module {
+	t.Helper()
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("打开 agentapi 测试数据库失败: %v", err)
+	}
+	module, err := agentapi.New(agentapi.Dependencies{
+		DB:       db,
+		Articles: stubAgentArticles{},
+		Images:   stubAgentImages{},
+		Tasks:    stubAgentTasks{},
+		Events:   nil,
+	})
+	if err != nil {
+		t.Fatalf("构建真实 agentapi 模块失败: %v", err)
+	}
+	return module
+}
+
+// TestMCPRealAgentToolsRespectScopeContract drives tools/list through the real
+// agentapi tool table and real keys, asserting visibility against the wire names
+// both modules spell out. agentapi deliberately re-declares its scope strings so
+// it never imports aigateway, so this test is the tripwire: if those literals
+// drift from ScopeContentRead / ScopeContentWrite, a content:read key stops
+// being shielded from the write tools and this case goes red.
+func TestMCPRealAgentToolsRespectScopeContract(t *testing.T) {
+	module := newGatewayTestModule(t, gatewayTestConfig{
+		Brave:      braveOK("b1"),
+		ExtraTools: newRealAgentModule(t),
+	})
+	engine := newTestEngine(module)
+
+	readOnly := []string{"list_articles", "get_article"}
+	writeOnly := []string{"create_article", "update_article", "upload_image"}
+
+	list := func(t *testing.T, token string) []string {
+		t.Helper()
+		result := rpcResultAs[mcp.ToolListResult](t, doMCP(engine, token,
+			`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`))
+		names := make([]string, 0, len(result.Tools))
+		for _, tool := range result.Tools {
+			names = append(names, tool.Name)
+		}
+		return names
+	}
+	seen := func(names []string, tool string) bool {
+		for _, name := range names {
+			if name == tool {
+				return true
+			}
+		}
+		return false
+	}
+
+	t.Run("只有 content:read 只见读工具", func(t *testing.T) {
+		token := issueTestKey(t, module, func(key *APIKey) { key.Scopes = ScopeContentRead })
+		names := list(t, token)
+		for _, tool := range readOnly {
+			if !seen(names, tool) {
+				t.Errorf("content:read key 看不到 %s, 列表 = %v", tool, names)
+			}
+		}
+		for _, tool := range writeOnly {
+			if seen(names, tool) {
+				t.Errorf("content:read key 不该看到 %s, 列表 = %v", tool, names)
+			}
+		}
+	})
+
+	t.Run("只有 content:write 只见写作工具", func(t *testing.T) {
+		// 设计文档明确：write 不代表 read，一把只有写权限的 key 看不到读工具。
+		token := issueTestKey(t, module, func(key *APIKey) { key.Scopes = ScopeContentWrite })
+		names := list(t, token)
+		for _, tool := range writeOnly {
+			if !seen(names, tool) {
+				t.Errorf("content:write key 看不到 %s, 列表 = %v", tool, names)
+			}
+		}
+		for _, tool := range readOnly {
+			if seen(names, tool) {
+				t.Errorf("content:write key 不该看到 %s, 列表 = %v", tool, names)
+			}
+		}
+	})
+
+	t.Run("read + write 五个写作工具全部可见", func(t *testing.T) {
+		token := issueTestKey(t, module, func(key *APIKey) {
+			key.Scopes = ScopeContentRead + "," + ScopeContentWrite
+		})
+		names := list(t, token)
+		for _, tool := range append(append([]string{}, readOnly...), writeOnly...) {
+			if !seen(names, tool) {
+				t.Errorf("read+write key 看不到 %s, 列表 = %v", tool, names)
+			}
+		}
+	})
 }
