@@ -17,13 +17,10 @@ func TestModuleRejectsNilDB(t *testing.T) {
 	}
 }
 
-func TestModuleExposesServiceAndPlaceholderTools(t *testing.T) {
-	module, _ := newTestModule(t, fixedNow())
-	if module.Grants() == nil {
-		t.Fatal("Grants() returned nil")
-	}
-	if tools := module.MCPTools(); tools != nil {
-		t.Fatalf("MCPTools() = %#v, want nil until Task 6", tools)
+func TestModuleRejectsNilArticlesDependency(t *testing.T) {
+	db := openTestDB(t)
+	if _, err := New(Dependencies{DB: db}); err == nil {
+		t.Fatal("New with nil Articles should fail")
 	}
 }
 
