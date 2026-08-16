@@ -56,6 +56,9 @@ func (r *grantRepository) IncrementUsed(id int, now time.Time) (bool, error) {
 		UpdateColumns(map[string]any{
 			"used_count":   gorm.Expr("used_count + 1"),
 			"last_used_at": now,
+			// UpdateColumns skips GORM's automatic timestamp hooks, so the row
+			// records the moment it was last validated explicitly.
+			"updated_at": now,
 		})
 	return result.RowsAffected == 1, result.Error
 }
