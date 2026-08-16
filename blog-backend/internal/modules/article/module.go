@@ -55,6 +55,7 @@ type Dependencies struct {
 // Module owns article, category, and tag persistence, handlers, and routes.
 type Module struct {
 	handler *Handler
+	content *contentService
 }
 
 // New assembles all repositories and handlers inside the vertical module.
@@ -75,8 +76,12 @@ func New(deps Dependencies) (*Module, error) {
 		deps.Tasks.RegisterSummaryGenerationHandler(handler.ProcessSummaryGeneration)
 	}
 
-	return &Module{handler: handler}, nil
+	return &Module{handler: handler, content: newContentService(articleRepository, deps.DB)}, nil
 }
+
+// ContentService exposes article persistence to cross-module consumers as a
+// narrow port, hiding the repositories behind an interface.
+func (m *Module) ContentService() ContentService { return m.content }
 
 func ensureDefaults(db *gorm.DB) error {
 	category := Category{Name: "默认分类", Slug: "default"}
