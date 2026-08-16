@@ -28,6 +28,11 @@ var (
 	ErrGrantRevoked = errors.New("该授权已被吊销")
 	// ErrGrantWrongArticle means the grant is bound to another article.
 	ErrGrantWrongArticle = errors.New("该授权只允许修改指定的文章")
+	// ErrGrantUnusable is returned when a grant passed every in-memory check but
+	// the atomic write that counts the use matched no row — the grant was
+	// revoked or expired by somebody else between our read and our write. The
+	// caller must treat it like a dead grant and ask the owner for a new one.
+	ErrGrantUnusable = errors.New("该授权已失效，请重新索取")
 	// ErrGrantInvalidArticleID means the requested article binding is
 	// impossible. A negative id is a client mistake, not a missing row.
 	ErrGrantInvalidArticleID = errors.New("articleId 不能为负数")
@@ -153,17 +158,28 @@ func (s *grantService) Validate(articleID int, token string) (*EditGrant, error)
 		return nil, ErrGrantWrongArticle
 	}
 
+	// The counters on the returned grant track what the caller (the admin
+	// list, the tool echo) should see; the truth lives in the atomic row
+	// update below. If that update matches zero rows, the grant was revoked
+	// or expired between the read above and this write — refuse rather than
+	// resurrect or double-count it.
 	grant.UsedCount++
 	lastUsed := now
 	grant.LastUsedAt = &lastUsed
-	if err := s.repo.Update(grant); err != nil {
+	used, err := s.repo.IncrementUsed(grant.ID, now)
+	if err != nil {
 		return nil, err
+	}
+	if !used {
+		return nil, ErrGrantUnusable
 	}
 	return grant, nil
 }
 
 // Revoke pulls a grant back early. The row is kept (revocation is not
-// deletion) so the UsedCount audit stays queryable until it expires.
+// deletion) so the UsedCount audit stays queryable until it expires. The flip
+// is a single per-column update, so it never drags the writer's own stale
+// counters back into the row.
 func (s *grantService) Revoke(id int) error {
 	grant, err := s.repo.ByID(id)
 	if err != nil {
@@ -172,8 +188,7 @@ func (s *grantService) Revoke(id int) error {
 		}
 		return err
 	}
-	grant.Revoked = true
-	return s.repo.Update(grant)
+	return s.repo.MarkRevoked(grant.ID)
 }
 
 // Reveal returns the plaintext token so the owner can copy it again. Refused

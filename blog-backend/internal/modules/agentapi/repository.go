@@ -6,10 +6,10 @@ import (
 	"gorm.io/gorm"
 )
 
-// grantRepository is the persistence layer for EditGrant. Rows are never
-// updated by partial updates: every mutation loads the row first and saves the
-// whole struct, so the audit fields (UsedCount, LastUsedAt) can never be
-// clobbered by a stale zero value.
+// grantRepository is the persistence layer for EditGrant. Every mutation is a
+// narrow, atomic statement (validation counts via IncrementUsed, revocation via
+// MarkRevoked) rather than a read-modify-save cycle, so concurrent readers and
+// writers can never clobber the audit fields (Revoked, UsedCount, LastUsedAt).
 type grantRepository struct {
 	db *gorm.DB
 }
@@ -44,8 +44,28 @@ func (r *grantRepository) ListActive(now time.Time) ([]EditGrant, error) {
 	return grants, nil
 }
 
-func (r *grantRepository) Update(grant *EditGrant) error {
-	return r.db.Save(grant).Error
+// IncrementUsed atomically counts one successful validation. The predicate is
+// what makes it race-proof: the WHERE clause re-checks revoked and expiry at
+// write time, so a grant revoked (or expired) between the service's read and
+// this UPDATE matches zero rows and the caller must refuse the use. The counter
+// moves inside the single statement, so two overlapping validations can never
+// clobber each other's increments.
+func (r *grantRepository) IncrementUsed(id int, now time.Time) (bool, error) {
+	result := r.db.Model(&EditGrant{}).
+		Where("id = ? AND revoked = ? AND expire_at > ?", id, false, now).
+		UpdateColumns(map[string]any{
+			"used_count":   gorm.Expr("used_count + 1"),
+			"last_used_at": now,
+		})
+	return result.RowsAffected == 1, result.Error
+}
+
+// MarkRevoked flips only the revoked column. Per-column update (rather than a
+// whole-row Save) guarantees it never drags a stale used_count or last_used_at
+// out of the writer's memory, and the bare id predicate makes it idempotent —
+// revoking an already-revoked grant is a no-op, not an error.
+func (r *grantRepository) MarkRevoked(id int) error {
+	return r.db.Model(&EditGrant{}).Where("id = ?", id).Update("revoked", true).Error
 }
 
 // DeleteExpired physically removes expired rows. A hard delete is right here

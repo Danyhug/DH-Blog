@@ -275,6 +275,103 @@ func TestRevealReturnsPlaintextOnlyWhileActive(t *testing.T) {
 	}
 }
 
+// TestGrantIncrementUsedAccumulatesAndTouchesLastUsed pins the atomic row
+// update Validate relies on: two successful increments land as used_count = 2
+// with last_used_at from the second call, written by one UPDATE rather than a
+// read-modify-save round trip.
+func TestGrantIncrementUsedAccumulatesAndTouchesLastUsed(t *testing.T) {
+	service, repo := newTestService(t, fixedNow())
+	grant, err := service.Grant(0, "")
+	if err != nil {
+		t.Fatalf("grant: %v", err)
+	}
+
+	later := fixedNow().Add(time.Minute)
+	for i := 0; i < 2; i++ {
+		ok, err := repo.IncrementUsed(grant.ID, later)
+		if err != nil {
+			t.Fatalf("increment %d: %v", i+1, err)
+		}
+		if !ok {
+			t.Fatalf("increment %d returned false, want true", i+1)
+		}
+	}
+
+	stored := loadGrant(t, repo.db, grant.ID)
+	if stored.UsedCount != 2 {
+		t.Fatalf("usedCount = %d, want 2", stored.UsedCount)
+	}
+	if stored.LastUsedAt == nil || !stored.LastUsedAt.Equal(later) {
+		t.Fatalf("lastUsedAt = %v, want %v", stored.LastUsedAt, later)
+	}
+}
+
+// TestGrantIncrementUsedRefusedAfterRevoke reproduces the review race at the
+// invariant level (SQLite serializes writes, so the interleaving is ordered by
+// hand): once a grant is revoked, every later IncrementUsed must be refused and
+// the used_count tally must not gain a phantom count.
+func TestGrantIncrementUsedRefusedAfterRevoke(t *testing.T) {
+	service, repo := newTestService(t, fixedNow())
+	grant, err := service.Grant(0, "")
+	if err != nil {
+		t.Fatalf("grant: %v", err)
+	}
+	ok, err := repo.IncrementUsed(grant.ID, fixedNow())
+	if err != nil || !ok {
+		t.Fatalf("first increment: ok=%v err=%v", ok, err)
+	}
+
+	if err := repo.MarkRevoked(grant.ID); err != nil {
+		t.Fatalf("mark revoked: %v", err)
+	}
+	// Idempotent: revoking again is a no-op, not an error.
+	if err := repo.MarkRevoked(grant.ID); err != nil {
+		t.Fatalf("mark revoked twice: %v", err)
+	}
+	for i := 0; i < 3; i++ {
+		ok, err := repo.IncrementUsed(grant.ID, fixedNow())
+		if err != nil {
+			t.Fatalf("increment after revoke %d: %v", i+1, err)
+		}
+		if ok {
+			t.Fatalf("increment %d after revoke returned true, want false", i+1)
+		}
+	}
+
+	stored := loadGrant(t, repo.db, grant.ID)
+	if stored.UsedCount != 1 {
+		t.Fatalf("usedCount = %d, want 1 (revoked uses must not count)", stored.UsedCount)
+	}
+	if !stored.Revoked {
+		t.Fatal("revoked flag was lost")
+	}
+}
+
+// TestGrantIncrementUsedRefusedWhenExpired covers the second half of the
+// read-then-write window: a grant that passes the in-memory expiry check but
+// expires before the atomic write must not count either.
+func TestGrantIncrementUsedRefusedWhenExpired(t *testing.T) {
+	service, repo := newTestService(t, fixedNow())
+	grant, err := service.Grant(0, "")
+	if err != nil {
+		t.Fatalf("grant: %v", err)
+	}
+	past := fixedNow().Add(-time.Minute)
+	if err := repo.db.Model(&EditGrant{}).Where("id = ?", grant.ID).Update("expire_at", past).Error; err != nil {
+		t.Fatalf("backdate grant: %v", err)
+	}
+	ok, err := repo.IncrementUsed(grant.ID, fixedNow())
+	if err != nil {
+		t.Fatalf("increment expired: %v", err)
+	}
+	if ok {
+		t.Fatal("increment on an expired grant succeeded, want false")
+	}
+	if stored := loadGrant(t, repo.db, grant.ID); stored.UsedCount != 0 {
+		t.Fatalf("usedCount = %d, want 0", stored.UsedCount)
+	}
+}
+
 func TestListOnlyShowsActiveGrantsNewestFirst(t *testing.T) {
 	now := fixedNow()
 	service, repo := newTestService(t, now)

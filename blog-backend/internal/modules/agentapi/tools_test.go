@@ -850,6 +850,50 @@ func TestUpdateOnlyPassedFields(t *testing.T) {
 	}
 }
 
+func TestUpdateArticleTrimsTitleAndSummary(t *testing.T) {
+	fixture := newToolFixture(t)
+	id := fixture.createArticle(t, "原标题", 7)
+	tool := fixture.tool(t, "update_article")
+	callTool(t, tool, identity(7, scopeContentWrite), map[string]any{
+		"id": id, "title": "  新标题  ", "summary": "  新摘要  ",
+	})
+	stored, err := fixture.articles.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if stored.Title != "新标题" {
+		t.Fatalf("title = %q, want trimmed 新标题", stored.Title)
+	}
+	if stored.Summary != "新摘要" {
+		t.Fatalf("summary = %q, want trimmed 新摘要", stored.Summary)
+	}
+}
+
+func TestUpdateArticleRejectsBlankTitle(t *testing.T) {
+	fixture := newToolFixture(t)
+	id := fixture.createArticle(t, "原标题", 7)
+	tool := fixture.tool(t, "update_article")
+	for _, args := range []map[string]any{
+		{"id": id, "title": ""},
+		{"id": id, "title": "   "},
+	} {
+		result, _, text := callTool(t, tool, identity(7, scopeContentWrite), args)
+		if !result.IsError {
+			t.Fatalf("update with %#v must fail", args)
+		}
+		if !strings.Contains(text, "title") {
+			t.Fatalf("error %q does not name title", text)
+		}
+	}
+	stored, err := fixture.articles.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if stored.Title != "原标题" {
+		t.Fatalf("title changed despite rejection: %q", stored.Title)
+	}
+}
+
 func TestUpdateArticleNotFound(t *testing.T) {
 	fixture := newToolFixture(t)
 	tool := fixture.tool(t, "update_article")

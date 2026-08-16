@@ -404,6 +404,8 @@ func grantDenialText(err error) string {
 		return "授权已过期（有效期 1 小时），请重新签发"
 	case errors.Is(err, ErrGrantRevoked):
 		return "授权已被吊销"
+	case errors.Is(err, ErrGrantUnusable):
+		return err.Error()
 	case errors.Is(err, ErrGrantWrongArticle):
 		return "该授权只允许修改指定的文章"
 	default:
@@ -450,13 +452,22 @@ func (t *updateArticleTool) Call(ctx context.Context, raw json.RawMessage) mcp.R
 
 	input := article.UpdateInput{ID: args.ID}
 	if args.Title != nil {
-		input.Title = args.Title
+		// A whitespace-only title is non-empty but useless — trim before it can
+		// reach the store, and reject what trims to nothing so the agent cannot
+		// silently blank a headline. Content is left alone: whitespace there can
+		// be intentional Markdown.
+		title := strings.TrimSpace(*args.Title)
+		if title == "" {
+			return mcp.ToolError("title 不能为空")
+		}
+		input.Title = &title
 	}
 	if args.Content != nil {
 		input.Content = args.Content
 	}
 	if args.Summary != nil {
-		input.Summary = args.Summary
+		summary := strings.TrimSpace(*args.Summary)
+		input.Summary = &summary
 	}
 	if args.Category != nil {
 		input.CategoryName = args.Category
