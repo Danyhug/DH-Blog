@@ -51,9 +51,35 @@ var skippedResourceTypes = map[string]struct{}{
 	"gateway":   {},
 }
 
-func skipAccessLog(resourceType string) bool {
-	_, skipped := skippedResourceTypes[resourceType]
-	return skipped
+// scannerProbeMarkers 是漏洞扫描器的高频探测特征，来自生产库访问日志的
+// TOP 路径统计：phpunit RCE、.env 泄露、Docker API、Vite 开发服务器、
+// 开放代理检测、SSRF/DNS 重绑定、路径穿越等。命中即跳过访问日志，
+// 防止扫描流量把日志表撑爆。
+var scannerProbeMarkers = []string{
+	"phpunit", "eval-stdin", ".env", "admin.php", "phpmyadmin", "dispatch.asp",
+	"actuator", "containers/json", "vite.svg", "azenv", "dnspod",
+	"dstat123.uk", "mxzu.net", "webLanguage", "../", "..%2f", "..%5c",
+}
+
+func skipAccessLog(resourceType, urlPath, rawQuery string) bool {
+	if _, skipped := skippedResourceTypes[resourceType]; skipped {
+		return true
+	}
+	// 非 API 请求（首页、静态资源、favicon、robots.txt 与绝大多数扫描器探测）
+	// 不写访问日志。这类请求曾占整表 93%，其中大部分是漏洞扫描流量。
+	if resourceType == "" {
+		return true
+	}
+	probe := strings.ToLower(urlPath)
+	if rawQuery != "" {
+		probe += "?" + strings.ToLower(rawQuery)
+	}
+	for _, marker := range scannerProbeMarkers {
+		if strings.Contains(probe, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 func getResourceType(path string) string {
@@ -88,7 +114,7 @@ func IPMiddleware(ipService IPService) gin.HandlerFunc {
 		requestURL := redactedRequestURL(c.Request.URL)
 
 		go func() {
-			if skipAccessLog(resourceType) {
+			if skipAccessLog(resourceType, c.Request.URL.Path, c.Request.URL.RawQuery) {
 				return
 			}
 			os, browser := utils.ParseUserAgent(userAgent)
