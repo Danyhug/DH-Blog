@@ -79,7 +79,7 @@ func TestAPIKeyJSONExposesScopesAndAuthorName(t *testing.T) {
 		Name:       "writer",
 		KeyPrefix:  "gw_live_abc12345",
 		Scopes:     "search,content:write",
-		AuthorName: "写作助手",
+		Byline:     "写作助手",
 	}
 	encoded, err := json.Marshal(key)
 	if err != nil {

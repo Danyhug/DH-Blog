@@ -48,6 +48,9 @@ type Dependencies struct {
 	// Events is optional. Without it the hourly usage sync can pull a
 	// credential out of rotation with nobody the wiser.
 	Events EventReporter
+	// ExtraTools is optional: the agent module's content-writing tools,
+	// mounted on the MCP endpoint and filtered by the caller's scopes.
+	ExtraTools ToolSource
 }
 
 // EventReporter records rotation changes made by the background usage sync for

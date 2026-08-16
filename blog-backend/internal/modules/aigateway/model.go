@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"dh-blog/internal/model"
+	"dh-blog/internal/modules/agentapi"
 )
 
 // Provider is one configured upstream search API.
@@ -168,9 +169,10 @@ type APIKey struct {
 	// deliberately the opposite of AllowedProviders, so an upgrade never grants
 	// an existing key write access it did not have before.
 	Scopes string `gorm:"column:scopes" json:"scopes"`
-	// AuthorName is the byline this key signs articles with; falls back to
-	// Name when left empty.
-	AuthorName string `gorm:"column:author_name" json:"authorName"`
+	// Byline is the author name this key signs articles with; falls back to
+	// Name when left empty. The wire contract keeps the original column and
+	// JSON names (author_name / authorName).
+	Byline string `gorm:"column:author_name" json:"authorName"`
 }
 
 func (APIKey) TableName() string { return "ai_gateway_api_keys" }
@@ -238,6 +240,22 @@ func (k *APIKey) HasScope(scope string) bool {
 	}
 	return false
 }
+
+// KeyID identifies the credential to the agent-api layer.
+func (k *APIKey) KeyID() int { return k.ID }
+
+// AuthorName returns the byline used when this key writes articles, falling
+// back to the key's own name.
+func (k *APIKey) AuthorName() string {
+	if trimmed := strings.TrimSpace(k.Byline); trimmed != "" {
+		return trimmed
+	}
+	return k.Name
+}
+
+// APIKey implements agentapi.Identity, so the gateway can hand the credential
+// straight into the MCP context for the content-writing tools.
+var _ agentapi.Identity = (*APIKey)(nil)
 
 // NormalizeScopes trims, de-duplicates and validates a comma-separated scope
 // list, returning the canonical joined form. Empty input stays empty, which

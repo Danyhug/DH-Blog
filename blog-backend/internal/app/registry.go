@@ -1,12 +1,16 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"path/filepath"
+	"time"
 
 	"dh-blog/internal/config"
 	"dh-blog/internal/dhcache"
 	adminmodule "dh-blog/internal/modules/admin"
+	agentapimodule "dh-blog/internal/modules/agentapi"
 	aigatewaymodule "dh-blog/internal/modules/aigateway"
 	articlemodule "dh-blog/internal/modules/article"
 	commentmodule "dh-blog/internal/modules/comment"
@@ -109,6 +113,13 @@ var moduleRegistrations = []moduleRegistration{
 		},
 	},
 	{
+		Name:            "agentapi",
+		MigrationModels: agentapimodule.MigrationModels,
+		Build: func(ctx *buildContext) (router.Module, error) {
+			return ctx.agentapi()
+		},
+	},
+	{
 		Name:            "aigateway",
 		MigrationModels: aigatewaymodule.MigrationModels,
 		Build: func(ctx *buildContext) (router.Module, error) {
@@ -144,6 +155,7 @@ type buildContext struct {
 	systemModule  *systemmodule.Module
 	articleModule *articlemodule.Module
 	shareModule   *sharemodule.Module
+	agentModule   *agentapimodule.Module
 	gatewayModule *aigatewaymodule.Module
 	eventModule   *eventlogmodule.Module
 }
@@ -275,9 +287,57 @@ func (ctx *buildContext) share() *sharemodule.Module {
 	return ctx.shareModule
 }
 
+// blogImageSaver adapts the files module to the agentapi Images port. Blog
+// images land in the fixed 博客 directory under the runtime storage root and
+// are served by the /博客 public route; the returned URL matches the admin
+// editor's convention (SERVER_URL + relative path).
+type blogImageSaver struct{ files filesmodule.Service }
+
+func (s blogImageSaver) SaveBlogImage(ctx context.Context, fileName string, data []byte) (string, error) {
+	parentID, err := s.files.GetProtectedDirectoryID(ctx, "博客")
+	if err != nil {
+		return "", fmt.Errorf("获取博客图片目录失败: %w", err)
+	}
+	name := fmt.Sprintf("%d_%s", time.Now().Unix(), filepath.Base(fileName))
+	file, err := s.files.UploadFile(ctx, 0, parentID, name, int64(len(data)), bytes.NewReader(data))
+	if err != nil {
+		return "", fmt.Errorf("保存博客图片失败: %w", err)
+	}
+	return "/api/" + filepath.ToSlash(file.StoragePath), nil
+}
+
+// agentapi wires the content-writing module. It is built before aigateway in
+// the registration list, but the lazy container would resolve it just the
+// same from anywhere: article is pulled in for the tasks and ContentService.
+func (ctx *buildContext) agentapi() (*agentapimodule.Module, error) {
+	if ctx.agentModule != nil {
+		return ctx.agentModule, nil
+	}
+	article, err := ctx.article()
+	if err != nil {
+		return nil, err
+	}
+	module, err := agentapimodule.New(agentapimodule.Dependencies{
+		DB:       ctx.db,
+		Articles: article.ContentService(),
+		Images:   blogImageSaver{files: ctx.files().Service()},
+		Tasks:    ctx.tasks,
+		// Events 由 Task 8 接入 eventlog；nil 时 agentapi 内部用 no-op
+	})
+	if err != nil {
+		return nil, fmt.Errorf("初始化 Agent 内容写入模块失败: %w", err)
+	}
+	ctx.agentModule = module
+	return module, nil
+}
+
 func (ctx *buildContext) aigateway() (*aigatewaymodule.Module, error) {
 	if ctx.gatewayModule != nil {
 		return ctx.gatewayModule, nil
+	}
+	agent, err := ctx.agentapi()
+	if err != nil {
+		return nil, err
 	}
 	gateway := ctx.conf.AIGateway
 	module, err := aigatewaymodule.New(aigatewaymodule.Dependencies{
@@ -289,7 +349,8 @@ func (ctx *buildContext) aigateway() (*aigatewaymodule.Module, error) {
 			QueueWait:        gateway.QueueWait,
 			LogRetentionDays: gateway.LogRetentionDays,
 		},
-		Events: ctx.eventlog().GatewayReporter(),
+		Events:     ctx.eventlog().GatewayReporter(),
+		ExtraTools: agent,
 	})
 	if err != nil {
 		return nil, err

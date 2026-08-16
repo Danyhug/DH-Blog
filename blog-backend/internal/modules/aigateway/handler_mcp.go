@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	"dh-blog/internal/modules/agentapi"
 	"dh-blog/internal/platform/mcp"
 
 	"github.com/gin-gonic/gin"
@@ -26,7 +27,7 @@ const (
 
 // mcpInstructions is handed to the model at initialize, so it reads as a direct
 // statement of what this server is: the environment's search, plus blog
-// content-writing once the writing tools land in a later step.
+// content-writing via the tools the agent module contributes.
 const mcpInstructions = "本服务器提供该环境的联网搜索能力，以及向本博客写入内容的能力。" +
 	"需要现网信息时调用 web_search，它返回标题、链接与摘要，通常不必再逐条抓取网页。" +
 	"需要向博客写入或修改内容时，使用 list_articles、get_article、create_article、" +
@@ -61,8 +62,8 @@ func mcpTransportError(code int, message string) mcp.Response {
 //
 // Auth, rate limiting, quota, routing, caching and accounting all come from the
 // group middleware and Service. The handler is only a transport: read the body,
-// hand it to the protocol server assembled at construction time, write back
-// whatever it says.
+// hand it to a protocol server assembled per request with the tools this key
+// may see, write back whatever it says.
 func (h *handler) MCP(c *gin.Context) {
 	body, err := io.ReadAll(io.LimitReader(c.Request.Body, maxMCPRequestBody+1))
 	if err != nil {
@@ -74,15 +75,44 @@ func (h *handler) MCP(c *gin.Context) {
 		return
 	}
 
-	ctx := context.WithValue(c.Request.Context(), mcpKeyCtxKey{}, apiKeyFrom(c))
+	key := apiKeyFrom(c)
+	ctx := context.WithValue(c.Request.Context(), mcpKeyCtxKey{}, key)
 	ctx = context.WithValue(ctx, mcpClientIPCtxKey{}, c.ClientIP())
+	// The content-writing tools read the caller through agentapi.Identity; the
+	// key now implements that contract, so one credential serves both layers.
+	ctx = agentapi.IdentityContext(ctx, key)
 
-	response, isNotification := h.mcp.Handle(ctx, body)
+	// The protocol server's tool table is fixed at construction, but the
+	// visible tools are per key — assemble one here so a key without write
+	// scopes never even sees the writing tools. The cost is a few small
+	// structs per request.
+	server := mcp.New(mcpServerName, mcpServerVersion, mcpInstructions)
+	server.Register(h.mcpToolsFor(key)...)
+
+	response, isNotification := server.Handle(ctx, body)
 	if isNotification {
 		c.Status(http.StatusAccepted)
 		return
 	}
 	c.JSON(http.StatusOK, response)
+}
+
+// mcpToolsFor filters the tool table down to what this key may see. Extra
+// tools that declare a Scope() are gated on the key's scopes; tools without
+// one (search side) are always visible. The built-in web search is mounted
+// unconditionally. The auth middleware guarantees a key here; a nil one
+// defensively sees the base tool set.
+func (h *handler) mcpToolsFor(key *APIKey) []mcp.Tool {
+	tools := make([]mcp.Tool, 0, len(h.extraTools)+1)
+	tools = append(tools, h.webSearch)
+	for _, tool := range h.extraTools {
+		scoped, ok := tool.(interface{ Scope() string })
+		if ok && (key == nil || !key.HasScope(scoped.Scope())) {
+			continue
+		}
+		tools = append(tools, tool)
+	}
+	return tools
 }
 
 // MCPNotAllowed answers the transport's optional verbs. The gateway never

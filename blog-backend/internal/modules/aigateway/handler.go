@@ -23,16 +23,20 @@ const apiKeyContextKey = "gatewayAPIKey"
 
 type handler struct {
 	service *Service
-	// mcp is the protocol server behind POST /api/gateway/v1/mcp, assembled
-	// here because the tools need the service and the service is the handler's
-	// constructor argument.
-	mcp *mcp.Server
+	// webSearch is the built-in search tool, mounted for every key.
+	// extraTools are the externally contributed tools (agent content writing);
+	// the request path filters them by the caller's scopes, so no server is
+	// assembled at construction time.
+	webSearch  *webSearchTool
+	extraTools []mcp.Tool
 }
 
-func newHandler(service *Service) *handler {
-	server := mcp.New(mcpServerName, mcpServerVersion, mcpInstructions)
-	server.Register(&webSearchTool{service: service})
-	return &handler{service: service, mcp: server}
+func newHandler(service *Service, extraTools []mcp.Tool) *handler {
+	return &handler{
+		service:    service,
+		webSearch:  &webSearchTool{service: service},
+		extraTools: extraTools,
+	}
 }
 
 // searchBody is the wire shape of a gateway search request. Pointer fields

@@ -67,11 +67,12 @@ var _ dhcache.Cache = (*testCache)(nil)
 
 // gatewayTestConfig describes the upstreams a test wants to stand up.
 type gatewayTestConfig struct {
-	Brave     http.HandlerFunc
-	Tavily    http.HandlerFunc
-	Exa       http.HandlerFunc
-	Firecrawl http.HandlerFunc
-	Options   *Options
+	Brave      http.HandlerFunc
+	Tavily     http.HandlerFunc
+	Exa        http.HandlerFunc
+	Firecrawl  http.HandlerFunc
+	Options    *Options
+	ExtraTools ToolSource
 }
 
 func defaultTestOptions() Options {
@@ -109,7 +110,7 @@ func newGatewayTestModule(t *testing.T, config gatewayTestConfig) *Module {
 		options = *config.Options
 	}
 
-	module, err := New(Dependencies{DB: db, Cache: newTestCache(), Options: options})
+	module, err := New(Dependencies{DB: db, Cache: newTestCache(), Options: options, ExtraTools: config.ExtraTools})
 	if err != nil {
 		t.Fatalf("构建网关模块失败: %v", err)
 	}

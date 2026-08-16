@@ -3,8 +3,15 @@ package aigateway
 import (
 	"fmt"
 
+	"dh-blog/internal/platform/mcp"
 	"dh-blog/internal/router"
 )
+
+// ToolSource is a module that contributes MCP tools to the gateway's endpoint.
+// The gateway is the endpoint holder, so it defines the narrow interface and
+// the composition root (registry) wires the agent module in; tools may be
+// filtered per key at request time (see handler.mcpToolsFor).
+type ToolSource interface{ MCPTools() []mcp.Tool }
 
 // Module owns the AI gateway's persistence, routing policy, agent-facing API
 // and admin API.
@@ -15,7 +22,8 @@ type Module struct {
 }
 
 // New builds the module. Provider rows are seeded on first run so the admin
-// page has something to configure.
+// page has something to configure. ExtraTools may be nil: the gateway then
+// serves its built-in tools only.
 func New(deps Dependencies) (*Module, error) {
 	if deps.DB == nil {
 		return nil, fmt.Errorf("aigateway: DB is required")
@@ -27,7 +35,11 @@ func New(deps Dependencies) (*Module, error) {
 	if err != nil {
 		return nil, fmt.Errorf("初始化 AI 网关模块失败: %w", err)
 	}
-	return &Module{service: service, handler: newHandler(service), enabled: true}, nil
+	var extraTools []mcp.Tool
+	if deps.ExtraTools != nil {
+		extraTools = deps.ExtraTools.MCPTools()
+	}
+	return &Module{service: service, handler: newHandler(service, extraTools), enabled: true}, nil
 }
 
 // Service exposes gateway operations to application-level collaborators.
