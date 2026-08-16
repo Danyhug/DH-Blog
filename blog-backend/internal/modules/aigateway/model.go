@@ -164,9 +164,24 @@ type APIKey struct {
 	ExpireAt         *time.Time `gorm:"column:expire_at" json:"expireAt"`
 	LastUsedAt       *time.Time `gorm:"column:last_used_at" json:"lastUsedAt"`
 	Note             string     `gorm:"column:note" json:"note"`
+	// Scopes is the comma-separated capability list. Empty means search only —
+	// deliberately the opposite of AllowedProviders, so an upgrade never grants
+	// an existing key write access it did not have before.
+	Scopes string `gorm:"column:scopes" json:"scopes"`
+	// AuthorName is the byline this key signs articles with; falls back to
+	// Name when left empty.
+	AuthorName string `gorm:"column:author_name" json:"authorName"`
 }
 
 func (APIKey) TableName() string { return "ai_gateway_api_keys" }
+
+// Scope values for APIKey.Scopes. Empty means search only — deliberately the
+// opposite of AllowedProviders, so an upgrade never grants old keys write access.
+const (
+	ScopeSearch       = "search"
+	ScopeContentRead  = "content:read"
+	ScopeContentWrite = "content:write"
+)
 
 // Allows reports whether this key may use the named provider. An empty
 // AllowedProviders list means every registered provider is permitted.
@@ -193,6 +208,61 @@ func (k *APIKey) AllowedList() []string {
 		}
 	}
 	return allowed
+}
+
+// ScopesList splits the stored comma-separated scope list.
+func (k *APIKey) ScopesList() []string {
+	raw := strings.Split(k.Scopes, ",")
+	scopes := make([]string, 0, len(raw))
+	for _, item := range raw {
+		if item = strings.TrimSpace(item); item != "" {
+			scopes = append(scopes, item)
+		}
+	}
+	return scopes
+}
+
+// HasScope reports whether the key carries the named scope. An empty list
+// deliberately grants only search: an upgrade must never hand an existing key
+// write access it did not have before, and a tool list filtered by scope has
+// nothing to offer a key that cannot write.
+func (k *APIKey) HasScope(scope string) bool {
+	scopes := k.ScopesList()
+	if len(scopes) == 0 {
+		return scope == ScopeSearch
+	}
+	for _, item := range scopes {
+		if item == scope {
+			return true
+		}
+	}
+	return false
+}
+
+// NormalizeScopes trims, de-duplicates and validates a comma-separated scope
+// list, returning the canonical joined form. Empty input stays empty, which
+// means "search only" for a stored key. Unknown scopes are rejected rather
+// than silently dropped, so a typo in the admin form surfaces instead of
+// quietly widening or narrowing a key's powers.
+func NormalizeScopes(raw string) (string, error) {
+	seen := map[string]bool{}
+	scopes := make([]string, 0, 3)
+	for _, item := range strings.Split(raw, ",") {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		switch item {
+		case ScopeSearch, ScopeContentRead, ScopeContentWrite:
+		default:
+			return "", fmt.Errorf("不支持的 scope: %q", item)
+		}
+		if !seen[item] {
+			seen[item] = true
+			scopes = append(scopes, item)
+		}
+	}
+	return strings.Join(scopes, ","), nil
 }
 
 // Expired reports whether the key is past its expiry moment.

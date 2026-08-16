@@ -16,7 +16,15 @@ type Article struct {
 	Views           int    `gorm:"column:views;default:0" json:"views"`
 	WordNum         int    `gorm:"column:word_num" json:"wordNum"`
 	ThumbnailURL    string `gorm:"column:thumbnail_url" json:"thumbnailUrl"`
-	IsLocked        bool   `gorm:"column:is_locked;default:false" json:"isLocked"`
+	// AuthorType 为空表示站长本人（历史文章天然如此），"agent" 表示 AI 写入。
+	AuthorType string `gorm:"column:author_type;index" json:"authorType"`
+	// AuthorName 是署名快照。存快照而非只存 key id：key 改名或删除后署名仍在，
+	// 且列表查询不必 join。
+	AuthorName string `gorm:"column:author_name" json:"authorName"`
+	// AuthorKeyID 溯源到具体凭证，也是「谁能免授权改这篇」的判据。
+	// json:"-" 是因为公开接口不该泄露内部 key id。
+	AuthorKeyID int  `gorm:"column:author_key_id;index" json:"-"`
+	IsLocked    bool `gorm:"column:is_locked;default:false" json:"isLocked"`
 	LockPassword    string `gorm:"column:lock_password" json:"lockPassword"`
 	CanAccess       bool   `gorm:"-" json:"canAccess"`
 
