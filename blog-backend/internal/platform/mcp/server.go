@@ -44,6 +44,10 @@ func ToolError(text string) Result {
 
 // Tool is a tool mounted on the MCP endpoint.
 type Tool interface {
+	// Name identifies the tool for tools/call lookups. It is kept separate from
+	// Definition so dispatch never has to render a full definition just to match
+	// a name — a tool's description can be expensive and caller-dependent.
+	Name() string
 	// Definition receives ctx because a tool's description may depend on the
 	// caller's identity: web_search's provider enum depends on which providers
 	// the current key can reach.
@@ -79,15 +83,15 @@ func (s *Server) Handle(ctx context.Context, body []byte) (response any, isNotif
 	// JSON-RPC batch requests were removed from MCP in 2025-06-18; rejecting
 	// them explicitly is clearer than silently processing the first element.
 	if trimmed := strings.TrimSpace(string(body)); strings.HasPrefix(trimmed, "[") {
-		return rpcFailure(nil, invalidRequest, "不支持 JSON-RPC 批量请求"), false
+		return rpcFailure(nil, InvalidRequest, "不支持 JSON-RPC 批量请求"), false
 	}
 
 	var req request
 	if err := json.Unmarshal(body, &req); err != nil {
-		return rpcFailure(nil, parseError, "请求体不是合法 JSON"), false
+		return rpcFailure(nil, ParseError, "请求体不是合法 JSON"), false
 	}
 	if req.Method == "" {
-		return rpcFailure(req.ID, invalidRequest, "缺少 method"), false
+		return rpcFailure(req.ID, InvalidRequest, "缺少 method"), false
 	}
 	// Notifications carry no id and expect no response; MCP uses them for
 	// notifications/initialized. Skipping them entirely keeps the transport
@@ -99,56 +103,62 @@ func (s *Server) Handle(ctx context.Context, body []byte) (response any, isNotif
 	return s.dispatch(ctx, req), false
 }
 
-func (s *Server) dispatch(ctx context.Context, req request) response {
+func (s *Server) dispatch(ctx context.Context, req request) Response {
 	switch req.Method {
 	case "initialize":
 		return rpcResult(req.ID, s.initialize(req))
 	case "ping":
 		return rpcResult(req.ID, struct{}{})
 	case "tools/list":
-		return rpcResult(req.ID, toolListResult{Tools: s.definitions(ctx)})
+		return rpcResult(req.ID, ToolListResult{Tools: s.definitions(ctx)})
 	case "tools/call":
 		return s.callTool(ctx, req)
 	default:
-		return rpcFailure(req.ID, methodNotFound, "不支持的方法: "+req.Method)
+		return rpcFailure(req.ID, MethodNotFound, "不支持的方法: "+req.Method)
 	}
 }
 
-type serverInfo struct {
+// ServerInfo identifies the server to the client at initialize.
+type ServerInfo struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 }
 
-type toolsCapability struct {
+// ToolsCapability declares the tools feature in the capabilities block.
+type ToolsCapability struct {
 	ListChanged bool `json:"listChanged"`
 }
 
-type capabilities struct {
-	Tools *toolsCapability `json:"tools,omitempty"`
+// Capabilities is what the server says it can do at initialize.
+type Capabilities struct {
+	Tools *ToolsCapability `json:"tools,omitempty"`
 }
 
-type initializeParams struct {
+// InitializeParams is the part of the initialize request that version
+// negotiation reads.
+type InitializeParams struct {
 	ProtocolVersion string `json:"protocolVersion"`
 }
 
-type initializeResult struct {
+// InitializeResult is the initialize reply.
+type InitializeResult struct {
 	ProtocolVersion string       `json:"protocolVersion"`
-	Capabilities    capabilities `json:"capabilities"`
-	ServerInfo      serverInfo   `json:"serverInfo"`
+	Capabilities    Capabilities `json:"capabilities"`
+	ServerInfo      ServerInfo   `json:"serverInfo"`
 	Instructions    string       `json:"instructions,omitempty"`
 }
 
-func (s *Server) initialize(req request) initializeResult {
-	var params initializeParams
+func (s *Server) initialize(req request) InitializeResult {
+	var params InitializeParams
 	// Version negotiation is lenient by design: a malformed params block means
 	// the client sent nothing we can honour, so fall back to the default.
 	if len(req.Params) > 0 {
 		_ = json.Unmarshal(req.Params, &params)
 	}
-	return initializeResult{
+	return InitializeResult{
 		ProtocolVersion: negotiateProtocolVersion(params.ProtocolVersion),
-		Capabilities:    capabilities{Tools: &toolsCapability{ListChanged: false}},
-		ServerInfo:      serverInfo{Name: s.name, Version: s.version},
+		Capabilities:    Capabilities{Tools: &ToolsCapability{ListChanged: false}},
+		ServerInfo:      ServerInfo{Name: s.name, Version: s.version},
 		Instructions:    s.instructions,
 	}
 }
@@ -157,13 +167,14 @@ func (s *Server) initialize(req request) initializeResult {
 // Echoing an unknown version back would claim fluency we lack, so those fall
 // back to the default.
 func negotiateProtocolVersion(requested string) string {
-	if supportedProtocolVersions[requested] {
+	if SupportedProtocolVersions[requested] {
 		return requested
 	}
-	return defaultProtocolVersion
+	return DefaultProtocolVersion
 }
 
-type toolListResult struct {
+// ToolListResult is the tools/list reply.
+type ToolListResult struct {
 	Tools []Definition `json:"tools"`
 }
 
@@ -175,34 +186,34 @@ func (s *Server) definitions(ctx context.Context) []Definition {
 	return definitions
 }
 
-type toolCallParams struct {
+// ToolCallParams is the tools/call request shape.
+type ToolCallParams struct {
 	Name      string          `json:"name"`
 	Arguments json.RawMessage `json:"arguments"`
 }
 
-func (s *Server) callTool(ctx context.Context, req request) response {
-	var params toolCallParams
+func (s *Server) callTool(ctx context.Context, req request) Response {
+	var params ToolCallParams
 	if err := json.Unmarshal(req.Params, &params); err != nil {
-		return rpcFailure(req.ID, invalidParams, "params 解析失败: "+err.Error())
+		return rpcFailure(req.ID, InvalidParams, "params 解析失败: "+err.Error())
 	}
 	if params.Name == "" {
-		return rpcFailure(req.ID, invalidParams, "缺少工具名")
+		return rpcFailure(req.ID, InvalidParams, "缺少工具名")
 	}
-	tool := s.findTool(ctx, params.Name)
+	tool := s.findTool(params.Name)
 	if tool == nil {
-		return rpcFailure(req.ID, invalidParams, "未知的工具: "+params.Name)
+		return rpcFailure(req.ID, InvalidParams, "未知的工具: "+params.Name)
 	}
-	// An unparseable arguments block is a protocol error, not a tool failure:
-	// the tool only ever sees JSON it can parse (or nil when absent).
-	if len(params.Arguments) > 0 && !json.Valid(params.Arguments) {
-		return rpcFailure(req.ID, invalidParams, "arguments 不是合法 JSON")
-	}
+	// The tool only ever sees arguments it can parse (or nil when absent):
+	// arguments is a raw message inside params, so params having parsed means
+	// arguments is valid JSON too. A type-level mismatch inside the payload is
+	// the tool's own concern and surfaces as an isError result.
 	return rpcResult(req.ID, tool.Call(ctx, params.Arguments))
 }
 
-func (s *Server) findTool(ctx context.Context, name string) Tool {
+func (s *Server) findTool(name string) Tool {
 	for _, tool := range s.tools {
-		if tool.Definition(ctx).Name == name {
+		if tool.Name() == name {
 			return tool
 		}
 	}

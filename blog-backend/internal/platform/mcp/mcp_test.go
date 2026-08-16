@@ -18,6 +18,8 @@ type stubTool struct {
 	gotArgs     json.RawMessage
 }
 
+func (t *stubTool) Name() string { return t.name }
+
 func (t *stubTool) Definition(ctx context.Context) Definition {
 	t.defCtx = ctx
 	return Definition{
@@ -45,17 +47,17 @@ func newTestServer(tools ...*stubTool) (*Server, []*stubTool) {
 
 // handleRPC runs Handle and decodes the JSON-RPC response as the wire format
 // would, so tests exercise the actual serialized shape.
-func handleRPC(t *testing.T, server *Server, body string) (response, bool) {
+func handleRPC(t *testing.T, server *Server, body string) (Response, bool) {
 	t.Helper()
 	got, isNotification := server.Handle(context.Background(), []byte(body))
 	if isNotification {
-		return response{}, true
+		return Response{}, true
 	}
 	raw, err := json.Marshal(got)
 	if err != nil {
 		t.Fatalf("序列化响应失败: %v", err)
 	}
-	var decoded response
+	var decoded Response
 	if err := json.Unmarshal(raw, &decoded); err != nil {
 		t.Fatalf("解析响应失败: %v (body=%s)", err, raw)
 	}
@@ -65,7 +67,7 @@ func handleRPC(t *testing.T, server *Server, body string) (response, bool) {
 	return decoded, false
 }
 
-func rpcResultAs[T any](t *testing.T, decoded response) T {
+func rpcResultAs[T any](t *testing.T, decoded Response) T {
 	t.Helper()
 	if decoded.Error != nil {
 		t.Fatalf("期望成功但收到错误: %+v", decoded.Error)
@@ -100,7 +102,7 @@ func TestInitializeNegotiatesProtocolVersion(t *testing.T) {
 			body := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"` +
 				test.requested + `","capabilities":{},"clientInfo":{"name":"claude-code","version":"1"}}}`
 			decoded, _ := handleRPC(t, server, body)
-			result := rpcResultAs[initializeResult](t, decoded)
+			result := rpcResultAs[InitializeResult](t, decoded)
 			if result.ProtocolVersion != test.want {
 				t.Errorf("protocolVersion = %q, 期望 %q", result.ProtocolVersion, test.want)
 			}
@@ -121,7 +123,7 @@ func TestInitializeWithoutParamsFallsBackToDefault(t *testing.T) {
 	server, _ := newTestServer()
 
 	decoded, _ := handleRPC(t, server, `{"jsonrpc":"2.0","id":1,"method":"initialize"}`)
-	result := rpcResultAs[initializeResult](t, decoded)
+	result := rpcResultAs[InitializeResult](t, decoded)
 	if result.ProtocolVersion != "2025-06-18" {
 		t.Errorf("protocolVersion = %q, 期望默认 2025-06-18", result.ProtocolVersion)
 	}
@@ -146,7 +148,7 @@ func TestToolListAdvertisesRegisteredToolsInOrder(t *testing.T) {
 	)
 
 	decoded, _ := handleRPC(t, server, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
-	list := rpcResultAs[toolListResult](t, decoded)
+	list := rpcResultAs[ToolListResult](t, decoded)
 	if len(list.Tools) != 2 {
 		t.Fatalf("工具数量 = %d, 期望 2", len(list.Tools))
 	}
@@ -180,6 +182,20 @@ func TestToolCallPassesArgumentsAndReturnsResult(t *testing.T) {
 	}
 	if tools[0].callCtx == nil {
 		t.Error("Call 没有收到 ctx")
+	}
+}
+
+func TestToolCallFindsToolByNameWithoutCallingDefinition(t *testing.T) {
+	server, tools := newTestServer(
+		&stubTool{name: "echo", result: Text("好的")},
+	)
+
+	decoded, _ := handleRPC(t, server, `{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"echo","arguments":{}}}`)
+	if decoded.Error != nil {
+		t.Fatalf("按名字查找工具失败: %+v", decoded.Error)
+	}
+	if tools[0].defCtx != nil {
+		t.Error("tools/call 不该为解析工具名调用 Definition，名字查找应当走 Name()")
 	}
 }
 
@@ -230,37 +246,37 @@ func TestProtocolErrors(t *testing.T) {
 		{
 			name: "未知方法",
 			body: `{"jsonrpc":"2.0","id":1,"method":"resources/list"}`,
-			want: methodNotFound,
+			want: MethodNotFound,
 		},
 		{
 			name: "未知工具",
 			body: `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"delete_everything","arguments":{}}}`,
-			want: invalidParams,
+			want: InvalidParams,
 		},
 		{
 			name: "缺少工具名",
 			body: `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"arguments":{}}}`,
-			want: invalidParams,
+			want: InvalidParams,
 		},
 		{
 			name: "params 不是合法 JSON",
 			body: `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":"not json"}`,
-			want: invalidParams,
+			want: InvalidParams,
 		},
 		{
 			name: "批量请求",
 			body: `[{"jsonrpc":"2.0","id":1,"method":"ping"}]`,
-			want: invalidRequest,
+			want: InvalidRequest,
 		},
 		{
 			name: "缺少 method",
 			body: `{"jsonrpc":"2.0","id":1}`,
-			want: invalidRequest,
+			want: InvalidRequest,
 		},
 		{
 			name: "body 不是 JSON",
 			body: `not json`,
-			want: parseError,
+			want: ParseError,
 		},
 	}
 	for _, test := range tests {

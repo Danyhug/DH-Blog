@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"dh-blog/internal/platform/mcp"
 	"dh-blog/internal/platform/search"
 
 	"github.com/gin-gonic/gin"
@@ -20,9 +21,19 @@ const (
 
 const apiKeyContextKey = "gatewayAPIKey"
 
-type handler struct{ service *Service }
+type handler struct {
+	service *Service
+	// mcp is the protocol server behind POST /api/gateway/v1/mcp, assembled
+	// here because the tools need the service and the service is the handler's
+	// constructor argument.
+	mcp *mcp.Server
+}
 
-func newHandler(service *Service) *handler { return &handler{service: service} }
+func newHandler(service *Service) *handler {
+	server := mcp.New(mcpServerName, mcpServerVersion, mcpInstructions)
+	server.Register(&webSearchTool{service: service})
+	return &handler{service: service, mcp: server}
+}
 
 // searchBody is the wire shape of a gateway search request. Pointer fields
 // distinguish "not supplied" from an explicit false.

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"dh-blog/internal/platform/mcp"
 	"dh-blog/internal/platform/search"
 
 	"github.com/gin-gonic/gin"
@@ -18,9 +19,9 @@ func doMCP(engine *gin.Engine, token, body string) *httptest.ResponseRecorder {
 	return doGateway(engine, http.MethodPost, "/api/gateway/v1/mcp", token, body)
 }
 
-func decodeRPC(t *testing.T, recorder *httptest.ResponseRecorder) jsonRPCResponse {
+func decodeRPC(t *testing.T, recorder *httptest.ResponseRecorder) mcp.Response {
 	t.Helper()
-	var response jsonRPCResponse
+	var response mcp.Response
 	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
 		t.Fatalf("解析 JSON-RPC 响应失败: %v (body=%s)", err, recorder.Body.String())
 	}
@@ -70,22 +71,26 @@ func TestMCPInitializeNegotiatesProtocolVersion(t *testing.T) {
 		{"2025-03-26", "2025-03-26"},
 		{"2024-11-05", "2024-11-05"},
 		// 认不出来的版本不能照抄回去，否则等于谎称自己会说这套协议
-		{"1999-01-01", mcpDefaultProtocolVersion},
-		{"", mcpDefaultProtocolVersion},
+		{"1999-01-01", mcp.DefaultProtocolVersion},
+		{"", mcp.DefaultProtocolVersion},
 	}
 	for _, test := range tests {
 		t.Run(test.requested, func(t *testing.T) {
 			body := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"` +
 				test.requested + `","capabilities":{},"clientInfo":{"name":"claude-code","version":"1"}}}`
-			result := rpcResultAs[mcpInitializeResult](t, doMCP(engine, token, body))
+			result := rpcResultAs[mcp.InitializeResult](t, doMCP(engine, token, body))
 			if result.ProtocolVersion != test.want {
 				t.Errorf("protocolVersion = %q, 期望 %q", result.ProtocolVersion, test.want)
 			}
 			if result.ServerInfo.Name != mcpServerName {
-				t.Errorf("serverInfo.name = %q", result.ServerInfo.Name)
+				t.Errorf("serverInfo.name = %q, 期望 %q", result.ServerInfo.Name, mcpServerName)
 			}
 			if result.Capabilities.Tools == nil {
 				t.Error("未声明 tools 能力，客户端不会去拉工具列表")
+			}
+			// instructions 是客户端直接交给模型的，必须说清这个 server 能干什么
+			if !strings.Contains(result.Instructions, "搜索") || !strings.Contains(result.Instructions, "写作") {
+				t.Errorf("instructions 应同时涵盖搜索与写作: %q", result.Instructions)
 			}
 		})
 	}
@@ -124,7 +129,7 @@ func TestMCPToolListReflectsKeyAllowlist(t *testing.T) {
 	// 这把 key 只被允许用 tavily，工具 schema 就不该把 brave 摆出来给模型选
 	token := issueTestKey(t, module, func(key *APIKey) { key.AllowedProviders = "tavily" })
 
-	result := rpcResultAs[mcpToolListResult](t, doMCP(engine, token, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`))
+	result := rpcResultAs[mcp.ToolListResult](t, doMCP(engine, token, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`))
 	if len(result.Tools) != 1 || result.Tools[0].Name != mcpToolWebSearch {
 		t.Fatalf("工具列表 = %+v", result.Tools)
 	}
@@ -138,7 +143,7 @@ func TestMCPToolListReflectsKeyAllowlist(t *testing.T) {
 	}
 }
 
-func providerEnumOf(t *testing.T, tool mcpTool) []string {
+func providerEnumOf(t *testing.T, tool mcp.Definition) []string {
 	t.Helper()
 	schema, ok := tool.InputSchema.(map[string]any)
 	if !ok {
@@ -170,7 +175,7 @@ func TestMCPToolCallSearchesAndLabelsLog(t *testing.T) {
 
 	body := `{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"web_search",
 		"arguments":{"query":"go 1.25","max_results":2}}}`
-	result := rpcResultAs[mcpToolResult](t, doMCP(engine, token, body))
+	result := rpcResultAs[mcp.Result](t, doMCP(engine, token, body))
 
 	if result.IsError {
 		t.Fatalf("工具调用失败: %+v", result.Content)
@@ -208,10 +213,10 @@ func TestMCPToolCallCountsAgainstKeyQuota(t *testing.T) {
 	engine := newTestEngine(module)
 	token := issueTestKey(t, module, func(key *APIKey) { key.MonthlyQuota = 1 })
 
-	call := func() mcpToolResult {
+	call := func() mcp.Result {
 		body := `{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"web_search",
 			"arguments":{"query":"配额测试"}}}`
-		return rpcResultAs[mcpToolResult](t, doMCP(engine, token, body))
+		return rpcResultAs[mcp.Result](t, doMCP(engine, token, body))
 	}
 
 	if first := call(); first.IsError {
@@ -237,7 +242,7 @@ func TestMCPToolCallUpstreamFailureIsToolError(t *testing.T) {
 	if response.Error != nil {
 		t.Fatalf("上游失败被报成了 JSON-RPC 错误: %+v", response.Error)
 	}
-	result := rpcResultAs[mcpToolResult](t, doMCP(engine, token, body))
+	result := rpcResultAs[mcp.Result](t, doMCP(engine, token, body))
 	if !result.IsError {
 		t.Fatal("上游失败未标记 isError")
 	}
@@ -256,37 +261,27 @@ func TestMCPProtocolErrors(t *testing.T) {
 		{
 			name: "未知方法",
 			body: `{"jsonrpc":"2.0","id":1,"method":"resources/list"}`,
-			want: jsonRPCMethodNotFound,
+			want: mcp.MethodNotFound,
 		},
 		{
 			name: "未知工具",
 			body: `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"delete_everything","arguments":{}}}`,
-			want: jsonRPCInvalidParams,
-		},
-		{
-			name: "参数非法",
-			body: `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"web_search","arguments":{"query":"  "}}}`,
-			want: jsonRPCInvalidParams,
-		},
-		{
-			name: "max_results 越界",
-			body: `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"web_search","arguments":{"query":"go","max_results":99}}}`,
-			want: jsonRPCInvalidParams,
+			want: mcp.InvalidParams,
 		},
 		{
 			name: "批量请求",
 			body: `[{"jsonrpc":"2.0","id":1,"method":"ping"}]`,
-			want: jsonRPCInvalidRequest,
+			want: mcp.InvalidRequest,
 		},
 		{
 			name: "缺少 method",
 			body: `{"jsonrpc":"2.0","id":1}`,
-			want: jsonRPCInvalidRequest,
+			want: mcp.InvalidRequest,
 		},
 		{
 			name: "body 不是 JSON",
 			body: `not json`,
-			want: jsonRPCParseError,
+			want: mcp.ParseError,
 		},
 	}
 	for _, test := range tests {
@@ -298,6 +293,52 @@ func TestMCPProtocolErrors(t *testing.T) {
 			}
 			if got := rpcErrorCode(t, recorder); got != test.want {
 				t.Errorf("错误码 = %d, 期望 %d", got, test.want)
+			}
+		})
+	}
+}
+
+// TestMCPSemanticValidationFailsAsToolError covers arguments the tool can parse
+// but must reject: the Tool interface only returns a Result, so semantic
+// failures surface as isError=true text the model can read and correct, instead
+// of a JSON-RPC error the client would just surface as a transport failure.
+func TestMCPSemanticValidationFailsAsToolError(t *testing.T) {
+	module := newGatewayTestModule(t, gatewayTestConfig{Brave: braveOK("b1")})
+	engine := newTestEngine(module)
+	token := issueTestKey(t, module, nil)
+
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "参数非法",
+			body: `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"web_search","arguments":{"query":"  "}}}`,
+			want: "query 不能为空",
+		},
+		{
+			name: "max_results 越界",
+			body: `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"web_search","arguments":{"query":"go","max_results":99}}}`,
+			want: "max_results",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			recorder := doMCP(engine, token, test.body)
+			if recorder.Code != http.StatusOK {
+				t.Fatalf("状态码 = %d, 期望 200", recorder.Code)
+			}
+			response := decodeRPC(t, recorder)
+			if response.Error != nil {
+				t.Fatalf("语义校验失败不应成为 JSON-RPC 错误: %+v", response.Error)
+			}
+			result := rpcResultAs[mcp.Result](t, recorder)
+			if !result.IsError {
+				t.Fatal("语义校验失败未标记 isError")
+			}
+			if !strings.Contains(result.Content[0].Text, test.want) {
+				t.Errorf("错误文本不易读: %q", result.Content[0].Text)
 			}
 		})
 	}
@@ -358,7 +399,7 @@ func TestRenderSearchResultWithoutHits(t *testing.T) {
 }
 
 // schemaPropertiesOf pulls the advertised parameter map out of a tool definition.
-func schemaPropertiesOf(t *testing.T, tool mcpTool) map[string]any {
+func schemaPropertiesOf(t *testing.T, tool mcp.Definition) map[string]any {
 	t.Helper()
 	schema, ok := tool.InputSchema.(map[string]any)
 	if !ok {
@@ -381,7 +422,7 @@ func TestMCPToolAdvertisesBuiltInWebSearchParameterNames(t *testing.T) {
 	token := issueTestKey(t, module, nil)
 
 	recorder := doMCP(engine, token, `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`)
-	list := rpcResultAs[mcpToolListResult](t, recorder)
+	list := rpcResultAs[mcp.ToolListResult](t, recorder)
 	properties := schemaPropertiesOf(t, list.Tools[0])
 
 	for _, name := range []string{"allowed_domains", "blocked_domains", "include_domains", "exclude_domains"} {
@@ -449,7 +490,7 @@ func TestMCPToolDescriptionPresentsItselfAsTheWebSearch(t *testing.T) {
 	engine := newTestEngine(module)
 	token := issueTestKey(t, module, nil)
 
-	list := rpcResultAs[mcpToolListResult](t,
+	list := rpcResultAs[mcp.ToolListResult](t,
 		doMCP(engine, token, `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`))
 	description := list.Tools[0].Description
 

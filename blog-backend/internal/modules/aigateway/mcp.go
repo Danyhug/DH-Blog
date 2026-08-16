@@ -1,167 +1,73 @@
 package aigateway
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 
+	"dh-blog/internal/platform/mcp"
 	"dh-blog/internal/platform/search"
+
+	"github.com/sirupsen/logrus"
 )
 
-// MCP (Model Context Protocol) over Streamable HTTP.
-//
-// The gateway only ever answers a request with a response, so it implements the
-// JSON-only half of the transport: POST carries JSON-RPC, and GET/DELETE are
-// answered with 405 as the spec requires of a server that offers no
-// server-initiated stream. That keeps the endpoint stateless — no session id,
-// no long-lived connection — which matters because the blog runs a single
-// process behind whatever reverse proxy the operator happens to have.
-const (
-	mcpServerName    = "dh-blog-search-gateway"
-	mcpServerVersion = "1.0.0"
-	// 协商时优先回显客户端请求的版本，认不出来才退到这个
-	mcpDefaultProtocolVersion = "2025-06-18"
-	// MCP 请求体只有工具参数，比透传的原始 body 小得多
-	maxMCPRequestBody = 64 << 10
-)
-
-var mcpSupportedProtocolVersions = map[string]bool{
-	"2024-11-05": true,
-	"2025-03-26": true,
-	"2025-06-18": true,
-}
-
-// JSON-RPC 2.0 错误码
-const (
-	jsonRPCParseError     = -32700
-	jsonRPCInvalidRequest = -32600
-	jsonRPCMethodNotFound = -32601
-	jsonRPCInvalidParams  = -32602
-	jsonRPCInternalError  = -32603
-)
-
-type jsonRPCRequest struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      json.RawMessage `json:"id"`
-	Method  string          `json:"method"`
-	Params  json.RawMessage `json:"params"`
-}
-
-type jsonRPCError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Data    any    `json:"data,omitempty"`
-}
-
-type jsonRPCResponse struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      json.RawMessage `json:"id"`
-	Result  any             `json:"result,omitempty"`
-	Error   *jsonRPCError   `json:"error,omitempty"`
-}
-
-// nullID is the id a response carries when the request was too broken to have one.
-var nullID = json.RawMessage("null")
-
-func rpcResult(id json.RawMessage, result any) jsonRPCResponse {
-	if len(id) == 0 {
-		id = nullID
-	}
-	return jsonRPCResponse{JSONRPC: "2.0", ID: id, Result: result}
-}
-
-func rpcFailure(id json.RawMessage, code int, message string) jsonRPCResponse {
-	if len(id) == 0 {
-		id = nullID
-	}
-	return jsonRPCResponse{JSONRPC: "2.0", ID: id, Error: &jsonRPCError{Code: code, Message: message}}
-}
-
-// isNotification reports whether the message expects no response. JSON-RPC
-// notifications carry no id; MCP sends `notifications/initialized` this way.
-func (r jsonRPCRequest) isNotification() bool {
-	trimmed := strings.TrimSpace(string(r.ID))
-	return trimmed == "" || trimmed == "null"
-}
-
-type mcpServerInfo struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-}
-
-type mcpToolsCapability struct {
-	ListChanged bool `json:"listChanged"`
-}
-
-type mcpCapabilities struct {
-	Tools *mcpToolsCapability `json:"tools,omitempty"`
-}
-
-type mcpInitializeParams struct {
-	ProtocolVersion string `json:"protocolVersion"`
-}
-
-type mcpInitializeResult struct {
-	ProtocolVersion string          `json:"protocolVersion"`
-	Capabilities    mcpCapabilities `json:"capabilities"`
-	ServerInfo      mcpServerInfo   `json:"serverInfo"`
-	Instructions    string          `json:"instructions,omitempty"`
-}
-
-type mcpTool struct {
-	Name        string `json:"name"`
-	Title       string `json:"title,omitempty"`
-	Description string `json:"description"`
-	InputSchema any    `json:"inputSchema"`
-}
-
-type mcpToolListResult struct {
-	Tools []mcpTool `json:"tools"`
-}
-
-type mcpToolCallParams struct {
-	Name      string          `json:"name"`
-	Arguments json.RawMessage `json:"arguments"`
-}
-
-type mcpTextContent struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
-}
-
-type mcpToolResult struct {
-	Content []mcpTextContent `json:"content"`
-	IsError bool             `json:"isError,omitempty"`
-}
-
-func mcpText(text string) mcpToolResult {
-	return mcpToolResult{Content: []mcpTextContent{{Type: "text", Text: text}}}
-}
-
-// mcpToolError reports a failed tool run. MCP wants execution failures inside
-// the result rather than as a JSON-RPC error, so the model can read what went
-// wrong and adjust instead of the client just surfacing a transport error.
-func mcpToolError(text string) mcpToolResult {
-	result := mcpText(text)
-	result.IsError = true
-	return result
-}
-
-// negotiateProtocolVersion echoes the client's version when it is one we speak.
-func negotiateProtocolVersion(requested string) string {
-	if mcpSupportedProtocolVersions[requested] {
-		return requested
-	}
-	return mcpDefaultProtocolVersion
-}
-
+// mcpToolWebSearch is the tool's name, what both tools/list and tools/call key
+// on. MCP clients namespace it under the server name automatically, so no
+// prefix is needed.
 const mcpToolWebSearch = "web_search"
 
-// webSearchTool builds the tool definition from the providers this particular
-// key can actually reach, so the model never sees a `provider` value that the
-// gateway would reject, and knows up front who can return an answer or page text.
-func webSearchTool(providers []providerStatus) mcpTool {
-	return mcpTool{
+// webSearchTool adapts the gateway's search path to MCP. Definition is rendered
+// per caller because the provider enum depends on which providers the
+// authenticated key can reach, and Call routes through Service.SearchFrom so
+// MCP traffic keeps the same metering, quota, caching and request logs as the
+// HTTP path — only the log's endpoint label differs.
+type webSearchTool struct {
+	service *Service
+}
+
+func (t *webSearchTool) Name() string { return mcpToolWebSearch }
+
+func (t *webSearchTool) Definition(ctx context.Context) mcp.Definition {
+	key := mcpKeyFromContext(ctx)
+	providers, err := t.service.ProviderStatuses(ctx, key)
+	if err != nil {
+		// Degrade the description to "no provider available" rather than
+		// failing tools/list: a temporary status-read error is not worth
+		// breaking the whole tool advertisement over.
+		logrus.Warnf("获取 MCP 工具定义的供应商状态失败: %v", err)
+		providers = nil
+	}
+	return webSearchDefinition(providers)
+}
+
+func (t *webSearchTool) Call(ctx context.Context, args json.RawMessage) mcp.Result {
+	// 工具参数与 HTTP 接口的 body 是同一套字段，校验也就共用同一份实现
+	var arguments mcpSearchArguments
+	if len(args) > 0 {
+		if err := json.Unmarshal(args, &arguments); err != nil {
+			return mcp.ToolError("arguments 解析失败: " + err.Error())
+		}
+	}
+	req, invalid := normalizeSearch(arguments.merged())
+	if invalid != nil {
+		return mcp.ToolError(invalid.Message)
+	}
+
+	result, searchErr := t.service.SearchFrom(ctx, mcpKeyFromContext(ctx), req, mcpClientIPFromContext(ctx), "mcp/search")
+	if searchErr != nil {
+		// 限流、配额、上游故障都是执行期失败：写进结果让模型自己决定要不要换个问法或放弃
+		return mcp.ToolError(mcpFailureText(searchErr))
+	}
+	return mcp.Text(renderSearchResult(result))
+}
+
+// webSearchDefinition renders the tool's advertised schema from the providers
+// this particular key can actually reach, so the model never sees a `provider`
+// value that the gateway would reject, and knows up front who can return an
+// answer or page text.
+func webSearchDefinition(providers []providerStatus) mcp.Definition {
+	return mcp.Definition{
 		Name:        mcpToolWebSearch,
 		Title:       "联网搜索",
 		Description: webSearchDescription(providers),
