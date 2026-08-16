@@ -607,6 +607,13 @@ func (s *Service) enqueueLog(entry RequestLog) {
 	}
 }
 
+// rateAllowed draws once from the key's per-minute allowance, using the same
+// counter the search path consults so content tools and search calls share one
+// budget per key. limitRatePerMin <= 0 means "unlimited", matching search.
+func (s *Service) rateAllowed(key *APIKey) bool {
+	return s.rates.allow(key.ID, key.RateLimitPerMin, s.now())
+}
+
 // SearchRequest is the gateway's own request shape, already validated.
 type SearchRequest struct {
 	Query             string

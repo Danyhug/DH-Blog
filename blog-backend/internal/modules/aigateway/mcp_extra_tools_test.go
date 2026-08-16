@@ -206,6 +206,41 @@ func newRealAgentModule(t *testing.T) *agentapi.Module {
 	return module
 }
 
+// TestMCPHiddenWriteToolIsNotCallable drives the HTTP layer end to end with a
+// content:read-only key and a real agent request for a write tool. Hiding is
+// only worth anything if it also means un-invokable: a direct tools/call for
+// create_article must be refused at the protocol layer as "未知的工具"
+// (-32602 InvalidParams), never executed as a side effect.
+func TestMCPHiddenWriteToolIsNotCallable(t *testing.T) {
+	module := newGatewayTestModule(t, gatewayTestConfig{
+		Brave:      braveOK("b1"),
+		ExtraTools: newRealAgentModule(t),
+	})
+	engine := newTestEngine(module)
+	token := issueTestKey(t, module, func(key *APIKey) { key.Scopes = ScopeContentRead })
+
+	body := `{"jsonrpc":"2.0","id":1,"method":"tools/call",` +
+		`"params":{"name":"create_article","arguments":{"title":"越权测试","content":"正文"}}}`
+	response := decodeRPC(t, doMCP(engine, token, body))
+	if response.Error == nil {
+		t.Fatalf("对隐藏工具的调用被放行了: %+v", response.Result)
+	}
+	if response.Error.Code != mcp.InvalidParams {
+		t.Fatalf("错误码 = %d, 期望 %d (-32602)", response.Error.Code, mcp.InvalidParams)
+	}
+	if !strings.Contains(response.Error.Message, "未知的工具") {
+		t.Fatalf("错误文案不易读: %q", response.Error.Message)
+	}
+	// 列表侧的对照：这把 key 的 tools/list 本就看不到写作工具
+	list := rpcResultAs[mcp.ToolListResult](t, doMCP(engine, token,
+		`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`))
+	for _, tool := range list.Tools {
+		if tool.Name == "create_article" {
+			t.Fatal("content:read key 的 tools/list 里不该有 create_article")
+		}
+	}
+}
+
 // TestMCPRealAgentToolsRespectScopeContract drives tools/list through the real
 // agentapi tool table and real keys, asserting visibility against the wire names
 // both modules spell out. agentapi deliberately re-declares its scope strings so

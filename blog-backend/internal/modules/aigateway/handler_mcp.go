@@ -97,11 +97,26 @@ func (h *handler) MCP(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// rateLimitedTool enforces the key's per-minute allowance on content tools.
+// The search path already applies RateLimitPerMin internally; without this a
+// stolen write key could spam creates and uploads at full speed.
+type rateLimitedTool struct {
+	mcp.Tool
+	allow func() bool
+}
+
+func (t rateLimitedTool) Call(ctx context.Context, args json.RawMessage) mcp.Result {
+	if !t.allow() {
+		return mcp.ToolError("请求过于频繁，请稍后再试")
+	}
+	return t.Tool.Call(ctx, args)
+}
+
 // mcpToolsFor filters the tool table down to what this key may see. Extra
 // tools that declare a Scope() are gated on the key's scopes; tools without
 // one (search side) are always visible. The built-in web search is mounted
 // unconditionally. The auth middleware guarantees a key here; a nil one
-// defensively sees the base tool set.
+// defensively sees the base tool set unwrapped (rate limiting needs a key).
 func (h *handler) mcpToolsFor(key *APIKey) []mcp.Tool {
 	tools := make([]mcp.Tool, 0, len(h.extraTools)+1)
 	tools = append(tools, h.webSearch)
@@ -110,7 +125,15 @@ func (h *handler) mcpToolsFor(key *APIKey) []mcp.Tool {
 		if ok && (key == nil || !key.HasScope(scoped.Scope())) {
 			continue
 		}
-		tools = append(tools, tool)
+		if key == nil {
+			tools = append(tools, tool)
+			continue
+		}
+		// Content tools share the search budget: one RateLimitPerMin pool per
+		// key, regardless of which endpoint the call arrives on.
+		tools = append(tools, rateLimitedTool{Tool: tool, allow: func() bool {
+			return h.service.rateAllowed(key)
+		}})
 	}
 	return tools
 }

@@ -299,7 +299,10 @@ func (s blogImageSaver) SaveBlogImage(ctx context.Context, fileName string, data
 		return "", fmt.Errorf("获取博客图片目录失败: %w", err)
 	}
 	name := fmt.Sprintf("%d_%s", time.Now().Unix(), filepath.Base(fileName))
-	file, err := s.files.UploadFile(ctx, 0, parentID, name, int64(len(data)), bytes.NewReader(data))
+	// The file belongs to the admin user, matching GetProtectedDirectoryID's
+	// owner for the fixed 博客 directory. A zero owner would fail the Files
+	// UI's ownership check and become unlistable / unmanageable there.
+	file, err := s.files.UploadFile(ctx, 1, parentID, name, int64(len(data)), bytes.NewReader(data))
 	if err != nil {
 		return "", fmt.Errorf("保存博客图片失败: %w", err)
 	}
