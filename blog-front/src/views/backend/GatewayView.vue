@@ -34,6 +34,17 @@
                 <GatewayRouting />
             </el-tab-pane>
 
+            <el-tab-pane name="mcp" lazy>
+                <template #label>
+                    <span class="tab-label">
+                        <el-icon>
+                            <Cpu />
+                        </el-icon> MCP 能力
+                    </span>
+                </template>
+                <GatewayMcp />
+            </el-tab-pane>
+
             <el-tab-pane name="keys" lazy>
                 <template #label>
                     <span class="tab-label">
@@ -62,10 +73,11 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Connection, DataAnalysis, Document, Key, Switch } from '@element-plus/icons-vue';
+import { Connection, Cpu, DataAnalysis, Document, Key, Switch } from '@element-plus/icons-vue';
 import GatewayOverview from '@/components/backend/gateway/GatewayOverview.vue';
 import GatewayProviders from '@/components/backend/gateway/GatewayProviders.vue';
 import GatewayRouting from '@/components/backend/gateway/GatewayRouting.vue';
+import GatewayMcp from '@/components/backend/gateway/GatewayMcp.vue';
 import GatewayKeys from '@/components/backend/gateway/GatewayKeys.vue';
 import GatewayLogs from '@/components/backend/gateway/GatewayLogs.vue';
 import { getGatewayProviders, type GatewayProvider } from '@/api/gateway';
@@ -73,7 +85,7 @@ import { getGatewayProviders, type GatewayProvider } from '@/api/gateway';
 const route = useRoute();
 const router = useRouter();
 
-const tabs = ['overview', 'providers', 'routing', 'keys', 'logs'];
+const tabs = ['overview', 'providers', 'routing', 'mcp', 'keys', 'logs'];
 const activeTab = ref(tabs.includes(String(route.query.tab)) ? String(route.query.tab) : 'overview');
 
 // 标签写回地址栏，刷新页面或把链接发给自己时还停在同一屏

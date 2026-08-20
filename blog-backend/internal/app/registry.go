@@ -3,6 +3,8 @@ package app
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -298,7 +300,16 @@ func (s blogImageSaver) SaveBlogImage(ctx context.Context, fileName string, data
 	if err != nil {
 		return "", fmt.Errorf("获取博客图片目录失败: %w", err)
 	}
-	name := fmt.Sprintf("%d_%s", time.Now().Unix(), filepath.Base(fileName))
+	// Unix seconds alone are not unique enough here: UploadFile rejects a
+	// same-name file outright, and an agent illustrating one article can upload
+	// two identically named images inside the same second (or the same clock
+	// tick on Windows). A random suffix makes the collision practically
+	// impossible without lengthening the name much.
+	suffix := make([]byte, 4)
+	if _, err := rand.Read(suffix); err != nil {
+		return "", fmt.Errorf("生成图片文件名失败: %w", err)
+	}
+	name := fmt.Sprintf("%d_%s_%s", time.Now().Unix(), hex.EncodeToString(suffix), filepath.Base(fileName))
 	// The file belongs to the admin user, matching GetProtectedDirectoryID's
 	// owner for the fixed 博客 directory. A zero owner would fail the Files
 	// UI's ownership check and become unlistable / unmanageable there.

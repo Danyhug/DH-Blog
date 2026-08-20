@@ -33,6 +33,7 @@ type ArticleBrief struct {
 	AuthorType   string
 	AuthorName   string
 	AuthorKeyID  int
+	IsLocked     bool
 }
 
 // ArticleDetail 是单篇文章的完整视图，正文、分类名、标签与作者信息都解析好。
@@ -213,7 +214,13 @@ func (s *contentService) Update(ctx context.Context, input UpdateInput) error {
 		next.TagNames = tagNames(current.Tags)
 	}
 
-	if err := s.repository.UpdateArticle(&next); err != nil {
+	// 摘要传了空串是「清空」，不能被仓储的「空 = 未携带」兼容语义吞掉；
+	// 没传时走默认路径，保留库里已生成的摘要。
+	update := s.repository.UpdateArticle
+	if input.Summary != nil {
+		update = s.repository.UpdateArticleWithSummary
+	}
+	if err := update(&next); err != nil {
 		return err
 	}
 	return nil
@@ -230,7 +237,10 @@ func (s *contentService) List(ctx context.Context, keyword string, page, pageSiz
 	query := s.db.WithContext(ctx).Model(&Article{})
 	if kw := strings.TrimSpace(keyword); kw != "" {
 		like := "%" + kw + "%"
-		query = query.Where("title LIKE ? OR content LIKE ?", like, like)
+		// 加密文章的正文不参与关键词匹配：get_article 已经拒绝返回它的正文，
+		// 若这里允许按正文命中，调用方就能靠 total 反推出正文里有没有某段文字。
+		// 标题本身在站点列表页就是公开的，仍可命中。
+		query = query.Where("title LIKE ? OR (content LIKE ? AND is_locked = ?)", like, like, false)
 	}
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -252,17 +262,24 @@ func (s *contentService) List(ctx context.Context, keyword string, page, pageSiz
 	briefs := make([]ArticleBrief, 0, len(articles))
 	for i := range articles {
 		a := &articles[i]
+		// 摘要是由正文生成的，加密文章的摘要等同于正文摘录，与 get_article 的
+		// 口径保持一致：不外泄。
+		summary := a.Summary
+		if a.IsLocked {
+			summary = ""
+		}
 		briefs = append(briefs, ArticleBrief{
 			ID:           a.ID,
 			Title:        a.Title,
 			CategoryName: categoryByID[a.CategoryID].Name,
 			Tags:         tagByArticle[a.ID],
-			Summary:      a.Summary,
+			Summary:      summary,
 			WordNum:      a.WordNum,
 			CreatedAt:    a.CreatedAt,
 			AuthorType:   a.AuthorType,
 			AuthorName:   a.AuthorName,
 			AuthorKeyID:  a.AuthorKeyID,
+			IsLocked:     a.IsLocked,
 		})
 	}
 	return briefs, total, nil

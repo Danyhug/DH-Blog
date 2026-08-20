@@ -346,3 +346,46 @@ export function getGatewayLogs(params: {
 export function getGatewayStats(days = 1): Promise<GatewayStats> {
   return request({ url: '/admin/gateway/stats', method: 'get', params: { days } })
 }
+
+/** MCP 工具的一个入参，由后端从工具的 JSON Schema 摊平而来 */
+interface GatewayMcpParam {
+  name: string
+  type: string
+  description: string
+  required: boolean
+}
+
+export interface GatewayMcpTool {
+  name: string
+  title: string
+  /** 原样是模型看到的工具说明，不是给管理员写的摘要 */
+  description: string
+  /** 门槛 scope；等于基线 scope 时表示每把 Key 都能用 */
+  scope: string
+  params: GatewayMcpParam[]
+}
+
+export interface GatewayMcpScope {
+  value: string
+  label: string
+  description: string
+  /** 基线能力，每把 Key 自带，不作为可勾选项 */
+  baseline: boolean
+}
+
+export interface GatewayMcpCatalog {
+  serverName: string
+  version: string
+  instructions: string
+  endpoint: string
+  scopes: GatewayMcpScope[]
+  tools: GatewayMcpTool[]
+}
+
+/**
+ * 工具目录来自后端实际挂载的工具表。前端不再自己维护工具名与 scope 清单，
+ * 后端新注册一个 MCP 工具，这里就自动多一项。
+ */
+export function getGatewayMcpCatalog(): Promise<GatewayMcpCatalog> {
+  return request({ url: '/admin/gateway/mcp/tools', method: 'get' })
+}

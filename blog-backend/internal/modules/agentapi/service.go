@@ -3,7 +3,6 @@ package agentapi
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -132,19 +131,14 @@ func (s *grantService) Grant(articleID int, note string) (*EditGrant, error) {
 // so the audit trail reflects only real uses.
 func (s *grantService) Validate(articleID int, token string) (*EditGrant, error) {
 	token = strings.TrimSpace(token)
-	hash := hashGrantToken(token)
-	grant, err := s.repo.ByHash(hash)
+	// 校验就是「拿明文的摘要去查行」：查得到即等值，没有可比较的第二个值，
+	// 因此这里不需要（也无法）再做一次恒定时间比较。
+	grant, err := s.repo.ByHash(hashGrantToken(token))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrGrantNotFound
 		}
 		return nil, err
-	}
-	// Constant-time comparison in addition to the indexed lookup: the hash is
-	// the sensitive half of the credential, and the comparison must not leak
-	// how close a guessed digest is to the stored one.
-	if subtle.ConstantTimeCompare([]byte(hash), []byte(grant.TokenHash)) != 1 {
-		return nil, ErrGrantNotFound
 	}
 
 	now := s.now()

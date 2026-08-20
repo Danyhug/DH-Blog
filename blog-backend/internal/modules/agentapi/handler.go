@@ -30,8 +30,8 @@ type createGrantRequest struct {
 }
 
 // createGrant issues a grant and returns the plaintext token exactly once.
-// The endpoint keeps accepting articleId even though the UI does not expose it
-// yet, so an early adopter can bind a grant to one article.
+// articleId binds the grant to a single article; 0 means any article, which the
+// admin UI makes an explicit choice rather than the default.
 func (h *grantHandler) createGrant(c *gin.Context) {
 	var req createGrantRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

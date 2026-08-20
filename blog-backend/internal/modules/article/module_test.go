@@ -608,3 +608,57 @@ func TestDeleteArticleIsNotRepeatable(t *testing.T) {
 		t.Fatalf("second delete err = %v, want ErrArticleNotFound", err)
 	}
 }
+
+func TestUpdateArticleKeepsAuthorKeyIDWhenPayloadCannotCarryIt(t *testing.T) {
+	db := openArticleTestDB(t)
+	cache := newTestCache()
+	articles := NewArticleRepository(db, NewCategoryRepository(db), NewTagRepository(db, cache), cache)
+
+	article := Article{Title: "Agent 写的", Content: "正文", AuthorType: "agent", AuthorName: "Claude", AuthorKeyID: 7}
+	if err := db.Create(&article).Error; err != nil {
+		t.Fatalf("create article: %v", err)
+	}
+
+	// 模拟后台编辑器提交：author_key_id 是 json:"-"，请求永远带不上它
+	update := Article{Title: "站长改了错别字", Content: "正文", AuthorType: "agent", AuthorName: "Claude"}
+	update.ID = article.ID
+	if err := articles.UpdateArticle(&update); err != nil {
+		t.Fatalf("update article: %v", err)
+	}
+
+	var stored Article
+	if err := db.First(&stored, article.ID).Error; err != nil {
+		t.Fatalf("load article: %v", err)
+	}
+	if stored.AuthorKeyID != 7 {
+		t.Fatalf("stored authorKeyID = %d, want the original 7", stored.AuthorKeyID)
+	}
+	if stored.Title != "站长改了错别字" {
+		t.Fatalf("stored title = %q, want the updated title", stored.Title)
+	}
+}
+
+func TestUpdateArticleWithSummaryClearsIt(t *testing.T) {
+	db := openArticleTestDB(t)
+	cache := newTestCache()
+	articles := NewArticleRepository(db, NewCategoryRepository(db), NewTagRepository(db, cache), cache)
+
+	article := Article{Title: "标题", Content: "正文", Summary: "过时的摘要"}
+	if err := db.Create(&article).Error; err != nil {
+		t.Fatalf("create article: %v", err)
+	}
+
+	update := Article{Title: "标题", Content: "正文"}
+	update.ID = article.ID
+	if err := articles.UpdateArticleWithSummary(&update); err != nil {
+		t.Fatalf("update article: %v", err)
+	}
+
+	var stored Article
+	if err := db.First(&stored, article.ID).Error; err != nil {
+		t.Fatalf("load article: %v", err)
+	}
+	if stored.Summary != "" {
+		t.Fatalf("stored summary = %q, want it cleared", stored.Summary)
+	}
+}

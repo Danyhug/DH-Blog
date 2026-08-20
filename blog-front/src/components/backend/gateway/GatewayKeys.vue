@@ -36,53 +36,7 @@
 
             <p class="mt-3 mb-0 text-xs text-gray-400 leading-relaxed">
                 原生透传保持上游的请求与响应格式，现有 SDK 改 base_url 即可；透传不做跨供应商回退，上游报什么就返回什么。
-            </p>
-        </SectionPanel>
-
-        <SectionPanel title="接入 Claude Code" subtitle="装好后用它替掉 Claude Code 内置的 WebSearch">
-            <template #icon>
-                <el-icon>
-                    <MagicStick />
-                </el-icon>
-            </template>
-
-            <el-alert v-if="insecureTransport" type="warning" :closable="false" show-icon class="mb-4">
-                <template #title>
-                    当前基础地址是 http，Key 会以明文经过网络。建议只在本机或内网这么连，公网请尽快换成 https。
-                </template>
-            </el-alert>
-
-            <div class="step">1. 挂上 MCP Server（把 Key 换成下面签发的那把）</div>
-            <div class="code-block">
-                <pre>{{ mcpAddCommand }}</pre>
-                <el-button class="copy-btn" link type="primary" :icon="CopyDocument"
-                    @click="copy(mcpAddCommand, '命令')" />
-            </div>
-
-            <div class="step">或写进项目的 <code>.mcp.json</code>，Key 从环境变量取、不落进仓库</div>
-            <div class="code-block">
-                <pre>{{ mcpJson }}</pre>
-                <el-button class="copy-btn" link type="primary" :icon="CopyDocument" @click="copy(mcpJson, '配置')" />
-            </div>
-
-            <div class="step">
-                2. 禁掉内置搜索，写进 <code>~/.claude/settings.json</code>
-                <span class="step-sub">不禁的话两个搜索工具并存，模型多半仍会用内置那个</span>
-            </div>
-            <div class="code-block">
-                <pre>{{ denyWebSearchJson }}</pre>
-                <el-button class="copy-btn" link type="primary" :icon="CopyDocument"
-                    @click="copy(denyWebSearchJson, '配置')" />
-            </div>
-
-            <p class="mt-4 mb-0 text-xs text-gray-400 leading-relaxed">
-                3. 在 Claude Code 里执行 <code>/mcp</code> 应该能看到 <code>dh-search</code>，
-                工具名为 <code>web_search</code>，可选的 provider 会按这把 Key 的供应商限制自动裁剪。<br />
-                内置 <code>WebSearch</code> 只给标题和链接，要读正文还得再 <code>WebFetch</code> 一次；
-                这个工具直接带摘要，需要全文时把 <code>include_raw_content</code> 设为 true 即可，省掉那一步。<br />
-                域名过滤同时认 <code>allowed_domains</code> / <code>blocked_domains</code>（内置搜索的叫法）
-                和 <code>include_domains</code> / <code>exclude_domains</code>。<br />
-                MCP 调用与统一接口共用限速、配额与缓存，流水里的 endpoint 记为 <code>mcp/search</code>。
+                <code>/mcp</code> 的工具目录与接入步骤见「MCP 能力」标签页。
             </p>
         </SectionPanel>
 
@@ -171,12 +125,16 @@
                     </el-select>
                 </el-form-item>
                 <el-form-item label="能力范围">
-                    <el-select v-model="createScopes" multiple placeholder="留空 = 纯搜索 Key" class="w-full">
-                        <el-option v-for="opt in scopeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
-                    </el-select>
-                    <div class="text-xs text-gray-400 mt-1">
-                        联网搜索对任何 Key 始终可用，无需勾选；下方只配置内容能力（留空即为纯搜索 Key）。
-                        content:write 才能创建/修改文章与传图。
+                    <el-checkbox-group v-model="createScopes" class="w-full">
+                        <div v-for="opt in selectableScopes" :key="opt.value" class="mb-1 last:mb-0">
+                            <el-checkbox :value="opt.value">
+                                {{ opt.label }} <code>{{ opt.value }}</code>
+                            </el-checkbox>
+                            <div class="text-xs text-gray-400 leading-relaxed pl-6 -mt-1">{{ opt.description }}</div>
+                        </div>
+                    </el-checkbox-group>
+                    <div v-if="baselineScope" class="text-xs text-gray-400 mt-1 leading-relaxed">
+                        {{ baselineScope.label }}对任何 Key 始终可用，无需勾选；上面都不勾就是一把纯搜索 Key。
                     </div>
                 </el-form-item>
                 <el-form-item label="署名">
@@ -211,13 +169,9 @@
             </el-input>
 
             <div class="step mt-4">接入 Claude Code，直接复制执行</div>
-            <div class="code-block">
-                <pre>{{ createdMcpCommand }}</pre>
-                <el-button class="copy-btn" link type="primary" :icon="CopyDocument"
-                    @click="copy(createdMcpCommand, '命令')" />
-            </div>
+            <CodeBlock :code="createdMcpCommand" label="命令" />
             <p class="mt-3 mb-0 text-xs text-gray-400">
-                装完记得按上面第 2 步禁掉内置 <code>WebSearch</code>，否则两个搜索工具并存。
+                其余接入步骤（禁用内置 <code>WebSearch</code>、这把 Key 能看到哪些工具）见「MCP 能力」标签页。
             </p>
 
             <template #footer>
@@ -230,19 +184,22 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { ElMessageBox } from 'element-plus';
-import { CopyDocument, Key, Link, MagicStick, Plus, Refresh } from '@element-plus/icons-vue';
+import { CopyDocument, Key, Link, Plus, Refresh } from '@element-plus/icons-vue';
 import { notify } from '@/utils/notification';
 import SectionPanel from './SectionPanel.vue';
+import CodeBlock from './CodeBlock.vue';
 import { formatTime } from './format';
 import {
     createGatewayApiKey,
     deleteGatewayApiKey,
     gatewayBaseUrl,
     getGatewayApiKeys,
+    getGatewayMcpCatalog,
     revealGatewayApiKey,
     updateGatewayApiKey,
     type CreateGatewayApiKeyPayload,
     type GatewayApiKey,
+    type GatewayMcpScope,
     type GatewayProvider
 } from '@/api/gateway';
 
@@ -261,30 +218,6 @@ const endpoints = [
 ];
 
 const mcpUrl = `${baseUrl}/mcp`;
-// 站点还没上 https 时如实提示，而不是假装 Key 的传输是安全的
-const insecureTransport = mcpUrl.startsWith('http://');
-
-function mcpCommandFor(key: string) {
-    return `claude mcp add --transport http dh-search ${mcpUrl} \\\n  --header "Authorization: Bearer ${key}" --scope user`;
-}
-
-const mcpAddCommand = mcpCommandFor('<你的网关 Key>');
-
-// WebSearch 的权限规则不带参数，deny 里写裸工具名就是全部禁用
-const denyWebSearchJson = JSON.stringify({
-    permissions: { deny: ['WebSearch'] }
-}, null, 2);
-
-// 单引号字符串，${DH_GATEWAY_KEY} 是要原样写进配置的占位符，不能被模板插值吃掉
-const mcpJson = JSON.stringify({
-    mcpServers: {
-        'dh-search': {
-            type: 'http',
-            url: mcpUrl,
-            headers: { Authorization: 'Bearer ${DH_GATEWAY_KEY}' }
-        }
-    }
-}, null, 2);
 
 const apiKeys = ref<GatewayApiKey[]>([]);
 const loading = ref(false);
@@ -293,20 +226,17 @@ const revealing = ref(0);
 const createDialogVisible = ref(false);
 const creating = ref(false);
 const createAllowed = ref<string[]>([]);
-// 搜索恒为基线能力，前端不再把它做成可勾选项；这里只配置内容权限。
-// 若一条存量 Key 的 scopes 里仍有 search（后端 NormalizeScopes 仍接受它），
-// scopeLabel 的映射把这种旧值渲染成可读文案。
-const scopeOptions = [
-    { value: 'content:read', label: '读取文章' },
-    { value: 'content:write', label: '写入文章' }
-];
-const scopeLabels: Record<string, string> = {
-    search: '联网搜索',
-    'content:read': '读取文章',
-    'content:write': '写入文章'
-};
+// 能力清单取自后端的 scope 目录，后端加一类能力这里自动多一个勾选项。
+// 基线能力（搜索）每把 Key 自带，做成勾选项会让人以为可以取消，所以只在说明里提一句；
+// 存量 Key 的 scopes 里若仍显式存着它，scopeLabel 照样渲染得出中文名。
+const scopeCatalog = ref<GatewayMcpScope[]>([]);
+// 挂载别名跟着服务器自报的名字走，和「MCP 能力」页给的命令保持一致
+const serverName = ref('dh-blog');
+const selectableScopes = computed(() => scopeCatalog.value.filter((item) => !item.baseline));
+const baselineScope = computed(() => scopeCatalog.value.find((item) => item.baseline));
 const createScopes = ref<string[]>([]);
-const scopeLabel = (s: string) => scopeLabels[s] || s;
+const scopeLabel = (value: string) =>
+    scopeCatalog.value.find((item) => item.value === value)?.label || value;
 const createForm = ref<CreateGatewayApiKeyPayload>({
     name: '',
     rateLimitPerMin: 60,
@@ -319,7 +249,10 @@ const secretDialogVisible = ref(false);
 const createdSecret = ref('');
 const secretName = ref('');
 
-const createdMcpCommand = computed(() => mcpCommandFor(createdSecret.value));
+const createdMcpCommand = computed(
+    () => `claude mcp add --transport http ${serverName.value} ${mcpUrl} \\\n` +
+        `  --header "Authorization: Bearer ${createdSecret.value}" --scope user`
+);
 
 async function load() {
     loading.value = true;
@@ -401,7 +334,15 @@ async function onDelete(key: GatewayApiKey) {
     await load();
 }
 
+async function loadScopeCatalog() {
+    const catalog = await getGatewayMcpCatalog();
+    scopeCatalog.value = catalog.scopes;
+    serverName.value = catalog.serverName;
+}
+
 onMounted(load);
+// 目录只决定表单里渲染哪些勾选项，单独拉：它挂了不该连带把 Key 列表也空着
+onMounted(loadScopeCatalog);
 </script>
 
 <style scoped>
@@ -409,39 +350,6 @@ onMounted(load);
     margin-bottom: 8px;
     font-size: 13px;
     color: #475467;
-}
-
-.step:not(:first-of-type) {
-    margin-top: 16px;
-}
-
-.step-sub {
-    margin-left: 8px;
-    font-size: 12px;
-    color: #98a2b3;
-}
-
-.code-block {
-    position: relative;
-    padding: 12px 40px 12px 14px;
-    border: 1px solid #e9edf2;
-    border-radius: 10px;
-    background-color: #fafbfc;
-}
-
-.code-block pre {
-    margin: 0;
-    font-size: 12px;
-    line-height: 1.75;
-    color: #476582;
-    white-space: pre-wrap;
-    word-break: break-all;
-}
-
-.copy-btn {
-    position: absolute;
-    top: 8px;
-    right: 10px;
 }
 
 .masked {

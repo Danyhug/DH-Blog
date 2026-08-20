@@ -538,13 +538,17 @@ func TestGetArticleReturnsFullContent(t *testing.T) {
 func TestGetArticleLockedHidesContent(t *testing.T) {
 	fixture := newToolFixture(t)
 	id := fixture.createArticle(t, "加密的文章", 0)
-	if err := fixture.db.Exec("UPDATE articles SET is_locked = ? WHERE id = ?", true, id).Error; err != nil {
+	if err := fixture.db.Exec("UPDATE articles SET is_locked = ?, summary = ? WHERE id = ?", true, "机密摘要", id).Error; err != nil {
 		t.Fatalf("lock article: %v", err)
 	}
 	tool := fixture.tool(t, "get_article")
 	_, data, _ := callTool(t, tool, identity(7, scopeContentRead), map[string]any{"id": id})
 	if data["content"] != "" {
 		t.Fatalf("locked content = %q, want empty", data["content"])
+	}
+	// 摘要是正文生成物，跟正文一起藏起来，否则等于把刚拒绝的内容换个形式给出去
+	if data["summary"] != "" {
+		t.Fatalf("locked summary = %q, want empty", data["summary"])
 	}
 	if data["isLocked"] != true {
 		t.Fatalf("isLocked = %v, want true", data["isLocked"])
@@ -1008,5 +1012,121 @@ func TestUploadImageRejectsEmptyFileName(t *testing.T) {
 	}
 	if fixture.images.calls != 0 {
 		t.Fatal("empty file name reached the image store")
+	}
+}
+
+func TestCreateArticleStripsAPIPrefixFromThumbnail(t *testing.T) {
+	fixture := newToolFixture(t)
+	tool := fixture.tool(t, "create_article")
+	// upload_image 返回的是能直接写进 Markdown 的 /api/... 链接，而 thumbnailUrl
+	// 存的是相对路径（前端渲染时再拼 SERVER_URL），照搬会渲染成 /api//api/...
+	_, data, _ := callTool(t, tool, identity(7, scopeContentWrite), map[string]any{
+		"title": "带封面的文章", "content": "正文", "thumbnail_url": "/api/博客/1_x.png",
+	})
+	stored, err := fixture.articles.Get(context.Background(), int(data["id"].(float64)))
+	if err != nil {
+		t.Fatalf("load created article: %v", err)
+	}
+	if stored.ThumbnailURL != "博客/1_x.png" {
+		t.Fatalf("thumbnailUrl = %q, want the relative form 博客/1_x.png", stored.ThumbnailURL)
+	}
+}
+
+func TestCreateArticleKeepsRelativeThumbnailAsIs(t *testing.T) {
+	fixture := newToolFixture(t)
+	tool := fixture.tool(t, "create_article")
+	_, data, _ := callTool(t, tool, identity(7, scopeContentWrite), map[string]any{
+		"title": "已是相对路径", "content": "正文", "thumbnail_url": " 博客/2_y.png ",
+	})
+	stored, err := fixture.articles.Get(context.Background(), int(data["id"].(float64)))
+	if err != nil {
+		t.Fatalf("load created article: %v", err)
+	}
+	if stored.ThumbnailURL != "博客/2_y.png" {
+		t.Fatalf("thumbnailUrl = %q, want 博客/2_y.png", stored.ThumbnailURL)
+	}
+}
+
+func TestUpdateLockedArticleDeniedEvenWithGrant(t *testing.T) {
+	fixture := newToolFixture(t)
+	id := fixture.createArticle(t, "加密的文章", 0)
+	if err := fixture.db.Exec("UPDATE articles SET is_locked = ? WHERE id = ?", true, id).Error; err != nil {
+		t.Fatalf("lock article: %v", err)
+	}
+	grant, err := fixture.grants.Grant(0, "")
+	if err != nil {
+		t.Fatalf("issue grant: %v", err)
+	}
+	tool := fixture.tool(t, "update_article")
+	result, _, text := callTool(t, tool, identity(7, scopeContentWrite), map[string]any{
+		"id": id, "edit_token": grant.TokenPlain, "content": "盲改的正文",
+	})
+	if !result.IsError {
+		t.Fatal("locked article must not be updatable, grant or not")
+	}
+	if !strings.Contains(text, "加密") {
+		t.Fatalf("denial %q does not explain the lock", text)
+	}
+	stored, err := fixture.articles.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if stored.Content != "正文 加密的文章" {
+		t.Fatalf("locked content was rewritten: %q", stored.Content)
+	}
+	if len(fixture.events.denied) != 1 {
+		t.Fatalf("denied events = %#v, want the refusal on record", fixture.events.denied)
+	}
+}
+
+func TestUpdateArticleClearsSummaryWhenExplicitlyEmpty(t *testing.T) {
+	fixture := newToolFixture(t)
+	tool := fixture.tool(t, "create_article")
+	_, data, _ := callTool(t, tool, identity(7, scopeContentWrite), map[string]any{
+		"title": "有摘要的文章", "content": "正文", "summary": "过时的摘要",
+	})
+	id := int(data["id"].(float64))
+	result, _, text := callTool(t, fixture.tool(t, "update_article"), identity(7, scopeContentWrite), map[string]any{
+		"id": id, "summary": "",
+	})
+	if result.IsError {
+		t.Fatalf("clearing the summary failed: %s", text)
+	}
+	stored, err := fixture.articles.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if stored.Summary != "" {
+		t.Fatalf("summary = %q, want it cleared", stored.Summary)
+	}
+}
+
+func TestListArticlesDoesNotMatchLockedContent(t *testing.T) {
+	fixture := newToolFixture(t)
+	locked := fixture.createArticle(t, "加密的文章", 0)
+	if err := fixture.db.Exec("UPDATE articles SET is_locked = ?, content = ?, summary = ? WHERE id = ?",
+		true, "内部口令 hunter2", "机密摘要", locked).Error; err != nil {
+		t.Fatalf("lock article: %v", err)
+	}
+	tool := fixture.tool(t, "list_articles")
+
+	// 正文关键词不能命中加密文章，否则 total 就是一个正文探测器
+	_, probe, _ := callTool(t, tool, identity(7, scopeContentRead), map[string]any{"keyword": "hunter2"})
+	if probe["total"].(float64) != 0 {
+		t.Fatalf("locked body matched keyword: total = %v, want 0", probe["total"])
+	}
+
+	// 标题命中仍然返回该文章，但摘要（由正文生成）不外泄
+	_, byTitle, _ := callTool(t, tool, identity(7, scopeContentRead), map[string]any{"keyword": "加密"})
+	items := byTitle["articles"].([]any)
+	if len(items) != 1 {
+		t.Fatalf("title keyword returned %d articles, want 1", len(items))
+	}
+	row := items[0].(map[string]any)
+	if row["summary"] != "" {
+		t.Fatalf("locked summary leaked: %v", row["summary"])
+	}
+	if row["isLocked"] != true {
+		t.Fatalf("isLocked = %v, want true so the caller can tell", row["isLocked"])
 	}
 }

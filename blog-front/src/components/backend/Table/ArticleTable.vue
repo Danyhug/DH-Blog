@@ -1,18 +1,20 @@
 <template>
   <el-table :data="props.articles" style="width: 100%;">
     <el-table-column prop="id" label="编号" width="70" />
-    <el-table-column prop="title" label="文章标题" width="145" />
+    <el-table-column label="文章标题" min-width="220">
+      <template #default="scope">
+        <!-- 站长手写是常态，只有 agent 写的才标出来，省下一整列 -->
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span>{{ scope.row.title }}</span>
+          <el-tag v-if="scope.row.authorType === 'agent'" size="small" type="warning" effect="plain">
+            AI · {{ scope.row.authorName }}
+          </el-tag>
+        </div>
+      </template>
+    </el-table-column>
     <el-table-column prop="categoryName" label="分类">
       <template #default="scope">
         <el-tag type="primary">{{ scope.row.categoryName }}</el-tag>
-      </template>
-    </el-table-column>
-    <el-table-column label="作者">
-      <template #default="scope">
-        <el-tag v-if="scope.row.authorType === 'agent'" size="small" type="warning" effect="plain">
-          AI · {{ scope.row.authorName }}
-        </el-tag>
-        <span v-else class="text-gray-400">站长</span>
       </template>
     </el-table-column>
 

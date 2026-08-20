@@ -94,6 +94,9 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 	admin.DELETE("/keys/:id", m.handler.deleteAPIKey)
 	admin.GET("/logs", m.handler.listLogs)
 	admin.GET("/stats", m.handler.stats)
+	// The MCP tool catalog: what the server currently mounts and which scope
+	// gates each tool, so the admin page never restates the tool table.
+	admin.GET("/mcp/tools", m.handler.listMCPTools)
 }
 
 // Shutdown drains the asynchronous log writer.

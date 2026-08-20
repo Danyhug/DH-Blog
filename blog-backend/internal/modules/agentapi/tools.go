@@ -68,6 +68,20 @@ func editableOf(authorKeyID, keyID int) bool {
 // exists only to keep the format string in one place.
 func timeText(t model.JSONTime) string { return t.Format("2006-01-02 15:04:05") }
 
+// blogImageURLPrefix is what upload_image prepends so its URL can be dropped
+// straight into Markdown.
+const blogImageURLPrefix = "/api/"
+
+// normalizeThumbnailURL converts an upload_image URL into what thumbnailUrl
+// stores. The two conventions differ: Markdown needs the served URL, while
+// thumbnailUrl keeps the path relative (the admin editor saves it that way and
+// the frontend prepends SERVER_URL at render time). Handing the Markdown form
+// straight to thumbnail_url would render as /api//api/… , so strip the prefix
+// back off here and accept either form from the model.
+func normalizeThumbnailURL(raw string) string {
+	return strings.TrimPrefix(strings.TrimSpace(raw), blogImageURLPrefix)
+}
+
 // --- list_articles ---
 
 type listArticlesArgs struct {
@@ -86,6 +100,7 @@ type listArticleView struct {
 	CreatedAt  string   `json:"createdAt"`
 	AuthorType string   `json:"authorType"`
 	AuthorName string   `json:"authorName"`
+	IsLocked   bool     `json:"isLocked"`
 	Editable   bool     `json:"editable"`
 }
 
@@ -108,11 +123,11 @@ func (t *listArticlesTool) Definition(context.Context) mcp.Definition {
 	return mcp.Definition{
 		Name:        toolListArticles,
 		Title:       "列出文章",
-		Description: "按关键词和分页列出博客文章，返回标题、分类、标签、摘要、字数、创建时间、作者，以及 editable 字段（本凭证能否免授权修改该篇）。editable 为 false 的文章需要站长签发临时授权才能修改。",
+		Description: "按关键词和分页列出博客文章，返回标题、分类、标签、摘要、字数、创建时间、作者，以及 editable 字段（本凭证能否免授权修改该篇）。editable 为 false 的文章需要站长签发临时授权才能修改。isLocked 为 true 的是加密文章，不返回摘要，也不允许修改。",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"keyword": map[string]any{"type": "string", "description": "标题或正文的关键词，可选。"},
+				"keyword": map[string]any{"type": "string", "description": "标题或正文的关键词，可选；加密文章只按标题匹配。"},
 				"page":    map[string]any{"type": "integer", "description": "页码，从 1 开始，默认 1。"},
 				"page_size": map[string]any{
 					"type": "integer", "description": "每页条数，默认 20，最大 50。",
@@ -166,6 +181,7 @@ func (t *listArticlesTool) Call(ctx context.Context, raw json.RawMessage) mcp.Re
 			CreatedAt:  timeText(brief.CreatedAt),
 			AuthorType: brief.AuthorType,
 			AuthorName: brief.AuthorName,
+			IsLocked:   brief.IsLocked,
 			Editable:   editableOf(brief.AuthorKeyID, identity.KeyID()),
 		})
 	}
@@ -207,7 +223,7 @@ func (t *getArticleTool) Definition(context.Context) mcp.Definition {
 	return mcp.Definition{
 		Name:        toolGetArticle,
 		Title:       "读取文章",
-		Description: "按 id 读取一篇文章的完整 Markdown 正文与元信息。加密文章不返回正文。editable 表示本凭证能否免授权修改该篇。",
+		Description: "按 id 读取一篇文章的完整 Markdown 正文与元信息。加密文章不返回正文与摘要，也不能修改。editable 表示本凭证能否免授权修改该篇。",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -252,8 +268,11 @@ func (t *getArticleTool) Call(ctx context.Context, raw json.RawMessage) mcp.Resu
 	if detail.IsLocked {
 		// The body is deliberately absent; the note tells the model why and
 		// that unlocking is an owner-side action, not a parameter it can pass.
+		// The summary goes with it: it is generated from the body, so leaving
+		// it in would hand back an excerpt of what was just withheld.
 		result.Content = ""
-		result.ContentNote = "该文章已加密，正文不可见"
+		result.Summary = ""
+		result.ContentNote = "该文章已加密，正文与摘要不可见"
 	}
 	return textResult(result)
 }
@@ -325,7 +344,7 @@ func (t *createArticleTool) Call(ctx context.Context, raw json.RawMessage) mcp.R
 		Summary:      args.Summary,
 		CategoryName: args.Category,
 		Tags:         args.Tags,
-		ThumbnailURL: args.ThumbnailURL,
+		ThumbnailURL: normalizeThumbnailURL(args.ThumbnailURL),
 		AuthorType:   authorTypeAgent,
 		AuthorName:   identity.AuthorName(),
 		AuthorKeyID:  identity.KeyID(),
@@ -376,7 +395,7 @@ func (t *updateArticleTool) Definition(context.Context) mcp.Definition {
 	return mcp.Definition{
 		Name:        toolUpdateArticle,
 		Title:       "更新文章",
-		Description: "按 id 更新文章，只更新传入的字段。edit_token 只有改非本 Agent 创建的文章时才需要，由站长从后台签发，有效期 1 小时；改自己创建的文章不需要。",
+		Description: "按 id 更新文章，只更新传入的字段。edit_token 只有改非本 Agent 创建的文章时才需要，由站长从后台签发，有效期 1 小时；改自己创建的文章不需要。加密文章一律不能改。",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -432,10 +451,18 @@ func (t *updateArticleTool) Call(ctx context.Context, raw json.RawMessage) mcp.R
 		return mcp.ToolError("读取文章失败: " + err.Error())
 	}
 
+	agent := identity.AuthorName()
+	// 加密文章的正文对 Agent 不可见（get_article 会把它抹掉），因此任何改写都是
+	// 盲改：会用看不到的旧正文换成新正文。授权与否都不放行，站长要改请走后台。
+	if detail.IsLocked {
+		denial := "该文章已加密，正文对 Agent 不可见，不能通过工具修改；请站长在后台直接编辑"
+		t.events.ArticleUpdateDenied(agent, detail.Title, args.ID, denial)
+		return mcp.ToolError(denial)
+	}
+
 	// Authorization rule, in order: own article passes for free; everything
 	// else needs a grant token, and each failure mode says which one.
 	viaGrant := false
-	agent := identity.AuthorName()
 	if detail.AuthorKeyID != identity.KeyID() {
 		if strings.TrimSpace(args.EditToken) == "" {
 			denial := "这篇文章不是本 Agent 创建的，修改需要临时授权 Token。请让站长在后台「文章管理 → 生成 AI 修改授权」签发一个（有效期 1 小时），并把它作为 edit_token 参数传入"

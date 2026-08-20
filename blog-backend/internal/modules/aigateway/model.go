@@ -185,6 +185,37 @@ const (
 	ScopeContentWrite = "content:write"
 )
 
+// ScopeDescriptor describes one capability for the admin UI. It lives next to
+// the constants so adding a scope means editing one list: the catalog endpoint,
+// the key form's checkboxes and NormalizeScopes all read from here.
+type ScopeDescriptor struct {
+	Value       string `json:"value"`
+	Label       string `json:"label"`
+	Description string `json:"description"`
+	// Baseline marks a scope every key carries whether or not it is stored.
+	// The form must not offer it as a checkbox — unchecking it would suggest a
+	// key can be denied search, which HasScope's empty-list rule contradicts.
+	Baseline bool `json:"baseline"`
+}
+
+// ScopeCatalog is the full capability list, in the order the admin page shows.
+func ScopeCatalog() []ScopeDescriptor {
+	return []ScopeDescriptor{
+		{
+			Value: ScopeSearch, Label: "联网搜索", Baseline: true,
+			Description: "调用网关配置的搜索供应商。每把 Key 都有，无需勾选。",
+		},
+		{
+			Value: ScopeContentRead, Label: "读取文章",
+			Description: "列出与读取博客文章的正文和元信息，加密文章除外。",
+		},
+		{
+			Value: ScopeContentWrite, Label: "写入文章",
+			Description: "创建、修改文章并上传图片。改他人文章仍需站长逐篇临时授权。",
+		},
+	}
+}
+
 // Allows reports whether this key may use the named provider. An empty
 // AllowedProviders list means every registered provider is permitted.
 func (k *APIKey) Allows(provider string) bool {
@@ -263,6 +294,10 @@ var _ agentapi.Identity = (*APIKey)(nil)
 // than silently dropped, so a typo in the admin form surfaces instead of
 // quietly widening or narrowing a key's powers.
 func NormalizeScopes(raw string) (string, error) {
+	known := map[string]bool{}
+	for _, descriptor := range ScopeCatalog() {
+		known[descriptor.Value] = true
+	}
 	seen := map[string]bool{}
 	scopes := make([]string, 0, 3)
 	for _, item := range strings.Split(raw, ",") {
@@ -270,9 +305,7 @@ func NormalizeScopes(raw string) (string, error) {
 		if item == "" {
 			continue
 		}
-		switch item {
-		case ScopeSearch, ScopeContentRead, ScopeContentWrite:
-		default:
+		if !known[item] {
 			return "", fmt.Errorf("不支持的 scope: %q", item)
 		}
 		if !seen[item] {

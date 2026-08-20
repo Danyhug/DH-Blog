@@ -88,9 +88,13 @@ func TestMCPInitializeNegotiatesProtocolVersion(t *testing.T) {
 			if result.Capabilities.Tools == nil {
 				t.Error("未声明 tools 能力，客户端不会去拉工具列表")
 			}
-			// instructions 是客户端直接交给模型的，必须说清这个 server 能干什么
-			if !strings.Contains(result.Instructions, "搜索") || !strings.Contains(result.Instructions, "写作") {
-				t.Errorf("instructions 应同时涵盖搜索与写作: %q", result.Instructions)
+			// instructions 是客户端直接交给模型的，必须说清这个 server 能干什么。
+			// 这把 key 只有搜索，就不该替它吹嘘写作能力（详见 TestMCPInstructionsFollowKeyScopes）
+			if !strings.Contains(result.Instructions, "搜索") {
+				t.Errorf("instructions 没提搜索: %q", result.Instructions)
+			}
+			if strings.Contains(result.Instructions, "写作后台") {
+				t.Errorf("纯搜索 key 的 instructions 不该提写作能力: %q", result.Instructions)
 			}
 		})
 	}
@@ -499,5 +503,28 @@ func TestMCPToolDescriptionPresentsItselfAsTheWebSearch(t *testing.T) {
 	}
 	if strings.Contains(description, "博客") {
 		t.Errorf("描述不该把自己限定成博客的附属功能: %s", description)
+	}
+}
+
+// TestMCPBodyLimitDependsOnWriteScope verifies the 8MB body ceiling is a
+// concession to article Markdown and base64 images, not a free channel: a key
+// without content:write has no tool that can consume such a body and keeps the
+// small limit.
+func TestMCPBodyLimitDependsOnWriteScope(t *testing.T) {
+	module := newGatewayTestModule(t, gatewayTestConfig{Brave: braveOK("b1")})
+	engine := newTestEngine(module)
+
+	// 一个语法合法但超过只读上限的请求体：padding 塞在参数里
+	padding := strings.Repeat("x", maxMCPRequestBodyReadOnly)
+	body := `{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"pad":"` + padding + `"}}`
+
+	searchOnly := issueTestKey(t, module, nil)
+	if code := rpcErrorCode(t, doMCP(engine, searchOnly, body)); code != mcp.InvalidRequest {
+		t.Fatalf("只读 key 的超大请求体 error code = %d, 期望 %d（请求体过大）", code, mcp.InvalidRequest)
+	}
+
+	writer := issueTestKey(t, module, func(key *APIKey) { key.Scopes = ScopeContentWrite })
+	if response := decodeRPC(t, doMCP(engine, writer, body)); response.Error != nil {
+		t.Fatalf("写 key 的同一请求体不应被拒: %+v", response.Error)
 	}
 }

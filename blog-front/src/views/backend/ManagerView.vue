@@ -35,8 +35,19 @@
     </template>
   </el-dialog>
 
-  <el-dialog v-model="grantDialogVisible" title="生成 AI 修改授权" width="620px">
+  <el-dialog v-model="grantDialogVisible" title="生成 AI 修改授权" width="620px" @close="stopCountdown">
     <el-form :model="{ note: grantNote }" label-width="90px" size="default" @submit.prevent>
+      <el-form-item label="授权范围">
+        <el-radio-group v-model="grantScope">
+          <el-radio value="one">指定文章</el-radio>
+          <el-radio value="all">全站所有文章</el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item v-if="grantScope === 'one'" label="文章编号">
+        <el-input-number v-model="grantArticleId" :min="1" :controls="false" />
+        <span v-if="grantArticleTitle" class="ml-2 text-xs text-gray-500">《{{ grantArticleTitle }}》</span>
+        <span v-else class="ml-2 text-xs text-gray-400">左侧文章列表第一列的「编号」</span>
+      </el-form-item>
       <el-form-item label="备注">
         <el-input v-model="grantNote" placeholder="让 Claude 改错别字" clearable />
       </el-form-item>
@@ -50,6 +61,7 @@
 
     <el-alert type="info" :closable="false" show-icon class="mb-3">
       把这段 Token 交给 Agent，作为 update_article 的 edit_token 参数，1 小时内有效；也可吊销使其立即失效。
+      {{ grantScopeHint }}
     </el-alert>
 
     <template v-if="createdGrantVisible">
@@ -68,6 +80,14 @@
     <div class="text-sm font-medium mb-2">当前有效授权</div>
     <el-table :data="grants" v-loading="grantsLoading" size="small" empty-text="暂无有效授权">
       <el-table-column prop="tokenPrefix" label="Token 前缀" min-width="120" />
+      <el-table-column label="授权范围" width="110">
+        <template #default="scope">
+          <el-tag v-if="scope.row.articleId" size="small" type="success" effect="plain">
+            文章 #{{ scope.row.articleId }}
+          </el-tag>
+          <el-tag v-else size="small" type="danger" effect="plain">全站</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="note" label="备注" min-width="140">
         <template #default="scope">{{ scope.row.note || '—' }}</template>
       </el-table-column>
@@ -102,7 +122,7 @@ import { CopyDocument, Key, MagicStick } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 import { notify } from '@/utils/notification'
 import { Tag } from '@/types/Tag';
-import { onMounted, onUnmounted, reactive } from 'vue';
+import { onMounted, onUnmounted, reactive, computed } from 'vue';
 import { ref } from 'vue';
 import { useAdminStore } from '@/store/';
 
@@ -130,14 +150,36 @@ const stopPolling = () => {
 // AI 修改授权：签发弹窗 + 剩余时间倒计时 + 当前有效授权列表
 const grantDialogVisible = ref(false)
 const grantNote = ref('')
+// 默认按最小权限走：只授权某一篇，全站授权必须显式选择
+const grantScope = ref<'one' | 'all'>('one')
+const grantArticleId = ref<number>()
 const grantCreating = ref(false)
 const grants = ref<AgentGrant[]>([])
 const grantsLoading = ref(false)
 const createdGrantVisible = ref(false)
 const createdGrantToken = ref('')
+// 记住已签发那条的范围：签出来之后再改单选框，说明文字不能跟着变
+const createdGrantArticleId = ref<number>()
 const countdownText = ref('')
 const countdownExpired = ref(false)
 let countdownTimer: ReturnType<typeof setInterval> | null = null
+
+// 文章编号是手填的，能在当前列表里查到标题就回显一下，避免填错编号还浑然不觉
+const grantArticleTitle = computed(() => {
+  if (!grantArticleId.value) return ''
+  return articles.find(item => item.id === grantArticleId.value)?.title ?? ''
+})
+
+const grantScopeHint = computed(() => {
+  if (createdGrantVisible.value) {
+    return createdGrantArticleId.value
+      ? `这段 Token 只能修改文章 #${createdGrantArticleId.value}。`
+      : '这段 Token 是全站授权：有效期内可以修改任意一篇文章。'
+  }
+  return grantScope.value === 'one'
+    ? '将只授权修改指定编号的那一篇。'
+    : '将签发全站授权：有效期内 Agent 可以修改任意一篇文章。'
+})
 
 const stopCountdown = () => {
   if (countdownTimer !== null) {
@@ -176,7 +218,10 @@ const openGrantDialog = async () => {
   grantDialogVisible.value = true
   createdGrantVisible.value = false
   createdGrantToken.value = ''
+  createdGrantArticleId.value = undefined
   grantNote.value = ''
+  grantScope.value = 'one'
+  grantArticleId.value = undefined
   countdownText.value = ''
   countdownExpired.value = false
   stopCountdown()
@@ -187,22 +232,34 @@ const loadGrants = async () => {
   grantsLoading.value = true
   try {
     grants.value = await getAgentGrants()
+  } catch {
+    // 错误提示由 axios 拦截器统一负责
   } finally {
     grantsLoading.value = false
   }
 }
 
 const createGrant = async () => {
+  if (grantScope.value === 'one' && !grantArticleId.value) {
+    notify.warning('请填写要授权修改的文章编号')
+    return
+  }
   grantCreating.value = true
   try {
-    const created = await createAgentGrant({ note: grantNote.value || undefined })
+    const created = await createAgentGrant({
+      note: grantNote.value || undefined,
+      articleId: grantScope.value === 'one' ? grantArticleId.value : undefined,
+    })
     createdGrantToken.value = created.token
+    createdGrantArticleId.value = created.articleId || undefined
     createdGrantVisible.value = true
     countdownExpired.value = false
     startCountdown(created.expireAt)
-    notify.success('授权已生成')
+    notify.success(created.articleId ? `已生成授权：仅限文章 #${created.articleId}` : '已生成全站授权')
     grantNote.value = ''
     await loadGrants()
+  } catch {
+    // 错误提示由 axios 拦截器统一负责
   } finally {
     grantCreating.value = false
   }

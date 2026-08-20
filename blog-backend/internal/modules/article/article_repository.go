@@ -89,17 +89,36 @@ func (r *ArticleRepository) SaveArticle(article *Article) error {
 	return err
 }
 
+// UpdateArticle 保留「空摘要 = 未携带」的历史语义：后台编辑器可能不带 summary
+// （例如恢复旧草稿），此时沿用库里已生成的摘要。
 func (r *ArticleRepository) UpdateArticle(article *Article) error {
+	return r.updateArticle(article, true)
+}
+
+// UpdateArticleWithSummary 按调用方给的摘要原样落库，空字符串就是「清空摘要」。
+// 供明确区分了「未传」与「传空」的调用方（agentapi 的 update_article）使用。
+func (r *ArticleRepository) UpdateArticleWithSummary(article *Article) error {
+	return r.updateArticle(article, false)
+}
+
+func (r *ArticleRepository) updateArticle(article *Article, keepStoredSummaryWhenEmpty bool) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		article.WordNum = countWords(article.Content)
-		// 编辑器可能没有携带 summary（例如恢复旧草稿），此时保留库里已生成的摘要，
-		// 否则 tx.Save 会用零值把它抹掉。
-		if article.Summary == "" {
+		// tx.Save 是整行覆盖，请求里没带的字段会被零值抹掉，两个字段必须从库里补回：
+		// summary 见上面的历史语义；author_key_id 是 json:"-"，任何 HTTP 请求都
+		// 带不上它，不补回就会把 Agent 对自己文章的免授权编辑权静默清掉。
+		needStored := article.AuthorKeyID == 0 || (keepStoredSummaryWhenEmpty && article.Summary == "")
+		if needStored {
 			var stored Article
-			if err := tx.Select("summary").First(&stored, article.ID).Error; err != nil {
-				return fmt.Errorf("读取文章摘要失败: %w", err)
+			if err := tx.Select("summary", "author_key_id").First(&stored, article.ID).Error; err != nil {
+				return fmt.Errorf("读取文章原有字段失败: %w", err)
 			}
-			article.Summary = stored.Summary
+			if keepStoredSummaryWhenEmpty && article.Summary == "" {
+				article.Summary = stored.Summary
+			}
+			if article.AuthorKeyID == 0 {
+				article.AuthorKeyID = stored.AuthorKeyID
+			}
 		}
 		tags, err := r.resolveTags(tx, article.CategoryID, article.TagNames)
 		if err != nil {
