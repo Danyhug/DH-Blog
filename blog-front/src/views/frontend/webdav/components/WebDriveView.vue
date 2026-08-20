@@ -219,17 +219,10 @@ import {
   FolderIcon,
   FileIcon,
   FileTextIcon,
-  ImageIcon,
-  VideoIcon,
-  MusicIcon,
   XIcon,
   ArrowLeftIcon,
-  FileCodeIcon,
-  FileZipIcon,
-  FilePdfIcon,
-  FileSpreadsheetIcon,
-  FilePresentationIcon,
 } from '../utils/icons'
+import { detectFileType, getFileIcon } from '../utils/fileType'
 import { listFiles, createFolder, getDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, getUploadedChunks, cancelChunkUpload, FileInfo } from '@/api/file'
 import { notify } from '@/utils/notification'
 
@@ -301,107 +294,9 @@ const apiFiles = ref<FileInfo[]>([])
 // 将API返回的文件数据转换为组件使用的格式
 const convertedFiles = computed<FileItem[]>(() => {
   return apiFiles.value.map(file => {
-    // 确定文件图标
-    let icon;
-    let fileType: 'file' | 'folder' | 'image' | 'video' | 'audio' | 'code' | 'pdf' | 'archive' | 'spreadsheet' | 'presentation' | 'text' = file.is_folder ? 'folder' : 'file';
-
-    if (file.is_folder) {
-      icon = FolderIcon;
-    } else if (file.mimeType) {
-      // 根据MIME类型确定图标
-      if (file.mimeType.startsWith('image/')) {
-        icon = ImageIcon;
-        fileType = 'image';
-      } else if (file.mimeType.startsWith('video/')) {
-        icon = VideoIcon;
-        fileType = 'video';
-      } else if (file.mimeType.startsWith('audio/')) {
-        icon = MusicIcon;
-        fileType = 'audio';
-      } else if (file.mimeType.startsWith('application/pdf')) {
-        icon = FilePdfIcon;
-        fileType = 'pdf';
-      } else if (
-        file.mimeType.includes('zip') ||
-        file.mimeType.includes('compressed') ||
-        file.mimeType.includes('archive') ||
-        file.mimeType.includes('x-tar') ||
-        file.mimeType.includes('x-rar')
-      ) {
-        icon = FileZipIcon;
-        fileType = 'archive';
-      } else if (
-        file.mimeType.includes('excel') ||
-        file.mimeType.includes('spreadsheet') ||
-        file.mimeType.includes('csv')
-      ) {
-        icon = FileSpreadsheetIcon;
-        fileType = 'spreadsheet';
-      } else if (
-        file.mimeType.includes('powerpoint') ||
-        file.mimeType.includes('presentation')
-      ) {
-        icon = FilePresentationIcon;
-        fileType = 'presentation';
-      } else if (
-        file.mimeType.includes('javascript') ||
-        file.mimeType.includes('json') ||
-        file.mimeType.includes('html') ||
-        file.mimeType.includes('css') ||
-        file.mimeType.includes('xml') ||
-        file.mimeType.includes('text/plain') ||
-        file.mimeType.includes('text/markdown') ||
-        file.mimeType.includes('text/')
-      ) {
-        // 所有文本类型文件都归为text类型，以支持预览
-        icon = FileCodeIcon;
-        fileType = 'text';
-      } else {
-        icon = FileTextIcon;
-      }
-    } else {
-      // 如果没有MIME类型，尝试通过文件扩展名判断
-      const extension = file.name.split('.').pop()?.toLowerCase();
-      if (extension) {
-        if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(extension)) {
-          icon = ImageIcon;
-          fileType = 'image';
-        } else if (['mp4', 'webm', 'avi', 'mov', 'wmv', 'flv', 'mkv'].includes(extension)) {
-          icon = VideoIcon;
-          fileType = 'video';
-        } else if (['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'].includes(extension)) {
-          icon = MusicIcon;
-          fileType = 'audio';
-        } else if (extension === 'pdf') {
-          icon = FilePdfIcon;
-          fileType = 'pdf';
-        } else if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2'].includes(extension)) {
-          icon = FileZipIcon;
-          fileType = 'archive';
-        } else if (['xls', 'xlsx', 'csv', 'ods'].includes(extension)) {
-          icon = FileSpreadsheetIcon;
-          fileType = 'spreadsheet';
-        } else if (['ppt', 'pptx', 'odp'].includes(extension)) {
-          icon = FilePresentationIcon;
-          fileType = 'presentation';
-        } else if (
-          // 所有文本类型文件和编程语言文件都归为text类型，以支持预览
-          ['txt', 'md', 'markdown', 'text', 'log', 'rtf', 'js', 'ts', 'html', 'css', 'xml', 'json', 'py', 'java', 'c', 'cpp', 'go', 'php', 'rb', 'sh', 'bat', 'ps1', 'sql', 'yaml', 'yml', 'toml', 'ini', 'conf', 'config'].includes(extension)
-        ) {
-          // 根据文件类型使用不同的图标，但都归为text类型以支持预览
-          if (['js', 'ts', 'html', 'css', 'xml', 'json', 'py', 'java', 'c', 'cpp', 'go', 'php', 'rb', 'sh', 'sql', 'yaml', 'yml'].includes(extension)) {
-            icon = FileCodeIcon;
-          } else {
-            icon = FileTextIcon;
-          }
-          fileType = 'text';
-        } else {
-          icon = FileTextIcon;
-        }
-      } else {
-        icon = FileTextIcon;
-      }
-    }
+    // 类型与图标统一由 utils/fileType 判定，避免与 FilePreview 的扩展名表漂移
+    const fileType = detectFileType(file.name, file.mimeType, file.is_folder);
+    const icon = getFileIcon(file.name, fileType);
 
     // 格式化文件大小
     const formatSize = (size: number): string => {

@@ -161,6 +161,23 @@
             <iframe :src="currentFileUrl" frameborder="0" class="w-full h-full border-none" @load="onPreviewLoaded" @error="onPreviewError('PDF加载失败')"></iframe>
           </div>
 
+          <!-- CSV/TSV 表格预览 -->
+          <div v-else-if="currentFileType === 'csv'" class="w-full h-full bg-white rounded-xl overflow-auto shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-5">
+            <table class="w-full border-collapse text-sm">
+              <thead>
+                <tr>
+                  <th v-for="(cell, i) in csvHeader" :key="i" class="sticky top-0 bg-[#f6f8fa] border border-[#e5e7eb] px-3 py-2 text-left font-semibold text-[#333] whitespace-nowrap">{{ cell }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, r) in csvBody" :key="r" class="even:bg-[#fafbfc]">
+                  <td v-for="(cell, c) in row" :key="c" class="border border-[#e5e7eb] px-3 py-2 text-[#555] align-top">{{ cell }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="csvTruncated" class="mt-4 text-center text-[13px] text-[#888]">仅显示前 {{ csvBody.length }} 行，完整内容请下载查看</p>
+          </div>
+
           <!-- 文本文件预览 -->
           <div v-else-if="currentFileType === 'text'" class="w-full h-full bg-white rounded-xl overflow-auto shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-5">
             <div v-if="isMarkdown" class="markdown-content p-5 leading-relaxed text-[#333] font-sans">
@@ -258,6 +275,23 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css' // 引入GitHub样式的高亮CSS
+import {
+  detectFileType,
+  isPreviewable,
+  getExtension,
+  getLanguage,
+  isCodeFile as isCodeFileName,
+  parseDelimitedText
+} from '../utils/fileType'
+
+// CSV 预览的行数上限，避免超大表格把页面卡死
+const CSV_ROW_LIMIT = 500
+
+function escapeHtml(text: string): string {
+  return text.replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string
+  ))
+}
 
 // 定义路径段接口
 interface PathSegment {
@@ -305,67 +339,15 @@ const renderedMarkdown = ref('')
 // 高亮代码
 const highlightedCode = ref('')
 
-// 根据文件扩展名获取语言
-function getLanguage(fileName: string): string {
-  const extension = fileName.split('.').pop()?.toLowerCase();
-  if (!extension) return 'plaintext';
-  
-  // 映射常见的文件扩展名到highlight.js支持的语言
-  const langMap: Record<string, string> = {
-    js: 'javascript',
-    ts: 'typescript',
-    html: 'html',
-    htm: 'html',
-    vue: 'vue',
-    css: 'css',
-    xml: 'xml',
-    json: 'json',
-    py: 'python',
-    java: 'java',
-    c: 'c',
-    cpp: 'cpp',
-    go: 'go',
-    php: 'php',
-    rb: 'ruby',
-    sh: 'bash',
-    sql: 'sql',
-    yaml: 'yaml',
-    yml: 'yaml',
-    md: 'markdown',
-    markdown: 'markdown',
-    jsx: 'javascript',
-    tsx: 'typescript'
-  };
-  
-  return langMap[extension] || 'plaintext';
-}
-
 // 计算属性：是否支持预览的文件类型
-const isSupportedPreviewType = computed(() => {
-  const supportedTypes = ['image', 'video', 'audio', 'pdf', 'text'];
-  return supportedTypes.includes(props.file.type);
-});
+const isSupportedPreviewType = computed(() => isPreviewable(props.file.type));
 
 // ========== 统一计算属性（分享模式和普通模式共用） ==========
 
 // 分享文件类型（根据文件名扩展名判断）
 const shareFileType = computed(() => {
   if (!shareInfo.value) return 'file'
-  const name = shareInfo.value.file_name.toLowerCase()
-  const ext = name.split('.').pop() || ''
-
-  const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico']
-  const videoExts = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv']
-  const audioExts = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a']
-  const pdfExts = ['pdf']
-  const textExts = ['txt', 'log', 'md', 'markdown', 'json', 'xml', 'html', 'htm', 'css', 'js', 'ts', 'vue', 'py', 'java', 'c', 'cpp', 'go', 'php', 'rb', 'sh', 'sql', 'yaml', 'yml', 'ini', 'conf', 'cfg', 'env']
-
-  if (imageExts.includes(ext)) return 'image'
-  if (videoExts.includes(ext)) return 'video'
-  if (audioExts.includes(ext)) return 'audio'
-  if (pdfExts.includes(ext)) return 'pdf'
-  if (textExts.includes(ext)) return 'text'
-  return 'file'
+  return detectFileType(shareInfo.value.file_name)
 })
 
 // 是否可以进入预览模式（分享模式需要验证通过）
@@ -395,15 +377,16 @@ const currentFileType = computed(() => {
 // 统一的文件 URL
 const currentFileUrl = computed(() => {
   if (props.shareMode) {
-    // 分享模式：音视频使用流式 URL，其他使用 Blob URL
-    if (isStreamableMedia.value && shareStreamUrl.value) {
+    // 分享模式：直接渲染的类型走带 preview 的流式 URL，其他用 Blob URL
+    if (isInlineRendered.value && shareStreamUrl.value) {
       return shareStreamUrl.value
     }
     return shareBlobUrl.value
   }
-  // 普通模式：音视频使用 preview URL 支持流式传输
-  if (isStreamableMedia.value && props.file.id) {
-    return getDownloadUrl(props.file.id, true) // preview=true
+  // 普通模式：直接渲染的类型必须带 preview=true，否则后端返回 attachment，
+  // iframe 里的 PDF 会被浏览器当成下载而不是预览
+  if (isInlineRendered.value && props.file.id) {
+    return getDownloadUrl(props.file.id, true)
   }
   return fileUrl.value
 })
@@ -452,46 +435,48 @@ const handleRetry = () => {
 }
 
 // 统一的是否支持预览
-const currentSupportedPreviewType = computed(() => {
-  const supportedTypes = ['image', 'video', 'audio', 'pdf', 'text']
-  return supportedTypes.includes(currentFileType.value)
-})
+const currentSupportedPreviewType = computed(() => isPreviewable(currentFileType.value))
+
+// 需要把整份内容取回本地渲染的类型（文本 / 表格）
+const isTextLike = computed(() => ['text', 'csv'].includes(currentFileType.value))
 
 // 是否为流媒体类型（音视频）- 使用直接 URL 流式传输
 const isStreamableMedia = computed(() => {
   return ['video', 'audio'].includes(currentFileType.value)
 })
 
+// 由浏览器直接按 URL 渲染的类型（不经 axios 取内容），需要后端返回 inline
+const isInlineRendered = computed(() => {
+  return ['video', 'audio', 'image', 'pdf'].includes(currentFileType.value)
+})
+
 // 添加isMarkdown和isCodeFile计算属性
 const isMarkdown = computed(() => {
-  const name = currentFileName.value;
-  if (!name) return false;
-  const extension = name.split('.').pop()?.toLowerCase();
-  return extension === 'md' || extension === 'markdown';
+  const ext = getExtension(currentFileName.value);
+  return ext === 'md' || ext === 'markdown';
 });
 
-const isCodeFile = computed(() => {
-  const name = currentFileName.value;
-  if (!name) return false;
-  const extension = name.split('.').pop()?.toLowerCase();
-  return ['js', 'ts', 'html', 'css', 'xml', 'json', 'py', 'java', 'c', 'cpp', 'go', 'php', 'rb', 'sh', 'sql', 'yaml', 'yml'].includes(extension || '');
-});
+const isCodeFile = computed(() => isCodeFileName(currentFileName.value));
 
 // 添加isHtmlFile计算属性
 const isHtmlFile = computed(() => {
-  const name = currentFileName.value;
-  if (!name) return false;
-  const extension = name.split('.').pop()?.toLowerCase();
-  return extension === 'html' || extension === 'htm';
+  const ext = getExtension(currentFileName.value);
+  return ext === 'html' || ext === 'htm';
 });
 
 // 添加isVueFile计算属性
-const isVueFile = computed(() => {
-  const name = currentFileName.value;
-  if (!name) return false;
-  const extension = name.split('.').pop()?.toLowerCase();
-  return extension === 'vue';
-});
+const isVueFile = computed(() => getExtension(currentFileName.value) === 'vue');
+
+// CSV/TSV 解析结果：首行当表头
+const csvRows = computed(() => {
+  if (currentFileType.value !== 'csv' || !textContent.value) return []
+  const delimiter = getExtension(currentFileName.value) === 'tsv' ? '\t' : ','
+  return parseDelimitedText(textContent.value, delimiter)
+})
+
+const csvHeader = computed(() => csvRows.value[0] || [])
+const csvBody = computed(() => csvRows.value.slice(1, CSV_ROW_LIMIT + 1))
+const csvTruncated = computed(() => csvRows.value.length - 1 > CSV_ROW_LIMIT)
 
 // 监听textContent变化，处理代码高亮
 watch([textContent, currentFileName], async ([newContent, fileName]) => {
@@ -513,11 +498,15 @@ watch([textContent, currentFileName], async ([newContent, fileName]) => {
   if (isHtmlFile.value || isVueFile.value || isCodeFile.value) {
     try {
       const language = getLanguage(fileName);
-      const highlighted = hljs.highlight(newContent, { language }).value;
+      // highlight.js 默认包只注册了部分语言，未注册的走自动识别，避免直接抛错
+      const highlighted = hljs.getLanguage(language)
+        ? hljs.highlight(newContent, { language }).value
+        : hljs.highlightAuto(newContent).value;
       highlightedCode.value = `<pre class="hljs"><code>${highlighted}</code></pre>`;
     } catch (error) {
       console.error('代码高亮失败:', error);
-      highlightedCode.value = `<pre class="error">${newContent}</pre>`;
+      // 降级到纯文本时必须转义，否则文件内容会被当成 HTML 注入
+      highlightedCode.value = `<pre class="error">${escapeHtml(newContent)}</pre>`;
     }
   }
 }, { immediate: true });
@@ -590,8 +579,8 @@ const fetchFileContent = async () => {
     return;
   }
 
-  // 文本文件需要获取内容
-  if (props.file.type === 'text') {
+  // 文本 / 表格文件需要获取内容
+  if (isTextLike.value) {
     try {
       isLoading.value = true;
       hasError.value = false;
@@ -809,10 +798,10 @@ const fetchShareFileContent = async () => {
     const url = getShareDownloadUrl(props.shareId, downloadToken.value)
 
     const response = await axios.get(url, {
-      responseType: fileType === 'text' ? 'text' : 'blob'
+      responseType: isTextLike.value ? 'text' : 'blob'
     })
 
-    if (fileType === 'text') {
+    if (isTextLike.value) {
       textContent.value = response.data
     } else {
       // 对于图片/PDF，创建 Blob URL

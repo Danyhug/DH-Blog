@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	filesmodule "dh-blog/internal/modules/files"
 	"dh-blog/internal/response"
 
 	"github.com/gin-gonic/gin"
@@ -283,15 +284,10 @@ func (h *handler) Download(c *gin.Context) {
 		return
 	}
 
-	contentType := file.MimeType
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
-	disposition := "attachment"
-	if preview {
-		disposition = "inline"
-	}
+	contentType, disposition := filesmodule.ResolveDownloadHeaders(file.MimeType, preview)
 	c.Header("Content-Disposition", mime.FormatMediaType(disposition, map[string]string{"filename": file.Name}))
 	c.Header("Content-Type", contentType)
+	// 禁止浏览器猜测类型，避免 attachment 的文本被嗅探成 HTML 执行
+	c.Header("X-Content-Type-Options", "nosniff")
 	c.File(file.StoragePath)
 }

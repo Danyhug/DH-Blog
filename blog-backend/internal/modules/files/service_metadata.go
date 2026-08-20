@@ -375,6 +375,12 @@ func getMimeType(fileName string) string {
 		return "image/gif"
 	case ".webp":
 		return "image/webp"
+	case ".avif":
+		return "image/avif"
+	case ".bmp":
+		return "image/bmp"
+	case ".ico":
+		return "image/x-icon"
 	case ".pdf":
 		return "application/pdf"
 	case ".doc":
@@ -387,17 +393,62 @@ func getMimeType(fileName string) string {
 		return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	case ".txt":
 		return "text/plain"
+	case ".csv":
+		return "text/csv"
 	case ".html", ".htm":
 		return "text/html"
 	case ".mp3":
 		return "audio/mpeg"
-	case ".mp4":
+	case ".m4a":
+		return "audio/mp4"
+	case ".flac":
+		return "audio/flac"
+	case ".opus":
+		return "audio/opus"
+	case ".wav":
+		return "audio/wav"
+	case ".ogg", ".oga":
+		return "audio/ogg"
+	case ".mp4", ".m4v":
 		return "video/mp4"
+	case ".webm":
+		return "video/webm"
+	case ".ogv":
+		return "video/ogg"
+	case ".mov":
+		return "video/quicktime"
 	case ".mkv":
 		return "video/x-matroska"
 	default:
+		// 文本与代码类文件统一按 text/plain 返回，前端才能直接取到内容预览。
+		// 放在最后兜底，前面的具体类型优先。
+		if isPlainTextExt(ext) {
+			return "text/plain"
+		}
 		return "application/octet-stream"
 	}
+}
+
+// plainTextExts 是内容为纯文本、可安全按 text/plain 返回的扩展名。
+// 与前端 utils/fileType.ts 的文本类型表对应。
+var plainTextExts = map[string]bool{
+	".log": true, ".md": true, ".markdown": true, ".ini": true, ".conf": true,
+	".config": true, ".cfg": true, ".env": true, ".properties": true, ".toml": true,
+	".yaml": true, ".yml": true, ".json": true, ".json5": true, ".jsonc": true,
+	".srt": true, ".vtt": true, ".lrc": true, ".tsv": true, ".diff": true, ".patch": true,
+	".js": true, ".mjs": true, ".cjs": true, ".jsx": true, ".ts": true, ".tsx": true,
+	".vue": true, ".svelte": true, ".css": true, ".scss": true, ".sass": true, ".less": true,
+	".py": true, ".java": true, ".kt": true, ".kts": true, ".scala": true, ".groovy": true,
+	".c": true, ".h": true, ".cpp": true, ".cc": true, ".cxx": true, ".hpp": true,
+	".cs": true, ".go": true, ".rs": true, ".swift": true, ".dart": true, ".php": true,
+	".rb": true, ".lua": true, ".pl": true, ".pm": true, ".r": true, ".jl": true,
+	".ex": true, ".exs": true, ".sh": true, ".bash": true, ".zsh": true, ".fish": true,
+	".bat": true, ".cmd": true, ".ps1": true, ".sql": true, ".graphql": true, ".gql": true,
+	".proto": true, ".tf": true, ".tfvars": true, ".gradle": true, ".cmake": true, ".mk": true,
+}
+
+func isPlainTextExt(ext string) bool {
+	return plainTextExts[ext]
 }
 
 // 辅助函数：解析文件ID

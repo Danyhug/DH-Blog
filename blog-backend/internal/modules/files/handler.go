@@ -139,22 +139,17 @@ func (h *handler) DownloadFile(c *gin.Context) {
 
 	// 设置文件名和内容类型
 	fileName := fileInfo.Name
-	contentType := fileInfo.MimeType
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
 
-	// 判断是否为预览模式（用于音视频流式传输）
+	// preview=true 时按类型决定能否 inline（音视频流式播放、图片/PDF 直接渲染）
 	preview := c.Query("preview") == "true"
-	disposition := "attachment"
-	if preview {
-		disposition = "inline"
-	}
+	contentType, disposition := ResolveDownloadHeaders(fileInfo.MimeType, preview)
 
 	// 设置响应头。mime.FormatMediaType 会为非 ASCII 文件名生成 RFC 5987 的
 	// filename*= 编码，避免中文文件名在浏览器里乱码。
 	c.Header("Content-Disposition", mime.FormatMediaType(disposition, map[string]string{"filename": fileName}))
 	c.Header("Content-Type", contentType)
+	// 禁止浏览器猜测类型，避免 attachment 的文本被嗅探成 HTML 执行
+	c.Header("X-Content-Type-Options", "nosniff")
 	// c.File 内部使用 http.ServeFile，自动支持 Range 请求
 	c.File(fileInfo.StoragePath)
 }
