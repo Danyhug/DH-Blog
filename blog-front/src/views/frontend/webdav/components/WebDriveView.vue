@@ -715,14 +715,39 @@ function handleFileDoubleClick(file: FileItem) {
     fetchFiles(folderId);
   } else {
     // 如果是文件，打开预览
-    selectedFile.value = file;
-    showFilePreview.value = true;
+    openFilePreview(file);
   }
+}
+
+// 打开文件预览。
+// 预览是覆盖层而非独立路由，浏览器/手势的「返回」只会看到网盘页之前的那条记录，
+// 于是直接退回首页。这里补一条同 URL 的 history 记录，让返回先用来关闭预览。
+const PREVIEW_HISTORY_FLAG = 'webdavFilePreview';
+
+function openFilePreview(file: FileItem) {
+  selectedFile.value = file;
+  showFilePreview.value = true;
+  // 同 URL 的 pushState 不会触发 vue-router 导航，只多出一条可回退的记录。
+  window.history.pushState({ ...window.history.state, [PREVIEW_HISTORY_FLAG]: true }, '', window.location.href);
 }
 
 // 关闭文件预览
 function closeFilePreview() {
+  if (!showFilePreview.value) return;
+  // 由界面主动关闭时回退掉预览那条记录，避免它残留在历史里；
+  // 真正的回退由 popstate 收尾，所以这里不直接改 showFilePreview。
+  if (window.history.state?.[PREVIEW_HISTORY_FLAG]) {
+    window.history.back();
+    return;
+  }
   showFilePreview.value = false;
+}
+
+function handlePreviewPopState() {
+  // 返回离开了预览记录：关掉覆盖层，把这次返回消费掉，页面留在网盘。
+  if (showFilePreview.value && !window.history.state?.[PREVIEW_HISTORY_FLAG]) {
+    showFilePreview.value = false;
+  }
 }
 
 // 预览选中的文件（移动端专用）
@@ -731,8 +756,7 @@ function previewSelectedFile() {
     const fileId = Array.from(selectedFiles.value)[0];
     const file = filteredFiles.value.find(f => f.id === fileId);
     if (file && file.type !== 'folder') {
-      selectedFile.value = file;
-      showFilePreview.value = true;
+      openFilePreview(file);
     }
   }
 }
@@ -1204,9 +1228,11 @@ function closeUploadModal() {
 onMounted(() => {
   // 初始化时获取文件列表
   fetchFiles();
+  window.addEventListener('popstate', handlePreviewPopState);
 })
 
 onUnmounted(() => {
+  window.removeEventListener('popstate', handlePreviewPopState);
   // 拖动过程中被卸载时，全局监听和 body 上的样式都得收回来
   endBoxSelect();
 })

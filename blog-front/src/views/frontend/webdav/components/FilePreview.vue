@@ -157,7 +157,9 @@
           </div>
 
           <!-- PDF预览 -->
-          <div v-else-if="currentFileType === 'pdf'" class="w-full h-full bg-white rounded-xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+          <!-- 高度用视口单位而非 h-full：父级是 items-center 的 flex 容器，
+               子项不会被拉伸，百分比高度会塌成很小一条 -->
+          <div v-else-if="currentFileType === 'pdf'" class="w-full h-[80vh] bg-white rounded-xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
             <iframe :src="currentFileUrl" frameborder="0" class="w-full h-full border-none" @load="onPreviewLoaded" @error="onPreviewError('PDF加载失败')"></iframe>
           </div>
 
