@@ -1,5 +1,5 @@
 <template>
-  <div class="web-drive-container">
+  <div class="web-drive-container" @mousedown="startBoxSelect">
     <!-- 响应式文件管理视图 -->
     <div class="responsive-view">
       <!-- 文件预览组件 -->
@@ -75,6 +75,7 @@
             <div v-else :key="currentParentId || 'root'" class="file-container-inner">
               <div class="file-grid">
                 <div v-for="(file, index) in filteredFiles" :key="file.id || index" class="file-item"
+                  :data-file-id="file.id"
                   :class="{ 
                     'folder-item': file.type === 'folder',
                     'new-uploaded-file': newUploadedFileIds.includes(file.id || ''),
@@ -112,6 +113,10 @@
             </div>
           </transition>
         </div>
+
+        <!-- 拖拽框选的选择框，fixed 定位以免受容器滚动影响 -->
+        <div v-if="boxSelect.visible" class="fixed z-40 pointer-events-none border border-blue-500 bg-blue-500/20 rounded-sm"
+          :style="selectionBoxStyle"></div>
       </template>
     </div>
 
@@ -555,6 +560,12 @@ function cancelDialog() {
 
 // 处理文件单击（选择文件）
 function handleFileClick(file: FileItem) {
+  // 框选刚结束时鼠标可能正好停在某个文件上，浏览器随后补发的 click
+  // 会把它反选掉，这里丢弃这一次。
+  if (suppressNextClick) {
+    suppressNextClick = false;
+    return;
+  }
   if (file.id) {
     if (selectedFiles.value.has(file.id)) {
       selectedFiles.value.delete(file.id);
@@ -562,6 +573,123 @@ function handleFileClick(file: FileItem) {
       selectedFiles.value.add(file.id);
     }
   }
+}
+
+// --- 拖拽框选 ---
+// 起点低于这个位移量的拖动仍当作普通点击，避免手抖清空选择。
+const BOX_SELECT_THRESHOLD = 5;
+
+// 坐标一律用文档坐标（client + 滚动量），这样拖动途中滚轮滚动也不会错位。
+const boxSelect = ref({ visible: false, startX: 0, startY: 0, currentX: 0, currentY: 0 });
+const scrollOffset = ref({ x: 0, y: 0 });
+let suppressNextClick = false;
+// 按住 Ctrl/Cmd/Shift 时在原选择上追加，这里记下拖动开始时的选择基线。
+let boxSelectBaseline: string[] = [];
+// 拖动开始时量一次所有文件项的位置。逐帧 getBoundingClientRect 会强制同步布局，
+// 文件上千时明显掉帧；拖动过程中列表不会变，量一次就够。
+let boxSelectTargets: Array<{ id: string; left: number; right: number; top: number; bottom: number }> = [];
+let lastPointer = { x: 0, y: 0 };
+
+// 选择框是 fixed 定位，用视口坐标绘制，所以要把文档坐标减回滚动量。
+const selectionBoxStyle = computed(() => ({
+  left: `${Math.min(boxSelect.value.startX, boxSelect.value.currentX) - scrollOffset.value.x}px`,
+  top: `${Math.min(boxSelect.value.startY, boxSelect.value.currentY) - scrollOffset.value.y}px`,
+  width: `${Math.abs(boxSelect.value.currentX - boxSelect.value.startX)}px`,
+  height: `${Math.abs(boxSelect.value.currentY - boxSelect.value.startY)}px`,
+}));
+
+function startBoxSelect(event: MouseEvent) {
+  // 只响应左键，且必须从空白处起手，否则会和文件项自身的点击/双击打架。
+  if (event.button !== 0) return;
+  if (showFilePreview.value || showShareManager.value || showUploadModal.value ||
+    showShareLinkPopup.value || showNewFolderDialog.value || showRenameDialog.value) return;
+  // 监听挂在整页容器上（而不是文件区），因为页面高度链依赖 min-height 兜底，
+  // 文件少时文件区并不铺满剩余空间。这里改用「排除交互元素」来圈定可起手范围，
+  // 于是文件区左右和下方的所有空白都能拖出选框。
+  const target = event.target as HTMLElement;
+  if (target.closest('.file-item, .browser-header, .toolbar, .context-menu, button, input, a')) return;
+
+  const additive = event.ctrlKey || event.metaKey || event.shiftKey;
+  boxSelectBaseline = additive ? Array.from(selectedFiles.value) : [];
+  if (!additive) selectedFiles.value.clear();
+
+  scrollOffset.value = { x: window.scrollX, y: window.scrollY };
+  lastPointer = { x: event.clientX, y: event.clientY };
+  const startX = event.clientX + window.scrollX;
+  const startY = event.clientY + window.scrollY;
+  boxSelect.value = {
+    visible: false, // 超过阈值才显示，纯点击不该闪出一个选择框
+    startX,
+    startY,
+    currentX: startX,
+    currentY: startY,
+  };
+
+  boxSelectTargets = Array.from(document.querySelectorAll<HTMLElement>('.file-item[data-file-id]'))
+    .map(element => {
+      const rect = element.getBoundingClientRect();
+      return {
+        id: element.dataset.fileId as string,
+        left: rect.left + window.scrollX,
+        right: rect.right + window.scrollX,
+        top: rect.top + window.scrollY,
+        bottom: rect.bottom + window.scrollY,
+      };
+    });
+
+  window.addEventListener('mousemove', updateBoxSelect);
+  window.addEventListener('mouseup', endBoxSelect);
+  window.addEventListener('scroll', handleBoxSelectScroll);
+}
+
+function updateBoxSelect(event: MouseEvent) {
+  lastPointer = { x: event.clientX, y: event.clientY };
+  applyBoxSelect();
+}
+
+// 拖动途中滚动页面时，指针的视口坐标没变但文档坐标变了，需要重算一次。
+function handleBoxSelectScroll() {
+  scrollOffset.value = { x: window.scrollX, y: window.scrollY };
+  applyBoxSelect();
+}
+
+function applyBoxSelect() {
+  boxSelect.value.currentX = lastPointer.x + scrollOffset.value.x;
+  boxSelect.value.currentY = lastPointer.y + scrollOffset.value.y;
+
+  const moved = Math.abs(boxSelect.value.currentX - boxSelect.value.startX) > BOX_SELECT_THRESHOLD ||
+    Math.abs(boxSelect.value.currentY - boxSelect.value.startY) > BOX_SELECT_THRESHOLD;
+  if (!moved) return;
+
+  boxSelect.value.visible = true;
+  // 拖动中禁掉文字选中，否则会连带选中文件名
+  document.body.style.userSelect = 'none';
+
+  const box = {
+    left: Math.min(boxSelect.value.startX, boxSelect.value.currentX),
+    right: Math.max(boxSelect.value.startX, boxSelect.value.currentX),
+    top: Math.min(boxSelect.value.startY, boxSelect.value.currentY),
+    bottom: Math.max(boxSelect.value.startY, boxSelect.value.currentY),
+  };
+
+  // 每次都从基线重算，这样反向缩小选择框时能把文件重新排除掉。
+  const next = new Set(boxSelectBaseline);
+  for (const target of boxSelectTargets) {
+    const intersects = target.left < box.right && target.right > box.left &&
+      target.top < box.bottom && target.bottom > box.top;
+    if (intersects) next.add(target.id);
+  }
+  selectedFiles.value = next;
+}
+
+function endBoxSelect() {
+  window.removeEventListener('mousemove', updateBoxSelect);
+  window.removeEventListener('mouseup', endBoxSelect);
+  window.removeEventListener('scroll', handleBoxSelectScroll);
+  document.body.style.userSelect = '';
+  suppressNextClick = boxSelect.value.visible;
+  boxSelect.value.visible = false;
+  boxSelectTargets = [];
 }
 
 // 处理文件双击（打开文件或进入文件夹）
@@ -1079,7 +1207,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  // 清理工作
+  // 拖动过程中被卸载时，全局监听和 body 上的样式都得收回来
+  endBoxSelect();
 })
 </script>
 
@@ -1099,6 +1228,15 @@ onUnmounted(() => {
     height: 100%;
     flex: 1;
     background-color: #ffffff;
+  }
+
+  // 此前没有任何声明，导致高度只由内容撑开、内部的 flex: 1 全部失效，
+  // 文件区无法填满剩余空间（框选可起手的空白区因此非常小）。
+  .responsive-view {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
   }
 
   .browser-header {
@@ -1357,6 +1495,8 @@ onUnmounted(() => {
         display: flex;
         flex-direction: column;
         overflow: visible;
+        // 撑满剩余高度，文件不多时下方空白区域也能起手框选
+        flex: 1;
       }
 
       .file-grid {
