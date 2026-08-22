@@ -82,6 +82,7 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 	fileAPI.GET("/list", m.handler.ListFiles)
 	fileAPI.POST("/folder", m.handler.CreateFolder)
 	fileAPI.GET("/download/:id", m.handler.DownloadFile)
+	fileAPI.GET("/download-batch", m.handler.DownloadBatch)
 	fileAPI.PUT("/rename/:id", m.handler.RenameFile)
 	fileAPI.DELETE("/:id", m.handler.DeleteFile)
 	fileAPI.GET("/directory-tree", m.handler.GetDirectoryTree)

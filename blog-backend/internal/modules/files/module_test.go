@@ -31,6 +31,7 @@ func TestModuleRegistersFileUploadAndPublicRoutes(t *testing.T) {
 		"GET /api/files/list":                          false,
 		"POST /api/files/folder":                       false,
 		"GET /api/files/download/:id":                  false,
+		"GET /api/files/download-batch":                false,
 		"PUT /api/files/rename/:id":                    false,
 		"DELETE /api/files/:id":                        false,
 		"GET /api/files/directory-tree":                false,

@@ -223,7 +223,7 @@ import {
   ArrowLeftIcon,
 } from '../utils/icons'
 import { detectFileType, getFileIcon } from '../utils/fileType'
-import { listFiles, createFolder, getDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, getUploadedChunks, cancelChunkUpload, FileInfo } from '@/api/file'
+import { listFiles, createFolder, getDownloadUrl, getBatchDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, getUploadedChunks, cancelChunkUpload, FileInfo } from '@/api/file'
 import { notify } from '@/utils/notification'
 
 // 状态变量
@@ -659,6 +659,19 @@ function downloadFile(file: FileItem) {
   closeContextMenu();
 }
 
+// 打包名沿用主流网盘的「来源 + 时间戳」惯例（如 Google Drive 的
+// drive-download-20160516T125832Z.zip），多次下载不会在下载目录里撞名。
+function buildArchiveName() {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, '0');
+  const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}T` +
+    `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const currentFolder = pathSegments.value[pathSegments.value.length - 1]?.name;
+  // 目录名里的路径分隔符等字符会让浏览器保存文件时出问题，统一替换掉。
+  const prefix = currentFolder?.replace(/[\\/:*?"<>|]/g, '_').trim();
+  return `${prefix || 'dhblog-download'}-${stamp}`;
+}
+
 // 批量下载选中的文件
 function downloadSelectedFiles() {
   if (selectedFiles.value.size === 0) {
@@ -675,13 +688,13 @@ function downloadSelectedFiles() {
     return;
   }
 
-  // 逐个下载所有选中的文件，间隔触发避免浏览器一次性拦截并发请求
-  selectedFileItems.forEach((file, index) => {
-    if (file.id) {
-      const downloadUrl = getDownloadUrl(file.id);
-      setTimeout(() => triggerDownload(downloadUrl), index * 500);
-    }
-  });
+  // 单个文件仍走直链；多个文件交给后端打包成 zip，
+  // 避免浏览器把连续的多次下载判定为并发下载而拦截。
+  if (selectedFileItems.length === 1) {
+    triggerDownload(getDownloadUrl(selectedFileItems[0].id!));
+  } else {
+    triggerDownload(getBatchDownloadUrl(selectedFileItems.map(file => file.id!), buildArchiveName()));
+  }
 
   // 下载完成后清空选择
   selectedFiles.value.clear();

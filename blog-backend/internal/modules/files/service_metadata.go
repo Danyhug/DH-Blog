@@ -141,6 +141,46 @@ func (s *fileService) UploadFile(ctx context.Context, userID uint64, parentID st
 }
 
 func (s *fileService) GetDownloadInfo(ctx context.Context, userID uint64, fileID string) (*File, error) {
+	file, err := s.findOwnedFile(ctx, userID, fileID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 检查是否是文件夹
+	if file.IsFolder {
+		return nil, fmt.Errorf("不能下载文件夹")
+	}
+
+	if err := s.resolveStoragePath(file); err != nil {
+		return nil, err
+	}
+
+	return file, nil
+}
+
+// ResolveBatchDownloadInfo 解析批量下载的条目，跳过其中的文件夹。
+// 与 GetDownloadInfo 的差别只在于文件夹的处理：打包下载允许选中集合里混有
+// 文件夹（当前实现不递归打包目录，直接忽略），而不是让整个请求失败。
+func (s *fileService) ResolveBatchDownloadInfo(ctx context.Context, userID uint64, fileIDs []string) ([]*File, error) {
+	items := make([]*File, 0, len(fileIDs))
+	for _, fileID := range fileIDs {
+		file, err := s.findOwnedFile(ctx, userID, fileID)
+		if err != nil {
+			return nil, err
+		}
+		if file.IsFolder {
+			continue
+		}
+		if err := s.resolveStoragePath(file); err != nil {
+			return nil, err
+		}
+		items = append(items, file)
+	}
+	return items, nil
+}
+
+// findOwnedFile 按 ID 或路径查出文件记录，并确认属于该用户。
+func (s *fileService) findOwnedFile(ctx context.Context, userID uint64, fileID string) (*File, error) {
 	// 解析fileID，在MVP版本中fileID可以是文件记录ID或文件路径
 	var file *File
 	var err error
@@ -164,24 +204,24 @@ func (s *fileService) GetDownloadInfo(ctx context.Context, userID uint64, fileID
 		return nil, fmt.Errorf("无权访问此文件")
 	}
 
-	// 检查是否是文件夹
-	if file.IsFolder {
-		return nil, fmt.Errorf("不能下载文件夹")
-	}
+	return file, nil
+}
 
+// resolveStoragePath 把记录里的相对路径换成磁盘绝对路径，并确认文件确实存在。
+func (s *fileService) resolveStoragePath(file *File) error {
 	// 构建实际的文件路径
 	fullPath := filepath.Join(s.filePath, file.StoragePath)
 
 	// 检查文件是否物理存在
 	if _, err := os.Stat(fullPath); err != nil {
 		logrus.Errorf("物理文件不存在: %v", err)
-		return nil, fmt.Errorf("文件已损坏或不存在")
+		return fmt.Errorf("文件已损坏或不存在")
 	}
 
 	// 设置文件的完整路径
 	file.StoragePath = fullPath
 
-	return file, nil
+	return nil
 }
 
 func (s *fileService) GetDownloadInfoForShare(ctx context.Context, fileID string) (*File, error) {

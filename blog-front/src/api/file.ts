@@ -168,3 +168,15 @@ export const getDownloadUrl = (fileId: string, preview: boolean = false): string
   }
   return url;
 };
+
+/**
+ * 获取批量打包（zip）下载链接
+ * @param fileIds 文件ID列表
+ * @param archiveName 压缩包文件名，不带后缀
+ */
+export const getBatchDownloadUrl = (fileIds: (string | number)[], archiveName = "dhblog-download"): string => {
+  const token = localStorage.getItem("token") || "";
+  const tokenParam = token.startsWith("Bearer ") ? token.substring(7) : token;
+  const ids = fileIds.join(",");
+  return `${SERVER_URL}/files/download-batch?ids=${encodeURIComponent(ids)}&name=${encodeURIComponent(archiveName)}&token=${tokenParam}`;
+};
