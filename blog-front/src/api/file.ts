@@ -50,6 +50,34 @@ export const listFiles = (parentId?: string): Promise<any> => {
 }
 
 /**
+ * 全盘搜索命中：文件本身 + 定位所需的所在目录信息
+ */
+interface SearchHit extends FileInfo {
+  /** 所在目录的展示路径，以 / 分隔；位于根目录时为空 */
+  parent_path: string;
+  /** 从根到所在目录的完整链路，用于还原面包屑 */
+  parent_segments: { id: string; name: string }[];
+}
+
+export interface SearchResult {
+  files: SearchHit[];
+  /** 命中数超过 limit，返回的只是前 limit 条 */
+  truncated: boolean;
+  limit: number;
+}
+
+/**
+ * 跨目录搜索文件（全盘搜索，含子目录）
+ * @param keyword 搜索关键词
+ * @returns 命中列表及是否被截断
+ */
+export const searchFiles = (keyword: string): Promise<SearchResult> => {
+  return request.get('/files/search', {
+    params: { keyword }
+  })
+}
+
+/**
  * 初始化分片上传
  * @param parentId 父目录ID
  * @param fileName 文件名

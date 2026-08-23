@@ -29,6 +29,7 @@ func TestModuleRegistersFileUploadAndPublicRoutes(t *testing.T) {
 
 	want := map[string]bool{
 		"GET /api/files/list":                          false,
+		"GET /api/files/search":                        false,
 		"POST /api/files/folder":                       false,
 		"GET /api/files/download/:id":                  false,
 		"GET /api/files/download-batch":                false,

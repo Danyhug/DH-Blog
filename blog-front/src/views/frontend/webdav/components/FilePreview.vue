@@ -1,39 +1,20 @@
 <template>
   <div class="w-full flex flex-col bg-white animate-[fade-in_0.3s_ease] relative"
     :class="shareMode ? 'min-h-screen share-mode' : 'flex-1 min-h-0'">
-    <!-- 顶部导航栏：分享页是独立页面，保留吸顶栏；嵌在网盘里时对齐首页的 .browser-header（无栏体、不居中、贴左边缘） -->
-    <div :class="shareMode ? 'sticky top-0 z-10 backdrop-blur-[20px] bg-white/90 border-b border-black/5 shadow-[0_4px_20px_rgba(0,0,0,0.05)] py-2.5' : 'shrink-0'">
-      <div class="flex justify-between items-center max-md:flex-col max-md:gap-3"
-        :class="shareMode ? 'max-w-[1400px] mx-auto px-6 py-3 max-md:px-3' : 'mb-5'">
-      <div class="flex-[2] max-md:w-full">
-        <!-- 分享模式：显示Logo -->
-        <template v-if="shareMode">
-          <a href="/" class="no-underline">
-            <span class="text-lg font-semibold text-[#333]">DH-Blog</span>
-          </a>
-        </template>
-        <!-- 普通模式：显示面包屑 -->
-        <template v-else>
-          <!-- 「我的网盘」是面包屑的固定根节点，进子目录后也要保留，否则只剩一个图标 -->
-          <div class="flex items-center gap-2 text-sm bg-[#f8f9fa] px-4 py-2.5 rounded-[50px] shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-            <HomeIcon class="cursor-pointer text-[#666] w-4 h-4 transition-all duration-200 hover:text-[#2a8aff]" @click="handleNavigateToRoot" />
-            <span class="cursor-pointer text-[#666] font-medium px-2 py-0.5 rounded transition-all duration-200 hover:text-[#2a8aff] hover:bg-[rgba(42,138,255,0.1)]" @click="handleNavigateToRoot">我的网盘</span>
-            <template v-for="(segment, index) in pathSegments" :key="index">
-              <ChevronRightIcon class="text-[#aaa] w-3 h-3" />
-              <span
-                class="cursor-pointer text-[#666] font-medium px-2 py-0.5 rounded transition-all duration-200 hover:text-[#2a8aff] hover:bg-[rgba(42,138,255,0.1)]"
-                @click="handleNavigateToPathSegment(index)"
-              >{{ segment.name }}</span>
-            </template>
-          </div>
-        </template>
-      </div>
-
-        <div class="flex-1 text-center max-md:w-full max-md:order-[-1]">
-          <h2 class="text-lg font-semibold text-[#333] m-0 whitespace-nowrap overflow-hidden text-ellipsis max-w-[400px] max-md:max-w-full inline-block px-4 py-2 rounded-lg bg-white/80 backdrop-blur-[4px] shadow-[0_2px_8px_rgba(0,0,0,0.03)]">{{ currentFileName }}</h2>
-        </div>
-
-      <div class="flex-[2] flex justify-end gap-3 max-md:w-full max-md:justify-between">
+    <DriveHeader :sticky="shareMode" :title="currentFileName">
+      <template #left>
+        <!-- 分享页是独立入口，没有网盘上下文可回溯，用站点 Logo 顶替面包屑 -->
+        <a v-if="shareMode" href="/" class="no-underline">
+          <span class="text-lg font-semibold text-[#333]">DH-Blog</span>
+        </a>
+        <DriveBreadcrumb
+          v-else
+          :segments="pathSegments"
+          @navigate-root="handleNavigateToRoot"
+          @navigate-segment="handleNavigateToPathSegment"
+        />
+      </template>
+      <template #actions>
         <!-- 返回按钮 -->
         <button class="flex items-center gap-2 rounded-lg cursor-pointer text-sm font-medium px-[18px] py-2.5 transition-all duration-300 bg-white/90 border border-[#eee] text-[#555] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:bg-white hover:border-[#ddd]" @click="handleBack">
           <ArrowLeftIcon class="w-4 h-4" />
@@ -44,9 +25,8 @@
           <DownloadIcon class="w-4 h-4" />
           下载
         </button>
-      </div>
-      </div>
-    </div>
+      </template>
+    </DriveHeader>
 
     <div class="flex-1 flex justify-center items-center overflow-auto p-8 max-md:p-4 bg-[#f8f9fa]">
       <!-- ========== 分享模式特殊状态处理 ========== -->
@@ -250,8 +230,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, nextTick, onMounted, watch } from 'vue'
-import type { FileItem } from '../utils/types/file'
+import { ref, computed, inject, nextTick, onMounted, watch, type Ref } from 'vue'
+import type { FileItem, PathSegment } from '../utils/types/file'
+import DriveHeader from './DriveHeader.vue'
+import DriveBreadcrumb from './DriveBreadcrumb.vue'
 import { getDownloadUrl } from '@/api/file'
 import { SERVER_URL } from '@/types/Constant'
 import { notify } from '@/utils/notification'
@@ -265,8 +247,6 @@ import {
   ArrowLeftIcon,
   DownloadIcon,
   MusicIcon,
-  HomeIcon,
-  ChevronRightIcon,
   FileIcon,
   LockIcon,
   EyeIcon,
@@ -295,12 +275,6 @@ function escapeHtml(text: string): string {
   ))
 }
 
-// 定义路径段接口
-interface PathSegment {
-  id: string;
-  name: string;
-}
-
 const props = defineProps<{
   file: FileItem
   // 分享模式相关
@@ -312,8 +286,8 @@ const emits = defineEmits<{
   (e: 'close'): void
 }>()
 
-// 从父组件注入路径导航信息
-const pathSegments = inject<PathSegment[]>('pathSegments', [])
+// 从父组件注入路径导航信息（网盘内嵌时由 WebDriveView provide）
+const pathSegments = inject<Ref<PathSegment[]>>('pathSegments', ref([]))
 const navigateToRoot = inject('navigateToRoot', () => {})
 const navigateToPathSegment = inject('navigateToPathSegment', (_index: number) => {})
 

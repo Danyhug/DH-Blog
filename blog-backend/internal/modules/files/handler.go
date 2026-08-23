@@ -5,6 +5,7 @@ import (
 	"mime"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"dh-blog/internal/response"
 
@@ -53,6 +54,41 @@ func (h *handler) ListFiles(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response.SuccessWithData(files))
+}
+
+// SearchFiles 全盘搜索
+// @Summary 跨目录搜索文件
+// @Description 在当前用户的全部文件与文件夹中按名称子串搜索，结果附带所在目录路径
+// @Tags 文件
+// @Accept json
+// @Produce json
+// @Param keyword query string true "搜索关键词"
+// @Success 200 {object} files.SearchResult "搜索结果"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器错误"
+// @Router /api/files/search [get]
+func (h *handler) SearchFiles(c *gin.Context) {
+	userID := h.getCurrentUserID(c)
+	if userID == 0 {
+		response.FailWithCode(c, http.StatusUnauthorized, "未授权")
+		return
+	}
+
+	keyword := strings.TrimSpace(c.Query("keyword"))
+	if keyword == "" {
+		response.FailWithCode(c, http.StatusBadRequest, "搜索关键词不能为空")
+		return
+	}
+
+	result, err := h.fileService.SearchFiles(c.Request.Context(), userID, keyword)
+	if err != nil {
+		logrus.Errorf("搜索文件失败: %v", err)
+		response.FailWithCode(c, http.StatusInternalServerError, "搜索文件失败")
+		return
+	}
+
+	c.JSON(http.StatusOK, response.SuccessWithData(result))
 }
 
 // CreateFolder 创建文件夹

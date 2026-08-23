@@ -6,36 +6,36 @@
       <FilePreview v-if="showFilePreview" :file="selectedFile" @close="closeFilePreview" />
 
       <template v-else>
-        <div class="browser-header">
-          <div class="header-left">
-            <div class="breadcrumb">
-              <!-- 「我的网盘」是面包屑的固定根节点，进子目录后也要保留，否则只剩一个图标 -->
-              <HomeIcon class="icon-sm" @click="navigateToRoot" />
-              <span class="path-segment" @click="navigateToRoot">我的网盘</span>
-              <template v-for="(segment, index) in pathSegments" :key="index">
-                <ChevronRightIcon class="icon-xs" />
-                <span class="path-segment" @click="navigateToPathSegment(index)">{{ segment.name }}</span>
-              </template>
-            </div>
-          </div>
-          <div class="header-right">
-            <button class="icon-btn" title="我的分享" @click="showShareManager = true">
-              <ShareIcon class="icon-sm" />
+        <DriveHeader>
+          <template #left>
+            <DriveBreadcrumb
+              :segments="pathSegments"
+              @navigate-root="navigateToRoot"
+              @navigate-segment="navigateToPathSegment"
+            />
+          </template>
+          <template #actions>
+            <button
+              class="p-2 rounded-full border-none bg-transparent cursor-pointer text-[#666] transition-all duration-200 hover:bg-[#f0f5ff] hover:text-[#2a8aff]"
+              title="我的分享"
+              @click="showShareManager = true"
+            >
+              <ShareIcon class="w-5 h-5" />
             </button>
-          </div>
-        </div>
+          </template>
+        </DriveHeader>
 
         <div class="toolbar">
           <div class="toolbar-left">
-            <button v-if="currentParentId" class="btn-outline" @click="navigateToParent">
+            <button v-if="currentParentId && !isSearchMode" class="btn-outline" @click="navigateToParent">
               <ArrowLeftIcon class="icon-sm" />
               返回上级
             </button>
-            <button class="btn-primary" @click="createNewFolder">
+            <button v-if="!isSearchMode" class="btn-primary" @click="createNewFolder">
               <PlusIcon class="icon-sm" />
               新建文件夹
             </button>
-            <button class="btn-outline" @click="openUploadModal">
+            <button v-if="!isSearchMode" class="btn-outline" @click="openUploadModal">
               <UploadIcon class="icon-sm" />
               上传
             </button>
@@ -59,18 +59,69 @@
           <div class="toolbar-right">
             <div class="search-container">
               <SearchIcon class="search-icon" />
-              <input type="text" v-model="searchQuery" placeholder="搜索文件..." class="search-input" />
+              <input
+                type="text"
+                v-model="searchQuery"
+                placeholder="搜索全部文件..."
+                title="搜索范围是整个网盘，包含所有子目录"
+                class="search-input"
+                @keyup.esc="clearSearch"
+              />
+              <button
+                v-if="searchQuery"
+                class="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full border-none bg-transparent cursor-pointer text-[#999] transition-colors duration-200 hover:bg-[#f0f0f0] hover:text-[#666]"
+                title="清空搜索（Esc）"
+                @click="clearSearch"
+              >
+                <ClearIcon class="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
 
         <div class="file-container">
           <transition name="simple-fade" mode="out-in">
-            <div v-if="isLoading" class="loading-container">
+            <div v-if="isLoading || isSearching" key="loading" class="loading-container">
               <div class="loading-spinner"></div>
-              <p>加载中...</p>
+              <p>{{ isSearching ? `正在全盘搜索「${trimmedQuery}」...` : '加载中...' }}</p>
             </div>
-            <div v-else :key="currentParentId || 'root'" class="file-container-inner">
+
+            <!-- 空态：搜索无结果和空目录是两种完全不同的处境，给的下一步操作也不同 -->
+            <div v-else-if="filteredFiles.length === 0" key="empty"
+              class="flex flex-1 flex-col items-center justify-center min-h-[300px] px-6 text-center">
+              <div class="flex items-center justify-center w-16 h-16 mb-5 rounded-full bg-[#f4f6fa] text-[#9aa4b2]">
+                <SearchIcon v-if="isSearchMode" class="w-7 h-7" />
+                <FolderIcon v-else class="w-7 h-7" />
+              </div>
+              <template v-if="isSearchMode">
+                <p class="text-base font-medium text-[#333] mb-2">没有找到包含「{{ trimmedQuery }}」的文件</p>
+                <p class="text-sm text-[#888] mb-5">搜索范围是整个网盘，可以试试更短的关键词或换个说法</p>
+                <button
+                  class="px-4 py-2 rounded-md text-sm font-medium cursor-pointer border border-[#ddd] bg-white text-[#555] transition-all duration-200 hover:border-[#2a8aff] hover:text-[#2a8aff]"
+                  @click="clearSearch">清空搜索</button>
+              </template>
+              <template v-else>
+                <p class="text-base font-medium text-[#333] mb-2">这个文件夹还是空的</p>
+                <p class="text-sm text-[#888] mb-5">把文件拖进来，或者点上方的「上传」按钮</p>
+                <button
+                  class="px-4 py-2 rounded-md text-sm font-medium cursor-pointer border-none bg-[#2a8aff] text-white transition-all duration-200 hover:bg-[#1c7ae8]"
+                  @click="openUploadModal">上传文件</button>
+              </template>
+            </div>
+
+            <div v-else :key="isSearchMode ? 'search' : (currentParentId || 'root')" class="file-container-inner">
+              <!-- 搜索结果条：说明这是全盘范围，并在被截断时明确提示 -->
+              <div v-if="isSearchMode"
+                class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-4 px-4 py-2.5 rounded-lg bg-[#f0f6ff] text-sm text-[#4a5568]">
+                <span>在全部文件中找到 <strong class="text-[#2a8aff]">{{ filteredFiles.length }}</strong> 个结果</span>
+                <span v-if="searchTruncated" class="text-[#c2740a]">
+                  · 匹配项过多，仅显示前 {{ searchLimit }} 条，请输入更精确的关键词
+                </span>
+                <button
+                  class="ml-auto px-2 py-0.5 rounded border-none bg-transparent cursor-pointer text-[#2a8aff] transition-colors duration-200 hover:bg-[rgba(42,138,255,0.12)]"
+                  @click="clearSearch">返回目录</button>
+              </div>
+
               <div class="file-grid">
                 <div v-for="(file, index) in filteredFiles" :key="file.id || index" class="file-item"
                   :data-file-id="file.id"
@@ -102,7 +153,16 @@
                       <p class="file-name" :title="file.name">{{ file.name }}</p>
                       <div class="file-details">
                         <p class="file-size">{{ file.size }}</p>
-                        <p class="file-modified" v-if="file.modified">{{ file.modified }}</p>
+                        <!-- 搜索态下文件散落在各级目录，位置比修改时间更值得看，
+                             所以占用日期那一行而不是另起一行——卡片高度是固定的。 -->
+                        <button v-if="isSearchMode"
+                          class="flex w-fit max-w-full mx-auto items-center gap-1 px-1.5 rounded-full border-none bg-transparent cursor-pointer text-xs leading-[1.2] text-[#a0a8b8] transition-colors duration-200 hover:bg-[rgba(42,138,255,0.12)] hover:text-[#2a8aff] max-[480px]:text-[11px]"
+                          :title="`打开所在目录：${file.parentPath || '我的网盘'}`"
+                          @click.stop="goToSearchHitLocation(file)">
+                          <FolderIcon class="shrink-0 w-3 h-3" />
+                          <span class="truncate">{{ file.parentPath || '我的网盘' }}</span>
+                        </button>
+                        <p class="file-modified" v-else-if="file.modified">{{ file.modified }}</p>
                       </div>
                     </div>
                   </div>
@@ -206,19 +266,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, provide, type ComponentPublicInstance } from 'vue'
-import type { FileItem } from '../utils/types/file'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, provide, type ComponentPublicInstance } from 'vue'
+import type { FileItem, PathSegment } from '../utils/types/file'
 import ShareManagerModal from '../modals/ShareManagerModal.vue'
 import UploadModal from '../modals/UploadModal.vue'
 import ShareLinkPopup from '../modals/ShareLinkPopup.vue'
 import FilePreview from './FilePreview.vue'
+import DriveHeader from './DriveHeader.vue'
+import DriveBreadcrumb from './DriveBreadcrumb.vue'
 import {
-  HomeIcon,
-  ChevronRightIcon,
   ShareIcon,
   PlusIcon,
   UploadIcon,
   SearchIcon,
+  XIcon as ClearIcon,
   FolderIcon,
   FileIcon,
   FileTextIcon,
@@ -226,7 +287,7 @@ import {
   ArrowLeftIcon,
 } from '../utils/icons'
 import { detectFileType, getFileIcon } from '../utils/fileType'
-import { listFiles, createFolder, getDownloadUrl, getBatchDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, getUploadedChunks, cancelChunkUpload, FileInfo } from '@/api/file'
+import { listFiles, searchFiles as searchFilesApi, createFolder, getDownloadUrl, getBatchDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, getUploadedChunks, cancelChunkUpload, FileInfo, type SearchResult } from '@/api/file'
 import { notify } from '@/utils/notification'
 
 // 状态变量
@@ -280,73 +341,152 @@ const extensionInput = ref<HTMLInputElement | null>(null)
 const newUploadedFileIds = ref<string[]>([]);
 
 // 路径导航历史
-interface PathSegment {
-  id: string;
-  name: string;
-}
 const pathSegments = ref<PathSegment[]>([])
 
-// 为FilePreview组件提供路径导航功能
-provide('pathSegments', pathSegments.value)
+// 为FilePreview组件提供路径导航功能。
+// 这里必须 provide ref 本身：navigateToRoot / navigateToPathSegment 会整体替换数组，
+// 只 provide .value 的话预览页拿到的是被替换掉的旧数组，面包屑会停在过期路径上。
+provide('pathSegments', pathSegments)
 provide('navigateToRoot', navigateToRoot)
 provide('navigateToPathSegment', navigateToPathSegment)
 
 // 文件数据
 const apiFiles = ref<FileInfo[]>([])
 
-// 将API返回的文件数据转换为组件使用的格式
-const convertedFiles = computed<FileItem[]>(() => {
-  return apiFiles.value.map(file => {
-    // 类型与图标统一由 utils/fileType 判定，避免与 FilePreview 的扩展名表漂移
-    const fileType = detectFileType(file.name, file.mimeType, file.is_folder);
-    const icon = getFileIcon(file.name, fileType);
+// 格式化文件大小
+function formatSize(size: number, isFolder: boolean): string {
+  if (isFolder) return '文件夹';
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
 
-    // 格式化文件大小
-    const formatSize = (size: number): string => {
-      if (file.is_folder) return '文件夹';
-      if (size < 1024) return `${size} B`;
-      if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-      if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-      return `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-    };
-
-    // 格式化修改日期
-    const formatDate = (dateStr: string): string => {
-      if (!dateStr) return '-';
-      const date = new Date(dateStr);
-      return date.toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    };
-
-    // 确保文件ID存在且转换为字符串
-    const fileId = file.id ? file.id.toString() : '';
-
-    return {
-      id: fileId, // 确保ID存在且为字符串
-      name: file.name,
-      type: fileType,
-      size: formatSize(file.size),
-      modified: formatDate(file.updateTime),
-      icon,
-      originalFile: file // 保留原始数据，以便后续操作
-    } as FileItem;
+// 格式化修改日期
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
   });
-});
+}
 
-// 过滤文件列表
-const filteredFiles = computed(() => {
-  if (!searchQuery.value) return convertedFiles.value;
+// 将API返回的单条文件数据转换为组件使用的格式。
+// 目录列表和搜索结果走同一套转换，避免两边的图标/大小格式漂移。
+function toFileItem(file: FileInfo): FileItem {
+  // 类型与图标统一由 utils/fileType 判定，避免与 FilePreview 的扩展名表漂移
+  const fileType = detectFileType(file.name, file.mimeType, file.is_folder);
 
-  const query = searchQuery.value.toLowerCase();
-  return convertedFiles.value.filter(file =>
-    file.name.toLowerCase().includes(query)
-  );
+  return {
+    id: file.id ? file.id.toString() : '', // 确保ID存在且为字符串
+    name: file.name,
+    type: fileType,
+    size: formatSize(file.size, file.is_folder),
+    modified: formatDate(file.updateTime),
+    icon: getFileIcon(file.name, fileType),
+    originalFile: file // 保留原始数据，以便后续操作
+  };
+}
+
+const convertedFiles = computed<FileItem[]>(() => apiFiles.value.map(toFileItem));
+
+// ========== 全盘搜索 ==========
+// 搜索框查的是整个网盘（含所有子目录），不是当前目录的本地过滤，
+// 所以要走后端接口；输入抖动期间不发请求，过期响应按序号丢弃。
+const SEARCH_DEBOUNCE_MS = 300
+
+const searchResult = ref<SearchResult | null>(null)
+const isSearching = ref(false)
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+let searchSeq = 0
+
+const trimmedQuery = computed(() => searchQuery.value.trim())
+const isSearchMode = computed(() => trimmedQuery.value.length > 0)
+const searchTruncated = computed(() => searchResult.value?.truncated ?? false)
+const searchLimit = computed(() => searchResult.value?.limit ?? 0)
+
+// 搜索命中额外带上所在目录，供结果项展示路径、并支持一键跳过去
+const searchHitItems = computed<FileItem[]>(() =>
+  (searchResult.value?.files ?? []).map(hit => ({
+    ...toFileItem(hit),
+    parentPath: hit.parent_path,
+    parentSegments: hit.parent_segments ?? []
+  }))
+)
+
+// 渲染与批量操作都以此为准：搜索态下换成命中列表，
+// 这样下载/分享/重命名等按 id 取文件的逻辑不用各自区分模式。
+const filteredFiles = computed<FileItem[]>(() =>
+  isSearchMode.value ? searchHitItems.value : convertedFiles.value
+)
+
+watch(trimmedQuery, keyword => {
+  if (searchTimer) clearTimeout(searchTimer)
+  // 选中项属于上一个列表，跨模式保留会让工具栏对着不存在的文件动作
+  selectedFiles.value.clear()
+
+  if (!keyword) {
+    searchSeq++ // 作废在途请求，避免它回来后又把结果塞进已清空的搜索态
+    isSearching.value = false
+    searchResult.value = null
+    return
+  }
+
+  // 立刻进入搜索态，否则防抖这 300ms 里会先闪一下"没有结果"
+  isSearching.value = true
+  searchTimer = setTimeout(() => { void runSearch(keyword) }, SEARCH_DEBOUNCE_MS)
 })
+
+async function runSearch(keyword: string) {
+  const seq = ++searchSeq
+  try {
+    const result = await searchFilesApi(keyword)
+    if (seq !== searchSeq) return
+    searchResult.value = result
+  } catch (error) {
+    if (seq !== searchSeq) return
+    // axios 拦截器已经弹过错误提示，这里只负责让界面回到"无结果"
+    console.error('搜索文件失败:', error)
+    searchResult.value = { files: [], truncated: false, limit: 0 }
+  } finally {
+    if (seq === searchSeq) isSearching.value = false
+  }
+}
+
+function clearSearch() {
+  searchQuery.value = ''
+}
+
+// 增删改之后刷新当前视图。搜索态下重跑搜索而不是拉当前目录，
+// 否则结果里会留着刚被删掉的文件、或者改名前的旧名字。
+function refreshCurrentView() {
+  if (isSearchMode.value) {
+    void runSearch(trimmedQuery.value)
+    return
+  }
+  fetchFiles(currentParentId.value)
+}
+
+// 跳转到搜索命中所在的目录。命中项不在当前目录下，
+// 必须用它自带的路径链整体重建面包屑，不能在当前层级上追加。
+function goToSearchHitLocation(file: FileItem, includeSelf = false) {
+  navigateWithHistory(() => {
+    const segments = [...(file.parentSegments ?? [])]
+    if (includeSelf && file.type === 'folder' && file.id) {
+      segments.push({ id: file.id, name: file.name })
+    }
+
+    pathSegments.value = segments
+    currentParentId.value = segments[segments.length - 1]?.id ?? ''
+    currentPath.value = segments.map(segment => segment.name).join('/')
+    clearSearch()
+    fetchFiles(currentParentId.value)
+  })
+}
 
 // 计算右键菜单位置
 const contextMenuStyle = computed(() => {
@@ -360,7 +500,7 @@ const contextMenuStyle = computed(() => {
 const isFolderSelected = computed(() => {
   if (selectedFiles.value.size !== 1) return false
   const selectedId = Array.from(selectedFiles.value)[0]
-  const selectedFile = convertedFiles.value.find(f => f.id === selectedId)
+  const selectedFile = filteredFiles.value.find(f => f.id === selectedId)
   return selectedFile?.type === 'folder'
 })
 
@@ -381,32 +521,96 @@ const fetchFiles = async (parentId: string = '') => {
 
 
 
+// ========== 网盘内部的视图历史 ==========
+// 目录切换和搜索都发生在同一个 URL 上（预览覆盖层同理），浏览器与手势的「返回」
+// 只能看到进入网盘之前那条记录，于是一路退回首页。这里给每次视图切换补一条
+// 同 URL 的 history 记录，返回就先在网盘内部逐级回退。
+const VIEW_HISTORY_KEY = 'webdavView';
+
+interface WebdavView {
+  parentId: string;
+  segments: PathSegment[];
+  query: string;
+}
+
+// 快照必须是纯对象：history 的 state 走结构化克隆，塞响应式代理会失败。
+function currentView(): WebdavView {
+  return {
+    parentId: currentParentId.value,
+    segments: pathSegments.value.map(({ id, name }) => ({ id, name })),
+    query: searchQuery.value
+  };
+}
+
+// 把「当前视图」写回当前这条 history 记录。
+// pushState 存的是新状态，旧状态留在上一条记录里，所以离开前必须先补登记，
+// 否则返回时拿不到离开前的搜索词，只能退到根目录。
+function rememberCurrentView() {
+  window.history.replaceState(
+    { ...window.history.state, [VIEW_HISTORY_KEY]: currentView() },
+    '',
+    window.location.href
+  );
+}
+
+// 在网盘内部切换视图：登记当前视图 → 执行切换 → 为新视图补一条记录。
+function navigateWithHistory(mutate: () => void) {
+  rememberCurrentView();
+  mutate();
+  // 同 URL 的 pushState 不会触发 vue-router 导航，只多出一条可回退的记录。
+  window.history.pushState(
+    { ...window.history.state, [VIEW_HISTORY_KEY]: currentView() },
+    '',
+    window.location.href
+  );
+}
+
+// 还原到某个历史视图。与当前视图一致时直接跳过，避免关闭预览这类
+// 「视图没变」的返回白白多打一次列表请求。
+function restoreView(view: WebdavView) {
+  if (view.parentId === currentParentId.value && view.query.trim() === trimmedQuery.value) return;
+
+  pathSegments.value = view.segments.map(({ id, name }) => ({ id, name }));
+  currentParentId.value = view.parentId;
+  currentPath.value = view.segments.map(segment => segment.name).join('/');
+  // 搜索词交给 watch 去重跑搜索，这里只管把目录列表拉回来
+  searchQuery.value = view.query;
+  fetchFiles(view.parentId);
+}
+
 // 导航到根目录
 function navigateToRoot() {
-  currentPath.value = '';
-  currentParentId.value = '';
-  pathSegments.value = []; // 清空路径导航历史
-  fetchFiles();
+  navigateWithHistory(() => {
+    clearSearch(); // 点面包屑是「去某个目录」的意图，搜索结果不该盖在上面
+    currentPath.value = '';
+    currentParentId.value = '';
+    pathSegments.value = []; // 清空路径导航历史
+    fetchFiles();
+  });
 }
 
 // 导航到特定路径段
 function navigateToPathSegment(index: number) {
   if (index < 0 || index >= pathSegments.value.length) return;
 
-  // 获取目标路径段
-  const targetSegment = pathSegments.value[index];
+  navigateWithHistory(() => {
+    clearSearch();
 
-  // 更新当前路径和父ID
-  currentParentId.value = targetSegment.id;
+    // 获取目标路径段
+    const targetSegment = pathSegments.value[index];
 
-  // 更新路径段历史（保留到当前点击的段）
-  pathSegments.value = pathSegments.value.slice(0, index + 1);
+    // 更新当前路径和父ID
+    currentParentId.value = targetSegment.id;
 
-  // 重新构建当前路径
-  currentPath.value = pathSegments.value.map(segment => segment.name).join('/');
+    // 更新路径段历史（保留到当前点击的段）
+    pathSegments.value = pathSegments.value.slice(0, index + 1);
 
-  // 获取文件列表
-  fetchFiles(targetSegment.id);
+    // 重新构建当前路径
+    currentPath.value = pathSegments.value.map(segment => segment.name).join('/');
+
+    // 获取文件列表
+    fetchFiles(targetSegment.id);
+  });
 }
 
 // 导航到上一级目录
@@ -447,7 +651,7 @@ async function confirmNewFolder() {
       await createFolder(currentParentId.value, newFolderName.value);
       notify.success('文件夹创建成功');
       // 刷新文件列表
-      fetchFiles(currentParentId.value);
+      refreshCurrentView();
       showNewFolderDialog.value = false;
     } catch (error) {
       console.error('创建文件夹失败:', error);
@@ -539,7 +743,7 @@ async function confirmRename() {
     try {
       await apiRenameFile(fileToRename.value.id, newFileName.value);
       notify.success('重命名成功');
-      fetchFiles(currentParentId.value);
+      refreshCurrentView();
       showRenameDialog.value = false;
     } catch (error) {
       console.error('重命名失败:', error);
@@ -605,7 +809,7 @@ function startBoxSelect(event: MouseEvent) {
   // 文件少时文件区并不铺满剩余空间。这里改用「排除交互元素」来圈定可起手范围，
   // 于是文件区左右和下方的所有空白都能拖出选框。
   const target = event.target as HTMLElement;
-  if (target.closest('.file-item, .browser-header, .toolbar, .context-menu, button, input, a')) return;
+  if (target.closest('.file-item, .drive-header, .toolbar, .context-menu, button, input, a')) return;
 
   const additive = event.ctrlKey || event.metaKey || event.shiftKey;
   boxSelectBaseline = additive ? Array.from(selectedFiles.value) : [];
@@ -696,21 +900,29 @@ function handleFileDoubleClick(file: FileItem) {
   selectedFiles.value.clear();
   
   if (file.type === 'folder') {
+    // 搜索结果里的文件夹不在当前目录下，按命中项自带的路径链跳过去
+    if (isSearchMode.value) {
+      goToSearchHitLocation(file, true);
+      return;
+    }
+
     // 如果是文件夹，进入该文件夹
-    const folderId = file.id as string;
-    currentParentId.value = folderId;
+    navigateWithHistory(() => {
+      const folderId = file.id as string;
+      currentParentId.value = folderId;
 
-    // 更新路径导航历史
-    pathSegments.value.push({
-      id: folderId,
-      name: file.name
+      // 更新路径导航历史
+      pathSegments.value.push({
+        id: folderId,
+        name: file.name
+      });
+
+      // 更新当前路径
+      currentPath.value = pathSegments.value.map(segment => segment.name).join('/');
+
+      // 获取文件列表
+      fetchFiles(folderId);
     });
-
-    // 更新当前路径
-    currentPath.value = pathSegments.value.map(segment => segment.name).join('/');
-
-    // 获取文件列表
-    fetchFiles(folderId);
   } else {
     // 如果是文件，打开预览
     openFilePreview(file);
@@ -723,6 +935,9 @@ function handleFileDoubleClick(file: FileItem) {
 const PREVIEW_HISTORY_FLAG = 'webdavFilePreview';
 
 function openFilePreview(file: FileItem) {
+  // 预览记录之前先登记当前视图，否则从搜索结果里打开预览再返回，
+  // 落回的那条记录不认识搜索词，会把人甩回根目录。
+  rememberCurrentView();
   selectedFile.value = file;
   showFilePreview.value = true;
   // 同 URL 的 pushState 不会触发 vue-router 导航，只多出一条可回退的记录。
@@ -741,11 +956,16 @@ function closeFilePreview() {
   showFilePreview.value = false;
 }
 
-function handlePreviewPopState() {
+function handleDrivePopState() {
   // 返回离开了预览记录：关掉覆盖层，把这次返回消费掉，页面留在网盘。
   if (showFilePreview.value && !window.history.state?.[PREVIEW_HISTORY_FLAG]) {
     showFilePreview.value = false;
   }
+
+  // 再把视图退回这条记录对应的目录/搜索。没带视图的记录是进入网盘时那条，
+  // 按根目录处理；真的退出了网盘路由，组件会被卸载，还原一下也无妨。
+  const view = window.history.state?.[VIEW_HISTORY_KEY] as WebdavView | undefined;
+  restoreView(view ?? { parentId: '', segments: [], query: '' });
 }
 
 // 预览选中的文件（移动端专用）
@@ -888,7 +1108,7 @@ function deleteFile(file: FileItem) {
     apiDeleteFile(file.id)
       .then(() => {
         notify.success('删除成功');
-        fetchFiles(currentParentId.value);
+        refreshCurrentView();
       })
       .catch((error: any) => {
         console.error('删除失败:', error);
@@ -958,7 +1178,7 @@ async function handleUploadFiles(files: File[]) {
   }
 
   // 重新获取文件列表
-  fetchFiles(currentParentId.value);
+  refreshCurrentView();
   
   // 不再自动清除高亮效果
   // 用户可以通过刷新页面或导航到其他目录来清除高亮
@@ -1226,11 +1446,12 @@ function closeUploadModal() {
 onMounted(() => {
   // 初始化时获取文件列表
   fetchFiles();
-  window.addEventListener('popstate', handlePreviewPopState);
+  window.addEventListener('popstate', handleDrivePopState);
 })
 
 onUnmounted(() => {
-  window.removeEventListener('popstate', handlePreviewPopState);
+  window.removeEventListener('popstate', handleDrivePopState);
+  if (searchTimer) clearTimeout(searchTimer);
   // 拖动过程中被卸载时，全局监听和 body 上的样式都得收回来
   endBoxSelect();
 })
@@ -1261,81 +1482,6 @@ onUnmounted(() => {
     flex-direction: column;
     flex: 1;
     min-height: 0;
-  }
-
-  .browser-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    flex-shrink: 0;
-
-    .header-right {
-      display: flex;
-      gap: 10px;
-
-      .icon-btn {
-        background: none;
-        border: none;
-        padding: 8px;
-        cursor: pointer;
-        border-radius: 50%;
-        color: #666;
-        transition: all 0.2s ease;
-
-        &:hover {
-          background-color: #f0f5ff;
-          color: #2a8aff;
-        }
-
-        .icon-sm {
-          width: 20px;
-          height: 20px;
-        }
-      }
-    }
-
-    .header-left {
-      .breadcrumb {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-        background-color: #f8f9fa;
-        padding: 10px 16px;
-        border-radius: 50px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-
-        .icon-sm {
-          cursor: pointer;
-          color: #666;
-
-          &:hover {
-            color: #2a8aff;
-          }
-        }
-
-        .path-segment {
-          cursor: pointer;
-          color: #666;
-          font-weight: 500;
-          padding: 2px 8px;
-          border-radius: 4px;
-          transition: all 0.2s ease;
-
-          &:hover {
-            color: #2a8aff;
-            background-color: rgba(42, 138, 255, 0.1);
-            text-decoration: none;
-          }
-        }
-
-        .icon-xs {
-          color: #aaa;
-        }
-      }
-    }
-
   }
 
   .toolbar {

@@ -80,6 +80,7 @@ func MigrationModels() []any {
 func (m *Module) RegisterRoutes(routes *router.Routes) {
 	fileAPI := routes.AuthenticatedAPI("/api/files")
 	fileAPI.GET("/list", m.handler.ListFiles)
+	fileAPI.GET("/search", m.handler.SearchFiles)
 	fileAPI.POST("/folder", m.handler.CreateFolder)
 	fileAPI.GET("/download/:id", m.handler.DownloadFile)
 	fileAPI.GET("/download-batch", m.handler.DownloadBatch)

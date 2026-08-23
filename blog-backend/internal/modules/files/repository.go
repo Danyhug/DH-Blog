@@ -2,6 +2,7 @@ package files
 
 import (
 	"context"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -17,6 +18,11 @@ type fileRepository interface {
 	ListByParentID(ctx context.Context, userID uint64, parentID string) ([]*File, error)                 // 获取指定目录下的所有文件
 	FindByPath(ctx context.Context, userID uint64, path string) (*File, error)                           // 根据存储路径查找文件
 	FindByUserIDAndName(ctx context.Context, userID uint64, parentID string, name string) (*File, error) // 根据用户ID、父目录和文件名查找文件
+
+	// SearchByName 跨目录按名称子串检索用户的文件与文件夹
+	SearchByName(ctx context.Context, userID uint64, keyword string, limit int) ([]*File, error)
+	// ListFolders 返回用户的全部文件夹，供搜索结果拼装所在目录路径
+	ListFolders(ctx context.Context, userID uint64) ([]*File, error)
 
 	// CountByUserID 统计和批量操作
 	CountByUserID(ctx context.Context, userID uint64) (int64, error) // 统计用户的文件总数
@@ -138,6 +144,63 @@ func (r *Repository) FindByUserIDAndName(ctx context.Context, userID uint64, par
 
 	return &file, nil
 }
+
+// SearchByName 跨目录检索名称包含 keyword 的记录。
+// keyword 里的 LIKE 通配符（% _ \）会被转义，否则用户输入 "%" 就等于全量导出。
+// 参数:
+//   - ctx: 上下文
+//   - userID: 用户ID
+//   - keyword: 关键词（调用方保证已去除首尾空白且非空）
+//   - limit: 最多返回的记录数，<=0 表示不限制
+//
+// 返回:
+//   - []*File: 命中的文件列表
+//   - error: 错误信息
+func (r *Repository) SearchByName(ctx context.Context, userID uint64, keyword string, limit int) ([]*File, error) {
+	var files []*File
+
+	query := r.db.WithContext(ctx).
+		Where("user_id = ? AND name LIKE ? ESCAPE '\\'", userID, "%"+escapeLikePattern(keyword)+"%").
+		Order("is_folder DESC, name ASC")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	if err := query.Find(&files).Error; err != nil {
+		return nil, err
+	}
+
+	return files, nil
+}
+
+// ListFolders 返回用户的全部文件夹记录。
+// 参数:
+//   - ctx: 上下文
+//   - userID: 用户ID
+//
+// 返回:
+//   - []*File: 文件夹列表
+//   - error: 错误信息
+func (r *Repository) ListFolders(ctx context.Context, userID uint64) ([]*File, error) {
+	var folders []*File
+
+	err := r.db.WithContext(ctx).
+		Where("user_id = ? AND is_folder = ?", userID, true).
+		Find(&folders).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return folders, nil
+}
+
+// escapeLikePattern 转义 LIKE 模式里的元字符，配合 ESCAPE '\' 使用。
+func escapeLikePattern(value string) string {
+	return likePatternEscaper.Replace(value)
+}
+
+var likePatternEscaper = strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`)
 
 // CountByUserID 统计用户的文件总数
 // 参数:
