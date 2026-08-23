@@ -1,27 +1,28 @@
-# .air.toml
+# air 热重载配置：监听 blog-backend 下的 Go 源码，编译并重启后端
+# 注意：编译产物必须输出到 blog-deploy/backend/dhblog_dev，
+# 后端的数据目录/配置文件是相对可执行文件所在目录解析的。
 root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/main ../blog-deploy/backend"
-  bin = "tmp/main"
-  include_ext = ["go", "tpl", "tmpl", "html"]
-  exclude_dir = ["assets", "tmp", "vendor", "node_modules"]
-  follow_symlink = true
-  delay = 1000 # ms
-
-[run]
-  cmd = "./tmp/main"
-  # cmd = "go run ../blog-deploy/backend/main.go" # 也可以直接用 go run，但编译后运行更快
+cmd = "go build -o ../blog-deploy/backend/dhblog_dev ./cmd/blog-backend"
+entrypoint = ["../blog-deploy/backend/dhblog_dev"]
+include_ext = ["go"]
+exclude_dir = ["tmp"]
+exclude_regex = ["_test\\.go"]
+exclude_unchanged = false
+follow_symlink = false
+log = "tmp/air_errors.log"
+poll = false
+poll_interval = 500
+delay = 1000
+kill_delay = 500
+stop_on_error = true
+send_interrupt = true
 
 [log]
-  time = false
-
-[color]
-  main = "magenta"
-  watcher = "cyan"
-  build = "yellow"
-  runner = "green"
+time = true
+main_only = false
 
 [misc]
-  clean_on_exit = true
+clean_on_exit = true

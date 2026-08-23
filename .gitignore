@@ -9,4 +9,6 @@ blog-backend/dhblog.db
 blog-front/node_modules/
 blog-front/dist/
 
+.tools/
+
 *.DS_Store
