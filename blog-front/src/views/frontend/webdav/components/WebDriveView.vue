@@ -9,15 +9,13 @@
         <div class="browser-header">
           <div class="header-left">
             <div class="breadcrumb">
+              <!-- 「我的网盘」是面包屑的固定根节点，进子目录后也要保留，否则只剩一个图标 -->
               <HomeIcon class="icon-sm" @click="navigateToRoot" />
-              <template v-if="pathSegments.length > 0">
+              <span class="path-segment" @click="navigateToRoot">我的网盘</span>
+              <template v-for="(segment, index) in pathSegments" :key="index">
                 <ChevronRightIcon class="icon-xs" />
-                <template v-for="(segment, index) in pathSegments" :key="index">
-                  <span class="path-segment" @click="navigateToPathSegment(index)">{{ segment.name }}</span>
-                  <ChevronRightIcon v-if="index < pathSegments.length - 1" class="icon-xs" />
-                </template>
+                <span class="path-segment" @click="navigateToPathSegment(index)">{{ segment.name }}</span>
               </template>
-              <span v-else>我的网盘</span>
             </div>
           </div>
           <div class="header-right">
@@ -1272,8 +1270,7 @@ onUnmounted(() => {
     margin-bottom: 20px;
     flex-shrink: 0;
 
-    .header-left {
-      .header-right {
+    .header-right {
       display: flex;
       gap: 10px;
 
@@ -1298,7 +1295,8 @@ onUnmounted(() => {
       }
     }
 
-    .breadcrumb {
+    .header-left {
+      .breadcrumb {
         display: flex;
         align-items: center;
         gap: 8px;

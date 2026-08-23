@@ -1,8 +1,10 @@
 <template>
-  <div class="w-full min-h-screen flex flex-col bg-[#f8f9fa] animate-[fade-in_0.3s_ease] relative" :class="{ 'share-mode': shareMode }">
-    <!-- 顶部导航栏 -->
-    <div class="sticky top-0 z-10 backdrop-blur-[20px] bg-white/90 border-b border-black/5 shadow-[0_4px_20px_rgba(0,0,0,0.05)] py-2.5">
-      <div class="max-w-[1400px] mx-auto flex justify-between items-center px-6 py-3 max-md:flex-col max-md:gap-3 max-md:px-3">
+  <div class="w-full flex flex-col bg-white animate-[fade-in_0.3s_ease] relative"
+    :class="shareMode ? 'min-h-screen share-mode' : 'flex-1 min-h-0'">
+    <!-- 顶部导航栏：分享页是独立页面，保留吸顶栏；嵌在网盘里时对齐首页的 .browser-header（无栏体、不居中、贴左边缘） -->
+    <div :class="shareMode ? 'sticky top-0 z-10 backdrop-blur-[20px] bg-white/90 border-b border-black/5 shadow-[0_4px_20px_rgba(0,0,0,0.05)] py-2.5' : 'shrink-0'">
+      <div class="flex justify-between items-center max-md:flex-col max-md:gap-3"
+        :class="shareMode ? 'max-w-[1400px] mx-auto px-6 py-3 max-md:px-3' : 'mb-5'">
       <div class="flex-[2] max-md:w-full">
         <!-- 分享模式：显示Logo -->
         <template v-if="shareMode">
@@ -12,19 +14,17 @@
         </template>
         <!-- 普通模式：显示面包屑 -->
         <template v-else>
-          <div class="flex items-center gap-2 text-sm bg-[#f8f9fa]/90 px-4 py-2.5 rounded-[50px] shadow-[0_2px_8px_rgba(0,0,0,0.03)] backdrop-blur-[4px]">
-            <HomeIcon class="cursor-pointer text-[#555] w-4 h-4 transition-all duration-200 hover:text-[var(--color-blue)] hover:scale-110" @click="handleNavigateToRoot" />
-            <template v-if="pathSegments.length > 0">
+          <!-- 「我的网盘」是面包屑的固定根节点，进子目录后也要保留，否则只剩一个图标 -->
+          <div class="flex items-center gap-2 text-sm bg-[#f8f9fa] px-4 py-2.5 rounded-[50px] shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+            <HomeIcon class="cursor-pointer text-[#666] w-4 h-4 transition-all duration-200 hover:text-[#2a8aff]" @click="handleNavigateToRoot" />
+            <span class="cursor-pointer text-[#666] font-medium px-2 py-0.5 rounded transition-all duration-200 hover:text-[#2a8aff] hover:bg-[rgba(42,138,255,0.1)]" @click="handleNavigateToRoot">我的网盘</span>
+            <template v-for="(segment, index) in pathSegments" :key="index">
               <ChevronRightIcon class="text-[#aaa] w-3 h-3" />
-              <template v-for="(segment, index) in pathSegments" :key="index">
-                <span
-                  class="cursor-pointer text-[#555] font-medium px-2 py-0.5 rounded transition-all duration-200 hover:text-[var(--color-blue)] hover:bg-[rgba(56,161,219,0.1)]"
-                  @click="handleNavigateToPathSegment(index)"
-                >{{ segment.name }}</span>
-                <ChevronRightIcon v-if="index < pathSegments.length - 1" class="text-[#aaa] w-3 h-3" />
-              </template>
+              <span
+                class="cursor-pointer text-[#666] font-medium px-2 py-0.5 rounded transition-all duration-200 hover:text-[#2a8aff] hover:bg-[rgba(42,138,255,0.1)]"
+                @click="handleNavigateToPathSegment(index)"
+              >{{ segment.name }}</span>
             </template>
-            <span v-else class="cursor-pointer text-[#555] font-medium px-2 py-0.5 rounded transition-all duration-200 hover:text-[var(--color-blue)] hover:bg-[rgba(56,161,219,0.1)]" @click="handleNavigateToRoot">我的网盘</span>
           </div>
         </template>
       </div>
@@ -48,7 +48,7 @@
       </div>
     </div>
 
-    <div class="flex-1 flex justify-center items-center overflow-auto p-8 max-md:p-4">
+    <div class="flex-1 flex justify-center items-center overflow-auto p-8 max-md:p-4 bg-[#f8f9fa]">
       <!-- ========== 分享模式特殊状态处理 ========== -->
       <template v-if="shareMode && !canPreview">
         <!-- 分享加载中 -->
