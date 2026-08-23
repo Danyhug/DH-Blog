@@ -489,12 +489,24 @@ function statusLabel(status: string) {
     return status;
 }
 
+// 与后端 upstreamUsageTTL 保持一致：更久以前的数字不足以代表现在
+const UPSTREAM_USAGE_TTL = 24 * 60 * 60 * 1000;
+
 /**
  * upstream 从多把密钥里挑出余量最紧的一把展示。
  * 这里刻意不做求和：account 口径的额度是同账户共享的，几把密钥加起来会把同一份额度算好几遍。
+ *
+ * 只看还在轮换、且用量是新鲜的密钥，口径和后端选路时的 upstreamHeadroom 一致：
+ * 一把停用密钥留下的 1000/1000 不代表供应商没额度了，拿它当整家的余量会把满额的一家显示成用尽。
  */
 function upstream(provider: GatewayProvider) {
-    const synced = provider.keys.filter((key) => key.upstreamSyncedAt);
+    const now = Date.now();
+    const synced = provider.keys.filter(
+        (key) =>
+            key.inRotation &&
+            key.upstreamSyncedAt &&
+            now - new Date(key.upstreamSyncedAt).getTime() <= UPSTREAM_USAGE_TTL
+    );
     if (!synced.length) return null;
     const ratio = (key: GatewayProviderKey) => (key.upstreamLimit ? key.upstreamUsed / key.upstreamLimit : -1);
     const tightest = synced.reduce((worst, key) => (ratio(key) > ratio(worst) ? key : worst));
