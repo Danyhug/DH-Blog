@@ -105,7 +105,7 @@ jobs:
       - name: ⚙️ Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.26'
+          go-version: '1.27'
           cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
 
       - name: 🔍 Verify Go dependencies
@@ -130,8 +130,8 @@ jobs:
           # 4. 创建最终的输出目录
           mkdir -p build
 
-          # 5. 构建 Go 二进制文件 (这部分不变)
-          (cd ${{ env.BACKEND_DIR }} && GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w" -o ../build/${{ env.BINARY_NAME }}${{ matrix.ext }} ./cmd/blog-backend)
+          # 5. 构建 Go 二进制文件（nomsgpack: 排除 gin v1.12 无条件引入的 msgpack 绑定及 ugorji codec，省约 5MB，与 blog-deploy/build.sh 保持一致）
+          (cd ${{ env.BACKEND_DIR }} && GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -tags nomsgpack -trimpath -ldflags="-s -w" -o ../build/${{ env.BINARY_NAME }}${{ matrix.ext }} ./cmd/blog-backend)
           
           # 6. 验证嵌入成功（可选）
           if [ -f "build/${{ env.BINARY_NAME }}${{ matrix.ext }}" ]; then

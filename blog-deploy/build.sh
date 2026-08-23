@@ -30,7 +30,8 @@ build_for_platform() {
     local ext=$3
     local output="$BUILD_DIR/${BINARY_NAME}${ext}"
     echo "构建 $os/$arch ..."
-    (cd "$BACKEND_DIR" && GOOS=$os GOARCH=$arch go build -ldflags="-s -w" -o "$output" ./cmd/blog-backend)
+    # nomsgpack: 排除 gin v1.12 无条件引入的 msgpack 绑定及 ugorji codec，省约 5MB
+    (cd "$BACKEND_DIR" && GOOS=$os GOARCH=$arch go build -tags nomsgpack -trimpath -ldflags="-s -w" -o "$output" ./cmd/blog-backend)
     if [ $? -eq 0 ]; then
         echo "✅ $output"
     else
