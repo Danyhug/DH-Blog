@@ -8,6 +8,7 @@ import (
 	"mime"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -158,25 +159,84 @@ func (s *fileService) GetDownloadInfo(ctx context.Context, userID uint64, fileID
 	return file, nil
 }
 
-// ResolveBatchDownloadInfo 解析批量下载的条目，跳过其中的文件夹。
-// 与 GetDownloadInfo 的差别只在于文件夹的处理：打包下载允许选中集合里混有
-// 文件夹（当前实现不递归打包目录，直接忽略），而不是让整个请求失败。
-func (s *fileService) ResolveBatchDownloadInfo(ctx context.Context, userID uint64, fileIDs []string) ([]*File, error) {
-	items := make([]*File, 0, len(fileIDs))
+// ResolveBatchDownloadInfo 解析批量下载的条目。选中的文件夹会被递归展开，
+// 子孙文件以相对路径进入压缩包，因此解压后能还原原来的目录结构。
+func (s *fileService) ResolveBatchDownloadInfo(ctx context.Context, userID uint64, fileIDs []string) ([]batchDownloadItem, error) {
+	items := make([]batchDownloadItem, 0, len(fileIDs))
+	// 顶层重名要各自去重：同时选中 "a" 文件夹和 "a.txt" 文件时压缩包内不能撞名。
+	usedNames := make(map[string]struct{}, len(fileIDs))
+	visited := make(map[int]struct{})
+
 	for _, fileID := range fileIDs {
 		file, err := s.findOwnedFile(ctx, userID, fileID)
 		if err != nil {
 			return nil, err
 		}
+		entryName := uniqueEntryName(usedNames, file.Name)
 		if file.IsFolder {
-			continue
+			items, err = s.appendFolderEntries(ctx, userID, file, entryName, items, visited)
+		} else {
+			items, err = s.appendFileEntry(file, entryName, items)
 		}
-		if err := s.resolveStoragePath(file); err != nil {
+		if err != nil {
 			return nil, err
 		}
-		items = append(items, file)
 	}
 	return items, nil
+}
+
+// appendFolderEntries 递归展开文件夹，把子孙条目按 prefix 下的相对路径追加进 items。
+// visited 挡住索引里可能出现的父子环，否则一条脏数据就能让打包无限递归。
+func (s *fileService) appendFolderEntries(
+	ctx context.Context,
+	userID uint64,
+	folder *File,
+	prefix string,
+	items []batchDownloadItem,
+	visited map[int]struct{},
+) ([]batchDownloadItem, error) {
+	if _, seen := visited[folder.ID]; seen {
+		return items, nil
+	}
+	visited[folder.ID] = struct{}{}
+
+	children, err := s.repo.ListByParentID(ctx, userID, strconv.Itoa(folder.ID))
+	if err != nil {
+		logrus.Errorf("展开文件夹失败 folder=%d: %v", folder.ID, err)
+		return nil, fmt.Errorf("读取文件夹 %s 失败", folder.Name)
+	}
+
+	countBefore := len(items)
+	usedNames := make(map[string]struct{}, len(children))
+	for _, child := range children {
+		entryName := prefix + "/" + uniqueEntryName(usedNames, child.Name)
+		if child.IsFolder {
+			items, err = s.appendFolderEntries(ctx, userID, child, entryName, items, visited)
+		} else {
+			items, err = s.appendFileEntry(child, entryName, items)
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// 空目录没有任何子条目，补一条目录项，否则解压出来这一层就消失了。
+	if len(items) == countBefore {
+		items = append(items, batchDownloadItem{EntryName: prefix + "/", IsDir: true})
+	}
+	return items, nil
+}
+
+// appendFileEntry 定位磁盘文件并追加成压缩包条目，顺带守住单次打包的条目上限。
+func (s *fileService) appendFileEntry(file *File, entryName string, items []batchDownloadItem) ([]batchDownloadItem, error) {
+	if len(items) >= maxBatchDownloadFiles {
+		return nil, errBatchTooManyFiles
+	}
+	if err := s.resolveStoragePath(file); err != nil {
+		// 展开文件夹后条目可能有上百个，带上路径才知道是哪一个坏了。
+		return nil, fmt.Errorf("%s: %w", entryName, err)
+	}
+	return append(items, batchDownloadItem{File: file, EntryName: entryName}), nil
 }
 
 // findOwnedFile 按 ID 或路径查出文件记录，并确认属于该用户。

@@ -2,6 +2,7 @@ package files
 
 import (
 	"archive/zip"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -18,8 +19,21 @@ import (
 )
 
 // maxBatchDownloadFiles caps one archive request so a stray selection cannot
-// pin a worker on thousands of files.
+// pin a worker on thousands of files. 选中文件夹时按展开后的文件数计算。
 const maxBatchDownloadFiles = 500
+
+// errBatchTooManyFiles 是超限的哨兵错误：展开文件夹后才知道总数，
+// 它要映射成 400 而不是跟"文件不存在"一起走 404。
+var errBatchTooManyFiles = fmt.Errorf("单次最多打包 %d 个文件", maxBatchDownloadFiles)
+
+// batchDownloadItem 是压缩包里的一个条目。
+// EntryName 是包内相对路径（始终用 / 分隔），选中文件夹时用它还原目录结构；
+// IsDir 的条目是空目录占位，没有对应的磁盘文件。
+type batchDownloadItem struct {
+	File      *File
+	EntryName string
+	IsDir     bool
+}
 
 // DownloadBatch 打包下载
 // @Summary 批量打包下载文件
@@ -45,13 +59,17 @@ func (h *handler) DownloadBatch(c *gin.Context) {
 		return
 	}
 	if len(ids) > maxBatchDownloadFiles {
-		response.FailWithCode(c, http.StatusBadRequest, fmt.Sprintf("单次最多打包 %d 个文件", maxBatchDownloadFiles))
+		response.FailWithCode(c, http.StatusBadRequest, errBatchTooManyFiles.Error())
 		return
 	}
 
 	// 先解析全部条目：任何一个不可下载都在写出响应体之前失败，
-	// 否则错误只能以半截 zip 的形式暴露给浏览器。选中集合里的文件夹会被跳过。
+	// 否则错误只能以半截 zip 的形式暴露给浏览器。选中的文件夹在这一步递归展开。
 	items, err := h.fileService.ResolveBatchDownloadInfo(c.Request.Context(), userID, ids)
+	if errors.Is(err, errBatchTooManyFiles) {
+		response.FailWithCode(c, http.StatusBadRequest, err.Error())
+		return
+	}
 	if err != nil {
 		response.FailWithCode(c, http.StatusNotFound, fmt.Sprintf("获取文件失败: %v", err))
 		return
@@ -74,11 +92,10 @@ func (h *handler) DownloadBatch(c *gin.Context) {
 	c.Writer.WriteHeader(http.StatusOK)
 
 	writer := zip.NewWriter(c.Writer)
-	used := make(map[string]struct{}, len(items))
 	for _, item := range items {
-		if err := writeZipEntry(writer, item, uniqueEntryName(used, item.Name)); err != nil {
+		if err := writeZipEntry(writer, item); err != nil {
 			// 响应体已经开始输出，只能中断连接让浏览器把 zip 判为损坏。
-			logrus.Errorf("打包下载写入失败 file=%s: %v", item.Name, err)
+			logrus.Errorf("打包下载写入失败 entry=%s: %v", item.EntryName, err)
 			_ = writer.Close()
 			c.Abort()
 			return
@@ -98,15 +115,21 @@ func (h *handler) DownloadBatch(c *gin.Context) {
 
 // writeZipEntry streams one file into the archive, keeping memory flat
 // regardless of file size.
-func writeZipEntry(writer *zip.Writer, info *File, entryName string) error {
-	source, err := os.Open(info.StoragePath)
+func writeZipEntry(writer *zip.Writer, item batchDownloadItem) error {
+	// 目录项只有一个以 / 结尾的名字，没有内容。
+	if item.IsDir {
+		_, err := writer.CreateHeader(&zip.FileHeader{Name: item.EntryName, Method: zip.Store})
+		return err
+	}
+
+	source, err := os.Open(item.File.StoragePath)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = source.Close() }()
 
 	header := &zip.FileHeader{
-		Name: entryName,
+		Name: item.EntryName,
 		// Deflate 对已压缩的媒体文件收益极低，却要吃满 CPU；这里统一存储即可。
 		Method: zip.Store,
 	}
@@ -139,8 +162,8 @@ func parseBatchIDs(raw string) []string {
 	return ids
 }
 
-// uniqueEntryName keeps duplicate file names from colliding inside the archive
-// and strips any path separators so entries stay flat.
+// uniqueEntryName keeps duplicate names from colliding inside the archive and
+// strips path separators, so the result is always a single path segment.
 func uniqueEntryName(used map[string]struct{}, name string) string {
 	name = strings.ReplaceAll(strings.ReplaceAll(name, "\\", "_"), "/", "_")
 	if name == "" || name == "." || name == ".." {

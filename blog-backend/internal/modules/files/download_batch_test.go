@@ -33,6 +33,29 @@ func performBatchDownload(t *testing.T, h *handler, userID uint64, query string)
 	return recorder
 }
 
+// zipEntryContents 把响应体解成 条目名 -> 内容，目录项内容为空串。
+func zipEntryContents(t *testing.T, body []byte) map[string]string {
+	t.Helper()
+	reader, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
+	if err != nil {
+		t.Fatalf("open zip: %v", err)
+	}
+	entries := make(map[string]string, len(reader.File))
+	for _, entry := range reader.File {
+		f, err := entry.Open()
+		if err != nil {
+			t.Fatalf("open entry %s: %v", entry.Name, err)
+		}
+		content, err := io.ReadAll(f)
+		_ = f.Close()
+		if err != nil {
+			t.Fatalf("read entry %s: %v", entry.Name, err)
+		}
+		entries[entry.Name] = string(content)
+	}
+	return entries
+}
+
 func TestDownloadBatchStreamsSelectedFiles(t *testing.T) {
 	h, service := newBatchTestHandler(t)
 	ctx := context.Background()
@@ -78,35 +101,51 @@ func TestDownloadBatchStreamsSelectedFiles(t *testing.T) {
 	}
 }
 
-func TestDownloadBatchSkipsFoldersInSelection(t *testing.T) {
+func TestDownloadBatchPacksFolderTree(t *testing.T) {
 	h, service := newBatchTestHandler(t)
 	ctx := context.Background()
 
-	folder, err := service.CreateFolder(ctx, 7, "", "docs")
+	folder, err := service.CreateFolder(ctx, 7, "", "照片")
 	if err != nil {
 		t.Fatalf("create folder: %v", err)
 	}
-	uploaded, err := service.UploadFile(ctx, 7, "", "a.txt", 999, strings.NewReader("hi"))
+	sub, err := service.CreateFolder(ctx, 7, strconv.Itoa(folder.ID), "子目录")
 	if err != nil {
-		t.Fatalf("upload: %v", err)
+		t.Fatalf("create sub folder: %v", err)
+	}
+	if _, err := service.UploadFile(ctx, 7, strconv.Itoa(folder.ID), "img1.jpg", 999, strings.NewReader("one")); err != nil {
+		t.Fatalf("upload img1: %v", err)
+	}
+	if _, err := service.UploadFile(ctx, 7, strconv.Itoa(sub.ID), "img2.jpg", 999, strings.NewReader("two")); err != nil {
+		t.Fatalf("upload img2: %v", err)
+	}
+	report, err := service.UploadFile(ctx, 7, "", "报告.pdf", 999, strings.NewReader("pdf"))
+	if err != nil {
+		t.Fatalf("upload report: %v", err)
 	}
 
-	// 混入文件夹不该让整个请求失败，文件夹本身被忽略。
-	recorder := performBatchDownload(t, h, 7, "ids="+strconv.Itoa(folder.ID)+","+strconv.Itoa(uploaded.ID))
+	recorder := performBatchDownload(t, h, 7, "ids="+strconv.Itoa(report.ID)+","+strconv.Itoa(folder.ID))
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
-	body := recorder.Body.Bytes()
-	reader, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
-	if err != nil {
-		t.Fatalf("open zip: %v", err)
+
+	got := zipEntryContents(t, recorder.Body.Bytes())
+	want := map[string]string{
+		"报告.pdf":          "pdf",
+		"照片/img1.jpg":     "one",
+		"照片/子目录/img2.jpg": "two",
 	}
-	if len(reader.File) != 1 || reader.File[0].Name != "a.txt" {
-		t.Fatalf("zip entries=%v, want only a.txt", reader.File)
+	if len(got) != len(want) {
+		t.Fatalf("zip entries=%v, want %v", got, want)
+	}
+	for name, content := range want {
+		if got[name] != content {
+			t.Errorf("entry %s=%q, want %q", name, got[name], content)
+		}
 	}
 }
 
-func TestDownloadBatchRejectsFolderOnlySelection(t *testing.T) {
+func TestDownloadBatchKeepsEmptyFolderAsDirectoryEntry(t *testing.T) {
 	h, service := newBatchTestHandler(t)
 	folder, err := service.CreateFolder(context.Background(), 7, "", "docs")
 	if err != nil {
@@ -114,8 +153,46 @@ func TestDownloadBatchRejectsFolderOnlySelection(t *testing.T) {
 	}
 
 	recorder := performBatchDownload(t, h, 7, "ids="+strconv.Itoa(folder.ID))
-	if recorder.Code != http.StatusBadRequest {
-		t.Fatalf("status=%d, want 400", recorder.Code)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	got := zipEntryContents(t, recorder.Body.Bytes())
+	if len(got) != 1 {
+		t.Fatalf("zip entries=%v, want only the directory entry", got)
+	}
+	if _, ok := got["docs/"]; !ok {
+		t.Fatalf("zip entries=%v, want docs/", got)
+	}
+}
+
+func TestDownloadBatchDeduplicatesTopLevelNames(t *testing.T) {
+	h, service := newBatchTestHandler(t)
+	ctx := context.Background()
+
+	folder, err := service.CreateFolder(ctx, 7, "", "a")
+	if err != nil {
+		t.Fatalf("create folder: %v", err)
+	}
+	if _, err := service.UploadFile(ctx, 7, strconv.Itoa(folder.ID), "inner.txt", 999, strings.NewReader("inner")); err != nil {
+		t.Fatalf("upload inner: %v", err)
+	}
+	// 同名的文件与文件夹分处不同目录，压缩包里却要挤在同一层。
+	other, err := service.CreateFolder(ctx, 7, "", "box")
+	if err != nil {
+		t.Fatalf("create box: %v", err)
+	}
+	plain, err := service.UploadFile(ctx, 7, strconv.Itoa(other.ID), "a", 999, strings.NewReader("plain"))
+	if err != nil {
+		t.Fatalf("upload a: %v", err)
+	}
+
+	recorder := performBatchDownload(t, h, 7, "ids="+strconv.Itoa(folder.ID)+","+strconv.Itoa(plain.ID))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+	got := zipEntryContents(t, recorder.Body.Bytes())
+	if got["a/inner.txt"] != "inner" || got["a(1)"] != "plain" {
+		t.Fatalf("zip entries=%v, want a/inner.txt and a(1)", got)
 	}
 }
 

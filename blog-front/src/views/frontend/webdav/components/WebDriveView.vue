@@ -39,19 +39,19 @@
               <UploadIcon class="icon-sm" />
               上传
             </button>
-            <button v-if="selectedFiles.size > 0 && !isFolderSelected" class="btn-primary" @click="downloadSelectedFiles">
+            <button v-if="selectedFiles.size > 0" class="btn-primary" @click="downloadSelectedFiles">
               <UploadIcon class="icon-sm" transform="rotate(180)" />
               下载 ({{ selectedFiles.size }})
             </button>
-            <button v-if="selectedFiles.size > 0 && !isFolderSelected" class="btn-outline" @click="shareSelectedFiles">
+            <button v-if="selectedFiles.size > 0 && !hasFolderSelected" class="btn-outline" @click="shareSelectedFiles">
               <UploadIcon class="icon-sm" />
               分享 ({{ selectedFiles.size }})
             </button>
-            <button v-if="selectedFiles.size === 1 && !isFolderSelected" class="btn-outline mobile-preview-btn" @click="previewSelectedFile">
+            <button v-if="selectedFiles.size === 1 && !hasFolderSelected" class="btn-outline mobile-preview-btn" @click="previewSelectedFile">
               <FileIcon class="icon-sm" />
               预览
             </button>
-            <button v-if="selectedFiles.size === 1 && isFolderSelected" class="btn-primary enter-folder-btn" @click="enterSelectedFolder">
+            <button v-if="isSingleFolderSelected" class="btn-primary enter-folder-btn" @click="enterSelectedFolder">
               <FolderIcon class="icon-sm" />
               进入文件夹
             </button>
@@ -252,7 +252,8 @@
           <UploadIcon class="icon-xs" /> 分享
         </li>
         <li @click="downloadFile(contextMenu.file)">
-          <UploadIcon class="icon-xs" transform="rotate(180)" /> 下载
+          <UploadIcon class="icon-xs" transform="rotate(180)" />
+          {{ contextMenu.file?.type === 'folder' ? '下载 (打包)' : '下载' }}
         </li>
         <li @click="renameFile(contextMenu.file)">
           <FileTextIcon class="icon-xs" /> 重命名
@@ -496,13 +497,19 @@ const contextMenuStyle = computed(() => {
   }
 })
 
-// 判断选中的是否为文件夹
-const isFolderSelected = computed(() => {
-  if (selectedFiles.value.size !== 1) return false
-  const selectedId = Array.from(selectedFiles.value)[0]
-  const selectedFile = filteredFiles.value.find(f => f.id === selectedId)
-  return selectedFile?.type === 'folder'
-})
+// 当前选中的条目。原来的 isFolderSelected 只在单选时有意义（多选恒为 false），
+// 导致「文件 + 文件夹」混选时按钮的可用性判断全错，这里按整个选中集合来算。
+const selectedItems = computed(() =>
+  filteredFiles.value.filter(file => file.id && selectedFiles.value.has(file.id))
+)
+
+// 选中集合里含文件夹。分享与预览都只支持单个文件，据此隐藏按钮。
+const hasFolderSelected = computed(() => selectedItems.value.some(file => file.type === 'folder'))
+
+// 只选中了一个文件夹，此时提供「进入文件夹」。
+const isSingleFolderSelected = computed(() =>
+  selectedItems.value.length === 1 && selectedItems.value[0].type === 'folder'
+)
 
 // 获取文件列表
 const fetchFiles = async (parentId: string = '') => {
@@ -1020,13 +1027,21 @@ function triggerDownload(url: string) {
   }, 10000);
 }
 
-// 下载文件
+// 下载文件。文件夹没有直链，交给打包接口按目录结构压成 zip。
 function downloadFile(file: FileItem) {
-  if (file.type === 'file' && file.id) {
-    const downloadUrl = getDownloadUrl(file.id);
-    triggerDownload(downloadUrl);
+  if (file.id) {
+    if (file.type === 'folder') {
+      triggerDownload(getBatchDownloadUrl([file.id], sanitizeArchiveName(file.name)));
+    } else {
+      triggerDownload(getDownloadUrl(file.id));
+    }
   }
   closeContextMenu();
+}
+
+// 名字里的路径分隔符等字符会让浏览器保存文件时出问题，统一替换掉。
+function sanitizeArchiveName(name: string) {
+  return name.replace(/[\\/:*?"<>|]/g, '_').trim();
 }
 
 // 打包名沿用主流网盘的「来源 + 时间戳」惯例（如 Google Drive 的
@@ -1037,8 +1052,7 @@ function buildArchiveName() {
   const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}T` +
     `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   const currentFolder = pathSegments.value[pathSegments.value.length - 1]?.name;
-  // 目录名里的路径分隔符等字符会让浏览器保存文件时出问题，统一替换掉。
-  const prefix = currentFolder?.replace(/[\\/:*?"<>|]/g, '_').trim();
+  const prefix = currentFolder ? sanitizeArchiveName(currentFolder) : '';
   return `${prefix || 'dhblog-download'}-${stamp}`;
 }
 
@@ -1049,21 +1063,20 @@ function downloadSelectedFiles() {
     return;
   }
 
-  const selectedFileItems = filteredFiles.value.filter(file => 
-    file.id && selectedFiles.value.has(file.id) && file.type !== 'folder'
-  );
-
-  if (selectedFileItems.length === 0) {
+  const items = selectedItems.value;
+  if (items.length === 0) {
     notify.warning('没有可下载的文件');
     return;
   }
 
-  // 单个文件仍走直链；多个文件交给后端打包成 zip，
-  // 避免浏览器把连续的多次下载判定为并发下载而拦截。
-  if (selectedFileItems.length === 1) {
-    triggerDownload(getDownloadUrl(selectedFileItems[0].id!));
+  // 单个文件仍走直链；其余（多选、或含文件夹）交给后端打包成 zip，
+  // 既能保住目录结构，也避免浏览器把连续的多次下载判定为并发下载而拦截。
+  if (items.length === 1 && items[0].type !== 'folder') {
+    triggerDownload(getDownloadUrl(items[0].id!));
   } else {
-    triggerDownload(getBatchDownloadUrl(selectedFileItems.map(file => file.id!), buildArchiveName()));
+    // 只选中一个文件夹时用它自己的名字命名压缩包，比「当前目录 + 时间戳」更好认。
+    const archiveName = items.length === 1 ? sanitizeArchiveName(items[0].name) : buildArchiveName();
+    triggerDownload(getBatchDownloadUrl(items.map(file => file.id!), archiveName || buildArchiveName()));
   }
 
   // 下载完成后清空选择
