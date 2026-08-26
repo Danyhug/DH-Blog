@@ -193,8 +193,9 @@ func TestBatchSummaryCapsConcurrencyAndKeepsGoingAfterFailures(t *testing.T) {
 	if peak < 2 {
 		t.Fatalf("concurrent AI calls peaked at %d, batch did not run in parallel", peak)
 	}
-	if calls != articleCount {
-		t.Fatalf("AI was called %d times, want %d (no retries in a batch)", calls, articleCount)
+	if calls != articleCount+3 {
+		t.Fatalf("AI was called %d times, want %d (%d failed articles retried once)",
+			calls, articleCount+3, 3)
 	}
 	// 失败的文章保持无摘要，成功的文章已写回
 	for i, id := range ids {

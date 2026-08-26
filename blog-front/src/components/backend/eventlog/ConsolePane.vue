@@ -101,7 +101,8 @@
             class="flex items-start gap-2.5 px-3 py-[3px]"
             :class="bucketOf(line.level) === 'error' ? 'bg-[#f87171]/[0.07]' : 'hover:bg-white/[0.03]'">
             <span class="mt-[6px] h-2.5 w-[3px] shrink-0 rounded-full" :class="rail[bucketOf(line.level)]"></span>
-            <span class="shrink-0 font-mono text-[12px] leading-[1.6] tabular-nums text-slate-500">{{ line.time }}</span>
+            <span class="shrink-0 font-mono text-[12px] leading-[1.6] tabular-nums text-slate-500"
+              :title="line.timestamp || line.time">{{ line.time }}</span>
             <span class="hidden w-9 shrink-0 font-mono text-[10px] uppercase leading-[1.9] tracking-[0.06em] sm:block"
               :class="tone[bucketOf(line.level)]">{{ short[bucketOf(line.level)] }}</span>
             <span class="font-mono text-[12px] leading-[1.6]"

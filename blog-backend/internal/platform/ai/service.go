@@ -68,11 +68,17 @@ type OpenAIService struct {
 const tagCacheTTL = 2 * time.Hour
 const summaryCacheTTL = 2 * time.Hour
 
+// aiRequestTimeout bounds one upstream AI round trip. It aligns with the
+// batch summary's per-article 90s budget: a shorter client timeout would
+// kill requests the batch context would still have allowed, turning slow
+// upstream responses into spurious failures.
+const aiRequestTimeout = 90 * time.Second
+
 // NewAIService 创建新的AI服务实例
 func NewAIService(config AIConfigSource, cache dhcache.Cache) AIService {
 	// 创建带有超时的HTTP客户端
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: aiRequestTimeout,
 	}
 
 	return &OpenAIService{

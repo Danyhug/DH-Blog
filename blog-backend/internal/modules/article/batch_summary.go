@@ -169,7 +169,13 @@ func (h *Handler) runBatchSummary(ctx context.Context, ids []int) {
 			defer func() { <-slots }()
 			err := h.generateSummaryForBatch(ctx, articleID)
 			if err != nil {
-				logrus.Errorf("批量生成文章 %d 的摘要失败: %v", articleID, err)
+				// 偶发上游慢响应（30s+ 排队）会造成一次失败，重试一次自愈；
+				// 摘要失败不写回，重试是幂等的。
+				logrus.Warnf("批量生成文章 %d 的摘要失败: %v, 将重试一次", articleID, err)
+				err = h.generateSummaryForBatch(ctx, articleID)
+			}
+			if err != nil {
+				logrus.Errorf("批量生成文章 %d 的摘要失败(重试后仍失败): %v", articleID, err)
 			}
 			h.batchSummary.record(err != nil)
 		}(id)

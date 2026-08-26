@@ -25,11 +25,14 @@ const (
 type LogLine struct {
 	// Seq is a monotonic id used by the client to deduplicate the scrollback
 	// it fetched against the lines the socket pushes.
-	Seq     int64             `json:"seq"`
-	Time    string            `json:"time"`
-	Level   string            `json:"level"`
-	Message string            `json:"message"`
-	Fields  map[string]string `json:"fields,omitempty"`
+	Seq int64 `json:"seq"`
+	// Time is the compact clock-only stamp shown in the console; Timestamp
+	// carries the full date so a hover tooltip can show which day it was.
+	Time      string `json:"time"`
+	Timestamp string `json:"timestamp"`
+	Level     string `json:"level"`
+	Message   string `json:"message"`
+	Fields    map[string]string `json:"fields,omitempty"`
 }
 
 // logRing is a fixed-size circular scrollback buffer.
@@ -103,13 +106,21 @@ type logHook struct {
 	queue chan LogLine
 }
 
+// consoleTimeStamp is the clock-only stamp shown in the console; fullTimestamp
+// keeps the date for hover tooltips.
+const (
+	consoleTimeStamp = "15:04:05.000"
+	fullTimestamp    = "2006-01-02 15:04:05.000"
+)
+
 func (h *logHook) Levels() []logrus.Level { return logrus.AllLevels }
 
 func (h *logHook) Fire(entry *logrus.Entry) error {
 	line := LogLine{
-		Time:    entry.Time.Format("15:04:05.000"),
-		Level:   entry.Level.String(),
-		Message: entry.Message,
+		Time:      entry.Time.Format(consoleTimeStamp),
+		Timestamp: entry.Time.Format(fullTimestamp),
+		Level:     entry.Level.String(),
+		Message:   entry.Message,
 	}
 	if len(entry.Data) > 0 {
 		// The entry is reused after Fire returns, so its fields are copied
@@ -176,11 +187,13 @@ func (s *Service) LogCursor() int64 { return s.logs.cursor() }
 // could any future caller that wants something on the console without putting
 // it in the server's own log.
 func (s *Service) publishLogLine(level, message string) {
+	now := time.Now()
 	select {
 	case s.logQueue <- LogLine{
-		Time:    time.Now().Format("15:04:05.000"),
-		Level:   level,
-		Message: message,
+		Time:      now.Format(consoleTimeStamp),
+		Timestamp: now.Format(fullTimestamp),
+		Level:     level,
+		Message:   message,
 	}:
 	default:
 	}

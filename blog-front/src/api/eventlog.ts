@@ -45,7 +45,10 @@ export const replayBackgroundEvents = (
 export interface ServerLogLine {
   /** 单调递增序号，用来和 WS 推来的行去重 */
   seq: number
+  /** 控制台显示的紧凑时间（时分秒毫秒） */
   time: string
+  /** 完整时间戳（含年月日），时间列悬停时展示 */
+  timestamp?: string
   level: string
   message: string
   fields?: Record<string, string>
