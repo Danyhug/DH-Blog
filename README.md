@@ -120,7 +120,7 @@ curl -X POST https://你的域名/api/gateway/v1/search \
 
 | 层 | 选型 |
 | --- | --- |
-| 后端 | Go 1.26 · Gin · GORM · SQLite（WAL）· Viper |
+| 后端 | Go 1.27 · Gin · GORM · SQLite（WAL）· Viper |
 | 前端 | Vue 3 · TypeScript · Vite · Element Plus · Tailwind v4 · Pinia（构建用 bun） |
 | AI | OpenAI 兼容 Chat Completions（标签/摘要）· 搜索网关（Brave / Tavily / Exa / Firecrawl）· MCP |
 | 打包 | `go:embed` 前端 → 单二进制，交叉编译三平台 |
