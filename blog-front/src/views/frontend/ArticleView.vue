@@ -2,7 +2,8 @@
   <!-- 文章浏览页 -->
   <div>
     <!-- 全屏观看文章信息 -->
-    <div :class="`blog-container ${store.aritcleModel.isFullPreview ? 'full-screen-preview' : ''}`">
+    <div :class="`blog-container ${store.aritcleModel.isFullPreview ? 'full-screen-preview' : ''}`"
+      @click="openPreviewLinkInNewTab">
       <p class="title" v-show="store.aritcleModel.isFullPreview" @click="changeIsFullPreview()">{{ title }}</p>
       <MdPreview :editorId="system.mdEditorInit.editorId" :modelValue="content"
         :previewTheme="system.mdEditorInit.previewTheme" :codeFoldable="system.mdEditorInit.codeFoldable"
@@ -82,6 +83,24 @@ export default {
   methods: {
     changeIsFullPreview() {
       this.store.aritcleModel.isFullPreview = !this.store.aritcleModel.isFullPreview
+    },
+    // 正文里的 <a> 没有 target，单击会直接替换掉当前文章页；
+    // 改为补上 target=_blank 后交给浏览器默认行为，在新标签页打开。
+    // #锚点（页内跳转）与 mailto: 等非 http(s) 链接保持原行为，修饰键/中键点击也不干涉。
+    openPreviewLinkInNewTab(e: MouseEvent) {
+      if (e.defaultPrevented) return
+      const target = e.target
+      if (!(target instanceof Element)) return
+      const anchor = target.closest('a')
+      if (!(anchor instanceof HTMLAnchorElement)) return
+
+      const rawHref = anchor.getAttribute('href') || ''
+      if (rawHref.startsWith('#')) return
+      if (anchor.protocol !== 'http:' && anchor.protocol !== 'https:') return
+      if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return
+
+      anchor.target = '_blank'
+      anchor.rel = 'noopener noreferrer'
     },
     changeArticleInfo(article: Article<Tag>) {
       this.id = article.id || 0
