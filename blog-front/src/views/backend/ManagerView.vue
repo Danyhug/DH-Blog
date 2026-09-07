@@ -12,6 +12,16 @@
         </el-button>
       </div>
       <ArticleTable :articles="articles" @refresh="loadArticles"></ArticleTable>
+
+      <div v-if="articleTotal > 0" class="mt-3 flex justify-end">
+        <el-pagination
+          v-model:current-page="articlePage.pageNum"
+          :page-size="articlePage.pageSize"
+          :total="articleTotal"
+          layout="total, prev, pager, next"
+          @current-change="loadArticles"
+        />
+      </div>
     </el-tab-pane>
 
     <el-tab-pane label="分类管理" name="second">
@@ -133,6 +143,10 @@ const store = useAdminStore()
 const articles = reactive<Article<Tag>[]>([])
 const categories = store.categories
 const tags = store.tags
+
+// 文章列表分页（文章管理 tab 专用）
+const articleTotal = ref(0)
+const articlePage = reactive({ pageNum: 1, pageSize: 10 })
 
 // 摘要批量生成：只在开始与结束时提示，中途 3 秒静默轮询进度
 const batchDialogVisible = ref(false)
@@ -336,13 +350,21 @@ const startBatch = async () => {
   }
 }
 
-// 加载文章列表
+// 加载当前页文章列表；总数变少导致当前页越界时（如删掉最后一页仅剩的那条），
+// 回退到最后一页重拉一次，避免停在空白页
 const loadArticles = async () => {
+  const res = await getArticleList({ pageNum: articlePage.pageNum, pageSize: articlePage.pageSize })
+  articleTotal.value = res.total
+
+  const lastPage = Math.max(1, Math.ceil(res.total / articlePage.pageSize))
+  if (articlePage.pageNum > lastPage) {
+    articlePage.pageNum = lastPage
+    return loadArticles()
+  }
+
   // 清空现有文章列表
   articles.splice(0, articles.length)
 
-  // 重新获取文章列表
-  const res = await getArticleList({ pageNum: 1, pageSize: 10, total: 10 })
   const articleList: Article<Tag>[] = []
   res.list.forEach(item => {
     item.categoryName = categories.find(c => c.id === item.categoryId)?.name

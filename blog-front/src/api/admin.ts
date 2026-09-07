@@ -31,7 +31,7 @@ export const addArticle = (data: Article<any>): Promise<Article<any>> => {
  * @param data
  * @returns
  */
-export const getArticleList = (data: Page): Promise<PageResult<Article<any>>> => {
+export const getArticleList = (data: Pick<Page, 'pageNum' | 'pageSize'>): Promise<PageResult<Article<any>>> => {
   return request.post('/admin/article/list', data)
 }
 
