@@ -1,8 +1,7 @@
 <template>
   <div class="info">
-    <img :src="site.avatar || defaultAvatar" :alt="site.blog_title">
+    <img class="block mx-auto" :src="site.avatar || defaultAvatar" :alt="site.blog_title">
     <div class="info-text">
-      <p class="title">{{ site.blog_title }}</p>
       <p class="sub-title">{{ site.signature }}</p>
       <ul class="links">
         <li>
