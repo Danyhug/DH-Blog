@@ -1,15 +1,17 @@
 <template>
     <div v-loading="loading">
         <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-[18px]">
-            <div v-for="tile in tiles" :key="tile.label" class="tile">
-                <span class="tile-icon" :style="{ backgroundColor: tile.tint, color: tile.color }">
+            <div v-for="tile in tiles" :key="tile.label"
+                class="flex items-center gap-[14px] px-[18px] py-[16px] bg-white border border-[#edf0f3] rounded-[14px] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                <span class="inline-flex items-center justify-center w-[40px] h-[40px] rounded-[12px] text-[19px] shrink-0"
+                    :style="{ backgroundColor: tile.tint, color: tile.color }">
                     <el-icon>
                         <component :is="tile.icon" />
                     </el-icon>
                 </span>
                 <div class="min-w-0">
-                    <div class="tile-value">{{ tile.value }}</div>
-                    <div class="tile-label">{{ tile.label }}</div>
+                    <div class="text-[24px] font-semibold leading-[1.2] text-[#1f2937] tabular-nums">{{ tile.value }}</div>
+                    <div class="mt-[2px] text-[12px] text-[#98a2b3] truncate">{{ tile.label }}</div>
                 </div>
             </div>
         </div>
@@ -145,44 +147,3 @@ async function load() {
 
 onMounted(load);
 </script>
-
-<style scoped>
-.tile {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 16px 18px;
-    background-color: #fff;
-    border: 1px solid #edf0f3;
-    border-radius: 14px;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-}
-
-.tile-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    font-size: 19px;
-    flex-shrink: 0;
-}
-
-.tile-value {
-    font-size: 24px;
-    font-weight: 600;
-    line-height: 1.2;
-    color: #1f2937;
-    font-variant-numeric: tabular-nums;
-}
-
-.tile-label {
-    margin-top: 2px;
-    font-size: 12px;
-    color: #98a2b3;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-</style>

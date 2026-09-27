@@ -1,9 +1,9 @@
 <template>
-  <div class="dash-container">
+  <div class="w-full">
     <TotalItem />
 
     <!-- 中间图表，左侧显示 访客数、用户数、总浏览数、总评论数，右侧显示具体图表数据 -->
-    <div class="chart-item">
+    <div class="chart-item flex items-center justify-between p-[16px] mb-[10px] h-[450px]">
       <VisitTable />
       
       <VisitChart />
@@ -11,18 +11,11 @@
   </div>
 </template>
 <style lang="less" scoped>
-.dash-container {
-  width: 100%;
-}
-
+/*
+  子组件（VisitTable / VisitChart）的根节点及其内部 DOM 在父组件里只能靠 :deep() 覆盖，
+  工具类加不到别的组件身上。.chart-item 这个类名保留为下面选择器的锚点。
+*/
 .chart-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  margin-bottom: 10px;
-  height: 450px;
-
   :deep(>div) {
     height: 100%;
     border-radius: var(--dh-admin-border-radius-big);

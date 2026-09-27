@@ -116,10 +116,10 @@
 
             <el-divider />
 
-            <div class="capability">用作联网搜索<span class="capability-scope">所有 Key 自带</span></div>
+            <div class="mb-[10px] text-[14px] font-semibold text-[#1f2937]">用作联网搜索<span class="ml-[8px] text-[12px] font-normal text-[#98a2b3]">所有 Key 自带</span></div>
             <div class="step">
                 禁掉内置搜索，写进 <code>~/.claude/settings.json</code>
-                <span class="step-sub">不禁的话两个搜索工具并存，模型多半仍会用内置那个</span>
+                <span class="ml-[8px] text-[12px] text-[#98a2b3]">不禁的话两个搜索工具并存，模型多半仍会用内置那个</span>
             </div>
             <CodeBlock :code="denyWebSearchJson" label="配置" />
             <p class="mt-3 mb-0 text-xs leading-relaxed text-[#98a2b3]">
@@ -133,7 +133,7 @@
 
             <el-divider />
 
-            <div class="capability">用作博客写入<span class="capability-scope">需要 content:read / content:write</span></div>
+            <div class="mb-[10px] text-[14px] font-semibold text-[#1f2937]">用作博客写入<span class="ml-[8px] text-[12px] font-normal text-[#98a2b3]">需要 content:read / content:write</span></div>
             <p class="mt-0 mb-3 text-xs leading-relaxed text-[#98a2b3]">
                 在「接入密钥」里新建 Key 时勾上对应能力范围，或给已有 Key 补上；能力是逐把配置的，
                 不勾就还是一把纯搜索 Key。
@@ -258,6 +258,11 @@ onMounted(load);
 </script>
 
 <style scoped>
+/*
+  组件类：模板中重复出现的同款样式，集中维护。
+  - .scope-group 的间隔靠相邻兄弟选择器表达，工具类没有等价写法；
+  - .step 用 :not(:first-of-type) 去掉首段的顶部间距，同样无等价工具类。
+*/
 .scope-group+.scope-group {
     margin-top: 24px;
     padding-top: 20px;
@@ -274,26 +279,7 @@ onMounted(load);
     margin-top: 16px;
 }
 
-.step-sub {
-    margin-left: 8px;
-    font-size: 12px;
-    color: #98a2b3;
-}
-
-.capability {
-    margin-bottom: 10px;
-    font-size: 14px;
-    font-weight: 600;
-    color: #1f2937;
-}
-
-.capability-scope {
-    margin-left: 8px;
-    font-size: 12px;
-    font-weight: 400;
-    color: #98a2b3;
-}
-
+/* 覆盖 Element Plus 折叠面板头部 */
 :deep(.el-collapse-item__header) {
     height: auto;
     padding: 10px 0;
