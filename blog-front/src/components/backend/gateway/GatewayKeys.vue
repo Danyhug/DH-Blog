@@ -58,7 +58,7 @@
                 <el-table-column label="Key" min-width="210">
                     <template #default="scope">
                         <div class="flex items-center gap-1">
-                            <code class="masked">{{ scope.row.keyPrefix }}…</code>
+                            <code class="px-[6px] py-[1px] rounded-[4px] bg-[#f4f6f8] text-[12px] text-[#667085]">{{ scope.row.keyPrefix }}…</code>
                             <el-button link type="primary" size="small" :icon="CopyDocument"
                                 :loading="revealing === scope.row.id" @click="onCopyKey(scope.row)" />
                         </div>
@@ -168,7 +168,7 @@
                 </template>
             </el-input>
 
-            <div class="step mt-4">接入 Claude Code，直接复制执行</div>
+            <div class="mt-4 mb-[8px] text-[13px] text-[#475467]">接入 Claude Code，直接复制执行</div>
             <CodeBlock :code="createdMcpCommand" label="命令" />
             <p class="mt-3 mb-0 text-xs text-gray-400">
                 其余接入步骤（禁用内置 <code>WebSearch</code>、这把 Key 能看到哪些工具）见「MCP 能力」标签页。
@@ -344,19 +344,3 @@ onMounted(load);
 // 目录只决定表单里渲染哪些勾选项，单独拉：它挂了不该连带把 Key 列表也空着
 onMounted(loadScopeCatalog);
 </script>
-
-<style scoped>
-.step {
-    margin-bottom: 8px;
-    font-size: 13px;
-    color: #475467;
-}
-
-.masked {
-    padding: 1px 6px;
-    border-radius: 4px;
-    background-color: #f4f6f8;
-    font-size: 12px;
-    color: #667085;
-}
-</style>

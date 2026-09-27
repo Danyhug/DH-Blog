@@ -1,5 +1,5 @@
 <template>
-  <div class="chart-left">
+  <div class="w-[45%] [--el-border-radius-base:6px]">
     <div class="item-top">
       <div>
         <div class="item-title">访问记录</div>
@@ -19,7 +19,7 @@
       </el-radio-group>
     </div>
 
-    <div class="item-table" v-loading="loading">
+    <div class="mt-[15px] px-[8px]" v-loading="loading">
       <el-table :data="ipData" @scroll.native="loadMore" style="overflow-y: auto; max-height: 315px;"
         @row-click="handleRowClick" :row-class-name="tableRowClassName">
 
@@ -27,7 +27,7 @@
         <el-table-column label="城市" min-width="21%" show-overflow-tooltip>
           <template #default="scope">
             <div>
-              <Icon class="tele-icon" :iconName="getTelecom(scope.row.city)" iconSize="1.8"></Icon>
+              <Icon class="mr-[5px]" :iconName="getTelecom(scope.row.city)" iconSize="1.8"></Icon>
               <span>{{ getCity(scope.row.city) }}</span>
             </div>
           </template>
@@ -53,20 +53,10 @@
 </template>
 
 <style lang="less">
-.chart-left {
-  width: 45%;
-  --el-border-radius-base: 6px;
-
-  .item-table {
-    margin-top: 15px;
-    padding: 0 8px;
-  }
-}
-
-.tele-icon {
-  margin-right: 5px;
-}
-
+/*
+  非 scoped：ban-row 由 el-table 的 row-class-name 加到库内部的 <tr> 上，
+  工具类够不着那些元素，只能保留这条规则。
+*/
 .ban-row {
   background-color: rgba(201, 61, 64, .1) !important;
 }

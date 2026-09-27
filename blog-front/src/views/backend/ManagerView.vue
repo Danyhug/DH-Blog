@@ -390,8 +390,3 @@ onUnmounted(() => {
   stopCountdown()
 })
 </script>
-<style scoped>
-.box-card {
-  width: 460px;
-}
-</style>
