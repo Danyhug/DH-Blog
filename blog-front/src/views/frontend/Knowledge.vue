@@ -1,19 +1,19 @@
 <template>
-    <div class="knowledge-page">
-        <div id="particles-js"></div>
-        <main class="main-container">
-            <section class="content-section">
-                <h2 class="section-title">📂 文章分类</h2>
-                <div class="grid-wrapper">
-                    <div v-if="isLoading" class="loading-state">
-                        <i class="fas fa-spinner fa-spin"></i> 加载中...
+    <div class="knowledge-page flex flex-col h-screen bg-[var(--bg-color)] text-[var(--text-color)] overflow-hidden [font-family:[-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,'Helvetica_Neue',Arial,sans-serif]]">
+        <div id="particles-js" class="fixed top-0 left-0 w-full h-full z-0"></div>
+        <main class="main-container flex grow p-10 gap-10 z-[1] relative h-[calc(100vh-80px)]">
+            <section class="content-section animate-fade-in-up">
+                <h2 class="section-title text-[2em] text-center text-[var(--text-color)] py-[25px] px-5 m-0 shrink-0 [text-shadow:none] border-b border-b-[var(--border-color)]">📂 文章分类</h2>
+                <div class="grid-wrapper grow p-[25px] [scrollbar-gutter:stable]">
+                    <div v-if="isLoading" class="loading-state text-center p-10 text-[var(--text-color)] text-[1.1em]">
+                        <i class="fas fa-spinner fa-spin mr-[10px]"></i> 加载中...
                     </div>
-                    <div v-else class="grid-container">
+                    <div v-else class="grid gap-5">
                         <!-- ✨ Staggering achieved via inline style -->
-                        <a v-for="(category, index) in categories" :key="category.name" href="#" class="card"
+                        <a v-for="(category, index) in categories" :key="category.name" href="#" class="card animate-fade-in-up"
                             :style="{ animationDelay: 200 + index * 50 + 'ms' }" @click.prevent="openModal(category)">
                             <div class="card-content">
-                                <span>{{ category.name }}</span>
+                                <span class="[transition:color_0.3s_ease-out]">{{ category.name }}</span>
                                 <span class="count">{{ category.count }}篇</span>
                             </div>
                         </a>
@@ -22,18 +22,18 @@
             </section>
 
             <!-- Tags Section -->
-            <section class="content-section tag-section" style="flex: 1">
-                <h2 class="section-title">🏷️ 热门标签</h2>
-                <div class="grid-wrapper">
-                    <div v-if="isLoading" class="loading-state">
-                        <i class="fas fa-spinner fa-spin"></i> 加载中...
+            <section class="content-section tag-section animate-fade-in-up" style="flex: 1">
+                <h2 class="section-title text-[2em] text-center text-[var(--text-color)] py-[25px] px-5 m-0 shrink-0 [text-shadow:none] border-b border-b-[var(--border-color)]">🏷️ 热门标签</h2>
+                <div class="grid-wrapper grow p-[25px] [scrollbar-gutter:stable]">
+                    <div v-if="isLoading" class="loading-state text-center p-10 text-[var(--text-color)] text-[1.1em]">
+                        <i class="fas fa-spinner fa-spin mr-[10px]"></i> 加载中...
                     </div>
-                    <div v-else class="grid-container">
+                    <div v-else class="grid gap-5 grid-cols-[repeat(auto-fill,minmax(130px,1fr))]">
                         <!-- ✨ Staggering achieved via inline style -->
-                        <a v-for="(tag, index) in tags" :key="tag.name" href="#" class="card tag-card"
+                        <a v-for="(tag, index) in tags" :key="tag.name" href="#" class="card tag-card animate-fade-in-up"
                             :style="{ animationDelay: 800 + index * 50 + 'ms' }" @click.prevent="openModal(tag)">
                             <div class="card-content">
-                                <span>{{ tag.name }}</span>
+                                <span class="[transition:color_0.3s_ease-out]">{{ tag.name }}</span>
                                 <span class="badge">{{ tag.count }}</span>
                             </div>
                         </a>
@@ -45,18 +45,19 @@
         <!-- Modal with Vue Transition -->
         <!-- ✨ Replaced GSAP with Vue's <Transition> component -->
         <Transition name="modal-fade">
-            <div v-if="isModalVisible" class="modal-overlay" @click.self="closeModal">
+            <div v-if="isModalVisible" class="modal-overlay fixed top-0 left-0 w-full h-full bg-[rgba(244,247,252,0.8)] z-[1000] flex justify-center items-center p-5" @click.self="closeModal">
                 <Transition name="modal-zoom">
-                    <div v-if="isModalVisible" class="modal-content">
-                        <button class="modal-close-btn" @click="closeModal">×</button>
-                        <h3 class="modal-title">{{ modalTitle }}</h3>
-                        <ul class="article-list">
-                            <li v-for="(article, index) in modalArticles" :key="index" @click="goToArticle(article)">
+                    <div v-if="isModalVisible" class="modal-content bg-[var(--card-bg-color)] border border-[var(--border-color)] rounded-2xl py-[25px] px-[30px] w-full max-w-[700px] max-h-[85vh] flex flex-col relative shadow-[0_15px_50px_rgba(45,55,72,0.15)]">
+                        <button class="modal-close-btn absolute top-[15px] right-[15px] bg-[#EDF2F7] [border:none] text-[var(--text-color)] w-9 h-9 rounded-[50%] text-[24px] leading-[36px] text-center cursor-pointer [transition:background_0.3s,transform_0.3s]" @click="closeModal">×</button>
+                        <h3 class="modal-title text-[1.8em] text-[var(--text-color)] mx-0 mt-0 mb-5 pb-[15px] pr-10 border-b border-b-[var(--border-color)] [text-shadow:none]">{{ modalTitle }}</h3>
+                        <ul class="article-list list-none p-0 pr-[15px] m-0 overflow-y-auto grow">
+                            <li v-for="(article, index) in modalArticles" :key="index" @click="goToArticle(article)"
+                                class="border-b border-b-[var(--border-color)] cursor-pointer py-[18px] pr-[10px] pl-5 text-[1.1em] [transition:all_0.3s_ease] relative">
                                 <div>{{ article.title }}</div>
-                                <div class="article-info">
-                                    <span><i class="fas fa-eye"></i> {{ article.views }} 阅读</span>
-                                    <span><i class="fas fa-file-word"></i> {{ article.wordNum }} 字</span>
-                                    <span><i class="fas fa-calendar-alt"></i> {{ article.createTime }}</span>
+                                <div class="article-info text-[0.85em] text-[#666] mt-[6px]">
+                                    <span class="mr-3"><i class="fas fa-eye mr-1"></i> {{ article.views }} 阅读</span>
+                                    <span class="mr-3"><i class="fas fa-file-word mr-1"></i> {{ article.wordNum }} 字</span>
+                                    <span class="mr-3"><i class="fas fa-calendar-alt mr-1"></i> {{ article.createTime }}</span>
                                 </div>
                             </li>
                         </ul>
@@ -142,90 +143,31 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.loading-state {
-    text-align: center;
-    padding: 40px;
-    color: var(--text-color);
-    font-size: 1.1em;
-}
+/*
+  Knowledge 页的样式大多是「页面骨架 + 弹窗」，已尽量内联到模板。
+  下面只留工具类表达不了的，以及 §4.5 认可的组件类：
 
-.loading-state i {
-    margin-right: 10px;
-}
+  1. 页面级 CSS 自定义属性（`--accent-color-*` / `--bg-color` / `--text-color` …）——
+     被模板里的 `bg-[var(--bg-color)]` 等工具类与下面保留的规则共同引用。
+  2. `.grid-wrapper` 的 overflow 三连：先 `hidden auto`，再写 `overflow-y: overlay`
+     作渐进增强（`overlay` 非法时会回落到上一行的 `auto`）。这种「同属性两条声明、
+     后者可能非法」的顺序语义，工具类表达不了（不写回退会掉成 `visible`）。
+  3. 伪元素：`::-webkit-scrollbar*` 四组、`.article-list li::before`。
+  4. 结构伪类与祖先 hover：`:first-of-type` / `:nth-of-type(2)` / `:last-child` / `:hover`。
+  5. Vue `<Transition>` 运行时生成的 `.modal-fade-*` / `.modal-zoom-*`。
+  6. 移动端覆盖块（无层级，自带 `!important`，正好维持原有的断点行为）。
+  7. 组件类：`.card` / `.card-content` / `.count` / `.badge` 在 v-for 里重复渲染（§4.5）。
 
-.article-info {
-    font-size: 0.85em;
-    color: #666;
-    margin-top: 6px;
-}
+  ⚠️ 顺带删掉一批**死代码**：原 CSS 里的 `.section-categories` / `.section-tags`
+  及其全部后代规则从未生效 —— 模板用的是裸 `.content-section` 与
+  `.content-section.tag-section`，这两个类名在模板里不存在（全项目 grep 只在本文件的
+  `<style>` 内命中），而 scoped 规则必须带 `[data-v-53a0e8e4]` 才能命中本组件元素。
+  连带只包含这两者的 `@media (min-width: 901px)` 整块一并删除。
 
-.article-info span {
-    margin-right: 12px;
-}
-
-.article-info i {
-    margin-right: 4px;
-}
-
-/* ✨ New CSS Animations to replace GSAP */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.content-section {
-    animation: fadeInUp 1s cubic-bezier(0.215, 0.61, 0.355, 1) both;
-}
-
-.content-section:nth-of-type(1) {
-    animation-delay: 0.2s;
-}
-
-.content-section:nth-of-type(2) {
-    animation-delay: 0.4s;
-}
-
-.card {
-    /* Link card to the animation, but it will be delayed by inline style */
-    animation: fadeInUp 1s cubic-bezier(0.215, 0.61, 0.355, 1) both;
-}
-
-/* Modal Fade Transition (for the overlay) */
-.modal-fade-enter-active,
-.modal-fade-leave-active {
-    transition: opacity 0.4s ease;
-}
-
-.modal-fade-enter-from,
-.modal-fade-leave-to {
-    opacity: 0;
-}
-
-/* Modal Zoom Transition (for the content) */
-.modal-zoom-enter-active {
-    transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
-    /* ease-out-expo */
-    transition-delay: 0.1s;
-}
-
-.modal-zoom-leave-active {
-    transition: all 0.3s ease-in;
-}
-
-.modal-zoom-enter-from,
-.modal-zoom-leave-to {
-    opacity: 0;
-    transform: translateY(50px) scale(0.95);
-}
-
-
-/* --- All other styles remain the same --- */
+  `@keyframes fadeInUp` 已按 §4.1 挪进 tailwind.css（`--animate-fade-in-up`），
+  模板改用 `animate-fade-in-up`：`:first-of-type` 那两条是无层级声明，
+  照样覆盖工具类简写里的默认 `animation-delay: 0s`。
+*/
 .knowledge-page {
     --accent-color-1: hsl(180, 100%, 40%);
     --accent-color-2: hsl(280, 100%, 55%);
@@ -236,61 +178,12 @@ onMounted(() => {
     --border-color: #E2E8F0;
     --shadow-color: rgba(45, 55, 72, 0.1);
     --accent-color-1-rgb: 0, 204, 204;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
 }
 
-#particles-js {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-}
-
-.main-container {
-    display: flex;
-    flex-grow: 1;
-    padding: 40px;
-    gap: 40px;
-    z-index: 1;
-    position: relative;
-    height: calc(100vh - 80px);
-}
-
-.section-categories {
-    flex-basis: 40%;
-}
-
-.section-tags {
-    flex-basis: 60%;
-}
-
-.section-title {
-    font-size: 2em;
-    text-align: center;
-    color: var(--text-color);
-    padding: 25px 20px;
-    margin: 0;
-    flex-shrink: 0;
-    text-shadow: none;
-    border-bottom: 1px solid var(--border-color);
-}
-
+/* 顺序敏感：后一行非法时回落到前一行 */
 .grid-wrapper {
-    overflow-y: auto;
     overflow-x: hidden;
-    padding: 25px;
-    flex-grow: 1;
-    /* 防止动画导致的滚动条闪烁 */
-    scrollbar-gutter: stable;
-    /* 使用overlay避免布局变化 */
+    overflow-y: auto;
     overflow-y: overlay;
 }
 
@@ -311,35 +204,16 @@ onMounted(() => {
     background: #A0AEC0;
 }
 
-.grid-container {
-    display: grid;
-    gap: 20px;
+/* 两个 section 的入场错峰（Vue 拿不到这两条，只能留在 CSS） */
+.content-section:first-of-type {
+    animation-delay: 0.2s;
 }
 
-.section-categories .grid-container {
-    grid-template-columns: minmax(0, 450px);
-    justify-content: center;
+.content-section:nth-of-type(2) {
+    animation-delay: 0.4s;
 }
 
-.section-tags .grid-container {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    /* 在小屏幕上保持网格布局 */
-}
-
-/* 横向排布 */
-@media (min-width: 901px) {
-    .section-tags .grid-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-    }
-    
-    .section-tags .grid-container .card {
-        width: auto;
-        white-space: nowrap;
-    }
-}
-
+/* 组件类：v-for 里重复渲染的卡片（§4.5）。入场动画改由模板上的 animate-fade-in-up 承担 */
 .card {
     border: 2px solid transparent;
     border-radius: 12px;
@@ -351,7 +225,6 @@ onMounted(() => {
     transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
     background: var(--card-bg-color);
     box-shadow: 0 4px 15px var(--shadow-color);
-    animation: fadeInUp 1s cubic-bezier(0.215, 0.61, 0.355, 1) both;
     transform-origin: center;
 }
 
@@ -370,10 +243,6 @@ onMounted(() => {
     overflow: hidden;
 }
 
-.section-categories .card-content {
-    justify-content: space-between;
-}
-
 .count {
     background: #EDF2F7;
     color: #718096;
@@ -384,28 +253,6 @@ onMounted(() => {
     transition: color 0.3s ease-out, background-color 0.3s ease-out;
 }
 
-.card-content>span:first-child {
-    transition: color 0.3s ease-out;
-}
-
-.card:hover {
-    transform: translateY(-4px) scale(1.05) rotate(2deg);
-    box-shadow: 10px 10px 25px var(--shadow-color);
-    border-radius: 12px;
-}
-
-.section-tags .card:hover {
-    border-color: var(--accent-color-1);
-}
-
-.section-categories .card:hover {
-    border-image-source: linear-gradient(120deg,
-            var(--accent-color-1),
-            var(--accent-color-2));
-    border-image-slice: 1;
-}
-
-/* 标签角标样式 */
 .badge {
     position: absolute;
     top: 0;
@@ -424,92 +271,41 @@ onMounted(() => {
     z-index: 1;
 }
 
-.section-tags .card {
-    position: relative;
+.card:hover {
+    transform: translateY(-4px) scale(1.05) rotate(2deg);
+    box-shadow: 10px 10px 25px var(--shadow-color);
+    border-radius: 12px;
 }
 
-.section-tags .card-content {
-    position: relative;
+/* Vue <Transition> 运行时生成的类，模板里静态写不出来 */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+    transition: opacity 0.4s ease;
 }
 
-.section-categories .card:hover .card-content>span:first-child {
-    color: var(--accent-color-1);
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+    opacity: 0;
 }
 
-.section-categories .card:hover .count {
-    background-color: hsl(180, 75%, 95%);
-    color: var(--accent-color-1);
+.modal-zoom-enter-active {
+    transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+    transition-delay: 0.1s;
 }
 
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(244, 247, 252, 0.8);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-    z-index: 1000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
+.modal-zoom-leave-active {
+    transition: all 0.3s ease-in;
 }
 
-.modal-content {
-    background: var(--card-bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 25px 30px;
-    width: 100%;
-    max-width: 700px;
-    max-height: 85vh;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    box-shadow: 0 15px 50px rgba(45, 55, 72, 0.15);
-}
-
-.modal-close-btn {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background: #EDF2F7;
-    border: none;
-    color: var(--text-color);
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    font-size: 24px;
-    line-height: 36px;
-    text-align: center;
-    cursor: pointer;
-    transition: background 0.3s, transform 0.3s;
+.modal-zoom-enter-from,
+.modal-zoom-leave-to {
+    opacity: 0;
+    transform: translateY(50px) scale(0.95);
 }
 
 .modal-close-btn:hover {
     background: #E2E8F0;
     transform: rotate(90deg);
-}
-
-.modal-title {
-    font-size: 1.8em;
-    color: var(--text-color);
-    margin: 0 0 20px 0;
-    padding-bottom: 15px;
-    padding-right: 40px;
-    border-bottom: 1px solid var(--border-color);
-    text-shadow: none;
-}
-
-.article-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    overflow-y: auto;
-    flex-grow: 1;
-    padding-right: 15px;
 }
 
 .article-list::-webkit-scrollbar {
@@ -527,15 +323,6 @@ onMounted(() => {
 
 .article-list::-webkit-scrollbar-thumb:hover {
     background: #A0AEC0;
-}
-
-.article-list li {
-    padding: 18px 10px 18px 20px;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 1.1em;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
 }
 
 .article-list li:last-child {
@@ -562,6 +349,19 @@ onMounted(() => {
 
 .article-list li:hover::before {
     opacity: 1;
+}
+
+/*
+  只此一条：原文同时写了 `backdrop-filter: blur(5px)` 与 `-webkit-backdrop-filter: blur(5px)`，
+  lightningcss 按目标浏览器把两者归并，最终产物**只剩 `-webkit-` 那行**；
+  而实测当前 Chrome（154）不认 `-webkit-backdrop-filter`（隔离实验：只写它时边缘强度 6.01，
+  与完全不写相同；只写无前缀时 0.47）——**这个模糊在 Chrome 下一直是失效的**，
+  只有 Safari 之类认前缀的浏览器能看到。
+  本方案只做样式迁移、不改观感，故原样保留。若要用 `backdrop-blur-[5px]` 打开它，
+  请单开一个 commit（已登记在文档 §6.1）。
+*/
+.modal-overlay {
+    -webkit-backdrop-filter: blur(5px);
 }
 
 @media (max-width: 900px) {
@@ -591,10 +391,6 @@ onMounted(() => {
         padding: 20px;
     }
 
-    .section-categories .grid-container {
-        grid-template-columns: 1fr;
-    }
-
     .modal-content {
         padding: 20px;
     }
@@ -602,9 +398,5 @@ onMounted(() => {
     .modal-title {
         font-size: 1.5em;
     }
-}
-
-.tag-section .grid-container {
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
 }
 </style>

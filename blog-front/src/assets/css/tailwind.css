@@ -74,6 +74,7 @@
   */
   --animate-dialog-appear: dialog-appear 0.2s ease-out;
   --animate-highlight-pulse: highlight-pulse 2s ease-in-out infinite;
+  --animate-fade-in-up: fade-in-up 1s cubic-bezier(0.215, 0.61, 0.355, 1) both;
 
   @keyframes dialog-appear {
     from {
@@ -98,6 +99,18 @@
 
     100% {
       box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+    }
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 }
