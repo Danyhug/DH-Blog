@@ -1,6 +1,6 @@
 <template>
-  <div class="top-container">
-    <div class="left">
+  <div class="flex justify-between">
+    <div class="h-[126px] w-[46%]">
       <el-tabs tabPosition="left" v-model="activeTag">
         <el-tab-pane label="分类选择" name="first">
           <el-radio-group v-model.number="article.categoryId">
@@ -12,7 +12,7 @@
         <el-tab-pane label="附加信息" name="second">
           <el-upload class="avatar-uploader" :http-request="handleFileUpload" :show-file-list="false"
             :before-upload="beforeAvatarUpload">
-            <img v-if="imageUrl" :src="imageUrl" class="avatar" />
+            <img v-if="imageUrl" :src="imageUrl" class="block max-w-[246px] max-h-[138px]" />
             <el-icon v-else class="avatar-uploader-icon">
               <Plus />
             </el-icon>
@@ -21,20 +21,20 @@
       </el-tabs>
     </div>
 
-    <div class="right">
-      <el-divider content-position="center">
-        <p class="tip">文章标题</p>
+    <div class="h-[126px] w-[46%]">
+      <el-divider content-position="center" class="bg-[#1E9FFF]">
+        <p class="my-[10px] text-[18px]">文章标题</p>
       </el-divider>
 
-      <div class="form-box">
+      <div class="flex justify-between">
         <el-input placeholder="输入文章标题" clearable class="title-input" v-model="article.title" />
-        <el-switch class="article-status" style="--el-switch-on-color: #13ce66; --el-switch-off-color: #4aa0ff"
+        <el-switch class="w-[120px]" style="--el-switch-on-color: #13ce66; --el-switch-off-color: #4aa0ff"
           inactive-text="公开" active-text="私密" v-model="article.isLocked" @change="changeArticleStatus" />
       </div>
 
-      <div class="btns">
+      <div class="my-[20px] text-right">
         <!-- 本地保存提示信息 -->
-        <div class="save-text">{{ autoSaveText }}</div>
+        <div class="float-left text-[14px] text-[#999]">{{ autoSaveText }}</div>
 
         <el-button type="warning" @click="clear(true)">清空</el-button>
         <el-button type="primary" @click="submit">发布</el-button>
@@ -42,8 +42,8 @@
     </div>
   </div>
 
-  <el-divider content-position="center">
-    <p class="tip">文章内容</p>
+  <el-divider content-position="center" class="bg-[#1E9FFF]">
+    <p class="my-[10px] text-[18px]">文章内容</p>
   </el-divider>
   <MdEditor ref="editor" v-model="article.content" :toolbars="toolbars" :previewTheme="system.mdEditorInit.previewTheme"
     :codeFoldable="system.mdEditorInit.codeFoldable" @onUploadImg="onUploadImg">
@@ -306,70 +306,32 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
 </script>
 
 <style scoped lang="less">
-.top-container {
-  display: flex;
-  justify-content: space-between;
-
-  &>div {
-    height: 126px;
-    width: 46%;
-  }
-
-  .right {
-
-    .form-box {
-      display: flex;
-      justify-content: space-between;
-
-      .el-input {
-        width: calc(100% - 150px);
-      }
-
-      .article-status {
-        width: 120px;
-      }
-    }
-
-    .btns {
-      .save-text {
-        float: left;
-        font-size: 14px;
-        color: #999;
-      }
-
-      margin: 20px 0;
-      text-align: right;
-    }
-  }
+/*
+  .title-input 的 width/font-size 必须留成 scoped 规则：
+  Element Plus 的 .el-input 声明了 width: var(--el-input-width) 与 font-size: var(--el-font-size-base)，
+  无层级声明会压掉 @layer utilities 里的 w-[calc(100%-150px)] / text-[16px]
+  （实测宽度 606px -> 756px、字号 16px -> 14px）。
+*/
+.title-input {
+  width: calc(100% - 150px);
+  font-size: 16px;
 }
 
-.el-divider {
-  background-color: #1E9FFF;
-}
-
+/* 覆盖 md-editor-v3 的编辑器正文 */
 :deep(.cm-editor .cm-line) {
   font-family: '微软雅黑', 'Georgia';
   line-height: 25px !important;
   font-size: 16px;
 }
 
-.tip {
-  font-size: 18px;
-  margin: 10px 0;
-}
-
-.title-input {
-  font-size: 16px;
-}
-
-.avatar-uploader .avatar {
-  max-width: 246px;
-  max-height: 138px;
-  display: block;
-}
 </style>
 
 <style>
+/*
+  这一块没有 scoped，但要保留：命中的都是拿不到 class 的 DOM。
+  Element Plus 的 Upload 根节点不带任何类名，`el-upload` 是它内部 upload-content 的根节点
+  （由库的 render 生成，工具类加不上去）；.emojis 同理属于第三方 @vavt/v3-extension 的表情面板。
+*/
 .avatar-uploader .el-upload {
   border: 1px dashed var(--el-border-color);
   border-radius: 6px;
