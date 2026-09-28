@@ -1,76 +1,72 @@
 <template>
-  <div class="upload-modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title">文件上传</h3>
-        <button class="close-btn" @click="$emit('close')">
-          <XIcon class="icon-sm" />
+  <div class="fixed top-1/2 left-1/2 z-[1102] w-[450px] max-w-[95vw] bg-[rgba(255,255,255,0.95)] backdrop-blur-[24px] rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.2)] pointer-events-auto [transform:translate(-50%,-50%)]">
+    <div class="p-6 max-h-[80vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="modal-title text-[1.125rem] text-[#111827] m-0">文件上传</h3>
+        <button class="p-2 rounded-md cursor-pointer transition-[background-color] duration-200 ease-[ease] hover:bg-[rgba(156,163,175,0.1)]" @click="$emit('close')">
+          <XIcon class="w-4 h-4" />
         </button>
       </div>
 
       <!-- 文件拖放区域 - 始终显示，但在上传时折叠 -->
-      <div 
-        class="drop-area" 
-        :class="{ 
-          active: isDragging,
-          collapsed: isUploading || uploadResults.length > 0 
-        }" 
+      <div
+        class="border-2 border-dashed rounded-lg text-center transition-all duration-300 ease-[ease]"
+        :class="[
+          isDragging ? 'border-[#3b82f6] bg-[rgba(59,130,246,0.05)]' : 'border-[#e5e7eb]',
+          isDropAreaCollapsed ? 'p-3 my-3' : 'p-8 my-6'
+        ]"
         @dragover.prevent="isDragging = true"
         @dragleave.prevent="isDragging = false"
         @drop.prevent="handleFileDrop"
       >
-        <UploadIcon class="upload-icon" />
-        <p class="drop-text">拖放文件至此处上传，或</p>
-        <input 
-          type="file" 
+        <UploadIcon class="text-[#6b7280] inline-block" :class="isDropAreaCollapsed ? 'w-6 h-6 mb-2' : 'w-10 h-10 mb-4'" />
+        <p class="text-[#6b7280]" :class="isDropAreaCollapsed ? 'mb-2 text-[0.875rem]' : 'mb-4'">拖放文件至此处上传，或</p>
+        <input
+          type="file"
           ref="fileInput"
           multiple
-          class="file-input" 
+          class="hidden"
           @change="handleFileSelect"
         >
-        <button class="select-btn" @click="triggerFileInput">选择文件</button>
+        <button class="bg-[#3b82f6] text-white px-4 py-2 rounded-md font-medium cursor-pointer transition-[background-color] duration-200 ease-[ease] hover:bg-[#2563eb]" @click="triggerFileInput">选择文件</button>
       </div>
 
-      <div v-if="selectedFiles.length > 0 && !isUploading" class="upload-list">
-        <div 
-          v-for="(file, index) in selectedFiles" 
+      <div v-if="selectedFiles.length > 0 && !isUploading" class="flex flex-col gap-3 max-h-[250px] overflow-y-auto mb-4 w-full">
+        <div
+          v-for="(file, index) in selectedFiles"
           :key="index"
-          class="upload-item"
+          class="flex items-center gap-3 p-2 rounded-md w-full box-border bg-[#f9fafb] transition-[background-color] duration-300 ease-[ease]"
         >
           <div class="file-icon-container" :class="getFileIconClass(file)">
             <component :is="getFileIcon(file)" class="file-icon" />
           </div>
-          <div class="file-info">
-            <p class="file-name">{{ file.name }}</p>
-            <p class="file-size">{{ formatFileSize(file.size) }}</p>
+          <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-[0.875rem] font-medium text-[#111827] m-0 whitespace-nowrap overflow-hidden text-ellipsis">{{ file.name }}</p>
+            <p class="text-[0.75rem] text-[#6b7280] mt-1 mb-0">{{ formatFileSize(file.size) }}</p>
           </div>
-          <button class="remove-btn" @click="removeFile(index)">
-            <XIcon class="icon-sm" />
+          <button class="p-1 rounded cursor-pointer text-[#9ca3af] transition-[color] duration-200 ease-[ease] hover:text-[#ef4444]" @click="removeFile(index)">
+            <XIcon class="w-4 h-4" />
           </button>
         </div>
       </div>
 
       <!-- 上传状态列表 -->
-      <div v-if="isUploading || uploadResults.length > 0" class="upload-status-list">
+      <div v-if="isUploading || uploadResults.length > 0" class="flex flex-col gap-3 max-h-[250px] overflow-y-auto mb-4 w-full">
         <!-- 失败的文件显示在上方 -->
-        <div 
-          v-for="(result, index) in sortedUploadResults" 
+        <div
+          v-for="(result, index) in sortedUploadResults"
           :key="index"
-          class="upload-item"
-          :class="{ 
-            'upload-success': result.status === 'success', 
-            'upload-error': result.status === 'error',
-            'upload-pending': result.status === 'pending'
-          }"
+          class="flex items-center gap-3 p-2 rounded-md w-full box-border transition-[background-color] duration-300 ease-[ease]"
+          :class="uploadItemStateClass(result.status)"
         >
           <div class="file-icon-container" :class="getFileIconClass(result.file)">
             <component :is="getFileIcon(result.file)" class="file-icon" />
           </div>
-          <div class="file-info">
-            <p class="file-name">{{ result.file.name }}</p>
-            <div class="file-status">
-              <p class="file-size">{{ formatFileSize(result.file.size) }}
-                <span v-if="result.uploadedChunks !== undefined && result.totalChunks !== undefined" class="chunk-progress">
+          <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-[0.875rem] font-medium text-[#111827] m-0 whitespace-nowrap overflow-hidden text-ellipsis">{{ result.file.name }}</p>
+            <div class="flex items-center justify-between">
+              <p class="text-[0.75rem] text-[#6b7280] mt-1 mb-0">{{ formatFileSize(result.file.size) }}
+                <span v-if="result.uploadedChunks !== undefined && result.totalChunks !== undefined" class="text-[#2a8aff] font-medium ml-2">
                   ({{ result.uploadedChunks }}/{{ result.totalChunks }})
                 </span>
               </p>
@@ -81,10 +77,10 @@
               </span>
             </div>
             <!-- 横向进度条 -->
-            <div v-if="result.status === 'uploading' || result.status === 'pending'" class="upload-progress-bar">
-              <div class="progress-track">
-                <div 
-                  class="progress-fill" 
+            <div v-if="result.status === 'uploading' || result.status === 'pending'" class="mt-2 w-full">
+              <div class="h-1 bg-[#e5e7eb] rounded-[2px] overflow-hidden">
+                <div
+                  class="progress-fill"
                   :style="{
                     width: result.totalChunks && result.uploadedChunks !== undefined 
                       ? `${(result.uploadedChunks / result.totalChunks) * 100}%` 
@@ -93,57 +89,57 @@
                 ></div>
               </div>
             </div>
-            <p v-if="result.status === 'error'" class="error-message">{{ result.error || '上传失败' }}</p>
+            <p v-if="result.status === 'error'" class="text-[0.75rem] text-[#ef4444] mt-1 mb-0">{{ result.error || '上传失败' }}</p>
           </div>
         </div>
       </div>
 
-      <div v-if="selectedFiles.length > 0 && !isUploading" class="upload-options">
-        <div class="retry-config-option">
-          <label class="retry-label">
+      <div v-if="selectedFiles.length > 0 && !isUploading" class="my-4 p-3 bg-[#f8fafc] rounded-lg border border-[#e2e8f0]">
+        <div class="mt-3 ml-6">
+          <label class="text-[0.875rem] text-[#475569] flex items-center gap-2">
             重试次数（0表示无限重试）：
-            <input 
-              type="number" 
+            <input
+              type="number"
               v-model.number="maxRetries"
-              min="0" 
+              min="0"
               max="100"
-              class="retry-input"
+              class="w-16 px-2 py-1 border border-[#d1d5db] rounded text-[0.875rem] text-center focus:outline-none focus:border-[#3b82f6] focus:shadow-[0_0_0_2px_rgba(59,130,246,0.1)]"
               placeholder="0"
             />
           </label>
         </div>
       </div>
 
-      <div v-if="selectedFiles.length > 0 && !isUploading" class="upload-actions">
-        <button class="upload-btn" @click="uploadFiles">
+      <div v-if="selectedFiles.length > 0 && !isUploading" class="flex justify-end mt-4">
+        <button class="bg-[#3b82f6] text-white px-6 py-2 rounded-md font-medium cursor-pointer transition-[background-color] duration-200 ease-[ease] hover:bg-[#2563eb]" @click="uploadFiles">
           开始上传
         </button>
       </div>
 
-      <div v-if="isUploading" class="upload-progress-container">
-    <div class="progress-bar">
-      <div class="progress-fill" :style="{ width: `${uploadProgress}%` }"></div>
-    </div>
-    <p class="progress-text">总进度：{{ uploadProgress }}%</p>
-    <p class="progress-stats">
-      已完成: {{ getCompletedCount() }}/{{ uploadResults.length }}
-      <span v-if="getSuccessCount() > 0" class="success-count">(成功: {{ getSuccessCount() }})</span>
-      <span v-if="getErrorCount() > 0" class="error-count">(失败: {{ getErrorCount() }})</span>
-    </p>
-  </div>
+      <div v-if="isUploading" class="mt-4">
+        <div class="w-full h-2 bg-[#e5e7eb] rounded overflow-hidden">
+          <div class="progress-fill" :style="{ width: `${uploadProgress}%` }"></div>
+        </div>
+        <p class="text-[0.75rem] text-[#6b7280] mt-1 mb-0 text-center">总进度：{{ uploadProgress }}%</p>
+        <p class="text-[0.75rem] text-[#6b7280] mt-1 mb-0 text-center">
+          已完成: {{ getCompletedCount() }}/{{ uploadResults.length }}
+          <span v-if="getSuccessCount() > 0" class="text-[#10b981]">(成功: {{ getSuccessCount() }})</span>
+          <span v-if="getErrorCount() > 0" class="text-[#ef4444]">(失败: {{ getErrorCount() }})</span>
+        </p>
+      </div>
 
-      <div v-if="!isUploading && uploadResults.length > 0" class="upload-complete-actions">
-        <p class="upload-summary">
+      <div v-if="!isUploading && uploadResults.length > 0" class="mt-4 flex flex-col items-center gap-3">
+        <p class="text-[0.875rem] text-[#6b7280] m-0">
           上传完成: {{ getSuccessCount() }} 成功, {{ getErrorCount() }} 失败
         </p>
-        <div class="action-buttons">
-          <button v-if="getErrorCount() > 0" class="retry-btn" @click="retryFailedUploads">
+        <div class="flex gap-3">
+          <button v-if="getErrorCount() > 0" class="bg-[#3b82f6] text-white px-4 py-2 rounded-md font-medium cursor-pointer transition-[background-color] duration-200 ease-[ease] hover:bg-[#2563eb]" @click="retryFailedUploads">
             重试失败文件
           </button>
-          <button class="upload-more-btn" @click="clearResults">
+          <button class="bg-[#3b82f6] text-white px-4 py-2 rounded-md font-medium cursor-pointer transition-[background-color] duration-200 ease-[ease] hover:bg-[#2563eb]" @click="clearResults">
             继续上传
           </button>
-          <button class="close-btn-text" @click="$emit('close')">
+          <button class="bg-transparent text-[#6b7280] border border-[#d1d5db] px-4 py-2 rounded-md font-medium cursor-pointer transition-all duration-200 ease-[ease] hover:bg-[#f3f4f6] hover:text-[#4b5563]" @click="$emit('close')">
             关闭
           </button>
         </div>
@@ -187,6 +183,17 @@ const sortedUploadResults = computed(() => {
     return statusOrder[a.status] - statusOrder[b.status];
   });
 });
+
+// 上传中/已有结果时拖放区折叠（原来写在模板的 :class 里，三处元素共用）
+const isDropAreaCollapsed = computed(() => isUploading.value || uploadResults.value.length > 0)
+
+// 上传项的状态底色 + 左侧色条。返回互斥的完整色值，避免基础态与状态态同属性互相覆盖（迁移方案 §4.9）
+function uploadItemStateClass(status: UploadResult['status']) {
+  if (status === 'success') return 'bg-[rgba(16,185,129,0.1)] border-l-[3px] border-l-[#10b981]'
+  if (status === 'error') return 'bg-[rgba(239,68,68,0.1)] border-l-[3px] border-l-[#ef4444]'
+  if (status === 'pending') return 'bg-[rgba(59,130,246,0.1)] border-l-[3px] border-l-[#3b82f6]'
+  return 'bg-[#f9fafb]'
+}
 
 // 触发文件选择
 function triggerFileInput() {
@@ -341,155 +348,15 @@ defineExpose({
 </script>
 
 <style scoped>
-.upload-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 450px;
-  max-width: 95vw;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(24px);
-  border-radius: 1rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  z-index: 1102; /* 确保显示在蒙版之上 */
-  pointer-events: auto; /* 确保弹窗可以接收点击事件 */
-}
-
-.modal-content {
-  padding: 1.5rem;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-}
-
+/* 只留字重：style.less 的 `h1, h2, h3 { font-weight: 400 }` 是无层级规则（§4.8） */
 .modal-title {
-  font-size: 1.125rem;
   font-weight: 600;
-  color: #111827;
-  margin: 0;
 }
 
-.close-btn {
-  background: none;
-  border: none;
-  padding: 0.5rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.close-btn:hover {
-  background: rgba(156, 163, 175, 0.1);
-}
-
-.drop-area {
-  margin: 1.5rem 0;
-  padding: 2rem;
-  border: 2px dashed #e5e7eb;
-  border-radius: 0.5rem;
-  text-align: center;
-  transition: all 0.3s;
-}
-
-.drop-area.active {
-  border-color: #3b82f6;
-  background-color: rgba(59, 130, 246, 0.05);
-}
-
-.drop-area.collapsed {
-  padding: 0.75rem;
-  margin: 0.75rem 0;
-}
-
-.drop-area.collapsed .upload-icon {
-  width: 1.5rem;
-  height: 1.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.drop-area.collapsed .drop-text {
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-}
-
-.upload-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  color: #6b7280;
-  margin-bottom: 1rem;
-  display: inline-block;
-}
-
-.drop-text {
-  margin-bottom: 1rem;
-  color: #6b7280;
-}
-
-.file-input {
-  display: none;
-}
-
-.select-btn {
-  background-color: #3b82f6;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.select-btn:hover {
-  background-color: #2563eb;
-}
-
-.upload-list,
-.upload-status-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  max-height: 250px;
-  overflow-y: auto;
-  margin-bottom: 1rem;
-  width: 100%;
-}
-
-.upload-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem;
-  border-radius: 0.375rem;
-  background-color: #f9fafb;
-  transition: background-color 0.3s ease;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.upload-item.upload-success {
-  background-color: rgba(16, 185, 129, 0.1);
-  border-left: 3px solid #10b981;
-}
-
-.upload-item.upload-error {
-  background-color: rgba(239, 68, 68, 0.1);
-  border-left: 3px solid #ef4444;
-}
-
-.upload-item.upload-pending {
-  background-color: rgba(59, 130, 246, 0.1);
-  border-left: 3px solid #3b82f6;
-}
-
+/*
+  组件类：文件类型配色（4 种变体 × 容器与图标两个元素），
+  getFileIconClass() 返回语义色名，容器底色与图标颜色靠后代选择器配对，共 4 组。
+*/
 .file-icon-container {
   width: 2.5rem;
   height: 2.5rem;
@@ -537,77 +404,9 @@ defineExpose({
   color: #6b7280;
 }
 
-.file-info {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.file-name {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #111827;
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.file-status {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.file-size {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin: 0.25rem 0 0 0;
-}
-
-.chunk-progress {
-  color: #2a8aff;
-  font-weight: 500;
-  margin-left: 8px;
-}
-
-.upload-progress-bar {
-  margin-top: 8px;
-  width: 100%;
-}
-
-.progress-track {
-  height: 4px;
-  background-color: #e5e7eb;
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #2563eb);
-  border-radius: 2px;
-  transition: width 0.3s ease;
-  animation: progress-animation 2s ease-in-out infinite;
-}
-
-@keyframes progress-animation {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-.progress-fill {
-  background-size: 200% 100%;
-  animation: progress-animation 2s ease-in-out infinite;
-}
-
+/*
+  组件类：状态徽标（模板中 3 处复用），逐元素内联会产生 3 份重复的长 class 串（§4.5）。
+*/
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -635,6 +434,11 @@ defineExpose({
   gap: 0.25rem;
 }
 
+/*
+  以下两条必须留在 CSS：它们的 animation 引用的是本块内声明的 @keyframes，
+  而 Vue 会把 scoped 块里的 keyframes 改名（如 progress-animation-<scope>）。
+  一旦把 animation 挪进工具类，引用的还是未改名的名字，动画会静默失效。
+*/
 .loading-spinner {
   display: inline-block;
   width: 0.75rem;
@@ -645,178 +449,24 @@ defineExpose({
   animation: spin 1s linear infinite;
 }
 
-.error-message {
-  font-size: 0.75rem;
-  color: #ef4444;
-  margin: 0.25rem 0 0 0;
-}
-
-.remove-btn {
-  background: none;
-  border: none;
-  padding: 0.25rem;
-  border-radius: 0.25rem;
-  cursor: pointer;
-  color: #9ca3af;
-  transition: color 0.2s;
-}
-
-.remove-btn:hover {
-  color: #ef4444;
-}
-
-.upload-options {
-  margin: 1rem 0;
-  padding: 0.75rem;
-  background-color: #f8fafc;
-  border-radius: 0.5rem;
-  border: 1px solid #e2e8f0;
-}
-
-.retry-config-option {
-  margin-top: 0.75rem;
-  margin-left: 1.5rem;
-}
-
-.retry-label {
-  font-size: 0.875rem;
-  color: #475569;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.retry-input {
-  width: 4rem;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  text-align: center;
-}
-
-.retry-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-}
-
-.upload-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 1rem;
-}
-
-.upload-btn {
-  background-color: #3b82f6;
-  color: white;
-  border: none;
-  padding: 0.5rem 1.5rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.upload-btn:hover {
-  background-color: #2563eb;
-}
-
-.upload-progress-container {
-  margin-top: 1rem;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 0.5rem;
-  background: #e5e7eb;
-  border-radius: 0.25rem;
-  overflow: hidden;
-}
-
 .progress-fill {
   height: 100%;
   background: #3b82f6;
+  border-radius: 2px;
   transition: width 0.3s ease;
+  animation: progress-animation 2s ease-in-out infinite;
 }
 
-.progress-text {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin: 0.25rem 0 0 0;
-  text-align: center;
-}
-
-.progress-stats {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin: 0.25rem 0 0 0;
-  text-align: center;
-}
-
-.success-count {
-  color: #10b981;
-}
-
-.error-count {
-  color: #ef4444;
-}
-
-.upload-complete-actions {
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.upload-summary {
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin: 0;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.retry-btn,
-.upload-more-btn {
-  background-color: #3b82f6;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.retry-btn:hover,
-.upload-more-btn:hover {
-  background-color: #2563eb;
-}
-
-.close-btn-text {
-  background-color: transparent;
-  color: #6b7280;
-  border: 1px solid #d1d5db;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.close-btn-text:hover {
-  background-color: #f3f4f6;
-  color: #4b5563;
-}
-
-.icon-sm {
-  width: 1rem;
-  height: 1rem;
+@keyframes progress-animation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 @keyframes spin {
