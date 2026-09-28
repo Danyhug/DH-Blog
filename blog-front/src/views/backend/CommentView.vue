@@ -1,18 +1,18 @@
 <template>
-  <div class="comment-manager">
-    <div class="page-toolbar">
+  <div class="comment-manager min-w-[880px]">
+    <div class="flex items-center justify-between gap-[24px] px-[16px] pt-[2px] pb-[14px]">
       <div class="title-block">
         <h2>文章评论</h2>
-        <p>按文章查看评论与回复，共 {{ total }} 篇文章有评论</p>
+        <p class="mt-[5px] text-[var(--comment-muted)] text-[13px]">按文章查看评论与回复，共 {{ total }} 篇文章有评论</p>
       </div>
 
-      <div class="toolbar-actions">
+      <div class="flex items-center gap-[10px]">
         <el-button round type="primary" plain :icon="DArrowRight" @click="expandAllRows">
           {{ expanded ? '收起全部' : '展开全部' }}
         </el-button>
         <el-button circle plain :icon="Refresh" :loading="isLoading" aria-label="刷新评论" @click="refreshData" />
 
-        <el-button-group class="comment-actions">
+        <el-button-group class="ml-[6px]">
           <el-button :icon="Edit" :disabled="!selectedComment" @click="openEdit">编辑</el-button>
           <el-button :icon="ChatDotRound" :disabled="!selectedComment" @click="openReply">回复</el-button>
           <el-button :icon="Delete" type="danger" :disabled="!selectedComment" @click="deleteSelectedComment">
@@ -39,39 +39,39 @@
     >
       <el-table-column label="文章 / 评论" min-width="340">
         <template #default="scope">
-          <div v-if="isArticleGroup(scope.row)" class="article-cell">
-            <span class="article-accent"></span>
-            <div class="article-copy">
-              <div class="article-title-line">
+          <div v-if="isArticleGroup(scope.row)" class="flex min-w-0 flex-1 items-stretch gap-[12px] min-h-[42px]">
+            <span class="w-[3px] flex-[0_0_3px] rounded-[3px] bg-[#4f8edc]"></span>
+            <div class="flex min-w-0 flex-col justify-center gap-[3px]">
+              <div class="flex min-w-0 items-center gap-[10px]">
                 <el-button link type="primary" class="article-title" @click.stop="openArticle(scope.row.articleId)">
                   {{ scope.row.articleTitle }}
                 </el-button>
                 <el-tag size="small" effect="plain" round>{{ scope.row.commentCount }} 条</el-tag>
               </div>
-              <span class="article-id">文章 #{{ scope.row.articleId }}</span>
+              <span class="text-[var(--comment-muted)] text-[12px]">文章 #{{ scope.row.articleId }}</span>
             </div>
           </div>
 
-          <div v-else class="comment-cell">
-            <div class="comment-labels">
-              <span class="comment-id">#{{ scope.row.id }}</span>
+          <div v-else class="flex min-w-0 flex-1 flex-col justify-center py-[2px]">
+            <div class="flex items-center gap-[6px]">
+              <span class="text-[#98a2b3] text-[11px] tabular-nums">#{{ scope.row.id }}</span>
               <el-tag v-if="scope.row.isAdmin" size="small" type="warning" effect="plain">博主</el-tag>
               <el-tag v-if="scope.row.parentId" size="small" type="info" effect="plain">回复</el-tag>
             </div>
-            <p>{{ scope.row.content }}</p>
+            <p class="mt-[5px] line-clamp-2 text-[#344054] leading-[1.55]">{{ scope.row.content }}</p>
           </div>
         </template>
       </el-table-column>
 
       <el-table-column label="作者" width="100">
         <template #default="scope">
-          <span v-if="!isArticleGroup(scope.row)" class="author-name">{{ scope.row.author }}</span>
+          <span v-if="!isArticleGroup(scope.row)" class="text-[var(--comment-ink)] font-[550]">{{ scope.row.author }}</span>
         </template>
       </el-table-column>
 
       <el-table-column label="邮箱" min-width="160">
         <template #default="scope">
-          <span v-if="!isArticleGroup(scope.row)" class="muted-text">{{ scope.row.email }}</span>
+          <span v-if="!isArticleGroup(scope.row)" class="text-[var(--comment-muted)] text-[12px]">{{ scope.row.email }}</span>
         </template>
       </el-table-column>
 
@@ -90,25 +90,25 @@
 
       <el-table-column label="环境" width="115">
         <template #default="scope">
-          <div v-if="!isArticleGroup(scope.row)" class="environment">
-            <span>{{ parseUserAgent(scope.row.ua).os }}</span>
-            <small>{{ parseUserAgent(scope.row.ua).browser }}</small>
+          <div v-if="!isArticleGroup(scope.row)" class="flex flex-col gap-[3px]">
+            <span class="text-[#475467] text-[12px]">{{ parseUserAgent(scope.row.ua).os }}</span>
+            <small class="text-[#98a2b3] text-[11px]">{{ parseUserAgent(scope.row.ua).browser }}</small>
           </div>
         </template>
       </el-table-column>
 
       <el-table-column label="时间" width="145">
         <template #default="scope">
-          <div v-if="isArticleGroup(scope.row)" class="latest-time">
-            <small>最近评论</small>
-            <span>{{ scope.row.latestCommentTime }}</span>
+          <div v-if="isArticleGroup(scope.row)" class="flex flex-col gap-[3px]">
+            <small class="text-[#98a2b3] text-[11px]">最近评论</small>
+            <span class="text-[#475467] text-[12px] tabular-nums">{{ scope.row.latestCommentTime }}</span>
           </div>
-          <span v-else class="comment-time">{{ scope.row.createTime }}</span>
+          <span v-else class="text-[var(--comment-muted)] text-[12px]">{{ scope.row.createTime }}</span>
         </template>
       </el-table-column>
     </el-table>
 
-    <div class="pagination-bar">
+    <div class="flex justify-end px-[8px] pt-[14px]">
       <el-pagination
         v-model:current-page="page.pageNum"
         v-model:page-size="page.pageSize"
@@ -154,8 +154,10 @@
           <el-switch v-model="replyForm.isPublic" />
         </el-form-item>
 
-        <div class="emoji-picker">
-          <button v-for="emoji in emojis" :key="emoji" type="button" @click="addEmoji(emoji)">{{ emoji }}</button>
+        <div class="grid grid-cols-[repeat(10,1fr)] gap-[5px] ml-[90px]">
+          <button v-for="emoji in emojis" :key="emoji" type="button"
+            class="grid w-[32px] h-[32px] p-0 border border-transparent rounded-[6px] bg-[#f5f7fa] cursor-pointer text-[17px] place-items-center hover:border-[#9ec5f4] hover:bg-[#edf5ff] hover:outline-none focus-visible:border-[#9ec5f4] focus-visible:bg-[#edf5ff] focus-visible:outline-none"
+            @click="addEmoji(emoji)">{{ emoji }}</button>
         </div>
       </el-form>
       <template #footer>
@@ -316,22 +318,18 @@ onMounted(getData)
 </script>
 
 <style scoped lang="less">
+/*
+  这四个变量留在根节点上：下方的 :deep(.article-row …) 也要用，
+  迁移后的工具类以 text-[var(--comment-muted)] 的形式引用。
+*/
 .comment-manager {
   --comment-ink: #1f2a3d;
   --comment-muted: #7d889a;
   --article-wash: #f2f7ff;
   --article-line: #b9d3f7;
-  min-width: 880px;
 }
 
-.page-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 2px 16px 14px;
-}
-
+/* h2 只能整条留在这里：style.less 的 `h1, h2, h3 { font-weight: 400 }` 是无层级规则，会压掉字重工具类 */
 .title-block {
   h2 {
     margin: 0;
@@ -340,24 +338,12 @@ onMounted(getData)
     font-weight: 650;
     letter-spacing: .02em;
   }
-
-  p {
-    margin: 5px 0 0;
-    color: var(--comment-muted);
-    font-size: 13px;
-  }
 }
 
-.toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.comment-actions {
-  margin-left: 6px;
-}
-
+/*
+  .comment-table 保留：Element Plus 的 .el-table 声明了 background-color / overflow / width，
+  这几条工具类会被它压掉（§4.8）；其余几条为集中维护一并留下。
+*/
 .comment-table {
   width: 100%;
   border: 1px solid #e9edf3;
@@ -367,37 +353,10 @@ onMounted(getData)
   overflow: hidden;
 }
 
-.article-cell {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  align-items: stretch;
-  gap: 12px;
-  min-height: 42px;
-}
-
-.article-accent {
-  width: 3px;
-  flex: 0 0 3px;
-  border-radius: 3px;
-  background: #4f8edc;
-}
-
-.article-copy {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  justify-content: center;
-  gap: 3px;
-}
-
-.article-title-line {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 10px;
-}
-
+/*
+  .article-title 保留：Element Plus 的 .el-button / .el-button.is-link 声明了
+  display / height / padding / color / font-size / white-space，工具类压不过（§4.8）。
+*/
 .article-title {
   display: block;
   max-width: 260px;
@@ -411,105 +370,7 @@ onMounted(getData)
   white-space: nowrap;
 }
 
-.article-id,
-.muted-text,
-.comment-time {
-  color: var(--comment-muted);
-  font-size: 12px;
-}
-
-.comment-cell {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  justify-content: center;
-  padding: 2px 0;
-
-  p {
-    display: -webkit-box;
-    margin: 5px 0 0;
-    overflow: hidden;
-    color: #344054;
-    line-height: 1.55;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
-}
-
-.comment-labels {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.comment-id {
-  color: #98a2b3;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-
-.author-name {
-  color: var(--comment-ink);
-  font-weight: 550;
-}
-
-.environment,
-.latest-time {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-
-  span {
-    color: #475467;
-    font-size: 12px;
-  }
-
-  small {
-    color: #98a2b3;
-    font-size: 11px;
-  }
-}
-
-.latest-time {
-  span {
-    font-variant-numeric: tabular-nums;
-  }
-}
-
-.pagination-bar {
-  display: flex;
-  justify-content: flex-end;
-  padding: 14px 8px 0;
-}
-
-.emoji-picker {
-  display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  gap: 5px;
-  margin-left: 90px;
-
-  button {
-    display: grid;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border: 1px solid transparent;
-    border-radius: 6px;
-    background: #f5f7fa;
-    cursor: pointer;
-    font-size: 17px;
-    place-items: center;
-
-    &:hover,
-    &:focus-visible {
-      border-color: #9ec5f4;
-      background: #edf5ff;
-      outline: none;
-    }
-  }
-}
-
+/* 以下 :deep() 覆盖 Element Plus 表格内部结构 */
 :deep(.article-row > td.el-table__cell) {
   border-bottom-color: var(--article-line) !important;
   background: var(--article-wash) !important;
