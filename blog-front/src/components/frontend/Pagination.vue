@@ -1,5 +1,7 @@
 <template>
-  <nav v-if="totalPages > 1" class="pagination-shell" aria-label="文章列表分页">
+  <nav v-if="totalPages > 1"
+    class="flex items-center justify-center w-full min-h-[46px] py-1 [@media(max-width:600px)]:min-h-[42px] [@media(max-width:600px)]:py-[2px]"
+    aria-label="文章列表分页">
     <el-pagination
       v-model:current-page="currentPageModel"
       class="article-pagination"
@@ -34,15 +36,13 @@ const totalPages = computed(() => Math.ceil(props.total / props.pageSize))
 </script>
 
 <style lang="less" scoped>
-.pagination-shell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 46px;
-  padding: 4px 0;
-}
-
+/*
+  以下全部是 `:deep()`：分页控件内部 DOM 由 Element Plus 渲染，加不上 class。
+  实测 `.el-pagination` 自己就声明了 `--el-pagination-hover-color`
+  （`var(--el-color-primary)`）以及 display/align-items/font-size/color，
+  所以 `[--el-pagination-hover-color:...]`、`flex-wrap` 这类工具类会被它的
+  无层级声明压掉（§4.8），必须留在这里（§4.3）。
+*/
 :deep(.article-pagination.el-pagination) {
   --el-pagination-hover-color: var(--primary-color);
   flex-wrap: nowrap;
@@ -95,11 +95,6 @@ const totalPages = computed(() => Math.ceil(props.total / props.pageSize))
 }
 
 @media (max-width: 600px) {
-  .pagination-shell {
-    min-height: 42px;
-    padding: 2px 0;
-  }
-
   :deep(.article-pagination.el-pagination .btn-prev),
   :deep(.article-pagination.el-pagination .btn-next),
   :deep(.article-pagination.el-pagination .el-pager li) {

@@ -1,36 +1,36 @@
 <template>
   <TransitionGroup>
-    <li v-for="comment in commentList" :key="comment.id" class="comment-box">
-      <div class="comment-container">
-        <div class="comment-avatar">
+    <li v-for="comment in commentList" :key="comment.id" class="comment-box list-none">
+      <div class="comment-container flex mb-5">
+        <div class="comment-avatar cursor-pointer">
           <img :alt="`${comment.author}'s avatar`"
             :src="`//cravatar.cn/avatar/${comment.email == 'danyhug@qq.com' ? '4831d466a6ba28c45b70edefc025fa8f' : comment.email}?s=256&d=monsterid`"
-            class="avatar">
+            class="avatar w-[44px] h-[44px] rounded-[5px] [transition:all_0.5s] border border-[#ddd] hover:rounded-[30%_70%_70%_30%/30%_30%_70%_70%]">
         </div>
-        <div class="comment-main">
-          <div class="comment-main-top">
-            <div class="comment-meta">
+        <div class="comment-main ml-[15px] text-[14px] w-full">
+          <div class="comment-main-top h-[44px] flex flex-col justify-between">
+            <div class="comment-meta flex items-baseline text-[#666]">
               <div class="comment-author"><a>{{ comment.author }}</a></div>
-              <span v-if="comment.isAdmin" class="admin-tag">博主</span>
-              <time class="comment-time"> • {{ formatDate(comment.createTime) }}</time>
+              <span v-if="comment.isAdmin" class="admin-tag text-white bg-[#6b7280] py-px px-[3px] text-[10px] leading-[1.1] font-medium rounded-[3px] inline-block opacity-90 mr-[3px] ml-[2px]">博主</span>
+              <time class="comment-time text-[#6b7280] text-[10px] ml-px"> • {{ formatDate(comment.createTime) }}</time>
             </div>
-            <div class="comment-content">
+            <div class="comment-content text-[rgb(74,85,104)]">
               <p>{{ comment.content }}</p>
             </div>
           </div>
 
-          <div class="reply-button">
-            <span :class="{ 'reply-enter': replay == comment.id }" @click="replyComment(comment.id)">回复</span>
+          <div class="reply-button mt-4 text-[12px]">
+            <span class="inline-block cursor-pointer" :class="{ 'reply-enter': replay == comment.id }" @click="replyComment(comment.id)">回复</span>
 
             <Transition>
-              <div class="reply-edit" v-if="replay == comment.id">
+              <div class="reply-edit mt-4" v-if="replay == comment.id">
                 <Publish @comment-submitted="send" :parentId="comment.id" />
               </div>
             </Transition>
           </div>
         </div>
       </div>
-      <ol class="children" v-if="comment.children && comment.children.length > 0">
+      <ol class="children list-none pl-6" v-if="comment.children && comment.children.length > 0">
         <CommentItem :commentList="comment.children" />
       </ol>
     </li>
@@ -38,6 +38,23 @@
 </template>
 
 <style lang="less" scoped>
+/*
+  只保留三类工具类表达不了的：
+
+  1. Vue <transition> 运行时类 + 它引用的 keyframes（Vue 会把两者一起改名，
+     拆开就会静默失效，§4.1）。
+  2. `.reply-enter` —— 由 `:class="{ 'reply-enter': replay == comment.id }"` 在运行时切换，
+     模板里写不出固定的 class 串（§4.3.1 同类）。
+  3. 无（其余全部内联）。
+
+  注意一个容易误判的点：原 CSS 里绝大多数规则嵌在 `ul { ... }` 之下，而本组件模板里
+  **没有** `ul`。但 Vue 只把 scope 属性加在**最后一个**复合选择器上，编译结果是
+  `ul .comment-box .comment-container[data-v-x]` —— 那个 `ul` 是**父组件**（Comment/View）
+  提供的，所以这些规则一直是生效的。内联后反而不再依赖祖先 `ul`，更稳。
+
+  另：原 `.comment-list` 规则在本组件模板里没有任何对应元素（与 Comment/View 的类名重名
+  但实现不同），是死样式，已删除。
+*/
 .v-enter-active {
   animation: bottom .6s ease;
 }
@@ -58,110 +75,9 @@
   }
 }
 
-.admin-tag {
-  margin: 0 3px 0 2px;
-  color: #fff;
-  background: #6b7280;
-  padding: 1px 3px;
-  font-size: 10px;
-  line-height: 1.1;
-  font-weight: 500;
-  border-radius: 3px;
-  display: inline-block;
-  opacity: .9;
-}
-
-ul,
-li,
-ol {
-  list-style: none;
-}
-
-.comment-time {
-  color: #6b7280;
-  font-size: 10px;
-  margin-left: 1px;
-}
-
-.comment-list {
-  width: 100%;
-  margin: 30px auto;
-  color: rgb(49, 49, 49);
-}
-
-ul {
-  margin: 24px 0;
-  width: 100%;
-
-  .comment-box {
-    .comment-container {
-      display: flex;
-      margin-bottom: 20px;
-
-      .comment-avatar {
-        cursor: pointer;
-
-        img {
-          width: 44px;
-          height: 44px;
-          border-radius: 5px;
-          transition: all .5s;
-
-          border: 1px solid #ddd;
-
-          &:hover {
-            border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
-          }
-        }
-      }
-
-      .comment-main {
-        margin-left: 15px;
-        font-size: 14px;
-        width: 100%;
-
-        .comment-main-top {
-          height: 44px;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-        }
-
-        .comment-meta {
-          display: flex;
-          align-items: baseline;
-          color: #666;
-        }
-
-        .comment-content {
-          color: rgb(74, 85, 104);
-        }
-
-        .reply-button {
-          margin-top: 16px;
-          font-size: 12px;
-
-          span {
-            display: inline-block;
-            cursor: pointer;
-          }
-        }
-
-        .reply-enter {
-          color: rgb(31, 109, 218);
-          font-weight: bold;
-        }
-
-        .reply-edit {
-          margin-top: 16px;
-        }
-      }
-    }
-
-    .children {
-      padding-left: 24px;
-    }
-  }
+.reply-enter {
+  color: rgb(31, 109, 218);
+  font-weight: bold;
 }
 </style>
 

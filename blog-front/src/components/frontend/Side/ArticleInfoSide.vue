@@ -2,47 +2,47 @@
   <div style="width: 100%;">
     <el-row>
       <el-col>
-        <el-card class="box">
-          <img :src="store.homeHeaderInfo.thumbnailUrl" class="image" />
+        <el-card class="box w-full min-h-screen">
+          <img :src="store.homeHeaderInfo.thumbnailUrl" class="image w-[95%] mx-auto" />
 
           <div>
-            <p class="title">{{ store.homeHeaderInfo.title }}</p>
+            <p class="title text-[1.15rem] my-3">{{ store.homeHeaderInfo.title }}</p>
             <div class="schedule">
               <el-progress :color="customColors" :percentage="sideInfo.process"></el-progress>
-              <p>已阅读时长：{{ formatSeconds(second) }}</p>
+              <p class="text-[14px] text-[#606266]">已阅读时长：{{ formatSeconds(second) }}</p>
             </div>
           </div>
 
-          <div class="links">
-            <a>
+          <div class="links grid grid-cols-[repeat(5,1fr)] justify-items-center w-full text-[#909399] text-[12px] mt-[14px] pt-2">
+            <a class="cursor-pointer">
               <Icon iconName="icon-31erweima" iconSize="2"></Icon>
             </a>
-            <a>
+            <a class="cursor-pointer">
               <Icon iconName="icon-fangda" style="margin-top: 3px;" iconSize="1.56"
                 @click="store.aritcleModel.isFullPreview = !store.aritcleModel.isFullPreview"></Icon>
             </a>
-            <a>
+            <a class="cursor-pointer">
               <Icon iconName="icon-forward" iconSize="2"></Icon>
             </a>
-            <a>
+            <a class="cursor-pointer">
               <Icon iconName="icon-share" iconSize="2"></Icon>
             </a>
-            <a>
+            <a class="cursor-pointer">
               <Icon iconName="icon-setting" iconSize="2"></Icon>
             </a>
           </div>
 
-          <div class="tags">
+          <div class="tags w-full text-[#909399] text-[14px]">
             <el-divider>
               <Icon iconName="icon-shili" iconSize="1.56"></Icon>
             </el-divider>
-            <div class="tag-list">
-              <span class="tag" v-for="(item, index) in store.homeHeaderInfo.tags" :key="item.id ?? item.name"
+            <div class="tag-list flex flex-wrap gap-2 w-full">
+              <span class="tag inline-flex items-center max-w-full text-white rounded-[5px] py-[3px] px-[6px] leading-[1.45] [overflow-wrap:anywhere] [word-break:break-word] whitespace-normal" v-for="(item, index) in store.homeHeaderInfo.tags" :key="item.id ?? item.name"
                 :style="{ backgroundColor: tags[index % tags.length] }">{{ item.name }}</span>
             </div>
           </div>
 
-          <div class="catelog">
+          <div class="catelog flex-1 overflow-y-auto text-left">
             <MdCatalog editorId="dh-editor" :scrollElement="scrollElement" theme="light" />
           </div>
         </el-card>
@@ -115,86 +115,23 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="less" scoped>
+/*
+  §4.8：Element Plus 的 `.el-card { background-color: var(--el-card-bg-color) }` 是无层级规则，
+  `bg-white` 工具类会被它压掉，所以这条保留在这里。
+*/
 .box {
   background-color: #fff;
-
-  img {
-    width: 95%;
-    margin: 0 auto;
-  }
 }
 
+/* Element Plus 内部 DOM（卡片内容区），加不上 class（§4.3） */
 :deep(.el-card__body) {
   height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
+/* 裸伪元素选择器，工具类没有对应写法 */
 ::-webkit-scrollbar {
   width: 0;
-}
-
-.catelog {
-  flex: 1;
-  overflow-y: auto;
-  text-align: left;
-}
-
-.schedule {
-  p {
-    font-size: 14px;
-    color: #606266;
-  }
-}
-
-.title {
-  font-size: 1.15rem;
-  margin: 0.75rem 0;
-}
-
-.box {
-  width: 100%;
-  min-height: 100vh;
-}
-
-.links {
-  margin-top: 14px;
-  padding-top: 8px;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  justify-items: center;
-  width: 100%;
-  color: #909399;
-  font-size: 12px;
-
-  a {
-    cursor: pointer;
-  }
-}
-
-.tags {
-  width: 100%;
-  color: #909399;
-  font-size: 14px;
-
-  .tag-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .tag {
-    display: inline-flex;
-    align-items: center;
-    max-width: 100%;
-    color: #fff;
-    border-radius: 5px;
-    padding: 3px 6px;
-    line-height: 1.45;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-    white-space: normal;
-  }
 }
 </style>

@@ -3,25 +3,25 @@
     <Header ref="headerElement" />
     <Banner ref="bannerElement">
       <template v-if="sideShowComponent.__name == 'HomeSide'">
-        <h1>我的个人纪录</h1>
-        <h2>DH-BLOG</h2>
+        <h1 class="text-[3.5em]">我的个人纪录</h1>
+        <h2 class="text-[2.5em] [text-shadow:rgba(0,0,0,0.5)_0rem_0.2rem_0.3rem]">DH-BLOG</h2>
       </template>
       <template v-else>
-        <h3>{{ store.homeHeaderInfo.title }}</h3>
-        <div class="top">
-          <span class="date">发表于 {{ store.homeHeaderInfo.created }}</span>
-          <span class="num-word">本文字数 {{ store.homeHeaderInfo.wordNum }} 字</span>
-          <span class="time-consum">阅读时长 {{ store.homeHeaderInfo.timConSum }} 分钟</span>
+        <h3 class="text-[2.2em] [text-shadow:rgba(0,0,0,0.5)_0rem_0.2rem_0.3rem] tracking-[0.125rem]">{{ store.homeHeaderInfo.title }}</h3>
+        <div class="top mt-[18px]">
+          <span class="date mr-5">发表于 {{ store.homeHeaderInfo.created }}</span>
+          <span class="num-word mr-5">本文字数 {{ store.homeHeaderInfo.wordNum }} 字</span>
+          <span class="time-consum mr-5">阅读时长 {{ store.homeHeaderInfo.timConSum }} 分钟</span>
         </div>
       </template>
     </Banner>
-    <div class="inner">
-      <div class="left" ref="leftElement">
+    <div class="inner px-[25px] flex justify-between">
+      <div class="left bg-white flex flex-col items-center w-[30%] h-screen text-center sticky top-0 my-[9.6px]" ref="leftElement">
         <transition mode="out-in">
           <component :is="sideShowComponent" />
         </transition>
       </div>
-      <div class="right">
+      <div class="right bg-white w-[67%] shadow-[0_0.5rem_0.75rem_0.0625rem_rgb(235,235,235)] rounded-[0.3125rem] my-[9.6px] pt-4 flex flex-col justify-between">
         <transition mode="out-in">
           <router-view />
         </transition>
@@ -70,6 +70,16 @@ watch(() => route.path, _ => {
 </script>
 
 <style scoped>
+/*
+  §4.8：style.less 的 `h1, h2, h3 { font-weight: normal }` 是无层级规则。
+  `h3 { font-weight: bold }`（scoped，特异性 0,1,1 > 0,0,1）本来赢过它；
+  换成 `font-bold` 工具类（在 @layer utilities 里）就会输给它，所以这一条必须留在这里。
+*/
+h3 {
+  font-weight: bold;
+}
+
+/* Vue <transition> 运行时生成的类，模板里静态写不出来 */
 .v-enter-from,
 .v-leave-to {
   opacity: 0;
@@ -85,66 +95,5 @@ watch(() => route.path, _ => {
 .v-enter-active,
 .v-leave-active {
   transition: all .6s ease;
-}
-
-h1 {
-  font-size: 3.5em;
-}
-
-h2 {
-  font-size: 2.5em;
-  text-shadow: rgba(0, 0, 0, 0.5) 0rem 0.2rem 0.3rem;
-}
-
-h3 {
-  font-size: 2.2em;
-  font-weight: bold;
-  text-shadow: rgba(0, 0, 0, 0.5) 0rem 0.2rem 0.3rem;
-  letter-spacing: 0.125rem;
-}
-
-.left {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 30%;
-  height: 100vh;
-  text-align: center;
-  position: sticky;
-  top: 0;
-  margin: 9.6px 0;
-}
-
-.inner {
-  padding: 0 25px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.inner>* {
-  background-color: #fff;
-}
-
-.top {
-  margin-top: 18px;
-
-  span {
-    margin-right: 20px;
-  }
-}
-
-.date {
-  text-shadow: rgba(0, 0, 0, .5) 0rem .2rem .3rem;
-}
-
-.right {
-  width: 67%;
-  box-shadow: 0 .5rem .75rem .0625rem rgb(235, 235, 235);
-  border-radius: .3125rem;
-  margin: 9.6px 0;
-  padding-top: 16px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
 }
 </style>

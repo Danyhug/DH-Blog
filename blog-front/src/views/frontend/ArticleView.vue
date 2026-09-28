@@ -2,18 +2,20 @@
   <!-- 文章浏览页 -->
   <div>
     <!-- 全屏观看文章信息 -->
-    <div :class="`blog-container ${store.aritcleModel.isFullPreview ? 'full-screen-preview' : ''}`"
+    <div :class="['blog-container', store.aritcleModel.isFullPreview
+      ? 'full-screen-preview fixed top-0 left-0 w-full h-full overflow-y-auto p-0 bg-white'
+      : 'px-6 pt-0 pb-5']"
       @click="openPreviewLinkInNewTab">
-      <p class="title" v-show="store.aritcleModel.isFullPreview" @click="changeIsFullPreview()">{{ title }}</p>
+      <p class="title pt-[1.875rem] px-0 pb-4 text-[1.6rem] font-bold text-center cursor-pointer [font-family:宋体]" v-show="store.aritcleModel.isFullPreview" @click="changeIsFullPreview()">{{ title }}</p>
       <MdPreview :editorId="system.mdEditorInit.editorId" :modelValue="content"
         :previewTheme="system.mdEditorInit.previewTheme" :codeFoldable="system.mdEditorInit.codeFoldable"
         :theme="system.mdEditorInit.theme" :scrollElement="scrollElement" />
     </div>
-    <div class="info">
-      <span>
+    <div class="info py-[10px] px-0 text-[12px] text-[#606266] text-right border-t border-grey-4">
+      <span class="mx-[10px]">
         更新于 {{ update }}
       </span>
-      <span>
+      <span class="mx-[10px]">
         阅读次数 {{ viewnum }} 次
       </span>
       <el-tag v-if="authorType === 'agent'" size="small" type="warning" effect="plain" class="ml-2">
@@ -132,19 +134,16 @@ export default {
 </script>
 
 <style lang="less" scoped>
+/*
+  本文件剩下的几乎都是 `:deep()`：正文由 md-editor（markdown-it + highlight.js）
+  在运行时生成，DOM 上加不上 class（§4.3.1）。组件自身的 padding/标题/信息条
+  已内联到模板。
+
+  `.blog-container` 这个类名必须保留：style.less 在 1024 断点下用
+  `.blog-container { padding: 0 !important }` 覆盖它，属于全局钩子；
+  它同时是下面三条 `:deep()` 的锚点。
+*/
 .blog-container {
-  padding: 1.25rem 1.5rem;
-  padding-top: 0;
-
-  .title {
-    font-size: 1.6rem;
-    font-family: "宋体";
-    font-weight: bold;
-    text-align: center;
-    padding: 1.875rem 0 1rem;
-    cursor: pointer;
-  }
-
   :deep(.md-editor-preview) {
     font-family: 'Microsoft YaHei';
   }
@@ -158,16 +157,13 @@ export default {
   }
 }
 
+/*
+  `.full-screen-preview` 同样要保留类名（全屏态由 JS 切换，且是下面两条 :deep() 的锚点）；
+  它自身那套定位/尺寸已内联成互斥的 class 串（原 `.blog-container` 与 `.full-screen-preview`
+  都写 padding，且特异性相同、后者靠源码顺序取胜；内联后必须整体二选一，
+  不能让 `p-0` 与 `px-*` 同时存在，否则谁赢取决于 Tailwind 的生成顺序，见 §4.9）。
+*/
 .full-screen-preview {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  overflow-y: auto;
-  padding: 0;
-  background-color: #fff;
-
   :deep(.md-editor-preview) {
     padding: 0 10px;
     background-color: rgb(250, 250, 250);
@@ -180,27 +176,7 @@ export default {
   }
 }
 
-.left {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 30%;
-
-  top: 0;
-  margin: .6rem 0;
-}
-
-.info {
-  padding: 10px 0;
-  font-size: 12px;
-  color: #606266;
-  text-align: right;
-  border-top: 1px solid var(--grey-4);
-
-  span {
-    margin: 0 10px;
-  }
-}
+/* 原 `.left` 规则在本文件模板里没有任何对应元素（从 HomeView 复制过来的死样式），已删除 */
 
 /** 平板移动端适配 */
 @media screen and (max-width: 1024px) {
