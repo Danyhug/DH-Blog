@@ -1,10 +1,10 @@
 <template>
   <div>
     <!-- 这里是文章列表 -->
-    <div class="posts">
-      <ArticleBox v-loading="show" v-for="item in store.articleList" :article="item" :key="item.id"></ArticleBox>
+    <div class="p-[18px]">
+      <ArticleBox v-loading="show" v-for="item in store.articleList" :article="item" :key="item.id" class="mb-[46px]"></ArticleBox>
     </div>
-    <div class="page">
+    <div class="flex justify-center items-center px-[18px] pt-0 pb-8">
       <Pagination :pageSize="store.page.pageSize" :currentPage="store.page.pageNum" :total="store.page.total"
         @update:currentPage="changePage"></Pagination>
     </div>
@@ -50,20 +50,3 @@ const changePage = (curr: number) => {
 }
 
 </script>
-<style lang="less" scoped>
-/* 文章父元素 */
-.posts {
-  padding: 18px;
-}
-
-Article {
-  margin-bottom: 46px;
-}
-
-.page {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 0 18px 32px;
-}
-</style>

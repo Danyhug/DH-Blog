@@ -1,29 +1,15 @@
 <template>
-  <div class="comment-list">
+  <div class="relative w-full my-[30px] mx-auto text-[rgb(49,49,49)]">
     <Loading v-if="isLoading" />
 
     <div>
       <div class="count">{{ length }} 条评论</div>
-      <ul>
+      <ul class="my-6 w-full">
         <CommentItem :commentList="commentList" />
       </ul>
     </div>
   </div>
 </template>
-
-<style lang="less" scoped>
-.comment-list {
-  position: relative;
-  width: 100%;
-  margin: 30px auto;
-  color: rgb(49, 49, 49);
-}
-
-ul {
-  margin: 24px 0;
-  width: 100%;
-}
-</style>
 
 <script setup>
 import { reactive } from 'vue';

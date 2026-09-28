@@ -1,41 +1,8 @@
 <template>
-  <div class="error-container">
-    <img src="@/assets/images/wuwei.png" alt="无畏契约">
-    <h1>已发现入侵者</h1>
-    <h2>访问终止</h2>
-    <p>您的访问受限，解除限制请联系管理员</p>
+  <div class="bg-[#CE3D3F] flex flex-col justify-center items-center h-screen text-[#FFFEFE] tracking-[5px] pb-[12%] [font-family:幼圆]">
+    <img src="@/assets/images/wuwei.png" alt="无畏契约" class="w-[280px]">
+    <h1 class="my-[25px] text-[3rem]">已发现入侵者</h1>
+    <h2 class="text-[2rem]">访问终止</h2>
+    <p class="mt-[14px] text-[1.1rem]">您的访问受限，解除限制请联系管理员</p>
   </div>
 </template>
-<style lang="less">
-.error-container {
-  background-color: #CE3D3F;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  color: #FFFEFE;
-  // 字间距
-  letter-spacing: 5px;
-  font-family: "幼圆";
-  padding-bottom: 12%;
-
-  img {
-    width: 280px;
-  }
-
-  h1 {
-    margin: 25px 0;
-    font-size: 3rem;
-  }
-
-  h2 {
-    font-size: 2rem;
-  }
-
-  p {
-    margin-top: 14px;
-    font-size: 1.1rem;
-  }
-}
-</style>
