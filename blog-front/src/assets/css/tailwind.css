@@ -1,1 +1,76 @@
 @import "tailwindcss";
+
+/*
+  P1：把 style.less 的主题变量映射成语义工具类（bg-grey-0 / text-color-red / shadow-dh-normal …）。
+
+  用 @theme inline 而不是 @theme：
+  - inline 会把值直接内联进工具类，例如 .bg-grey-0 { background-color: var(--grey-0) }，
+    不会另外生成一份 --color-* 变量，变量值始终只在 style.less 的 :root 里维护一处；
+  - 非 inline 会生成 --color-grey-0: var(--grey-0) 这样的平行变量，等于同一份颜色有两个名字。
+
+  style.less 里的原变量全部保留，未迁移的代码继续可用。
+
+  命名说明：项目自己的品牌色变量本身就叫 --color-red / --color-blue …
+  为保持「类名能直接反推变量名」且不与 Tailwind 默认色板（text-red-500 等）混淆，
+  统一加一层前缀，生成 text-color-red / bg-color-blue。
+*/
+@theme inline {
+  /* 灰阶 */
+  --color-grey-0: var(--grey-0);
+  --color-grey-1: var(--grey-1);
+  --color-grey-2: var(--grey-2);
+  --color-grey-3: var(--grey-3);
+  --color-grey-4: var(--grey-4);
+  --color-grey-5: var(--grey-5);
+  --color-grey-6: var(--grey-6);
+  --color-grey-7: var(--grey-7);
+  --color-grey-8: var(--grey-8);
+  --color-grey-9: var(--grey-9);
+  /* 透明灰 */
+  --color-grey-1-a0: var(--grey-1-a0);
+  --color-grey-1-a3: var(--grey-1-a3);
+  --color-grey-1-a5: var(--grey-1-a5);
+  --color-grey-1-a7: var(--grey-1-a7);
+  --color-grey-9-a1: var(--grey-9-a1);
+  --color-grey-9-a5: var(--grey-9-a5);
+  --color-grey-2-a0: var(--grey-2-a0);
+
+  /* 品牌色板 */
+  --color-color-pink-light: var(--color-pink-light);
+  --color-color-cyan-light: var(--color-cyan-light);
+  --color-color-red: var(--color-red);
+  --color-color-pink: var(--color-pink);
+  --color-color-orange: var(--color-orange);
+  --color-color-yellow: var(--color-yellow);
+  --color-color-green: var(--color-green);
+  --color-color-aqua: var(--color-aqua);
+  --color-color-blue: var(--color-blue);
+  --color-color-purple: var(--color-purple);
+  --color-color-grey: var(--color-grey);
+  --color-color-red-a1: var(--color-red-a1);
+  --color-color-red-a3: var(--color-red-a3);
+  --color-color-pink-a3: var(--color-pink-a3);
+  --color-color-pink-light-a3: var(--color-pink-light-a3);
+  --color-color-pink-light-a5: var(--color-pink-light-a5);
+  --color-color-pink-light-a7: var(--color-pink-light-a7);
+  --color-primary: var(--primary-color);
+
+  /* 后台 */
+  --color-dh-admin: var(--dh-admin-bg);
+  --color-dh-success: var(--dh-admin-color-success);
+  --color-dh-error: var(--dh-admin-color-error);
+  --color-dh-info: var(--dh-admin-color-info);
+  --radius-dh-sm: var(--dh-admin-border-radius-small);
+  --radius-dh: var(--dh-admin-border-radius-normal);
+  --radius-dh-lg: var(--dh-admin-border-radius-big);
+  --shadow-dh-shallow: var(--dh-admin-border-shadow-shallow);
+  --shadow-dh-normal: var(--dh-admin-border-shadow-normal);
+}
+
+/*
+  --nav-bg 是整条 linear-gradient，v4 没有背景图对应的主题命名空间，
+  只能用自定义工具类（效果等同于 bg-[var(--nav-bg)]）。
+*/
+@utility bg-nav {
+  background-image: var(--nav-bg);
+}
