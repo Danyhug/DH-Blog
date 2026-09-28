@@ -1,38 +1,38 @@
 <template>
-  <div class="info">
-    <img class="block mx-auto" :src="site.avatar || defaultAvatar" :alt="site.blog_title">
-    <div class="info-text">
+  <div class="pt-6 relative h-screen">
+    <img class="block mx-auto w-[9.375rem] h-[9.375rem] rounded-[50%]" :src="site.avatar || defaultAvatar" :alt="site.blog_title">
+    <div class="leading-[2.2em]">
       <p class="sub-title">{{ site.signature }}</p>
-      <ul class="links">
-        <li>
+      <ul class="mt-6 mb-5 flex justify-between">
+        <li class="text-grey-7 list-none">
           <a href="">
-            <p class="num">{{ data.articleCount }}</p>
+            <p class="num font-bold text-[22px]">{{ data.articleCount }}</p>
             文章
           </a>
         </li>
-        <span></span>
-        <li>
+        <span class="block border-l border-grey-4"></span>
+        <li class="text-grey-7 list-none">
           <a href="">
-            <p class="num">{{ data.categoryCount }}</p>
+            <p class="num font-bold text-[22px]">{{ data.categoryCount }}</p>
             分类
           </a>
         </li>
-        <span></span>
-        <li>
+        <span class="block border-l border-grey-4"></span>
+        <li class="text-grey-7 list-none">
           <a href="">
-            <p class="num">{{ data.tagCount }}</p>
+            <p class="num font-bold text-[22px]">{{ data.tagCount }}</p>
             标签
           </a>
         </li>
       </ul>
 
-      <ul class="external-links">
-        <li v-if="site.github_link">
+      <ul class="text-center">
+        <li v-if="site.github_link" class="inline-block px-[0.9375rem]">
           <a :href="site.github_link" target="_blank">
             <Icon iconName="icon-github1" iconSize="2.3"></Icon>
           </a>
         </li>
-        <li v-if="site.bilibili_link">
+        <li v-if="site.bilibili_link" class="inline-block px-[0.9375rem]">
           <a :href="site.bilibili_link" target="_blank">
             <Icon iconName="icon-bilibili" iconSize="2.2" style="fill: rgb(250,116,153)"></Icon>
           </a>
@@ -67,53 +67,3 @@ onMounted(async () => {
   Object.assign(data, overview)
 })
 </script>
-
-<style scoped lang="less">
-.info {
-  padding-top: 24px;
-  position: relative;
-  height: 100vh;
-}
-
-.links {
-  margin-top: 1.5rem;
-  margin-bottom: 1.25rem;
-  display: flex;
-  justify-content: space-between;
-
-  li {
-    color: var(--grey-7);
-    list-style: none;
-
-    .num {
-      font-weight: bold;
-      font-size: 22px;
-    }
-  }
-
-  span {
-    display: block;
-    border-left: 1px solid var(--grey-4);
-  }
-}
-
-img {
-  width: 9.375rem;
-  height: 9.375rem;
-  border-radius: 50%;
-}
-
-.info-text {
-  line-height: 2.2em;
-}
-
-.external-links {
-  text-align: center;
-
-  li {
-    display: inline-block;
-    padding: 0 .9375rem;
-
-  }
-}
-</style>

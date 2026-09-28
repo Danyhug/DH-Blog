@@ -1,6 +1,7 @@
 <template>
-  <div id="banner" ref="banner">
-    <div class="info">
+  <div id="banner" ref="banner"
+    class="relative z-[-999] w-full h-[80vh] bg-[url(@/assets/images/banner.png)] bg-no-repeat bg-cover bg-center filter-[contrast(88%)] flex justify-center items-center">
+    <div class="z-[2] text-center leading-[1.2] text-white [font-family:'Fredericka_the_Great',Mulish,-apple-system,'PingFang_SC','Microsoft_YaHei',sans-serif]">
       <slot></slot>
     </div>
   </div>
@@ -29,7 +30,14 @@ onMounted(() => {
 </script>
 
 <style lang="less" scoped>
-// 进入文章时，上面的黑色背景淡入
+/*
+  `.fade-in-article` 由 JS 在运行时 add/remove（见 articleAnimate()），模板里写不出来，
+  因此这条规则与它的 ::after 必须留在 CSS 里。
+
+  同时它不能被内联的第二个原因：`animation: fadeIn` 引用的是本块内的 `@keyframes fadeIn`。
+  Vue 会把两者一起改名（fadeIn-<scope>），所以这份是「配得上」的；一旦把 animation 挪到
+  工具类里，引用的就是未改名的 fadeIn，会像 FilePreview 那样静默失效（§4.1）。
+*/
 .fade-in-article {
   &::after {
     content: "";
@@ -54,25 +62,4 @@ onMounted(() => {
     }
   }
 }
-
-#banner {
-  position: relative;
-  z-index: -999;
-  width: 100%;
-  height: 80vh;
-  background: url('@/assets/images/banner.png') no-repeat;
-  background-size: cover;
-  background-position: center;
-  filter: contrast(88%);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  .info {
-    z-index: 2;
-    text-align: center;
-    line-height: 1.2;
-    color: #fff;
-    font-family: 'Fredericka the Great', Mulish, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-  }}
 </style>

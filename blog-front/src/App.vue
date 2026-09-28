@@ -16,4 +16,3 @@ const timer = setInterval(() => {
   }
 }, 5000);
 </script>
-<style></style>
