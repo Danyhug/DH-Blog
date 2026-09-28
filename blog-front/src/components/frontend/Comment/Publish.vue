@@ -1,6 +1,6 @@
 <template>
-  <div class="comment-form">
-    <div class="right-top">
+  <div class="comment-form relative w-full mx-auto py-4 px-2 bg-white rounded-xl text-[12px]">
+    <div class="right-top absolute right-3 top-2">
       <label class="ui-bookmark">
         <input type="checkbox" v-model="comment.isPublic" />
         <div class="bookmark">
@@ -14,29 +14,32 @@
         </div>
       </label>
     </div>
-    <div class="author-info">
-      <input class="input" type="text" placeholder="* 昵称" maxlength="15" v-model="comment.author" />
-      <input class="input" type="email" placeholder="* 邮箱" maxlength="20" v-model="comment.email" />
+    <div class="author-info w-full grid grid-cols-3 leading-[24px]">
+      <input class="input border-none text-[12px] py-2 px-3 focus:[outline:none]" type="text" placeholder="* 昵称" maxlength="15" v-model="comment.author" />
+      <input class="input border-none text-[12px] py-2 px-3 focus:[outline:none]" type="email" placeholder="* 邮箱" maxlength="20" v-model="comment.email" />
       <div style="color: #666; margin-right: 30px;">
         {{ comment.isPublic ? '评论已公开，任何人均可阅读' : '评论已私密，仅博主可见' }}
       </div>
     </div>
-    <div class="comment-content">
-      <textarea @focus="viewState.showEmoji = true" @blur="viewState.showEmoji = false" class="input" type="textarea"
+    <div class="comment-content mt-4">
+      <textarea @focus="viewState.showEmoji = true" @blur="viewState.showEmoji = false"
+        class="input border-none w-full h-[70px] py-2 px-[13px] resize-y min-h-[70px] focus:[outline:none]" type="textarea"
         placeholder="想要说些什么呢" ref="textarea" v-model="comment.content"></textarea>
     </div>
 
-    <div class="comment-action">
-      <div class="action-left">
+    <div class="comment-action mt-2 w-full flex justify-between">
+      <div class="action-left flex-1">
         <div class="emoji">
-          <ul v-show="viewState.showEmoji">
-            <li v-for="ji in emojis" :key="ji" @click="addEmj(ji)">{{ ji }}</li>
+          <ul class="list-none text-[18px] grid grid-cols-[repeat(10,1fr)] gap-[6px]" v-show="viewState.showEmoji">
+            <li class="mr-[10px] cursor-pointer" v-for="ji in emojis" :key="ji" @click="addEmj(ji)">{{ ji }}</li>
           </ul>
         </div>
       </div>
-      <div class="action-right">
-        <button @click="submitComment">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36px" height="36px">
+      <div class="action-right ml-[30px] relative left-[10px]">
+        <button @click="submitComment"
+          class="[transform:scale(0.87)] flex items-center justify-center gap-[10px] py-0 px-[10px] text-white [text-shadow:2px_2px_rgb(116,116,116)] uppercase cursor-pointer border-solid border-2 border-black tracking-[1px] font-semibold text-[17px] bg-[hsl(49deg_98%_60%)] rounded-[50px] relative overflow-hidden [transition:all_0.5s_ease] active:[transform:scale(0.77)] active:[transition:all_100ms_ease]">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36px" height="36px"
+            class="[transition:all_0.5s_ease] z-[2]">
             <rect width="36" height="36" x="0" y="0" fill="#fdd835"></rect>
             <path fill="#e53935"
               d="M38.67,42H11.52C11.27,40.62,11,38.57,11,36c0-5,0-11,0-11s1.44-7.39,3.22-9.59 c1.67-2.06,2.76-3.48,6.78-4.41c3-0.7,7.13-0.23,9,1c2.15,1.42,3.37,6.67,3.81,11.29c1.49-0.3,5.21,0.2,5.5,1.28 C40.89,30.29,39.48,38.31,38.67,42z">
@@ -63,142 +66,38 @@
               d="M15.078,19.043c1.957-0.326,5.122-0.529,4.435,1.304c-0.489,1.304-7.185,2.185-7.185,0.652 C12.328,19.467,15.078,19.043,15.078,19.043z">
             </path>
           </svg>
-          <span class="now">评论!</span>
-          <span class="play">发表</span>
+          <span class="now absolute left-0 [transform:translateX(-100%)] [transition:all_0.5s_ease] z-[2]">评论!</span>
+          <span class="play [transition:all_0.5s_ease_300ms]">发表</span>
         </button>
       </div>
     </div>
   </div>
 </template>
 <style scoped lang="less">
-.comment-form {
-  position: relative;
-  width: 100%;
-  margin: 0 auto;
-  padding: 16px 8px;
-  background-color: #fff;
-  border-radius: 12px;
-  font-size: 12px;
-
-  .right-top {
-    position: absolute;
-    right: 12px;
-    top: 8px;
-  }
-
-  input:focus,
-  textarea:focus {
-    outline: none;
-  }
-
-  .author-info {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    line-height: 24px;
-
-    .input {
-      border: none;
-      font-size: 12px;
-      padding: 8px 12px;
-    }
-  }
-
-  .comment-content {
-    margin-top: 16px;
-
-    textarea {
-      border: none;
-      width: 100%;
-      height: 70px;
-      padding: 8px 13px;
-      // 只能垂直更改大小
-      resize: vertical;
-      min-height: 70px;
-    }
-  }
-
-  .comment-action {
-    margin-top: 8px;
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-
-    .action-left {
-      flex: 1;
-
-      ul {
-        list-style: none;
-        font-size: 18px;
-        display: grid;
-        grid-template-columns: repeat(10, 1fr);
-        grid-gap: 6px;
-
-        li {
-          margin-right: 10px;
-          cursor: pointer;
-        }
-      }
-    }
-
-    .action-right {
-      margin-left: 30px;
-      position: relative;
-      left: 10px;
-    }
-  }
-}
+/*
+  原 style #1（79 行）全部内联，只留下面这条：`focus:` 变体同样能表达，
+  但原值是 `outline: none` 简写，用 `focus:[outline:none]` 保持逐字节等价。
+  已内联的对应关系：
+  - `.comment-form` → 根 div
+  - `.right-top` → absolute right-3 top-2
+  - `.author-info`（含 3 列 grid 与 line-height）→ 对应 div 与两个 input
+  - `.comment-content` + textarea → 对应 div 与 textarea
+  - `.comment-action` / `.action-left` / `ul` / `li` / `.action-right` → 逐个内联
+  注意 textarea 的 padding（8px 13px）与 `.input` 的（8px 12px）不同：
+  原 CSS 里 textarea 规则更靠后且特异性更高，覆盖了 `.input`；
+  内联时直接给 textarea 写 `px-[13px]`，避免 `px-3` 与 `px-[13px]` 同时出现（§4.9）。
+*/
 </style>
 
 <style scoped>
-/* From Uiverse.io by barisdogansutcu */
-button {
-  transform: scale(.87);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 0 10px;
-  color: white;
-  text-shadow: 2px 2px rgb(116, 116, 116);
-  text-transform: uppercase;
-  cursor: pointer;
-  border: solid 2px black;
-  letter-spacing: 1px;
-  font-weight: 600;
-  font-size: 17px;
-  background-color: hsl(49deg 98% 60%);
-  border-radius: 50px;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.5s ease;
-}
-
-button:active {
-  transform: scale(0.77);
-  transition: all 100ms ease;
-}
-
-button svg {
-  transition: all 0.5s ease;
-  z-index: 2;
-}
-
-.play {
-  transition: all 0.5s ease;
-  transition-delay: 300ms;
-}
-
+/*
+  原 style #2（61 行）：`button` 的基础样式与 `.now` / `.play` / `button svg`
+  已内联到模板。只剩三条工具类表达不了的「祖先 :hover + 后代」规则。
+  `button:active` 用的是任意属性 `[transform:...]` 而不是 `active:scale-*`：
+  后者写的是独立的 `scale` 属性，与 `transform` 不是同一个属性，会改变原有级联。
+*/
 button:hover svg {
   transform: scale(3) translate(50%);
-}
-
-.now {
-  position: absolute;
-  left: 0;
-  transform: translateX(-100%);
-  transition: all 0.5s ease;
-  z-index: 2;
 }
 
 button:hover .now {
@@ -213,6 +112,15 @@ button:hover .play {
 </style>
 
 <style scoped>
+/*
+  原 style #3（199 行）**整块保留**，属 §4.1「装饰组件豁免」：
+  这是 Uiverse.io 的书签动画控件，机制全部落在工具类表达不了的写法上 ——
+  `input:checked + .bookmark`（兄弟组合器）、`.bookmark::before/::after`（伪元素）、
+  `.ui-bookmark:hover .bookmark`（祖先 hover）、三个 keyframes（bookmark / circle / circles，
+  且带 `-webkit-` 配对）。逐条内联既做不到，也会破坏「keyframes 与 animation 必须同块」的前提。
+  它与本文件其余部分互不影响，保持原样是这里最安全、也最可读的选择。
+*/
+
 .ui-bookmark {
   --icon-size: 24px;
   --icon-secondary-color: rgb(77, 77, 77);
@@ -411,6 +319,7 @@ button:hover .play {
   }
 }
 </style>
+
 
 <script setup>
 import { emojis } from '@/types/Constant';
