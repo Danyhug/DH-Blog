@@ -1,5 +1,5 @@
 <template>
-  <div ref="container" class="container">
+  <div ref="container" class="container h-full flex flex-col relative bg-white">
     <h1 @click="router.push({ name: 'Home' })">DH-Blog</h1>
     <el-menu router :default-active="$route.path">
       <el-menu-item index="/admin/dashboard">
@@ -46,7 +46,7 @@
       </el-menu-item>
     </el-menu>
 
-    <div class="tool">
+    <div class="tool h-[60px] absolute bottom-[20px] left-[12px]">
       <div>
         <el-icon
           size="26"
@@ -63,6 +63,15 @@
   </div>
 </template>
 <style scoped lang="less">
+/*
+  保留的规则都有一处工具类替代不了的理由：
+  - `h1` 的 font-weight 被 style.less 全局 `h1, h2, h3 { font-weight: 400 }` 压住（无层级规则
+    永远赢过 @layer utilities），所以整条留在这里；
+  - :deep(.el-menu) 的 background-color / border 同理被 Element Plus 的 .el-menu 压住；
+  - .el-menu-item / .is-active 是 Element Plus 的内部类名与运行期状态类，
+    .fold-container 是 fold() 里 classList 切换的类名，工具类够不着；
+  - .container .el-icon 是 7 个菜单图标共用的同款样式，集中维护。
+*/
 h1 {
   opacity: 1;
   font-weight: bold;
@@ -76,50 +85,33 @@ h1 {
   transition: all 0.6s;
 }
 
-.container {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  position: relative;
+.container :deep(.el-menu) {
+  padding: 0 12px;
   background-color: #fff;
+  flex: 1;
+  border: none;
+}
 
-  :deep(.el-menu) {
-    padding: 0 12px;
-    background-color: #fff;
-    flex: 1;
-    border: none;
-  }
+.container .el-icon {
+  margin-left: 10px;
+  margin-right: 15px;
+}
 
-  .el-icon {
-    margin-left: 10px;
-    margin-right: 15px;
-  }
+.container .tool .el-icon {
+  margin: 0;
+}
 
-  .tool {
-    .el-icon {
-      margin: 0;
-    }
-  }
+.container .el-menu-item {
+  --el-menu-hover-bg-color: rgb(245, 245, 245);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  transition: all 0.3s;
+}
 
-  .el-menu-item {
-    --el-menu-hover-bg-color: rgb(245, 245, 245);
-    border-radius: 10px;
-    margin-bottom: 10px;
-    transition: all 0.3s;
-  }
-
-  .is-active {
-    --el-menu-active-color: #3f8cff;
-    background-color: var(--el-menu-bg-color);
-    box-shadow: -2px 2px 26px #0000001b;
-  }
-
-  .tool {
-    height: 60px;
-    position: absolute;
-    bottom: 20px;
-    left: 12px;
-  }
+.container .is-active {
+  --el-menu-active-color: #3f8cff;
+  background-color: var(--el-menu-bg-color);
+  box-shadow: -2px 2px 26px #0000001b;
 }
 
 .fold-container {
