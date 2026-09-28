@@ -194,7 +194,7 @@
         <div v-else class="flex justify-center items-center h-full">
           <div class="flex flex-col items-center justify-center bg-linear-to-br from-white to-[#f8f9fa] p-[50px] rounded-[20px] shadow-[0_10px_30px_rgba(0,0,0,0.08)] max-w-[440px] text-center max-md:p-[30px]">
             <div class="mb-[30px] bg-linear-to-br from-[#e3fdf5] to-[#ffe6fa] w-[110px] h-[110px] rounded-full flex justify-center items-center shadow-[0_8px_20px_rgba(0,0,0,0.05)]">
-              <component :is="file.icon || FileIcon" class="w-[55px] h-[55px] text-[#999]" :class="getIconClass(currentFileType)" />
+              <component :is="file.icon || FileIcon" class="w-[55px] h-[55px]" :class="getIconClass(currentFileType)" />
             </div>
             <div class="text-center">
               <h3 class="text-[22px] text-[#333] mb-4 font-semibold">无法预览此文件</h3>
@@ -607,20 +607,25 @@ const retryPreview = () => {
   fetchFileContent();
 }
 
-// 获取图标类名
+/**
+ * 图标颜色类。这里直接返回工具类而不是「类名 → CSS 变量」：
+ * 颜色必须只由一处决定——元素上若同时挂静态 text-[#999] 与类型色，
+ * 两个同属性工具类谁生效取决于 Tailwind 生成顺序（见迁移方案 §4.9），
+ * 所以把兜底色也放进这张表里，由函数唯一决定颜色。
+ */
 const getIconClass = (fileType: string) => {
   const typeClassMap = {
-    'image': 'image-icon',
-    'video': 'video-icon',
-    'audio': 'audio-icon',
-    'code': 'code-icon',
-    'pdf': 'pdf-icon',
-    'archive': 'archive-icon',
-    'spreadsheet': 'spreadsheet-icon',
-    'presentation': 'presentation-icon'
+    'image': 'text-color-blue',
+    'video': 'text-[#f50]',
+    'audio': 'text-[#73d13d]',
+    'code': 'text-[#722ed1]',
+    'pdf': 'text-[#f5222d]',
+    'archive': 'text-[#fa8c16]',
+    'spreadsheet': 'text-[#52c41a]',
+    'presentation': 'text-[#eb2f96]'
   }
-  
-  return typeClassMap[fileType as keyof typeof typeClassMap] || ''
+
+  return typeClassMap[fileType as keyof typeof typeClassMap] || 'text-[#999]'
 }
 
 // 格式化文件大小
@@ -971,13 +976,4 @@ onMounted(() => {
   }
 }
 
-/* 文件图标颜色类 */
-.image-icon { color: var(--color-blue); }
-.video-icon { color: #f50; }
-.audio-icon { color: #73d13d; }
-.code-icon { color: #722ed1; }
-.pdf-icon { color: #f5222d; }
-.archive-icon { color: #fa8c16; }
-.spreadsheet-icon { color: #52c41a; }
-.presentation-icon { color: #eb2f96; }
 </style> 
