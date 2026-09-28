@@ -13,8 +13,9 @@
 
             <el-empty v-if="!providers.length" description="暂无供应商" :image-size="60" />
             <div v-else class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
-                <article v-for="provider in providers" :key="provider.name" class="card"
-                    :class="{ 'card--off': !provider.enabled }">
+                <article v-for="provider in providers" :key="provider.name"
+                    class="py-[16px] px-[18px] border border-[#edf0f3] rounded-[12px] transition-[border-color,box-shadow] duration-200 ease-[ease] hover:border-[#d6e4ff] hover:shadow-[0_4px_16px_rgba(63,140,255,0.08)]"
+                    :class="provider.enabled ? 'bg-white' : 'bg-[#fbfbfc] card-off'">
                     <div class="flex items-center gap-3">
                         <ProviderLogo :name="provider.name" :size="34" />
                         <div class="min-w-0 flex-1">
@@ -73,7 +74,7 @@
         </SectionPanel>
 
         <el-drawer v-model="drawerVisible" :title="`配置 ${active?.displayName || active?.name || ''}`" size="600px">
-            <div v-if="active" class="drawer">
+            <div v-if="active" class="pb-[8px]">
                 <p class="hint">
                     <el-icon class="align-middle mr-1">
                         <InfoFilled />
@@ -92,9 +93,10 @@
                     <span class="group-sub">多把密钥按顺序轮换；上游报鉴权失败或配额耗尽时自动停止调度</span>
                 </h4>
 
-                <div v-if="!active.keys.length" class="empty-keys">还没有密钥，先在下面添加一把</div>
-                <div v-for="item in active.keys" :key="item.id" class="key-row">
-                    <span class="dot" :class="item.inRotation ? 'dot--on' : 'dot--off'" />
+                <div v-if="!active.keys.length" class="p-[14px] border border-dashed border-[#e4e7ed] rounded-[10px] text-center text-[13px] text-[#98a2b3]">还没有密钥，先在下面添加一把</div>
+                <div v-for="item in active.keys" :key="item.id" class="key-row flex items-center gap-[10px] px-[12px] py-[10px] border border-[#f0f2f5] rounded-[10px]">
+                    <span class="w-[8px] h-[8px] rounded-[50%] shrink-0"
+                        :class="item.inRotation ? 'bg-[#16a34a] shadow-[0_0_0_3px_rgba(22,163,74,0.14)]' : 'bg-[#d0d5dd]'" />
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2">
                             <span class="text-sm text-gray-700 truncate">{{ item.label || '未命名' }}</span>
@@ -175,7 +177,7 @@
                     </div>
                 </div>
 
-                <div class="add-key">
+                <div class="mt-[12px] p-[12px] border border-dashed border-[#dcdfe6] rounded-[10px] bg-[#fcfcfd]">
                     <div class="flex gap-2">
                         <el-input v-model="newKey.label" placeholder="标签，例如「主账号」" class="w-40" clearable />
                         <el-input v-model="newKey.apiKey" placeholder="粘贴上游密钥" show-password clearable />
@@ -235,7 +237,7 @@
                     <el-form-item>
                         <template #label>
                             月费用上限（美元，0 不限）
-                            <span class="label-hint">按金额计费的供应商用这个，次数上限说不清预算</span>
+                            <span class="ml-[6px] text-[12px] font-normal text-[#a8b0bd]">按金额计费的供应商用这个，次数上限说不清预算</span>
                         </template>
                         <el-input-number v-model="form.monthlyCostLimitUsd" :min="0" :max="10000" :step="1"
                             :precision="2" class="w-full" />
@@ -296,7 +298,7 @@
                         <el-form-item>
                             <template #label>
                                 Service Key
-                                <span class="label-hint">
+                                <span class="ml-[6px] text-[12px] font-normal text-[#a8b0bd]">
                                     留空表示不修改；已保存的值只显示掩码
                                     <template v-if="active.usageServiceKeyMasked">（当前 {{ active.usageServiceKeyMasked }}）</template>
                                 </span>
@@ -727,27 +729,20 @@ function isJson(value: string) {
 </script>
 
 <style scoped>
-.card {
-    padding: 16px 18px;
-    border: 1px solid #edf0f3;
-    border-radius: 12px;
-    background-color: #fff;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.card:hover {
-    border-color: #d6e4ff;
-    box-shadow: 0 4px 16px rgba(63, 140, 255, 0.08);
-}
-
-.card--off {
-    background-color: #fbfbfc;
-}
-
-.card--off :deep(.el-progress-bar__inner) {
+/*
+  覆盖 Element Plus：停用的供应商进度条转为灰色。
+  工具类够不着 el-progress 内部元素，.card-off 是模板上跟着停用状态一起挂的锚点类。
+*/
+.card-off :deep(.el-progress-bar__inner) {
     background-color: #dcdfe6;
 }
 
+/* 组件类：模板中重复出现的同款样式，集中维护 */
+/*
+  .link 必须留成组件类：style.less 里有全局 `a { color: currentColor; text-decoration: none }`，
+  无层级规则会压掉 @layer utilities 里的 text-[#3f8cff] 与 hover:underline
+  （实测链接色会从 #3f8cff 变成 #333）。
+*/
 .link {
     color: #3f8cff;
     white-space: nowrap;
@@ -755,10 +750,6 @@ function isJson(value: string) {
 
 .link:hover {
     text-decoration: underline;
-}
-
-.drawer {
-    padding-bottom: 8px;
 }
 
 .hint {
@@ -789,64 +780,21 @@ function isJson(value: string) {
     color: #98a2b3;
 }
 
-.label-hint {
-    margin-left: 6px;
-    font-size: 12px;
-    font-weight: 400;
-    color: #a8b0bd;
-}
-
-.empty-keys {
-    padding: 14px;
-    border: 1px dashed #e4e7ed;
-    border-radius: 10px;
-    text-align: center;
-    font-size: 13px;
-    color: #98a2b3;
-}
-
-.key-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    border: 1px solid #f0f2f5;
-    border-radius: 10px;
-}
-
+/* .key-row 只留作相邻兄弟选择器的锚点：行间距无法用工具类表达 */
 .key-row+.key-row {
     margin-top: 8px;
 }
 
-.dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.dot--on {
-    background-color: #16a34a;
-    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.14);
-}
-
-.dot--off {
-    background-color: #d0d5dd;
-}
-
+/*
+  masked 徽标必须留成组件类：父级 GatewayView 有一条无层级的 :deep(code) 规则
+  （color / background-color / border-radius / padding / font-size），
+  工具类位于 @layer utilities，会被它整条压掉。
+*/
 .masked {
     padding: 1px 6px;
     border-radius: 4px;
     background-color: #f4f6f8;
     font-size: 12px;
     color: #667085;
-}
-
-.add-key {
-    margin-top: 12px;
-    padding: 12px;
-    border: 1px dashed #dcdfe6;
-    border-radius: 10px;
-    background-color: #fcfcfd;
 }
 </style>
