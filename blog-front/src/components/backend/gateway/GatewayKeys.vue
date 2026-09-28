@@ -58,7 +58,7 @@
                 <el-table-column label="Key" min-width="210">
                     <template #default="scope">
                         <div class="flex items-center gap-1">
-                            <code class="px-[6px] py-[1px] rounded-[4px] bg-[#f4f6f8] text-[12px] text-[#667085]">{{ scope.row.keyPrefix }}…</code>
+                            <code class="masked">{{ scope.row.keyPrefix }}…</code>
                             <el-button link type="primary" size="small" :icon="CopyDocument"
                                 :loading="revealing === scope.row.id" @click="onCopyKey(scope.row)" />
                         </div>
