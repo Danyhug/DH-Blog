@@ -1,7 +1,7 @@
 <template>
-  <div class="web-drive-container" @mousedown="startBoxSelect">
+  <div class="p-5 h-full flex flex-col min-h-[calc(100vh-40px)] bg-white" @mousedown="startBoxSelect">
     <!-- 响应式文件管理视图 -->
-    <div class="responsive-view">
+    <div class="flex flex-col flex-1 min-h-0">
       <!-- 文件预览组件 -->
       <FilePreview v-if="showFilePreview" :file="selectedFile" @close="closeFilePreview" />
 
@@ -79,11 +79,12 @@
           </div>
         </div>
 
-        <div class="file-container">
+        <div class="flex-1 overflow-visible flex flex-col min-h-[400px] bg-white p-[10px]">
           <transition name="simple-fade" mode="out-in">
-            <div v-if="isLoading || isSearching" key="loading" class="loading-container">
-              <div class="loading-spinner"></div>
-              <p>{{ isSearching ? `正在全盘搜索「${trimmedQuery}」...` : '加载中...' }}</p>
+            <div v-if="isLoading || isSearching" key="loading"
+              class="flex flex-col items-center justify-center h-full min-h-[300px] flex-1">
+              <div class="w-10 h-10 border-[3px] border-[#f3f3f3] border-t-[#2a8aff] rounded-[50%] animate-spin mb-[15px]"></div>
+              <p class="text-[#666] text-[14px]">{{ isSearching ? `正在全盘搜索「${trimmedQuery}」...` : '加载中...' }}</p>
             </div>
 
             <!-- 空态：搜索无结果和空目录是两种完全不同的处境，给的下一步操作也不同 -->
@@ -109,7 +110,7 @@
               </template>
             </div>
 
-            <div v-else :key="isSearchMode ? 'search' : (currentParentId || 'root')" class="file-container-inner">
+            <div v-else :key="isSearchMode ? 'search' : (currentParentId || 'root')" class="flex flex-col overflow-visible flex-1">
               <!-- 搜索结果条：说明这是全盘范围，并在被截断时明确提示 -->
               <div v-if="isSearchMode"
                 class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-4 px-4 py-2.5 rounded-lg bg-[#f0f6ff] text-sm text-[#4a5568]">
@@ -122,18 +123,21 @@
                   @click="clearSearch">返回目录</button>
               </div>
 
-              <div class="file-grid">
-                <div v-for="(file, index) in filteredFiles" :key="file.id || index" class="file-item"
+              <div class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4 flex-1 bg-white overflow-visible p-[10px] [@media(max-width:768px)]:grid-cols-[repeat(auto-fill,minmax(140px,1fr))] [@media(max-width:768px)]:gap-3 [@media(max-width:768px)]:p-2 [@media(max-width:480px)]:grid-cols-[repeat(auto-fit,minmax(120px,1fr))] [@media(max-width:480px)]:gap-2 [@media(max-width:480px)]:p-[5px]">
+                <div v-for="(file, index) in filteredFiles" :key="file.id || index"
+                  class="cursor-pointer rounded-lg p-[15px] transition-all duration-300 ease-[ease] relative h-[140px] flex border-2 hover:bg-[#f5f5f5] hover:[transform:translateY(-3px)] hover:shadow-[0_5px_15px_rgba(0,0,0,0.05)] [@media(max-width:768px)]:h-[120px] [@media(max-width:768px)]:p-3 [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:h-[100px] [@media(max-width:480px)]:p-[10px] [@media(max-width:480px)]:rounded"
                   :data-file-id="file.id"
-                  :class="{ 
+                  :class="{
                     'folder-item': file.type === 'folder',
                     'new-uploaded-file': newUploadedFileIds.includes(file.id || ''),
-                    'selected': file.id && selectedFiles.has(file.id)
-                  }" 
+                    'animate-highlight-pulse': newUploadedFileIds.includes(file.id || ''),
+                    'bg-white border-transparent': !(file.id && selectedFiles.has(file.id)),
+                    'bg-[#e6f0ff] border-[#2a8aff] shadow-[0_5px_15px_rgba(42,138,255,0.2)] hover:bg-[#e6f0ff] hover:shadow-[0_5px_15px_rgba(42,138,255,0.2)]': !!(file.id && selectedFiles.has(file.id))
+                  }"
                   @click="handleFileClick(file)"
                   @dblclick="handleFileDoubleClick(file)"
                   @contextmenu.prevent="showContextMenu($event, file)">
-                  <div class="file-content">
+                  <div class="flex flex-col items-center h-full w-full">
                     <div class="file-icon-container">
                       <FolderIcon v-if="file.type === 'folder'" class="folder-icon" />
                       <component v-else-if="file.icon" :is="file.icon" :class="[
@@ -149,10 +153,10 @@
                       ]" />
                       <FileIcon v-else class="file-icon" />
                     </div>
-                    <div class="file-info">
-                      <p class="file-name" :title="file.name">{{ file.name }}</p>
-                      <div class="file-details">
-                        <p class="file-size">{{ file.size }}</p>
+                    <div class="text-center w-full flex flex-col h-[50px] [@media(max-width:768px)]:h-[45px] [@media(max-width:480px)]:h-[40px]">
+                      <p class="text-[14px] mt-0 mx-0 mb-[3px] whitespace-nowrap overflow-hidden text-ellipsis max-w-full leading-[1.2] [@media(max-width:768px)]:text-[13px] [@media(max-width:480px)]:text-[12px]" :title="file.name">{{ file.name }}</p>
+                      <div class="h-[30px]">
+                        <p class="text-[12px] text-[#999] m-0 leading-[1.2] [@media(max-width:480px)]:text-[11px]">{{ file.size }}</p>
                         <!-- 搜索态下文件散落在各级目录，位置比修改时间更值得看，
                              所以占用日期那一行而不是另起一行——卡片高度是固定的。 -->
                         <button v-if="isSearchMode"
@@ -162,7 +166,7 @@
                           <FolderIcon class="shrink-0 w-3 h-3" />
                           <span class="truncate">{{ file.parentPath || '我的网盘' }}</span>
                         </button>
-                        <p class="file-modified" v-else-if="file.modified">{{ file.modified }}</p>
+                        <p v-else-if="file.modified" class="text-[12px] text-[#999] m-0 leading-[1.2] [@media(max-width:480px)]:text-[11px]">{{ file.modified }}</p>
                       </div>
                     </div>
                   </div>
@@ -182,8 +186,8 @@
     <ShareManagerModal v-if="showShareManager" @close="showShareManager = false" />
 
     <!-- 上传弹窗 - 按需显示 -->
-    <div v-if="showUploadModal" class="upload-modal-container">
-      <div class="upload-modal-overlay" @click="closeUploadModal"></div>
+    <div v-if="showUploadModal" class="fixed top-0 left-0 w-full h-full z-[1100] flex items-center justify-center pointer-events-none">
+      <div class="fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur-[2px] z-[1101] pointer-events-auto" @click="closeUploadModal"></div>
       <UploadModal ref="uploadModalRef" :upload-progress="uploadProgress" @close="closeUploadModal"
         @upload="handleUploadFiles" @retry="handleRetryUpload" @cancel="handleCancelUpload" />
     </div>
@@ -192,17 +196,19 @@
     <ShareLinkPopup v-if="showShareLinkPopup" :file="selectedFile" @close="showShareLinkPopup = false" />
 
     <!-- 新建文件夹弹窗 -->
-    <div v-if="showNewFolderDialog" class="dialog-overlay" @click.self="cancelDialog">
-      <div class="dialog-box">
-        <div class="dialog-header">
-          <h3>新建文件夹</h3>
-          <button class="close-btn" @click="cancelDialog">×</button>
+    <div v-if="showNewFolderDialog" class="fixed inset-0 bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-[1100]" @click.self="cancelDialog">
+      <div class="bg-white rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-[400px] max-w-[90%] overflow-hidden animate-dialog-appear [@media(max-width:768px)]:w-[95%] [@media(max-width:768px)]:max-w-[95%] [@media(max-width:768px)]:rounded-xl [@media(max-width:480px)]:w-full [@media(max-width:480px)]:max-w-full [@media(max-width:480px)]:h-full [@media(max-width:480px)]:max-h-full [@media(max-width:480px)]:rounded-none [@media(max-width:480px)]:flex [@media(max-width:480px)]:flex-col">
+        <div class="dialog-header flex justify-between items-center px-5 py-4 border-b border-[#eee] [@media(max-width:480px)]:p-5">
+          <h3 class="m-0 text-[18px] text-[#333] [@media(max-width:768px)]:text-[20px] [@media(max-width:480px)]:text-[22px]">新建文件夹</h3>
+          <button class="bg-transparent border-none text-[20px] text-[#999] cursor-pointer p-0 hover:text-[#666] [@media(max-width:768px)]:text-[24px] [@media(max-width:768px)]:p-2 [@media(max-width:480px)]:text-[28px] [@media(max-width:480px)]:p-3" @click="cancelDialog">×</button>
         </div>
-        <div class="dialog-body">
-          <input type="text" v-model="newFolderName" placeholder="请输入文件夹名称" class="dialog-input" ref="folderNameInput"
+        <div class="p-5 [@media(max-width:768px)]:p-6 [@media(max-width:480px)]:p-7 [@media(max-width:480px)]:flex-1">
+          <input type="text" v-model="newFolderName" placeholder="请输入文件夹名称"
+            class="w-full px-3 py-[10px] border border-[#ddd] rounded text-[14px] focus:outline-none focus:border-[#2a8aff] focus:shadow-[0_0_0_2px_rgba(42,138,255,0.2)] [@media(max-width:768px)]:px-[14px] [@media(max-width:768px)]:py-3 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:px-4 [@media(max-width:480px)]:py-[14px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:rounded-lg"
+            ref="folderNameInput"
             @keyup.enter="confirmNewFolder" />
         </div>
-        <div class="dialog-footer">
+        <div class="dialog-footer px-5 py-4 border-t border-[#eee] flex justify-end gap-[10px] [@media(max-width:480px)]:p-5 [@media(max-width:480px)]:mt-auto">
           <button class="btn-outline" @click="cancelDialog">取消</button>
           <button class="btn-primary" @click="confirmNewFolder">确定</button>
         </div>
@@ -210,32 +216,35 @@
     </div>
 
     <!-- 重命名弹窗 -->
-    <div v-if="showRenameDialog" class="dialog-overlay" @click.self="cancelDialog">
-      <div class="dialog-box">
-        <div class="dialog-header">
-          <h3>重命名</h3>
-          <button class="close-btn" @click="cancelDialog">×</button>
+    <div v-if="showRenameDialog" class="fixed inset-0 bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-[1100]" @click.self="cancelDialog">
+      <div class="bg-white rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-[400px] max-w-[90%] overflow-hidden animate-dialog-appear [@media(max-width:768px)]:w-[95%] [@media(max-width:768px)]:max-w-[95%] [@media(max-width:768px)]:rounded-xl [@media(max-width:480px)]:w-full [@media(max-width:480px)]:max-w-full [@media(max-width:480px)]:h-full [@media(max-width:480px)]:max-h-full [@media(max-width:480px)]:rounded-none [@media(max-width:480px)]:flex [@media(max-width:480px)]:flex-col">
+        <div class="dialog-header flex justify-between items-center px-5 py-4 border-b border-[#eee] [@media(max-width:480px)]:p-5">
+          <h3 class="m-0 text-[18px] text-[#333] [@media(max-width:768px)]:text-[20px] [@media(max-width:480px)]:text-[22px]">重命名</h3>
+          <button class="bg-transparent border-none text-[20px] text-[#999] cursor-pointer p-0 hover:text-[#666] [@media(max-width:768px)]:text-[24px] [@media(max-width:768px)]:p-2 [@media(max-width:480px)]:text-[28px] [@media(max-width:480px)]:p-3" @click="cancelDialog">×</button>
         </div>
-        <div class="dialog-body">
-          <div v-if="fileToRename && !fileToRename.type.includes('folder')" class="filename-container">
-            <input type="text" v-model="fileNameWithoutExt" placeholder="文件名" class="dialog-input filename-input"
+        <div class="p-5 [@media(max-width:768px)]:p-6 [@media(max-width:480px)]:p-7 [@media(max-width:480px)]:flex-1">
+          <div v-if="fileToRename && !fileToRename.type.includes('folder')" class="flex items-center gap-[5px] w-full">
+            <input type="text" v-model="fileNameWithoutExt" placeholder="文件名"
+              class="flex-1 w-full px-3 py-[10px] border border-[#ddd] rounded text-[14px] focus:outline-none focus:border-[#2a8aff] focus:shadow-[0_0_0_2px_rgba(42,138,255,0.2)] [@media(max-width:768px)]:px-[14px] [@media(max-width:768px)]:py-3 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:px-4 [@media(max-width:480px)]:py-[14px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:rounded-lg"
               ref="fileNameInput" @keyup.enter="confirmRename" />
-            <div class="extension-container">
-              <div class="extension-wrapper" @dblclick="enableExtensionEdit" :title="editingExtension ? '' : '双击编辑后缀名'">
-                <input type="text" v-model="fileExtension" class="dialog-input extension-input"
+            <div class="flex items-center relative">
+              <div class="w-20 cursor-pointer" @dblclick="enableExtensionEdit" :title="editingExtension ? '' : '双击编辑后缀名'">
+                <input type="text" v-model="fileExtension"
+                  class="w-full px-3 py-[10px] border border-[#ddd] rounded text-[14px] focus:outline-none focus:border-[#2a8aff] focus:shadow-[0_0_0_2px_rgba(42,138,255,0.2)] [@media(max-width:768px)]:px-[14px] [@media(max-width:768px)]:py-3 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:px-4 [@media(max-width:480px)]:py-[14px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:rounded-lg bg-[#f8f8f8] text-[#666] disabled:cursor-pointer disabled:opacity-80 disabled:pointer-events-none [:not(:disabled)]:bg-white [:not(:disabled)]:text-[#333]"
                   :disabled="!editingExtension" @keyup.enter="confirmRename" ref="extensionInput" />
               </div>
-              <button class="extension-edit-btn" :class="{ 'active': editingExtension }" @click="toggleExtensionEdit"
+              <button class="absolute right-2 bg-transparent border-none cursor-pointer p-0 text-[14px] flex items-center justify-center hover:text-[#666]" :class="editingExtension ? 'text-[#2a8aff]' : 'text-[#999]'" @click="toggleExtensionEdit"
                 :title="editingExtension ? '锁定后缀名' : '编辑后缀名'">
                 <span v-if="editingExtension">🔓</span>
                 <span v-else>🔒</span>
               </button>
             </div>
           </div>
-          <input v-else type="text" v-model="newFileName" placeholder="请输入新名称" class="dialog-input"
+          <input v-else type="text" v-model="newFileName" placeholder="请输入新名称"
+            class="w-full px-3 py-[10px] border border-[#ddd] rounded text-[14px] focus:outline-none focus:border-[#2a8aff] focus:shadow-[0_0_0_2px_rgba(42,138,255,0.2)] [@media(max-width:768px)]:px-[14px] [@media(max-width:768px)]:py-3 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:px-4 [@media(max-width:480px)]:py-[14px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:rounded-lg"
             ref="folderNameInput" @keyup.enter="confirmRename" />
         </div>
-        <div class="dialog-footer">
+        <div class="dialog-footer px-5 py-4 border-t border-[#eee] flex justify-end gap-[10px] [@media(max-width:480px)]:p-5 [@media(max-width:480px)]:mt-auto">
           <button class="btn-outline" @click="cancelDialog">取消</button>
           <button class="btn-primary" @click="confirmRename">确定</button>
         </div>
@@ -243,22 +252,22 @@
     </div>
 
     <!-- 右键菜单 -->
-    <div v-if="contextMenu.show" class="context-menu" :style="contextMenuStyle">
-      <ul>
-        <li @click="openFile(contextMenu.file)">
+    <div v-if="contextMenu.show" class="fixed bg-white rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] z-[1000] min-w-[180px] max-w-[250px] [@media(max-width:768px)]:rounded-xl [@media(max-width:768px)]:min-w-[200px] [@media(max-width:768px)]:shadow-[0_8px_30px_rgba(0,0,0,0.2)]" :style="contextMenuStyle">
+      <ul class="list-none p-0 m-0">
+        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px]" @click="openFile(contextMenu.file)">
           <FileIcon class="icon-xs" /> 打开
         </li>
-        <li @click="shareFile(contextMenu.file)">
+        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px]" @click="shareFile(contextMenu.file)">
           <UploadIcon class="icon-xs" /> 分享
         </li>
-        <li @click="downloadFile(contextMenu.file)">
+        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px]" @click="downloadFile(contextMenu.file)">
           <UploadIcon class="icon-xs" transform="rotate(180)" />
           {{ contextMenu.file?.type === 'folder' ? '下载 (打包)' : '下载' }}
         </li>
-        <li @click="renameFile(contextMenu.file)">
+        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px]" @click="renameFile(contextMenu.file)">
           <FileTextIcon class="icon-xs" /> 重命名
         </li>
-        <li @click="deleteFile(contextMenu.file)" class="danger">
+        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px] text-[#ff4d4f]" @click="deleteFile(contextMenu.file)">
           <XIcon class="icon-xs" /> 删除
         </li>
       </ul>
@@ -1470,500 +1479,30 @@ onUnmounted(() => {
 })
 </script>
 
-<style lang="less">
-.web-drive-container {
-  padding: 20px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100vh - 40px);
-  /* 减去padding的高度 */
-  background-color: #ffffff;
 
-  .desktop-view {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    flex: 1;
-    background-color: #ffffff;
-  }
-
-  // 此前没有任何声明，导致高度只由内容撑开、内部的 flex: 1 全部失效，
-  // 文件区无法填满剩余空间（框选可起手的空白区因此非常小）。
-  .responsive-view {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-  }
-
-  .toolbar {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    flex-shrink: 0;
-
-    @media (max-width: 768px) {
-      flex-direction: column;
-      gap: 15px;
-      margin-bottom: 15px;
-    }
-
-    .toolbar-left {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-
-      button {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        padding: 8px 15px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-
-        .icon-sm {
-          width: 16px;
-          height: 16px;
-        }
-
-        @media (max-width: 768px) {
-          padding: 10px 16px;
-          font-size: 15px;
-          min-height: 44px;
-        }
-
-        @media (max-width: 480px) {
-          padding: 12px 16px;
-          font-size: 16px;
-          flex: 1;
-          justify-content: center;
-          min-height: 48px;
-        }
-      }
-
-      @media (max-width: 480px) {
-        gap: 8px;
-      }
-
-      .btn-primary {
-        background-color: #2a8aff;
-        color: white;
-        border: none;
-
-        &:hover {
-          background-color: #1a7aef;
-        }
-      }
-
-      .btn-outline {
-        background-color: white;
-        color: #666;
-        border: 1px solid #ddd;
-
-        &:hover {
-          background-color: #f5f5f5;
-        }
-      }
-
-      .mobile-preview-btn {
-        display: none;
-
-        @media (max-width: 768px) {
-          display: flex;
-          flex: 1;
-          min-width: 100%;
-          margin-top: 8px;
-          justify-content: center;
-        }
-      }
-
-      .enter-folder-btn {
-        display: none;
-
-        @media (max-width: 768px) {
-          display: flex;
-          flex: 1;
-          min-width: 100%;
-          margin-top: 8px;
-          justify-content: center;
-          background-color: #2a8aff;
-          color: white;
-          border: none;
-
-          &:hover {
-            background-color: #1a7aef;
-          }
-        }
-      }
-
-      @media (max-width: 768px) {
-        .btn-primary,
-        .btn-outline {
-          &:nth-child(n+3):nth-last-child(-n+4) {
-            flex: 1;
-            min-width: 100%;
-            margin: 4px 0;
-          }
-        }
-      }
-    }
-
-    .toolbar-right {
-      .search-container {
-        position: relative;
-
-        .search-icon {
-          position: absolute;
-          left: 10px;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 16px;
-          height: 16px;
-          color: #999;
-        }
-
-        .search-input {
-          padding: 8px 10px 8px 35px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          width: 250px;
-          font-size: 14px;
-
-          &:focus {
-            outline: none;
-            border-color: #2a8aff;
-          }
-
-          @media (max-width: 768px) {
-            width: 100%;
-            padding: 10px 12px 10px 40px;
-            font-size: 15px;
-            min-height: 44px;
-          }
-
-          @media (max-width: 480px) {
-            padding: 12px 12px 12px 40px;
-            font-size: 16px;
-            min-height: 48px;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .search-icon {
-            left: 12px;
-            width: 18px;
-            height: 18px;
-          }
-        }
-      }
-
-      @media (max-width: 768px) {
-        width: 100%;
-      }
-    }
-  }
-
-  .file-container {
-      flex: 1;
-      overflow: visible;
-      display: flex;
-      flex-direction: column;
-      min-height: 400px;
-      background-color: #ffffff;
-      padding: 10px;
-
-      .file-container-inner {
-        display: flex;
-        flex-direction: column;
-        overflow: visible;
-        // 撑满剩余高度，文件不多时下方空白区域也能起手框选
-        flex: 1;
-      }
-
-      .file-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 16px;
-        flex: 1;
-        background-color: #ffffff;
-        overflow: visible;
-        padding: 10px;
-
-        @media (max-width: 768px) {
-          grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-          gap: 12px;
-          padding: 8px;
-        }
-
-        @media (max-width: 480px) {
-          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-          gap: 8px;
-          padding: 5px;
-        }
-
-      .file-item {
-        cursor: pointer;
-        border-radius: 8px;
-        padding: 15px;
-        transition: all 0.3s ease;
-        position: relative;
-        height: 140px;
-        display: flex;
-        background-color: #ffffff;
-        border: 2px solid transparent;
-
-        &:hover {
-          background-color: #f5f5f5;
-          transform: translateY(-3px);
-          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-        }
-
-        @media (max-width: 768px) {
-          height: 120px;
-          padding: 12px;
-          border-radius: 6px;
-        }
-
-        @media (max-width: 480px) {
-          height: 100px;
-          padding: 10px;
-          border-radius: 4px;
-        }
-
-        &.selected {
-          background-color: #e6f0ff;
-          border-color: #2a8aff;
-          box-shadow: 0 5px 15px rgba(42, 138, 255, 0.2);
-        }
-
-        &.folder-item {
-          &:hover {
-            .file-icon-container {
-              .folder-icon {
-                transform: scale(1.1);
-              }
-            }
-          }
-        }
-
-        &.new-uploaded-file {
-          animation: highlight-pulse 2s ease-in-out infinite;
-          background-color: rgba(59, 130, 246, 0.1);
-          border: 1px solid rgba(59, 130, 246, 0.4);
-          box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
-        }
-
-        .file-content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          height: 100%;
-          width: 100%;
-
-          .file-icon-container {
-            width: 60px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            .folder-icon,
-            .file-icon {
-              width: 40px;
-              height: 40px;
-              transition: transform 0.3s ease;
-            }
-
-            @media (max-width: 768px) {
-              width: 50px;
-              height: 50px;
-              
-              .folder-icon,
-              .file-icon {
-                width: 35px;
-                height: 35px;
-              }
-            }
-
-            @media (max-width: 480px) {
-              width: 40px;
-              height: 40px;
-              
-              .folder-icon,
-              .file-icon {
-                width: 30px;
-                height: 30px;
-              }
-            }
-
-            .folder-icon {
-              color: #2a8aff;
-            }
-
-            .file-icon {
-              color: #2a8aff;
-
-              &.image-icon {
-                color: #4CAF50;
-                /* 绿色 */
-              }
-
-              &.video-icon {
-                color: #FF5722;
-                /* 橙红色 */
-              }
-
-              &.audio-icon {
-                color: #9C27B0;
-                /* 紫色 */
-              }
-
-              &.code-icon {
-                color: #607D8B;
-                /* 蓝灰色 */
-              }
-
-              &.pdf-icon {
-                color: #F44336;
-                /* 红色 */
-              }
-
-              &.archive-icon {
-                color: #795548;
-                /* 棕色 */
-              }
-
-              &.spreadsheet-icon {
-                color: #4CAF50;
-                /* 绿色 */
-              }
-
-              &.presentation-icon {
-                color: #FF9800;
-                /* 橙色 */
-              }
-            }
-          }
-
-          .file-info {
-            text-align: center;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            height: 50px;
-
-            .file-name {
-              font-size: 14px;
-              margin: 0 0 3px 0;
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              max-width: 100%;
-              line-height: 1.2;
-
-              @media (max-width: 768px) {
-                font-size: 13px;
-              }
-
-              @media (max-width: 480px) {
-                font-size: 12px;
-              }
-            }
-
-            .file-details {
-              height: 30px;
-
-              .file-size,
-              .file-modified {
-                font-size: 12px;
-                color: #999;
-                margin: 0;
-                line-height: 1.2;
-
-                @media (max-width: 480px) {
-                  font-size: 11px;
-                }
-              }
-            }
-
-            @media (max-width: 768px) {
-              height: 45px;
-            }
-
-            @media (max-width: 480px) {
-              height: 40px;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  .context-menu {
-    position: fixed;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
-    min-width: 180px;
-    max-width: 250px;
-
-    @media (max-width: 768px) {
-      border-radius: 12px;
-      min-width: 200px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-
-      li {
-        padding: 12px 16px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        cursor: pointer;
-        font-size: 14px;
-
-        &:hover {
-          background-color: #f5f5f5;
-        }
-
-        &.danger {
-          color: #ff4d4f;
-        }
-
-        .icon-xs {
-          width: 16px;
-          height: 16px;
-        }
-
-        @media (max-width: 768px) {
-          padding: 16px 20px;
-          font-size: 16px;
-          min-height: 48px;
-
-          .icon-xs {
-            width: 18px;
-            height: 18px;
-          }
-        }
-
-        @media (max-width: 480px) {
-          padding: 18px 22px;
-          font-size: 17px;
-          min-height: 52px;
-        }
-      }
-    }
-  }
-}
-
-// 简单的淡入淡出效果
+<style scoped>
+/*
+  本文件原来是**非 scoped** 的 lang="less"，嵌套在 `.web-drive-container` 下的规则会全局泄漏。
+  逐条核对过：产物里真正全局生效的顶层选择器只有下面这些，且没有任何其他组件依赖
+  （`.dialog-footer` 的泄漏形态是 `.dialog-box .dialog-footer`，4 个引用它的后台组件都不在
+  `.dialog-box` 内，从未吃到过）。因此收紧为 scoped 不改变任何既有渲染。
+
+  只保留 CSS 能表达、工具类表达不了的四类：
+
+  1. Vue <transition> 运行时生成的类（.simple-fade-*）——模板里静态写不出来。
+  2. 组件类（迁移方案 §4.5，≥3 处复用）：.toolbar-left 的 7 个按钮共用 3 档断点的一套按钮基础样式，
+     .dialog-footer 的 4 个按钮同理；逐元素内联会产生 7 份 / 4 份 300+ 字符的重复 class 串。
+  3. 文件卡片图标：8 种类型的颜色靠 `.file-icon-container.<类型> .file-icon` 后代选择器配对，
+     并叠 3 档尺寸断点（共 20 条规则）。
+  4. 无工具类对应的写法：`.folder-item:hover .folder-icon`（祖先 :hover + 后代）、
+     `.new-uploaded-file::after`（伪元素角标 + animation）。
+
+  其余（布局、栅格、卡片、右键菜单、对话框、上传蒙版、加载态）全部内联到模板。
+  三处 keyframes 已按 §4.1 挪进 tailwind.css 的 @theme，改成 animate-spin /
+  animate-dialog-appear / animate-highlight-pulse。
+*/
+
+/* 1. Vue transition 运行时类 */
 .simple-fade-enter-active,
 .simple-fade-leave-active {
   transition: opacity 0.25s ease;
@@ -1974,10 +1513,23 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-// 图标尺寸
+/*
+  2a. 图标尺寸（icon-sm 模板 7 处、icon-xs 5 处）
+
+  icon-xs 的 5 处用法全部在右键菜单项内，原文件里 `.context-menu li .icon-xs`
+  把顶层那份 12px 覆盖成了桌面 16px、≤768px 18px（12px 从未生效）。
+  这里直接写成实际生效的两个值。
+*/
 .icon-xs {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 768px) {
+  .icon-xs {
+    width: 18px;
+    height: 18px;
+  }
 }
 
 .icon-sm {
@@ -1985,362 +1537,344 @@ onUnmounted(() => {
   height: 16px;
 }
 
-// 加载动画
-.loading-container {
+/* 2b. 工具栏与搜索框：7 个按钮 + 搜索区各自 3 档断点 */
+.toolbar {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  min-height: 300px;
-  flex: 1;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
 
-  .loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #2a8aff;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    gap: 15px;
     margin-bottom: 15px;
   }
+}
 
-  p {
-    color: #666;
-    font-size: 14px;
+.toolbar-left {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .toolbar-left {
+    gap: 8px;
   }
 }
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-// 对话框样式
-.dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+.toolbar-left button {
   display: flex;
   align-items: center;
-  justify-content: center;
-  z-index: 1100;
+  gap: 5px;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
 }
 
-.dialog-box {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  width: 400px;
-  max-width: 90%;
-  overflow: hidden;
-  animation: dialog-appear 0.2s ease-out;
-
-  @media (max-width: 768px) {
-    width: 95%;
-    max-width: 95%;
-    border-radius: 12px;
-  }
-
-  @media (max-width: 480px) {
-    width: 100%;
-    max-width: 100%;
-    height: 100%;
-    max-height: 100%;
-    border-radius: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .dialog-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    border-bottom: 1px solid #eee;
-
-    h3 {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 500;
-      color: #333;
-
-      @media (max-width: 768px) {
-        font-size: 20px;
-      }
-
-      @media (max-width: 480px) {
-        font-size: 22px;
-      }
-    }
-
-    .close-btn {
-      background: none;
-      border: none;
-      font-size: 20px;
-      color: #999;
-      cursor: pointer;
-      padding: 0;
-
-      &:hover {
-        color: #666;
-      }
-
-      @media (max-width: 768px) {
-        font-size: 24px;
-        padding: 8px;
-      }
-
-      @media (max-width: 480px) {
-        font-size: 28px;
-        padding: 12px;
-      }
-    }
-
-    @media (max-width: 480px) {
-      padding: 20px;
-    }
-  }
-
-  .dialog-body {
-    padding: 20px;
-
-    .filename-container {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      width: 100%;
-
-      .filename-input {
-        flex: 1;
-      }
-
-      .extension-container {
-        display: flex;
-        align-items: center;
-        position: relative;
-
-        .extension-wrapper {
-          width: 80px;
-          cursor: pointer;
-        }
-
-        .extension-input {
-          width: 100%;
-          background-color: #f8f8f8;
-          color: #666;
-
-          &:disabled {
-            cursor: pointer;
-            /* 改为指针，提示可以交互 */
-            opacity: 0.8;
-            pointer-events: none;
-            /* 禁用事件，让父元素处理双击 */
-          }
-
-          &:not(:disabled) {
-            background-color: #fff;
-            color: #333;
-          }
-        }
-
-        .extension-edit-btn {
-          position: absolute;
-          right: 8px;
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 0;
-          font-size: 14px;
-          color: #999;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          &.active {
-            color: #2a8aff;
-          }
-
-          &:hover {
-            color: #666;
-          }
-        }
-      }
-    }
-
-    .dialog-input {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 14px;
-
-      &:focus {
-        outline: none;
-        border-color: #2a8aff;
-        box-shadow: 0 0 0 2px rgba(42, 138, 255, 0.2);
-      }
-
-      @media (max-width: 768px) {
-        padding: 12px 14px;
-        font-size: 16px;
-        border-radius: 6px;
-      }
-
-      @media (max-width: 480px) {
-        padding: 14px 16px;
-        font-size: 17px;
-        border-radius: 8px;
-      }
-    }
-
-    @media (max-width: 768px) {
-      padding: 24px;
-    }
-
-    @media (max-width: 480px) {
-      padding: 28px;
-      flex: 1;
-    }
-  }
-
-  .dialog-footer {
-    padding: 16px 20px;
-    border-top: 1px solid #eee;
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-
-    @media (max-width: 480px) {
-      padding: 20px;
-      margin-top: auto;
-    }
-
-    button {
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-
-      @media (max-width: 768px) {
-        padding: 10px 20px;
-        font-size: 16px;
-        min-height: 44px;
-      }
-
-      @media (max-width: 480px) {
-        padding: 12px 24px;
-        font-size: 17px;
-        min-height: 48px;
-        flex: 1;
-        max-width: 120px;
-      }
-
-      &.btn-outline {
-        background-color: white;
-        color: #666;
-        border: 1px solid #ddd;
-
-        &:hover {
-          background-color: #f5f5f5;
-        }
-      }
-
-      &.btn-primary {
-        background-color: #2a8aff;
-        color: white;
-        border: none;
-
-        &:hover {
-          background-color: #1a7aef;
-        }
-      }
-    }
+@media (max-width: 768px) {
+  .toolbar-left button {
+    padding: 10px 16px;
+    font-size: 15px;
+    min-height: 44px;
   }
 }
 
-@keyframes dialog-appear {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-// 修改高亮样式，使其更适合长时间显示
-.file-item.new-uploaded-file {
-  background-color: rgba(59, 130, 246, 0.05);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.1);
-  position: relative;
-  
-  &::after {
-    content: "新";
-    position: absolute;
-    top: -10px; /* 调整标记位置，使其显示在元素外 */
-    right: -10px;
-    background-color: #3b82f6;
-    color: white;
-    font-size: 12px;
-    font-weight: bold;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
+@media (max-width: 480px) {
+  .toolbar-left button {
+    padding: 12px 16px;
+    font-size: 16px;
+    flex: 1;
     justify-content: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    z-index: 10; /* 使用更高的z-index确保显示在最上层 */
+    min-height: 48px;
   }
 }
 
-@keyframes highlight-pulse {
-  0% {
-    box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+.toolbar-left .btn-primary {
+  background-color: #2a8aff;
+  color: white;
+  border: none;
+}
+
+.toolbar-left .btn-primary:hover {
+  background-color: #1a7aef;
+}
+
+.toolbar-left .btn-outline {
+  background-color: white;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.toolbar-left .btn-outline:hover {
+  background-color: #f5f5f5;
+}
+
+.toolbar-left .mobile-preview-btn {
+  display: none;
+}
+
+.toolbar-left .enter-folder-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .toolbar-left .mobile-preview-btn {
+    display: flex;
+    flex: 1;
+    min-width: 100%;
+    margin-top: 8px;
+    justify-content: center;
   }
-  50% {
-    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+
+  .toolbar-left .enter-folder-btn {
+    display: flex;
+    flex: 1;
+    min-width: 100%;
+    margin-top: 8px;
+    justify-content: center;
+    background-color: #2a8aff;
+    color: white;
+    border: none;
   }
-  100% {
-    box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+
+  .toolbar-left .enter-folder-btn:hover {
+    background-color: #1a7aef;
+  }
+
+  /* 第 3 个起且倒数 4 个内的按钮（下载/分享/预览/进入文件夹）占满整行 */
+  .toolbar-left .btn-primary:nth-child(n+3):nth-last-child(-n+4),
+  .toolbar-left .btn-outline:nth-child(n+3):nth-last-child(-n+4) {
+    flex: 1;
+    min-width: 100%;
+    margin: 4px 0;
   }
 }
 
-// 添加上传弹窗样式
-.upload-modal-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1100;
+.toolbar-right .search-container {
+  position: relative;
+}
+
+.toolbar-right .search-container .search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: #999;
+}
+
+.toolbar-right .search-container .search-input {
+  padding: 8px 10px 8px 35px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 250px;
+  font-size: 14px;
+}
+
+.toolbar-right .search-container .search-input:focus {
+  outline: none;
+  border-color: #2a8aff;
+}
+
+@media (max-width: 768px) {
+  .toolbar-right {
+    width: 100%;
+  }
+
+  .toolbar-right .search-container .search-icon {
+    left: 12px;
+    width: 18px;
+    height: 18px;
+  }
+
+  .toolbar-right .search-container .search-input {
+    width: 100%;
+    padding: 10px 12px 10px 40px;
+    font-size: 15px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .toolbar-right .search-container .search-input {
+    padding: 12px 12px 12px 40px;
+    font-size: 16px;
+    min-height: 48px;
+  }
+}
+
+/* 3. 文件卡片图标：8 种类型配色 × 容器/图标两个元素 + 3 档尺寸断点 */
+.file-icon-container {
+  width: 60px;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: none; /* 防止容器本身阻止点击事件 */
 }
 
-.upload-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
-  z-index: 1101;
-  pointer-events: auto; /* 允许蒙版接收点击事件 */
+.file-icon-container .folder-icon,
+.file-icon-container .file-icon {
+  width: 40px;
+  height: 40px;
+  transition: transform 0.3s ease;
+}
+
+.file-icon-container .folder-icon {
+  color: #2a8aff;
+}
+
+.file-icon-container .file-icon {
+  color: #2a8aff;
+}
+
+.file-icon-container .file-icon.image-icon {
+  color: #4CAF50;
+}
+
+.file-icon-container .file-icon.video-icon {
+  color: #FF5722;
+}
+
+.file-icon-container .file-icon.audio-icon {
+  color: #9C27B0;
+}
+
+.file-icon-container .file-icon.code-icon {
+  color: #607D8B;
+}
+
+.file-icon-container .file-icon.pdf-icon {
+  color: #F44336;
+}
+
+.file-icon-container .file-icon.archive-icon {
+  color: #795548;
+}
+
+.file-icon-container .file-icon.spreadsheet-icon {
+  color: #4CAF50;
+}
+
+.file-icon-container .file-icon.presentation-icon {
+  color: #FF9800;
+}
+
+@media (max-width: 768px) {
+  .file-icon-container {
+    width: 50px;
+    height: 50px;
+  }
+
+  .file-icon-container .folder-icon,
+  .file-icon-container .file-icon {
+    width: 35px;
+    height: 35px;
+  }
+}
+
+@media (max-width: 480px) {
+  .file-icon-container {
+    width: 40px;
+    height: 40px;
+  }
+
+  .file-icon-container .folder-icon,
+  .file-icon-container .file-icon {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+/* 4a. 祖先 :hover + 后代选择器，工具类无对应写法 */
+.folder-item:hover .folder-icon {
+  transform: scale(1.1);
+}
+
+/*
+  4b. 新上传文件的脉动与「新」角标。
+  原文件里 .file-item.new-uploaded-file 被声明了两次（一次嵌套在 .web-drive-container
+  .file-container .file-grid 下、一次在顶层），下面是合并后的唯一一份，取嵌套那份的
+  取值（原特异性更高，本就由它生效），并保留顶层独有的 position 与 ::after。
+*/
+.file-item.new-uploaded-file {
+  background-color: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+  position: relative;
+}
+
+.file-item.new-uploaded-file::after {
+  content: "新";
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background-color: #3b82f6;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+/* §4.8：style.less 的 `h1, h2, h3 { font-weight: 400 }` 是无层级规则，压掉字重工具类 */
+.dialog-header h3 {
+  font-weight: 500;
+}
+
+/* 2c. 对话框底部按钮：4 个按钮共用 3 档断点 */
+.dialog-footer button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .dialog-footer button {
+    padding: 10px 20px;
+    font-size: 16px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dialog-footer button {
+    padding: 12px 24px;
+    font-size: 17px;
+    min-height: 48px;
+    flex: 1;
+    max-width: 120px;
+  }
+}
+
+.dialog-footer button.btn-outline {
+  background-color: white;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.dialog-footer button.btn-outline:hover {
+  background-color: #f5f5f5;
+}
+
+.dialog-footer button.btn-primary {
+  background-color: #2a8aff;
+  color: white;
+  border: none;
+}
+
+.dialog-footer button.btn-primary:hover {
+  background-color: #1a7aef;
 }
 </style>

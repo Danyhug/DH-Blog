@@ -65,6 +65,41 @@
   --radius-dh-lg: var(--dh-admin-border-radius-big);
   --shadow-dh-shallow: var(--dh-admin-border-shadow-shallow);
   --shadow-dh-normal: var(--dh-admin-border-shadow-normal);
+
+  /*
+    组件动画。keyframes 放在全局（非 scoped）的这里，名字不会被 Vue 重命名，
+    组件里就能用 animate-<name>；若把 @keyframes 留在组件的 scoped 块里，
+    Vue 会改成 <name>-<scope>，工具类引用的旧名字就永远匹配不上（静默失效）。
+    `animate-spin` 是 Tailwind 内置的，无需在此声明。
+  */
+  --animate-dialog-appear: dialog-appear 0.2s ease-out;
+  --animate-highlight-pulse: highlight-pulse 2s ease-in-out infinite;
+
+  @keyframes dialog-appear {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes highlight-pulse {
+    0% {
+      box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+    }
+
+    50% {
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+    }
+
+    100% {
+      box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+    }
+  }
 }
 
 /*
