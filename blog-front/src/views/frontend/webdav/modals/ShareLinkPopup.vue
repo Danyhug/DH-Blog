@@ -1,35 +1,35 @@
 <template>
-  <div class="share-popup">
-    <div class="popup-content">
-      <div class="popup-header">
-        <h3 class="popup-title">创建分享链接</h3>
-        <button class="close-btn" @click="$emit('close')">
-          <XIcon class="icon-sm" />
+  <div class="absolute top-32 left-1/2 z-[25] w-[360px] bg-[rgba(255,255,255,0.95)] backdrop-blur-[24px] rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.2)] [transform:translateX(-50%)_translateX(8rem)]">
+    <div class="p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="popup-title text-[1rem] text-[#111827] m-0">创建分享链接</h3>
+        <button class="p-2 rounded-md cursor-pointer transition-[background-color] duration-200 ease-[ease] hover:bg-[rgba(156,163,175,0.1)]" @click="$emit('close')">
+          <XIcon class="w-4 h-4" />
         </button>
       </div>
 
-      <div class="popup-body">
-        <div class="file-preview">
-          <div class="file-icon-container">
-            <component :is="file.icon || FileTextIcon" class="file-icon" />
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-3 p-3 bg-[rgba(249,250,251,0.5)] rounded-lg">
+          <div class="w-8 h-8 bg-[#dbeafe] rounded-lg flex items-center justify-center">
+            <component :is="file.icon || FileTextIcon" class="w-4 h-4 text-[#2563eb]" />
           </div>
-          <div class="file-info">
-            <p class="file-name">{{ file.name }}</p>
-            <p class="file-size">{{ file.size }}</p>
+          <div class="flex-1">
+            <p class="text-[0.875rem] font-medium text-[#111827] m-0 [word-break:break-all]">{{ file.name }}</p>
+            <p class="text-[0.75rem] text-[#6b7280] mt-1 mb-0">{{ file.size }}</p>
           </div>
         </div>
 
         <!-- 分享设置 -->
         <template v-if="!shareCreated">
-          <div class="option-row">
-            <span class="option-label">设置密码</span>
+          <div class="flex items-center justify-between">
+            <span class="text-[0.875rem] text-[#374151]">设置密码</span>
             <label class="toggle-switch">
               <input type="checkbox" v-model="usePassword" />
               <span class="toggle-slider"></span>
             </label>
           </div>
 
-          <div v-if="usePassword" class="form-group">
+          <div v-if="usePassword" class="flex flex-col gap-2">
             <input
               type="text"
               v-model="password"
@@ -39,8 +39,8 @@
             />
           </div>
 
-          <div class="option-row">
-            <span class="option-label">过期时间</span>
+          <div class="flex items-center justify-between">
+            <span class="text-[0.875rem] text-[#374151]">过期时间</span>
             <select v-model="expireDays" class="select-input">
               <option :value="0">永不过期</option>
               <option :value="1">1天</option>
@@ -50,8 +50,8 @@
             </select>
           </div>
 
-          <div class="option-row">
-            <span class="option-label">下载次数限制</span>
+          <div class="flex items-center justify-between">
+            <span class="text-[0.875rem] text-[#374151]">下载次数限制</span>
             <select v-model="maxDownloadCount" class="select-input">
               <option :value="0">不限制</option>
               <option :value="1">1次</option>
@@ -68,9 +68,9 @@
 
         <!-- 分享链接展示 -->
         <template v-else>
-          <div class="form-group">
-            <label class="form-label">分享链接</label>
-            <div class="url-input-group">
+          <div class="flex flex-col gap-2">
+            <label class="text-[0.75rem] text-[#6b7280]">分享链接</label>
+            <div class="flex gap-2">
               <input
                 type="text"
                 :value="shareUrl"
@@ -82,9 +82,9 @@
             </div>
           </div>
 
-          <div v-if="shareInfo?.password" class="form-group">
-            <label class="form-label">访问密码</label>
-            <div class="url-input-group">
+          <div v-if="shareInfo?.password" class="flex flex-col gap-2">
+            <label class="text-[0.75rem] text-[#6b7280]">访问密码</label>
+            <div class="flex gap-2">
               <input
                 type="text"
                 :value="displayPassword"
@@ -95,15 +95,16 @@
             </div>
           </div>
 
-          <div class="share-tips">
-            <p v-if="expireDays > 0">
-              <span class="tip-icon">⏰</span> {{ expireDays }}天后过期
+          <div class="p-3 bg-[#f0fdf4] rounded-lg border border-[#bbf7d0]">
+            <p v-if="expireDays > 0" class="m-0 text-[0.75rem] text-[#166534] flex items-center gap-2">
+              <span class="text-[1rem]">⏰</span> {{ expireDays }}天后过期
             </p>
-            <p v-else>
-              <span class="tip-icon">✨</span> 永不过期
+            <p v-else class="m-0 text-[0.75rem] text-[#166534] flex items-center gap-2">
+              <span class="text-[1rem]">✨</span> 永不过期
             </p>
-            <p v-if="maxDownloadCount > 0">
-              <span class="tip-icon">📥</span> 最多下载{{ maxDownloadCount }}次
+            <!-- 原 `.share-tips p + p { margin-top: .5rem }`：p1/p2 互斥，DOM 里的第二个 p 恒为这一条 -->
+            <p v-if="maxDownloadCount > 0" class="m-0 mt-2 text-[0.75rem] text-[#166534] flex items-center gap-2">
+              <span class="text-[1rem]">📥</span> 最多下载{{ maxDownloadCount }}次
             </p>
           </div>
 
@@ -233,116 +234,12 @@ function resetShare() {
 </script>
 
 <style scoped>
-.share-popup {
-  position: absolute;
-  top: 8rem;
-  left: 50%;
-  transform: translateX(-50%) translateX(8rem);
-  width: 360px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(24px);
-  border-radius: 1rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  z-index: 25;
-}
-
-.popup-content {
-  padding: 1.25rem;
-}
-
-.popup-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-}
-
+/* 只留字重：style.less 的 `h1, h2, h3 { font-weight: 400 }` 是无层级规则（§4.8） */
 .popup-title {
-  font-size: 1rem;
   font-weight: 600;
-  color: #111827;
-  margin: 0;
 }
 
-.close-btn {
-  background: none;
-  border: none;
-  padding: 0.5rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.close-btn:hover {
-  background: rgba(156, 163, 175, 0.1);
-}
-
-.popup-body {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.file-preview {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background: rgba(249, 250, 251, 0.5);
-  border-radius: 0.5rem;
-}
-
-.file-icon-container {
-  width: 2rem;
-  height: 2rem;
-  background: #dbeafe;
-  border-radius: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.file-icon {
-  width: 1rem;
-  height: 1rem;
-  color: #2563eb;
-}
-
-.file-info {
-  flex: 1;
-}
-
-.file-name {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #111827;
-  margin: 0;
-  word-break: break-all;
-}
-
-.file-size {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin: 0.25rem 0 0 0;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-label {
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-.url-input-group {
-  display: flex;
-  gap: 0.5rem;
-}
-
+/* 下面这些是重复 ≥2 次、且带状态伪类的表单控件类，内联会把 class 串撑得很长（§4.5） */
 .url-input {
   flex: 1;
   padding: 0.5rem 0.75rem;
@@ -373,17 +270,7 @@ function resetShare() {
   background: #1d4ed8;
 }
 
-.option-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.option-label {
-  font-size: 0.875rem;
-  color: #374151;
-}
-
+/* 开关是纯 CSS 状态机：`input:checked + .toggle-slider` 这种兄弟选择器在工具类里没有对应写法 */
 .toggle-switch {
   position: relative;
   display: inline-block;
@@ -472,34 +359,5 @@ input:checked + .toggle-slider:before {
 
 .create-btn.secondary:hover {
   background: #4b5563;
-}
-
-.share-tips {
-  padding: 0.75rem;
-  background: #f0fdf4;
-  border-radius: 0.5rem;
-  border: 1px solid #bbf7d0;
-}
-
-.share-tips p {
-  margin: 0;
-  font-size: 0.75rem;
-  color: #166534;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.share-tips p + p {
-  margin-top: 0.5rem;
-}
-
-.tip-icon {
-  font-size: 1rem;
-}
-
-.icon-sm {
-  width: 1rem;
-  height: 1rem;
 }
 </style>
