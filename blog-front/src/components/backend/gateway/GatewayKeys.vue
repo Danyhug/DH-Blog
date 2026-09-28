@@ -344,3 +344,19 @@ onMounted(load);
 // 目录只决定表单里渲染哪些勾选项，单独拉：它挂了不该连带把 Key 列表也空着
 onMounted(loadScopeCatalog);
 </script>
+
+<style scoped>
+/*
+  masked 徽标必须留成组件类：父级 GatewayView 有一条无层级的 [data-v-gw] code 规则
+  （color / background-color / border-radius / padding / font-size），
+  工具类位于 @layer utilities，会被它整条压掉——实测文字色会从 #667085 变成 #476582。
+  scoped 选择器的特异性足够盖过它。
+*/
+.masked {
+    padding: 1px 6px;
+    border-radius: 4px;
+    background-color: #f4f6f8;
+    font-size: 12px;
+    color: #667085;
+}
+</style>
