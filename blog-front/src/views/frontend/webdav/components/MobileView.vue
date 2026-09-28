@@ -1,7 +1,7 @@
 <template>
-  <div class="mobile-view">
-      <div class="mobile-header">
-      <div class="mobile-tabs">
+  <div class="w-full h-screen bg-white flex flex-col relative">
+      <div class="p-4 border-b border-[#f3f4f6]">
+      <div class="flex mb-4">
         <div class="tab active">
           <HomeIcon class="icon-sm" />
           <span>首页</span>
@@ -15,48 +15,48 @@
           <span>云盘</span>
         </div>
       </div>
-      <div class="mobile-search">
-        <SearchIcon class="search-icon" />
-        <input type="text" placeholder="搜索文件..." class="search-input" v-model="searchQuery" />
+      <div class="relative">
+        <SearchIcon class="absolute left-3 top-1/2 [transform:translateY(-50%)] text-[#9ca3af] w-4 h-4" />
+        <input type="text" placeholder="搜索文件..." class="w-full py-3 pr-4 pl-10 bg-[#f9fafb] border border-[#e5e7eb] rounded-lg text-[0.875rem]" v-model="searchQuery" />
         </div>
       </div>
 
-    <div class="mobile-files">
+    <div class="flex-1 overflow-y-auto py-2 px-4">
         <div
         v-for="(file, index) in filteredFiles"
           :key="index"
-          class="mobile-file-item"
+          class="flex items-center py-3 border-b border-[#f3f4f6]"
         @click="handleFileClick(file)"
         >
-        <div class="file-icon-container">
-          <FolderIcon v-if="file.type === 'folder'" class="folder-icon" />
-          <component v-else-if="file.icon" :is="file.icon" class="file-icon" />
-          <FileIcon v-else class="file-icon" />
+        <div class="mr-4">
+          <FolderIcon v-if="file.type === 'folder'" class="w-8 h-8 text-[#2563eb]" />
+          <component v-else-if="file.icon" :is="file.icon" class="w-8 h-8 text-[#6b7280]" />
+          <FileIcon v-else class="w-8 h-8 text-[#6b7280]" />
           </div>
-        <div class="file-info">
-          <div class="file-name-row">
-            <p class="file-name">{{ file.name }}</p>
-            <button class="more-btn" @click.stop="showOptions(file)">
-              <MoreHorizontalIcon class="icon-xs" />
+        <div class="flex-1">
+          <div class="flex justify-between items-center">
+            <p class="text-[0.875rem] font-medium text-[#111827]">{{ file.name }}</p>
+            <button class="p-2 cursor-pointer text-[#6b7280]" @click.stop="showOptions(file)">
+              <MoreHorizontalIcon class="w-4 h-4" />
             </button>
           </div>
-          <p class="file-details">{{ file.size }}</p>
+          <p class="text-[0.75rem] text-[#6b7280] mt-1">{{ file.size }}</p>
         </div>
       </div>
     </div>
 
-    <div class="mobile-fab" @click="$emit('upload')">
+    <div class="fixed right-6 bottom-6 w-14 h-14 rounded-[50%] bg-[#2563eb] text-white flex items-center justify-center shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06)] cursor-pointer z-10" @click="$emit('upload')">
       <PlusIcon class="icon-sm" />
       </div>
 
-    <div v-if="showOptionsMenu" class="mobile-options-menu">
-      <div class="options-header">
-        <h3>{{ selectedFile?.name }}</h3>
-        <button @click="showOptionsMenu = false">
+    <div v-if="showOptionsMenu" class="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 p-4">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-[1rem] text-[#111827]">{{ selectedFile?.name }}</h3>
+        <button class="p-2 cursor-pointer" @click="showOptionsMenu = false">
           <XIcon class="icon-sm" />
           </button>
       </div>
-      <div class="options-list">
+      <div class="flex flex-col">
         <div class="option-item" @click="openFile">
           <FileIcon class="icon-sm" />
           <span>打开</span>
@@ -73,7 +73,7 @@
           <FileTextIcon class="icon-sm" />
           <span>重命名</span>
         </div>
-        <div class="option-item danger" @click="deleteFile">
+        <div class="option-item text-[#ef4444]" @click="deleteFile">
           <XIcon class="icon-sm" />
           <span>删除</span>
         </div>
@@ -177,25 +177,11 @@ function deleteFile() {
 </script>
 
 <style scoped>
-.mobile-view {
-  width: 100%;
-  height: 100vh;
-  background: white;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-}
-
-.mobile-header {
-  padding: 1rem;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.mobile-tabs {
-  display: flex;
-  margin-bottom: 1rem;
-}
-
+/*
+  组件类：模板中重复出现的同款样式，集中维护。
+  .tab 用于 3 个底部标签、.option-item 用于 5 个操作项、.icon-sm 在模板里出现 8 次，
+  逐一内联会在模板里产生大段重复的 class 串（迁移方案 §4.5）。
+*/
 .tab {
   flex: 1;
   display: flex;
@@ -211,145 +197,6 @@ function deleteFile() {
   color: #2563eb;
 }
 
-.mobile-search {
-  position: relative;
-}
-
-.search-icon {
-  position: absolute;
-  left: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #9ca3af;
-  width: 1rem;
-  height: 1rem;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.75rem 1rem 0.75rem 2.5rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-}
-
-.mobile-files {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.5rem 1rem;
-}
-
-.mobile-file-item {
-  display: flex;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.file-icon-container {
-  margin-right: 1rem;
-}
-
-.folder-icon {
-  width: 2rem;
-  height: 2rem;
-  color: #2563eb;
-}
-
-.file-icon {
-  width: 2rem;
-  height: 2rem;
-  color: #6b7280;
-}
-
-.file-info {
-  flex: 1;
-}
-
-.file-name-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.file-name {
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin: 0;
-  color: #111827;
-}
-
-.more-btn {
-  background: none;
-  border: none;
-  padding: 0.5rem;
-  cursor: pointer;
-  color: #6b7280;
-}
-
-.file-details {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin: 0.25rem 0 0 0;
-}
-
-.mobile-fab {
-  position: fixed;
-  right: 1.5rem;
-  bottom: 1.5rem;
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 50%;
-  background: #2563eb;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  cursor: pointer;
-  z-index: 10;
-}
-
-.mobile-options-menu {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  border-top-left-radius: 1rem;
-  border-top-right-radius: 1rem;
-  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
-  z-index: 20;
-  padding: 1rem;
-}
-
-.options-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.options-header h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0;
-  color: #111827;
-}
-
-.options-header button {
-  background: none;
-  border: none;
-  padding: 0.5rem;
-  cursor: pointer;
-}
-
-.options-list {
-  display: flex;
-  flex-direction: column;
-}
-
 .option-item {
   display: flex;
   align-items: center;
@@ -363,17 +210,16 @@ function deleteFile() {
   border-radius: 0.5rem;
 }
 
-.option-item.danger {
-  color: #ef4444;
-}
-
 .icon-sm {
   width: 1.25rem;
   height: 1.25rem;
 }
 
-.icon-xs {
-  width: 1rem;
-  height: 1rem;
+/*
+  h3 的字重只能留成 scoped 规则：style.less 的 `h1, h2, h3 { font-weight: 400 }`
+  是无层级规则，会压掉 @layer utilities 里的字重工具类（迁移方案 §4.8）。
+*/
+.options-header h3 {
+  font-weight: 600;
 }
 </style>
