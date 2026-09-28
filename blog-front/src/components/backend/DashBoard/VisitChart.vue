@@ -1,16 +1,17 @@
 <template>
-  <div class="chart-right">
-    <div class="item-top">
+  <div class="w-[53%]">
+    <!-- item-top / item-title / item-sub 三个类名是父组件 DashBoardView 用 :deep(>div) 兜底的锚点，不能删 -->
+    <div class="item-top mb-[3px]">
       <div class="info-section">
-        <div class="item-title">访问量统计</div>
+        <div class="item-title text-[#303133]">访问量统计</div>
         <div class="item-sub">
           {{ chartMode === 'daily' ? '今日' : '本月' }}增长
-          <span class="add">{{ growth > 0 ? '+' + growth.toFixed(0) : growth.toFixed(0) }}%</span> /
+          <span class="add font-medium">{{ growth > 0 ? '+' + growth.toFixed(0) : growth.toFixed(0) }}%</span> /
           <span class="online-count"> {{ store.online }}人在线</span>
         </div>
       </div>
-      <div class="chart-controls">
-        <el-radio-group v-model="chartMode" size="small" @change="handleChartModeChange">
+      <div class="chart-controls flex items-center gap-[8px]">
+        <el-radio-group v-model="chartMode" size="small" class="rounded-[4px] overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.05)]" @change="handleChartModeChange">
           <el-radio-button label="daily">按天</el-radio-button>
           <el-radio-button label="monthly">按月</el-radio-button>
         </el-radio-group>
@@ -44,79 +45,28 @@
       </div>
     </div>
     <div class="div-item-charts" v-loading="loading">
-      <v-chart class="chart" :option="option" autoresize />
+      <v-chart class="mt-[10px] h-[400px]" :option="option" autoresize />
     </div>
   </div>
 </template>
-<style lang="less">
-.chart-right {
-  width: 53%;
+<style scoped lang="less">
+/*
+  只剩两类元素自己的样式，都是工具类替代不了的：
+  - .chart-select 的定宽：Element Plus 有 .el-select { width: var(--el-select-width) }（无层级规则），
+    会压过 @layer utilities 里的 w-[100px]；改 --el-select-width 也一样，同一元素上无层级声明优先。
+  - 按钮组的内边距/高度在库内部元素上，工具类加不上去；且 .el-radio-button--small 的选择器
+    比特异性高于裸 :deep()，需要 .chart-controls 作为锚点。
 
-  .chart {
-    margin-top: 10px;
-    height: 400px;
-  }
-  
-  .item-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 0 3px 0; // 减小上下内边距
-    margin-bottom: 3px;
-  }
-  
-  .info-section {
-    .item-title {
-      font-size: 15px; // 减小字体大小
-      color: #303133;
-    }
-    
-    .item-sub {
-      font-size: 13px;
-      color: #606266;
-      
-      .add {
-        color: #67c23a;
-        font-weight: 500;
-      }
-      
-      .online-count {
-        color: #909399;
-      }
-    }
-  }
-  
-  .chart-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px; // 减小间距
-    
-    .chart-select {
-      width: 100px; // 减小宽度
-      margin-top: 0px; // 调整垂直对齐
-      
-      :deep(.el-input__wrapper) {
-        height: 28px;
-      }
-      
-      :deep(.el-input__inner) {
-        font-size: 13px;
-      }
-    }
-    
-    .el-radio-group {
-      --el-font-size-base: 13px;
-      border-radius: 4px;
-      overflow: hidden;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-      
-      .el-radio-button__inner {
-        padding: 6px 12px;
-        height: 28px;
-        line-height: 1;
-      }
-    }
-  }
+  原文件是非 scoped 块，样式全局泄漏（§4.7），迁移后改为 scoped。
+*/
+.chart-select {
+  width: 100px;
+}
+
+.chart-controls :deep(.el-radio-button__inner) {
+  padding: 6px 12px;
+  height: 28px;
+  line-height: 1;
 }
 </style>
 <script setup>
