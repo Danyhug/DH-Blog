@@ -1,28 +1,28 @@
 <template>
-  <div class="share-manager">
-    <div class="panel">
-      <div class="panel-header">
-        <h3 class="panel-title">
-          <button v-if="logsFor" class="back-btn" @click="closeLogs">←</button>
+  <div class="absolute top-16 left-1/2 z-[25] w-[min(560px,calc(100%-2rem))] [transform:translateX(-50%)]">
+    <div class="bg-[rgba(255,255,255,0.97)] backdrop-blur-[24px] rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.2)] p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="panel-title flex items-center gap-2 m-0 text-[1rem] text-[#111827] truncate">
+          <button v-if="logsFor" class="px-2 py-[0.35rem] rounded-md cursor-pointer text-[#6b7280] text-[1rem] transition-[background-color] duration-200 ease-[ease] hover:bg-[rgba(156,163,175,0.12)]" @click="closeLogs">←</button>
           {{ logsFor ? `访问日志 · ${logsFor.file_name || logsFor.file_key}` : '我的分享' }}
         </h3>
-        <button class="close-btn" @click="$emit('close')">
-          <XIcon class="icon-sm" />
+        <button class="px-2 py-[0.35rem] rounded-md cursor-pointer text-[#6b7280] text-[1rem] transition-[background-color] duration-200 ease-[ease] hover:bg-[rgba(156,163,175,0.12)]" @click="$emit('close')">
+          <XIcon class="w-4 h-4" />
         </button>
       </div>
 
       <!-- 分享列表 -->
-      <div v-if="!logsFor" class="panel-body">
+      <div v-if="!logsFor" class="max-h-[26rem] overflow-y-auto">
         <p v-if="loading" class="hint">加载中…</p>
         <p v-else-if="shares.length === 0" class="hint">还没有创建过分享链接</p>
 
-        <ul v-else class="share-list">
-          <li v-for="share in shares" :key="share.id" class="share-item">
-            <div class="share-main">
-              <p class="share-name" :class="{ missing: share.file_missing }">
+        <ul v-else class="list-none m-0 p-0">
+          <li v-for="share in shares" :key="share.id" class="py-3 border-b border-[rgba(229,231,235,0.8)] last:border-b-0">
+            <div class="flex items-center justify-between gap-2">
+              <p class="m-0 text-[0.875rem] font-medium truncate" :class="share.file_missing ? 'text-[#9ca3af] italic' : 'text-[#111827]'">
                 {{ share.file_missing ? '文件已删除' : share.file_name }}
               </p>
-              <div class="badges">
+              <div class="flex gap-1 shrink-0">
                 <span v-if="share.has_password" class="badge">密码</span>
                 <span v-if="share.is_expired" class="badge danger">已过期</span>
                 <span v-else-if="share.expire_at" class="badge">{{ formatExpire(share.expire_at) }} 到期</span>
@@ -30,14 +30,14 @@
               </div>
             </div>
 
-            <p class="share-meta">
+            <p class="mt-1 mb-2 text-[0.75rem] text-[#6b7280]">
               {{ share.file_missing ? '—' : formatFileSize(share.file_size) }}
               · 浏览 {{ share.view_count }}
               · 下载 {{ share.download_count }}<template v-if="share.max_download_count">/{{ share.max_download_count }}</template>
               · {{ share.create_time }}
             </p>
 
-            <div class="share-actions">
+            <div class="flex gap-3">
               <button class="link-btn" @click="copyLink(share)">复制链接</button>
               <button class="link-btn" @click="openLogs(share)">访问日志</button>
               <button
@@ -51,29 +51,29 @@
           </li>
         </ul>
 
-        <div v-if="totalPages > 1" class="pager">
+        <div v-if="totalPages > 1" class="flex items-center justify-center gap-4 pt-3 border-t border-[rgba(229,231,235,0.8)] mt-2">
           <button class="link-btn" :disabled="page <= 1" @click="goPage(page - 1)">上一页</button>
-          <span class="pager-info">{{ page }} / {{ totalPages }}</span>
+          <span class="text-[0.75rem] text-[#6b7280]">{{ page }} / {{ totalPages }}</span>
           <button class="link-btn" :disabled="page >= totalPages" @click="goPage(page + 1)">下一页</button>
         </div>
       </div>
 
       <!-- 访问日志 -->
-      <div v-else class="panel-body">
+      <div v-else class="max-h-[26rem] overflow-y-auto">
         <p v-if="logsLoading" class="hint">加载中…</p>
         <p v-else-if="logs.length === 0" class="hint">这个分享还没有被访问过</p>
 
-        <ul v-else class="log-list">
-          <li v-for="log in logs" :key="log.id" class="log-item">
-            <span class="log-action" :class="log.action_type">{{ log.action_type === 'download' ? '下载' : '浏览' }}</span>
-            <span class="log-ip">{{ log.ip }}</span>
-            <span class="log-time">{{ log.create_time }}</span>
+        <ul v-else class="list-none m-0 p-0">
+          <li v-for="log in logs" :key="log.id" class="flex items-center gap-3 py-2 border-b border-[rgba(229,231,235,0.6)] last:border-b-0 text-[0.75rem] text-[#4b5563]">
+            <span class="shrink-0 py-[0.1rem] px-[0.4rem] rounded" :class="log.action_type === 'download' ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#eef2ff] text-[#4f46e5]'">{{ log.action_type === 'download' ? '下载' : '浏览' }}</span>
+            <span class="flex-1 [font-family:Monaco,Menlo,monospace]">{{ log.ip }}</span>
+            <span class="shrink-0 text-[#9ca3af]">{{ log.create_time }}</span>
           </li>
         </ul>
 
-        <div v-if="logsTotalPages > 1" class="pager">
+        <div v-if="logsTotalPages > 1" class="flex items-center justify-center gap-4 pt-3 border-t border-[rgba(229,231,235,0.8)] mt-2">
           <button class="link-btn" :disabled="logsPage <= 1" @click="goLogsPage(logsPage - 1)">上一页</button>
-          <span class="pager-info">{{ logsPage }} / {{ logsTotalPages }}</span>
+          <span class="text-[0.75rem] text-[#6b7280]">{{ logsPage }} / {{ logsTotalPages }}</span>
           <button class="link-btn" :disabled="logsPage >= logsTotalPages" @click="goLogsPage(logsPage + 1)">下一页</button>
         </div>
       </div>
@@ -213,116 +213,22 @@ onMounted(loadShares)
 </script>
 
 <style scoped>
-.share-manager {
-  position: absolute;
-  top: 4rem;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(560px, calc(100% - 2rem));
-  z-index: 25;
-}
-
-.panel {
-  background: rgba(255, 255, 255, 0.97);
-  backdrop-filter: blur(24px);
-  border-radius: 1rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 1.25rem;
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-}
-
+/* .panel-title 只留字重：style.less 的 `h1, h2, h3 { font-weight: 400 }` 是无层级规则（§4.8） */
 .panel-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1rem;
   font-weight: 600;
-  color: #111827;
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.back-btn,
-.close-btn {
-  background: none;
-  border: none;
-  padding: 0.35rem 0.5rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  color: #6b7280;
-  font-size: 1rem;
-  transition: background-color 0.2s;
-}
-
-.back-btn:hover,
-.close-btn:hover {
-  background: rgba(156, 163, 175, 0.12);
-}
-
-.panel-body {
-  max-height: 26rem;
-  overflow-y: auto;
-}
-
+/*
+  组件类：模板中重复出现的同款样式，集中维护。
+  .hint 4 处、.badge（含 danger/warn 变体）4 处、.link-btn（含 danger/禁用/hover）7 处，
+  逐一内联会在模板里产生大段重复的 class 串（迁移方案 §4.5）。
+*/
 .hint {
   color: #9ca3af;
   font-size: 0.8rem;
   text-align: center;
   padding: 2rem 0;
   margin: 0;
-}
-
-.share-list,
-.log-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.share-item {
-  padding: 0.75rem 0;
-  border-bottom: 1px solid rgba(229, 231, 235, 0.8);
-}
-
-.share-item:last-child {
-  border-bottom: none;
-}
-
-.share-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.share-name {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #111827;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.share-name.missing {
-  color: #9ca3af;
-  font-style: italic;
-}
-
-.badges {
-  display: flex;
-  gap: 0.25rem;
-  flex-shrink: 0;
 }
 
 .badge {
@@ -342,17 +248,6 @@ onMounted(loadShares)
 .badge.warn {
   background: #fef3c7;
   color: #b45309;
-}
-
-.share-meta {
-  margin: 0.25rem 0 0.5rem 0;
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-.share-actions {
-  display: flex;
-  gap: 0.75rem;
 }
 
 .link-btn {
@@ -375,62 +270,5 @@ onMounted(loadShares)
 
 .link-btn.danger {
   color: #dc2626;
-}
-
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(229, 231, 235, 0.8);
-  margin-top: 0.5rem;
-}
-
-.pager-info {
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-.log-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid rgba(229, 231, 235, 0.6);
-  font-size: 0.75rem;
-  color: #4b5563;
-}
-
-.log-item:last-child {
-  border-bottom: none;
-}
-
-.log-action {
-  flex-shrink: 0;
-  padding: 0.1rem 0.4rem;
-  border-radius: 0.25rem;
-  background: #eef2ff;
-  color: #4f46e5;
-}
-
-.log-action.download {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.log-ip {
-  flex: 1;
-  font-family: 'Monaco', 'Menlo', monospace;
-}
-
-.log-time {
-  flex-shrink: 0;
-  color: #9ca3af;
-}
-
-.icon-sm {
-  width: 1rem;
-  height: 1rem;
 }
 </style>
