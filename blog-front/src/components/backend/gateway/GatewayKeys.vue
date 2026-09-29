@@ -346,12 +346,7 @@ onMounted(loadScopeCatalog);
 </script>
 
 <style scoped>
-/*
-  masked 徽标必须留成组件类：父级 GatewayView 有一条无层级的 [data-v-gw] code 规则
-  （color / background-color / border-radius / padding / font-size），
-  工具类位于 @layer utilities，会被它整条压掉——实测文字色会从 #667085 变成 #476582。
-  scoped 选择器的特异性足够盖过它。
-*/
+/* 父级 GatewayView 的无层级 :deep(code) 会整条压掉工具类（实测文字色 #667085 → #476582） */
 .masked {
     padding: 1px 6px;
     border-radius: 4px;

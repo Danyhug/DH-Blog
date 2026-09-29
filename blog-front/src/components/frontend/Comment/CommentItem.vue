@@ -38,23 +38,7 @@
 </template>
 
 <style lang="less" scoped>
-/*
-  只保留三类工具类表达不了的：
-
-  1. Vue <transition> 运行时类 + 它引用的 keyframes（Vue 会把两者一起改名，
-     拆开就会静默失效，§4.1）。
-  2. `.reply-enter` —— 由 `:class="{ 'reply-enter': replay == comment.id }"` 在运行时切换，
-     模板里写不出固定的 class 串（§4.3.1 同类）。
-  3. 无（其余全部内联）。
-
-  注意一个容易误判的点：原 CSS 里绝大多数规则嵌在 `ul { ... }` 之下，而本组件模板里
-  **没有** `ul`。但 Vue 只把 scope 属性加在**最后一个**复合选择器上，编译结果是
-  `ul .comment-box .comment-container[data-v-x]` —— 那个 `ul` 是**父组件**（Comment/View）
-  提供的，所以这些规则一直是生效的。内联后反而不再依赖祖先 `ul`，更稳。
-
-  另：原 `.comment-list` 规则在本组件模板里没有任何对应元素（与 Comment/View 的类名重名
-  但实现不同），是死样式，已删除。
-*/
+/* Vue transition 运行时类 + 它引用的 @keyframes（Vue 一起改名，拆开即失效） */
 .v-enter-active {
   animation: bottom .6s ease;
 }
@@ -75,6 +59,7 @@
   }
 }
 
+/* 由 :class 运行时切换，模板里写不出固定 class 串 */
 .reply-enter {
   color: rgb(31, 109, 218);
   font-weight: bold;

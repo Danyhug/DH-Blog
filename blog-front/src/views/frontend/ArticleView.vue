@@ -134,16 +134,9 @@ export default {
 </script>
 
 <style lang="less" scoped>
-/*
-  本文件剩下的几乎都是 `:deep()`：正文由 md-editor（markdown-it + highlight.js）
-  在运行时生成，DOM 上加不上 class（§4.3.1）。组件自身的 padding/标题/信息条
-  已内联到模板。
-
-  `.blog-container` 这个类名必须保留：style.less 在 1024 断点下用
-  `.blog-container { padding: 0 !important }` 覆盖它，属于全局钩子；
-  它同时是下面三条 `:deep()` 的锚点。
-*/
+/* 类名必须保留：style.less 在 1024 断点用它作全局钩子，且是下方 :deep() 的锚点 */
 .blog-container {
+  /* 正文由 md-editor 运行时生成，加不上 class */
   :deep(.md-editor-preview) {
     font-family: 'Microsoft YaHei';
   }
@@ -157,12 +150,7 @@ export default {
   }
 }
 
-/*
-  `.full-screen-preview` 同样要保留类名（全屏态由 JS 切换，且是下面两条 :deep() 的锚点）；
-  它自身那套定位/尺寸已内联成互斥的 class 串（原 `.blog-container` 与 `.full-screen-preview`
-  都写 padding，且特异性相同、后者靠源码顺序取胜；内联后必须整体二选一，
-  不能让 `p-0` 与 `px-*` 同时存在，否则谁赢取决于 Tailwind 的生成顺序，见 §4.9）。
-*/
+/* 全屏态由 JS 切换，也是下方 :deep() 的锚点 */
 .full-screen-preview {
   :deep(.md-editor-preview) {
     padding: 0 10px;
@@ -176,7 +164,6 @@ export default {
   }
 }
 
-/* 原 `.left` 规则在本文件模板里没有任何对应元素（从 HomeView 复制过来的死样式），已删除 */
 
 /** 平板移动端适配 */
 @media screen and (max-width: 1024px) {

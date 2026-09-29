@@ -58,20 +58,9 @@ const article: Article<Tag> = props.article
 </script>
 
 <style lang="less" scoped>
-/*
-  组件自身的布局/配色已内联。这里只留四类工具类表达不了的：
 
-  1. 祖先 :hover + 后代选择器。`.cover:hover .more` 原本带 !important，
-     是因为它的特异性(0,3,0)低于原 `.cover .right .bottom .more`(0,4,0)；
-     现在基色已内联成工具类，保留 !important 可保证行为逐字节不变。
-  2. 子组件的根元素：Icon 渲染成 `<svg class="icon">`，类名由子组件决定。
-  3. 伪元素装饰 `.private-summary::after`。
-  4. Element Plus 内部 `:deep(.el-icon)`。
 
-  另外原来的 `.cover div { width: 50% }` 与 `.cover .right div { width: 100% }`
-  是后代选择器：前者命中 `.left`/`.right`（各 w-1/2），后者命中 `.right` 内的
-  `.top`/`.private-summary`/`.bottom`（各 w-full），已按此逐个内联。
-*/
+/* 祖先 :hover + 后代；原带 !important（特异性低于原 .cover .right .bottom .more），保留以保证行为不变 */
 .cover:hover .more {
   color: #fff !important;
 }
@@ -80,10 +69,12 @@ const article: Article<Tag> = props.article
   transform: scale(1.05);
 }
 
+/* Icon 渲染成 <svg class="icon">，类名由子组件决定 */
 .cover .right .top span .icon {
   transform: translateY(-1px);
 }
 
+/* 伪元素装饰 */
 .cover .right .private-summary::after {
   position: absolute;
   right: -1.3rem;
@@ -95,6 +86,7 @@ const article: Article<Tag> = props.article
   border-radius: 50%;
 }
 
+/* EP 内部元素 */
 .cover .right .private-summary .private-lock :deep(.el-icon) {
   font-size: 1.2rem;
 }
@@ -104,14 +96,6 @@ const article: Article<Tag> = props.article
     height: 244px;
     min-height: 244px;
 
-    /*
-      `.private-summary` 原本在这里还有 min-height: auto / margin-bottom: 0 / padding: .65rem，
-      但它们是**死声明**：基础规则 `.cover .right .private-summary` 特异性更高(0,3,0 vs 0,2,0)，
-      一直压着它们（实测 ≤768px 仍是 82px / 16px / .8rem 1rem）。
-      基础值现已内联成工具类，若留下这几条，无层级声明会反过来生效而改变观感，故删除。
-      `.private-hint { display: none }` 没有冲突（基础规则只设 margin-top/color/font-size），
-      原样保留。
-    */
     .private-summary {
       .private-hint {
         display: none;

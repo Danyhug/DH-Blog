@@ -70,16 +70,12 @@ watch(() => route.path, _ => {
 </script>
 
 <style scoped>
-/*
-  §4.8：style.less 的 `h1, h2, h3 { font-weight: normal }` 是无层级规则。
-  `h3 { font-weight: bold }`（scoped，特异性 0,1,1 > 0,0,1）本来赢过它；
-  换成 `font-bold` 工具类（在 @layer utilities 里）就会输给它，所以这一条必须留在这里。
-*/
+/* 字重：style.less 全局 h1,h2,h3{font-weight:normal} 是无层级规则；scoped 的 h3 特异性更高本来能赢，换成工具类就会输 */
 h3 {
   font-weight: bold;
 }
 
-/* Vue <transition> 运行时生成的类，模板里静态写不出来 */
+/* Vue transition 运行时类 */
 .v-enter-from,
 .v-leave-to {
   opacity: 0;

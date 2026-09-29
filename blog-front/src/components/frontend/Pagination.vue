@@ -36,13 +36,7 @@ const totalPages = computed(() => Math.ceil(props.total / props.pageSize))
 </script>
 
 <style lang="less" scoped>
-/*
-  以下全部是 `:deep()`：分页控件内部 DOM 由 Element Plus 渲染，加不上 class。
-  实测 `.el-pagination` 自己就声明了 `--el-pagination-hover-color`
-  （`var(--el-color-primary)`）以及 display/align-items/font-size/color，
-  所以 `[--el-pagination-hover-color:...]`、`flex-wrap` 这类工具类会被它的
-  无层级声明压掉（§4.8），必须留在这里（§4.3）。
-*/
+/* :deep()：EP 内部 DOM。.el-pagination 自带 --el-pagination-hover-color 等无层级声明，压过工具类 */
 :deep(.article-pagination.el-pagination) {
   --el-pagination-hover-color: var(--primary-color);
   flex-wrap: nowrap;

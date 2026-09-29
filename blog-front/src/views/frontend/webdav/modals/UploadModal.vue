@@ -187,7 +187,7 @@ const sortedUploadResults = computed(() => {
 // 上传中/已有结果时拖放区折叠（原来写在模板的 :class 里，三处元素共用）
 const isDropAreaCollapsed = computed(() => isUploading.value || uploadResults.value.length > 0)
 
-// 上传项的状态底色 + 左侧色条。返回互斥的完整色值，避免基础态与状态态同属性互相覆盖（迁移方案 §4.9）
+// 上传项的状态底色 + 左侧色条。返回互斥的完整色值，避免基础态与状态态同属性互相覆盖
 function uploadItemStateClass(status: UploadResult['status']) {
   if (status === 'success') return 'bg-[rgba(16,185,129,0.1)] border-l-[3px] border-l-[#10b981]'
   if (status === 'error') return 'bg-[rgba(239,68,68,0.1)] border-l-[3px] border-l-[#ef4444]'
@@ -348,15 +348,12 @@ defineExpose({
 </script>
 
 <style scoped>
-/* 只留字重：style.less 的 `h1, h2, h3 { font-weight: 400 }` 是无层级规则（§4.8） */
+/* 字重：style.less 全局规则是无层级的，压过工具类 */
 .modal-title {
   font-weight: 600;
 }
 
-/*
-  组件类：文件类型配色（4 种变体 × 容器与图标两个元素），
-  getFileIconClass() 返回语义色名，容器底色与图标颜色靠后代选择器配对，共 4 组。
-*/
+/* 组件类：4 种文件类型配色，容器底色与图标颜色靠后代选择器配对 */
 .file-icon-container {
   width: 2.5rem;
   height: 2.5rem;
@@ -404,9 +401,7 @@ defineExpose({
   color: #6b7280;
 }
 
-/*
-  组件类：状态徽标（模板中 3 处复用），逐元素内联会产生 3 份重复的长 class 串（§4.5）。
-*/
+/* 组件类：状态徽标 3 处复用 */
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -434,11 +429,7 @@ defineExpose({
   gap: 0.25rem;
 }
 
-/*
-  以下两条必须留在 CSS：它们的 animation 引用的是本块内声明的 @keyframes，
-  而 Vue 会把 scoped 块里的 keyframes 改名（如 progress-animation-<scope>）。
-  一旦把 animation 挪进工具类，引用的还是未改名的名字，动画会静默失效。
-*/
+/* 必须与下方 @keyframes 同块：Vue 会给 scoped 里的 keyframes 改名，animation 挪进工具类会失配 */
 .loading-spinner {
   display: inline-block;
   width: 0.75rem;

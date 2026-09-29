@@ -729,20 +729,12 @@ function isJson(value: string) {
 </script>
 
 <style scoped>
-/*
-  覆盖 Element Plus：停用的供应商进度条转为灰色。
-  工具类够不着 el-progress 内部元素，.card-off 是模板上跟着停用状态一起挂的锚点类。
-*/
+/* 停用态进度条转灰；.card-off 是模板上跟随停用状态挂的锚点类 */
 .card-off :deep(.el-progress-bar__inner) {
     background-color: #dcdfe6;
 }
 
-/* 组件类：模板中重复出现的同款样式，集中维护 */
-/*
-  .link 必须留成组件类：style.less 里有全局 `a { color: currentColor; text-decoration: none }`，
-  无层级规则会压掉 @layer utilities 里的 text-[#3f8cff] 与 hover:underline
-  （实测链接色会从 #3f8cff 变成 #333）。
-*/
+/* 必须留成组件类：style.less 全局 a{color:currentColor} 是无层级规则，会压掉链接色工具类（实测 #3f8cff → #333） */
 .link {
     color: #3f8cff;
     white-space: nowrap;
@@ -752,6 +744,7 @@ function isJson(value: string) {
     text-decoration: underline;
 }
 
+/* 组件类：.hint / .group-title / .group-sub 各 4 处复用 */
 .hint {
     margin: 0 0 18px;
     padding: 10px 12px;
@@ -780,16 +773,12 @@ function isJson(value: string) {
     color: #98a2b3;
 }
 
-/* .key-row 只留作相邻兄弟选择器的锚点：行间距无法用工具类表达 */
+/* 相邻兄弟选择器：行间距无工具类写法 */
 .key-row+.key-row {
     margin-top: 8px;
 }
 
-/*
-  masked 徽标必须留成组件类：父级 GatewayView 有一条无层级的 :deep(code) 规则
-  （color / background-color / border-radius / padding / font-size），
-  工具类位于 @layer utilities，会被它整条压掉。
-*/
+/* 父级 GatewayView 的无层级 :deep(code) 会压掉工具类 */
 .masked {
     padding: 1px 6px;
     border-radius: 4px;

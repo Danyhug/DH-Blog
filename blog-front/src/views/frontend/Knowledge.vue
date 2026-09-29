@@ -143,31 +143,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/*
-  Knowledge 页的样式大多是「页面骨架 + 弹窗」，已尽量内联到模板。
-  下面只留工具类表达不了的，以及 §4.5 认可的组件类：
-
-  1. 页面级 CSS 自定义属性（`--accent-color-*` / `--bg-color` / `--text-color` …）——
-     被模板里的 `bg-[var(--bg-color)]` 等工具类与下面保留的规则共同引用。
-  2. `.grid-wrapper` 的 overflow 三连：先 `hidden auto`，再写 `overflow-y: overlay`
-     作渐进增强（`overlay` 非法时会回落到上一行的 `auto`）。这种「同属性两条声明、
-     后者可能非法」的顺序语义，工具类表达不了（不写回退会掉成 `visible`）。
-  3. 伪元素：`::-webkit-scrollbar*` 四组、`.article-list li::before`。
-  4. 结构伪类与祖先 hover：`:first-of-type` / `:nth-of-type(2)` / `:last-child` / `:hover`。
-  5. Vue `<Transition>` 运行时生成的 `.modal-fade-*` / `.modal-zoom-*`。
-  6. 移动端覆盖块（无层级，自带 `!important`，正好维持原有的断点行为）。
-  7. 组件类：`.card` / `.card-content` / `.count` / `.badge` 在 v-for 里重复渲染（§4.5）。
-
-  ⚠️ 顺带删掉一批**死代码**：原 CSS 里的 `.section-categories` / `.section-tags`
-  及其全部后代规则从未生效 —— 模板用的是裸 `.content-section` 与
-  `.content-section.tag-section`，这两个类名在模板里不存在（全项目 grep 只在本文件的
-  `<style>` 内命中），而 scoped 规则必须带 `[data-v-53a0e8e4]` 才能命中本组件元素。
-  连带只包含这两者的 `@media (min-width: 901px)` 整块一并删除。
-
-  `@keyframes fadeInUp` 已按 §4.1 挪进 tailwind.css（`--animate-fade-in-up`），
-  模板改用 `animate-fade-in-up`：`:first-of-type` 那两条是无层级声明，
-  照样覆盖工具类简写里的默认 `animation-delay: 0s`。
-*/
 .knowledge-page {
     --accent-color-1: hsl(180, 100%, 40%);
     --accent-color-2: hsl(280, 100%, 55%);
@@ -180,7 +155,7 @@ onMounted(() => {
     --accent-color-1-rgb: 0, 204, 204;
 }
 
-/* 顺序敏感：后一行非法时回落到前一行 */
+/* 顺序敏感：overlay 非法时回落到上一行的 auto */
 .grid-wrapper {
     overflow-x: hidden;
     overflow-y: auto;
@@ -204,7 +179,7 @@ onMounted(() => {
     background: #A0AEC0;
 }
 
-/* 两个 section 的入场错峰（Vue 拿不到这两条，只能留在 CSS） */
+/* 入场错峰：结构伪类无工具类写法 */
 .content-section:first-of-type {
     animation-delay: 0.2s;
 }
@@ -213,7 +188,7 @@ onMounted(() => {
     animation-delay: 0.4s;
 }
 
-/* 组件类：v-for 里重复渲染的卡片（§4.5）。入场动画改由模板上的 animate-fade-in-up 承担 */
+/* 组件类：v-for 里重复渲染的卡片 */
 .card {
     border: 2px solid transparent;
     border-radius: 12px;
@@ -277,7 +252,7 @@ onMounted(() => {
     border-radius: 12px;
 }
 
-/* Vue <Transition> 运行时生成的类，模板里静态写不出来 */
+/* Vue <Transition> 运行时生成的类 */
 .modal-fade-enter-active,
 .modal-fade-leave-active {
     transition: opacity 0.4s ease;
@@ -351,17 +326,7 @@ onMounted(() => {
     opacity: 1;
 }
 
-/*
-  弹窗遮罩的毛玻璃。
-
-  原文同时写了 `backdrop-filter: blur(5px)` 与 `-webkit-backdrop-filter: blur(5px)`，
-  lightningcss 认为两者等价、按目标浏览器归并成一条，结果**只剩下排在后面的 `-webkit-`**；
-  而实测当前 Chrome 不认 `-webkit-backdrop-filter`（隔离实验：只写它时边缘强度 6.01，
-  与完全不写相同；只写无前缀时 0.47）—— 也就是这个模糊在 Chrome 下一直是失效的。
-
-  修法：**只留无前缀那一条**。不再给 lightningcss 两个「等价声明」让它二选一，
-  它会按目标浏览器自行决定是否补 `-webkit-` 前缀。
-*/
+/* 只写无前缀那一条 —— 同时写 -webkit- 会被 lightningcss 归并掉只剩 -webkit-，而 Chrome 不认它 */
 .modal-overlay {
     backdrop-filter: blur(5px);
 }

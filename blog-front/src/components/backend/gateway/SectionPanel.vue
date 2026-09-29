@@ -29,18 +29,12 @@ withDefaults(defineProps<{ title: string; subtitle?: string; flush?: boolean }>(
 </script>
 
 <style scoped>
-/*
-  组件类：相邻面板之间的间距只能靠兄弟选择器表达，工具类没有等价写法，
-  因此模板上保留 .panel 这个类名作为选择器锚点。
-*/
+/* 相邻兄弟选择器：面板间距无工具类写法 */
 .panel+.panel {
     margin-top: 18px;
 }
 
-/*
-  全局 style.less 里的 `h1, h2, h3 { font-weight: 400 }` 是无层级规则，
-  会压过 @layer utilities 里的 font-semibold，所以标题字重只能写在这里。
-*/
+/* 字重：style.less 全局 h1,h2,h3{font-weight:400} 是无层级规则，压过工具类 */
 .panel-title {
     font-weight: 600;
 }

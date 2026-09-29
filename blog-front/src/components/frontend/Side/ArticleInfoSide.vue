@@ -115,22 +115,19 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="less" scoped>
-/*
-  §4.8：Element Plus 的 `.el-card { background-color: var(--el-card-bg-color) }` 是无层级规则，
-  `bg-white` 工具类会被它压掉，所以这条保留在这里。
-*/
+/* .el-card 自带 background-color（无层级），压过 bg-white */
 .box {
   background-color: #fff;
 }
 
-/* Element Plus 内部 DOM（卡片内容区），加不上 class（§4.3） */
+/* :deep()：EP 卡片内容区加不上 class */
 :deep(.el-card__body) {
   height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-/* 裸伪元素选择器，工具类没有对应写法 */
+/* 裸伪元素选择器，无工具类写法 */
 ::-webkit-scrollbar {
   width: 0;
 }

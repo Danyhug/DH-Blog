@@ -11,10 +11,7 @@
   </div>
 </template>
 <style lang="less" scoped>
-/*
-  子组件（VisitTable / VisitChart）的根节点及其内部 DOM 在父组件里只能靠 :deep() 覆盖，
-  工具类加不到别的组件身上。.chart-item 这个类名保留为下面选择器的锚点。
-*/
+/* 跨组件覆盖子组件根元素只能 :deep()；.chart-item 是锚点类 */
 .chart-item {
   :deep(>div) {
     height: 100%;

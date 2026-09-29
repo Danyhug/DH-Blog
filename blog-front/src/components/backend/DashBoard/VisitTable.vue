@@ -53,10 +53,7 @@
 </template>
 
 <style lang="less">
-/*
-  非 scoped：ban-row 由 el-table 的 row-class-name 加到库内部的 <tr> 上，
-  工具类够不着那些元素，只能保留这条规则。
-*/
+/* ban-row 由 el-table 的 row-class-name 加到库内部 <tr>，工具类够不着 */
 .ban-row {
   background-color: rgba(201, 61, 64, .1) !important;
 }

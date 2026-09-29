@@ -318,10 +318,7 @@ onMounted(getData)
 </script>
 
 <style scoped lang="less">
-/*
-  这四个变量留在根节点上：下方的 :deep(.article-row …) 也要用，
-  迁移后的工具类以 text-[var(--comment-muted)] 的形式引用。
-*/
+/* 这四个变量也被下方 :deep() 引用 */
 .comment-manager {
   --comment-ink: #1f2a3d;
   --comment-muted: #7d889a;
@@ -329,7 +326,7 @@ onMounted(getData)
   --article-line: #b9d3f7;
 }
 
-/* h2 只能整条留在这里：style.less 的 `h1, h2, h3 { font-weight: 400 }` 是无层级规则，会压掉字重工具类 */
+/* h2 的字重只能留在这里：style.less 全局规则是无层级的，会压掉字重工具类 */
 .title-block {
   h2 {
     margin: 0;
@@ -340,10 +337,7 @@ onMounted(getData)
   }
 }
 
-/*
-  .comment-table 保留：Element Plus 的 .el-table 声明了 background-color / overflow / width，
-  这几条工具类会被它压掉（§4.8）；其余几条为集中维护一并留下。
-*/
+/* .el-table 自带 background-color/overflow/width（无层级），压过工具类 */
 .comment-table {
   width: 100%;
   border: 1px solid #e9edf3;
@@ -353,10 +347,7 @@ onMounted(getData)
   overflow: hidden;
 }
 
-/*
-  .article-title 保留：Element Plus 的 .el-button / .el-button.is-link 声明了
-  display / height / padding / color / font-size / white-space，工具类压不过（§4.8）。
-*/
+/* .el-button 自带 display/height/padding/color（无层级），压过工具类 */
 .article-title {
   display: block;
   max-width: 260px;

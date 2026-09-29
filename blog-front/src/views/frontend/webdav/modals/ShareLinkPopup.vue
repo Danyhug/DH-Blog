@@ -234,12 +234,12 @@ function resetShare() {
 </script>
 
 <style scoped>
-/* 只留字重：style.less 的 `h1, h2, h3 { font-weight: 400 }` 是无层级规则（§4.8） */
+/* 字重：style.less 全局规则是无层级的，压过工具类 */
 .popup-title {
   font-weight: 600;
 }
 
-/* 下面这些是重复 ≥2 次、且带状态伪类的表单控件类，内联会把 class 串撑得很长（§4.5） */
+/* 重复 ≥2 次且带状态伪类的表单控件类，内联会撑长 class 串 */
 .url-input {
   flex: 1;
   padding: 0.5rem 0.75rem;
@@ -270,7 +270,7 @@ function resetShare() {
   background: #1d4ed8;
 }
 
-/* 开关是纯 CSS 状态机：`input:checked + .toggle-slider` 这种兄弟选择器在工具类里没有对应写法 */
+/* 纯 CSS 状态机：input:checked + ... 兄弟选择器无工具类写法 */
 .toggle-switch {
   position: relative;
   display: inline-block;

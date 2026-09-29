@@ -73,29 +73,8 @@
     </div>
   </div>
 </template>
-<style scoped lang="less">
-/*
-  原 style #1（79 行）全部内联，只留下面这条：`focus:` 变体同样能表达，
-  但原值是 `outline: none` 简写，用 `focus:[outline:none]` 保持逐字节等价。
-  已内联的对应关系：
-  - `.comment-form` → 根 div
-  - `.right-top` → absolute right-3 top-2
-  - `.author-info`（含 3 列 grid 与 line-height）→ 对应 div 与两个 input
-  - `.comment-content` + textarea → 对应 div 与 textarea
-  - `.comment-action` / `.action-left` / `ul` / `li` / `.action-right` → 逐个内联
-  注意 textarea 的 padding（8px 13px）与 `.input` 的（8px 12px）不同：
-  原 CSS 里 textarea 规则更靠后且特异性更高，覆盖了 `.input`；
-  内联时直接给 textarea 写 `px-[13px]`，避免 `px-3` 与 `px-[13px]` 同时出现（§4.9）。
-*/
-</style>
-
 <style scoped>
-/*
-  原 style #2（61 行）：`button` 的基础样式与 `.now` / `.play` / `button svg`
-  已内联到模板。只剩三条工具类表达不了的「祖先 :hover + 后代」规则。
-  `button:active` 用的是任意属性 `[transform:...]` 而不是 `active:scale-*`：
-  后者写的是独立的 `scale` 属性，与 `transform` 不是同一个属性，会改变原有级联。
-*/
+/* 祖先 :hover + 后代，工具类无对应写法 */
 button:hover svg {
   transform: scale(3) translate(50%);
 }
@@ -112,15 +91,8 @@ button:hover .play {
 </style>
 
 <style scoped>
-/*
-  原 style #3（199 行）**整块保留**，属 §4.1「装饰组件豁免」：
-  这是 Uiverse.io 的书签动画控件，机制全部落在工具类表达不了的写法上 ——
-  `input:checked + .bookmark`（兄弟组合器）、`.bookmark::before/::after`（伪元素）、
-  `.ui-bookmark:hover .bookmark`（祖先 hover）、三个 keyframes（bookmark / circle / circles，
-  且带 `-webkit-` 配对）。逐条内联既做不到，也会破坏「keyframes 与 animation 必须同块」的前提。
-  它与本文件其余部分互不影响，保持原样是这里最安全、也最可读的选择。
-*/
 
+/* Uiverse 书签动画控件：兄弟组合器 + 伪元素 + 3 组 keyframes，整块保留 */
 .ui-bookmark {
   --icon-size: 24px;
   --icon-secondary-color: rgb(77, 77, 77);

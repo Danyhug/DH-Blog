@@ -104,7 +104,7 @@ onMounted(loadProviders);
 </script>
 
 <style scoped>
-/* 组件类：模板中重复出现的同款样式（6 个标签共用），集中维护 */
+/* 组件类：6 个标签共用 */
 .tab-label {
     display: inline-flex;
     align-items: center;

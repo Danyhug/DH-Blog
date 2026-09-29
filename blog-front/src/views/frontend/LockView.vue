@@ -64,10 +64,7 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
-/*
-  只剩移动端覆盖块。这里的 !important 与无层级声明本来就压过工具类，
-  保留它们正好维持原有的断点行为，不需要也不能搬到 class 里。
-*/
+/* 移动端覆盖块：无层级 + !important，正好维持原有的断点行为 */
 @media (max-width: 1024px) {
   .left {
     display: none;
@@ -83,12 +80,6 @@ onMounted(() => {
       font-size: 12px !important;
 
       align-items: center;
-      /*
-        这里原本还有 `justify-content: center`，但它是**死声明**：
-        基础规则 `.lock-view .right { justify-content: flex-start }` 与它特异性相同
-        (0,2,0) 且更靠后，本来就赢。基础值现已内联成工具类（@layer utilities），
-        若把它留下，这条无层级声明反而会生效、把布局改成居中。故删掉以保持原样。
-      */
 
       &>div {
         margin-left: 5px !important;
@@ -102,11 +93,7 @@ onMounted(() => {
   }
 }
 
-/*
-  唯一必须留在这里的按钮规则：它的主体是「祖先 :hover + 后代 span」。
-  改成 span 自己的 `hover:` 不等价 —— 按钮有 3px padding，hover 那一圈时
-  原来的写法会变、span:hover 不会变。其余按钮样式已内联到模板。
-*/
+/* 祖先 :hover + 后代 span；改成 span:hover 不等价（按钮有 3px padding） */
 .lock-view .right button:hover span {
   background: none;
 }

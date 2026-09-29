@@ -306,18 +306,13 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
 </script>
 
 <style scoped lang="less">
-/*
-  .title-input 的 width/font-size 必须留成 scoped 规则：
-  Element Plus 的 .el-input 声明了 width: var(--el-input-width) 与 font-size: var(--el-font-size-base)，
-  无层级声明会压掉 @layer utilities 里的 w-[calc(100%-150px)] / text-[16px]
-  （实测宽度 606px -> 756px、字号 16px -> 14px）。
-*/
+/* .el-input 自带 width/font-size（无层级），压过工具类（实测 606→756px、16→14px） */
 .title-input {
   width: calc(100% - 150px);
   font-size: 16px;
 }
 
-/* 覆盖 md-editor-v3 的编辑器正文 */
+/* 覆盖 md-editor-v3 编辑器正文 */
 :deep(.cm-editor .cm-line) {
   font-family: '微软雅黑', 'Georgia';
   line-height: 25px !important;
@@ -327,11 +322,7 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
 </style>
 
 <style>
-/*
-  这一块没有 scoped，但要保留：命中的都是拿不到 class 的 DOM。
-  Element Plus 的 Upload 根节点不带任何类名，`el-upload` 是它内部 upload-content 的根节点
-  （由库的 render 生成，工具类加不上去）；.emojis 同理属于第三方 @vavt/v3-extension 的表情面板。
-*/
+/* 本块无 scoped：EP 的 Upload 根节点与第三方表情面板都拿不到 class */
 .avatar-uploader .el-upload {
   border: 1px dashed var(--el-border-color);
   border-radius: 6px;

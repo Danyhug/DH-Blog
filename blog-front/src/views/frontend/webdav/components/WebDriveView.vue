@@ -1481,28 +1481,8 @@ onUnmounted(() => {
 
 
 <style scoped>
-/*
-  本文件原来是**非 scoped** 的 lang="less"，嵌套在 `.web-drive-container` 下的规则会全局泄漏。
-  逐条核对过：产物里真正全局生效的顶层选择器只有下面这些，且没有任何其他组件依赖
-  （`.dialog-footer` 的泄漏形态是 `.dialog-box .dialog-footer`，4 个引用它的后台组件都不在
-  `.dialog-box` 内，从未吃到过）。因此收紧为 scoped 不改变任何既有渲染。
 
-  只保留 CSS 能表达、工具类表达不了的四类：
-
-  1. Vue <transition> 运行时生成的类（.simple-fade-*）——模板里静态写不出来。
-  2. 组件类（迁移方案 §4.5，≥3 处复用）：.toolbar-left 的 7 个按钮共用 3 档断点的一套按钮基础样式，
-     .dialog-footer 的 4 个按钮同理；逐元素内联会产生 7 份 / 4 份 300+ 字符的重复 class 串。
-  3. 文件卡片图标：8 种类型的颜色靠 `.file-icon-container.<类型> .file-icon` 后代选择器配对，
-     并叠 3 档尺寸断点（共 20 条规则）。
-  4. 无工具类对应的写法：`.folder-item:hover .folder-icon`（祖先 :hover + 后代）、
-     `.new-uploaded-file::after`（伪元素角标 + animation）。
-
-  其余（布局、栅格、卡片、右键菜单、对话框、上传蒙版、加载态）全部内联到模板。
-  三处 keyframes 已按 §4.1 挪进 tailwind.css 的 @theme，改成 animate-spin /
-  animate-dialog-appear / animate-highlight-pulse。
-*/
-
-/* 1. Vue transition 运行时类 */
+/* Vue transition 运行时类，模板里静态写不出来 */
 .simple-fade-enter-active,
 .simple-fade-leave-active {
   transition: opacity 0.25s ease;
@@ -1513,13 +1493,7 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-/*
-  2a. 图标尺寸（icon-sm 模板 7 处、icon-xs 5 处）
-
-  icon-xs 的 5 处用法全部在右键菜单项内，原文件里 `.context-menu li .icon-xs`
-  把顶层那份 12px 覆盖成了桌面 16px、≤768px 18px（12px 从未生效）。
-  这里直接写成实际生效的两个值。
-*/
+/* 尺寸：icon-sm 7 处、icon-xs 5 处复用 */
 .icon-xs {
   width: 16px;
   height: 16px;
@@ -1537,7 +1511,6 @@ onUnmounted(() => {
   height: 16px;
 }
 
-/* 2b. 工具栏与搜索框：7 个按钮 + 搜索区各自 3 档断点 */
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -1553,6 +1526,7 @@ onUnmounted(() => {
   }
 }
 
+/* 组件类：7 个按钮共用 3 档断点的一套基础样式 */
 .toolbar-left {
   display: flex;
   gap: 10px;
@@ -1645,7 +1619,7 @@ onUnmounted(() => {
     background-color: #1a7aef;
   }
 
-  /* 第 3 个起且倒数 4 个内的按钮（下载/分享/预览/进入文件夹）占满整行 */
+  /* 第 3 个起、倒数 4 个内的按钮占满整行 */
   .toolbar-left .btn-primary:nth-child(n+3):nth-last-child(-n+4),
   .toolbar-left .btn-outline:nth-child(n+3):nth-last-child(-n+4) {
     flex: 1;
@@ -1708,7 +1682,7 @@ onUnmounted(() => {
   }
 }
 
-/* 3. 文件卡片图标：8 种类型配色 × 容器/图标两个元素 + 3 档尺寸断点 */
+/* 8 种类型配色靠后代选择器配对 + 3 档尺寸断点 */
 .file-icon-container {
   width: 60px;
   height: 60px;
@@ -1790,17 +1764,11 @@ onUnmounted(() => {
   }
 }
 
-/* 4a. 祖先 :hover + 后代选择器，工具类无对应写法 */
+/* 祖先 :hover + 后代，工具类无对应写法 */
 .folder-item:hover .folder-icon {
   transform: scale(1.1);
 }
 
-/*
-  4b. 新上传文件的脉动与「新」角标。
-  原文件里 .file-item.new-uploaded-file 被声明了两次（一次嵌套在 .web-drive-container
-  .file-container .file-grid 下、一次在顶层），下面是合并后的唯一一份，取嵌套那份的
-  取值（原特异性更高，本就由它生效），并保留顶层独有的 position 与 ::after。
-*/
 .file-item.new-uploaded-file {
   background-color: rgba(59, 130, 246, 0.1);
   border: 1px solid rgba(59, 130, 246, 0.4);
@@ -1808,6 +1776,7 @@ onUnmounted(() => {
   position: relative;
 }
 
+/* 伪元素角标 + animation */
 .file-item.new-uploaded-file::after {
   content: "新";
   position: absolute;
@@ -1827,12 +1796,12 @@ onUnmounted(() => {
   z-index: 10;
 }
 
-/* §4.8：style.less 的 `h1, h2, h3 { font-weight: 400 }` 是无层级规则，压掉字重工具类 */
+/* 字重：style.less 全局规则是无层级的，压过工具类 */
 .dialog-header h3 {
   font-weight: 500;
 }
 
-/* 2c. 对话框底部按钮：4 个按钮共用 3 档断点 */
+/* 组件类：4 个按钮共用 3 档断点 */
 .dialog-footer button {
   padding: 8px 16px;
   border-radius: 4px;

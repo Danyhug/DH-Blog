@@ -63,15 +63,7 @@
   </div>
 </template>
 <style scoped lang="less">
-/*
-  保留的规则都有一处工具类替代不了的理由：
-  - `h1` 的 font-weight 被 style.less 全局 `h1, h2, h3 { font-weight: 400 }` 压住（无层级规则
-    永远赢过 @layer utilities），所以整条留在这里；
-  - :deep(.el-menu) 的 background-color / border 同理被 Element Plus 的 .el-menu 压住；
-  - .el-menu-item / .is-active 是 Element Plus 的内部类名与运行期状态类，
-    .fold-container 是 fold() 里 classList 切换的类名，工具类够不着；
-  - .container .el-icon 是 7 个菜单图标共用的同款样式，集中维护。
-*/
+/* 字重：style.less 全局 h1,h2,h3{font-weight:400} 是无层级规则，压过工具类 */
 h1 {
   opacity: 1;
   font-weight: bold;
@@ -120,6 +112,7 @@ h1 {
     opacity: 0;
   }
 
+  /* .el-menu 自带 background-color/border（无层级），压过工具类 */
   :deep(.el-menu) {
     padding: 0 5px;
   }
@@ -128,6 +121,7 @@ h1 {
     margin: 0;
   }
 
+  /* 库内部类与运行期状态类，工具类够不着；.fold-container 同理 */
   .el-menu-item {
     font-size: 0;
     --el-menu-base-level-padding: 12px;

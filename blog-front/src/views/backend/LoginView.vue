@@ -37,20 +37,12 @@
 </template>
 
 <style scoped lang="less">
-/*
-  .login-title 的字重只能留在这里：style.less 的 `h1, h2, h3 { font-weight: 400 }` 是无层级规则，
-  会压掉 @layer utilities 里的字重工具类（§4.8）。
-*/
+/* 字重：style.less 全局 h1,h2,h3{font-weight:400} 是无层级规则，压过工具类 */
 .login-title {
   font-weight: 600;
 }
 
-/*
-  登录按钮这三条也必须留成 scoped 规则：Element Plus 的 .el-button 声明了
-  display: inline-flex 与 background-color，.el-button--large 又设了 height: 40px，
-  无层级声明会压掉工具类（§4.8）。原写法是 `.login-btn button`，这里把类名直接放在 el-button 上
-  （Element Plus 会把 class 透传到那个 button 根节点）。
-*/
+/* .el-button 自带 display/background-color，--large 又设了 height（无层级），压过工具类 */
 .login-btn-main {
   display: block;
   height: 44px;

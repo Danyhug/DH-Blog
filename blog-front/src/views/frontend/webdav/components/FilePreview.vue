@@ -610,7 +610,7 @@ const retryPreview = () => {
 /**
  * 图标颜色类。这里直接返回工具类而不是「类名 → CSS 变量」：
  * 颜色必须只由一处决定——元素上若同时挂静态 text-[#999] 与类型色，
- * 两个同属性工具类谁生效取决于 Tailwind 生成顺序（见迁移方案 §4.9），
+ * 两个同属性工具类谁生效取决于 Tailwind 生成顺序，
  * 所以把兜底色也放进这张表里，由函数唯一决定颜色。
  */
 const getIconClass = (fileType: string) => {
@@ -851,15 +851,9 @@ onMounted(() => {
 </script>
 
 <style lang="less" scoped>
-/*
-  原来的 `@keyframes fade-in` 放在这里是个 bug：Vue 会把 scoped 块内的 keyframes
-  改名成 `fade-in-<scope>`，而根元素上的 `animate-[fade-in_0.3s_ease]` 引用的是
-  未改名的 `fade-in`，两者永远匹配不上 —— 实测 `getAnimations()` 返回 0 个动画，
-  也就是这个淡入从未播放过。已按 §4.1 把 keyframes 挪到 tailwind.css 的 @theme
-  （`--animate-fade-in`），根元素改用 `animate-fade-in`。
-*/
 
 /* Markdown 内容样式 - 因为是动态生成的 HTML 需要保留 */
+/* 本块不放 @keyframes：Vue 会改名，animation 引用即失配（keyframes 已移入 tailwind.css 的 @theme） */
 .markdown-content {
   h1, h2, h3, h4, h5, h6 {
     margin-top: 24px;

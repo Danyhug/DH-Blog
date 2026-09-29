@@ -213,16 +213,12 @@ onMounted(loadShares)
 </script>
 
 <style scoped>
-/* .panel-title 只留字重：style.less 的 `h1, h2, h3 { font-weight: 400 }` 是无层级规则（§4.8） */
+/* 字重：style.less 全局规则是无层级的，压过工具类 */
 .panel-title {
   font-weight: 600;
 }
 
-/*
-  组件类：模板中重复出现的同款样式，集中维护。
-  .hint 4 处、.badge（含 danger/warn 变体）4 处、.link-btn（含 danger/禁用/hover）7 处，
-  逐一内联会在模板里产生大段重复的 class 串（迁移方案 §4.5）。
-*/
+/* 组件类：.hint 4 处、.badge 4 处、.link-btn 7 处复用 */
 .hint {
   color: #9ca3af;
   font-size: 0.8rem;

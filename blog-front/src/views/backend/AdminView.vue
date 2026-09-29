@@ -22,10 +22,7 @@ import AdminFooter from '@/components/backend/AdminFooter.vue';
 </script>
 
 <style scoped>
-/*
-  el-aside 自带 overflow: auto，而 Tailwind 工具类位于 @layer utilities，
-  无层级的 Element Plus 样式总是压过它，所以这条只能留在 CSS 里。
-*/
+/* .el-aside 自带 overflow:auto（无层级），压过工具类 */
 .el-aside {
   overflow: hidden;
 }

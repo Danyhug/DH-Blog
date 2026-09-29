@@ -258,17 +258,14 @@ onMounted(load);
 </script>
 
 <style scoped>
-/*
-  组件类：模板中重复出现的同款样式，集中维护。
-  - .scope-group 的间隔靠相邻兄弟选择器表达，工具类没有等价写法；
-  - .step 用 :not(:first-of-type) 去掉首段的顶部间距，同样无等价工具类。
-*/
+/* 相邻兄弟选择器：无工具类写法 */
 .scope-group+.scope-group {
     margin-top: 24px;
     padding-top: 20px;
     border-top: 1px dashed #eaecf0;
 }
 
+/* 用 :not(:first-of-type) 去首段顶部间距，无工具类写法 */
 .step {
     margin-bottom: 8px;
     font-size: 13px;

@@ -50,19 +50,12 @@
   </div>
 </template>
 <style scoped lang="less">
-/*
-  只剩两类元素自己的样式，都是工具类替代不了的：
-  - .chart-select 的定宽：Element Plus 有 .el-select { width: var(--el-select-width) }（无层级规则），
-    会压过 @layer utilities 里的 w-[100px]；改 --el-select-width 也一样，同一元素上无层级声明优先。
-  - 按钮组的内边距/高度在库内部元素上，工具类加不上去；且 .el-radio-button--small 的选择器
-    比特异性高于裸 :deep()，需要 .chart-controls 作为锚点。
-
-  原文件是非 scoped 块，样式全局泄漏（§4.7），迁移后改为 scoped。
-*/
+/* .el-select 自带 width（无层级），压过 w-* 工具类 */
 .chart-select {
   width: 100px;
 }
 
+/* 库内部元素加不上 class；.chart-controls 是提升特异性的锚点 */
 .chart-controls :deep(.el-radio-button__inner) {
   padding: 6px 12px;
   height: 28px;

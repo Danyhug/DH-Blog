@@ -30,14 +30,7 @@ onMounted(() => {
 </script>
 
 <style lang="less" scoped>
-/*
-  `.fade-in-article` 由 JS 在运行时 add/remove（见 articleAnimate()），模板里写不出来，
-  因此这条规则与它的 ::after 必须留在 CSS 里。
-
-  同时它不能被内联的第二个原因：`animation: fadeIn` 引用的是本块内的 `@keyframes fadeIn`。
-  Vue 会把两者一起改名（fadeIn-<scope>），所以这份是「配得上」的；一旦把 animation 挪到
-  工具类里，引用的就是未改名的 fadeIn，会像 FilePreview 那样静默失效（§4.1）。
-*/
+/* 由 JS 运行时 add/remove；animation 引用本块 @keyframes fadeIn（Vue 会把两者一起改名，拆开即失效） */
 .fade-in-article {
   &::after {
     content: "";

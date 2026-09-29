@@ -177,11 +177,7 @@ function deleteFile() {
 </script>
 
 <style scoped>
-/*
-  组件类：模板中重复出现的同款样式，集中维护。
-  .tab 用于 3 个底部标签、.option-item 用于 5 个操作项、.icon-sm 在模板里出现 8 次，
-  逐一内联会在模板里产生大段重复的 class 串（迁移方案 §4.5）。
-*/
+/* 组件类：.tab 3 处、.option-item 5 处、.icon-sm 8 处复用 */
 .tab {
   flex: 1;
   display: flex;
@@ -215,10 +211,7 @@ function deleteFile() {
   height: 1.25rem;
 }
 
-/*
-  h3 的字重只能留成 scoped 规则：style.less 的 `h1, h2, h3 { font-weight: 400 }`
-  是无层级规则，会压掉 @layer utilities 里的字重工具类（迁移方案 §4.8）。
-*/
+/* 字重：style.less 全局 h1,h2,h3{font-weight:400} 是无层级规则，压过工具类 */
 .options-header h3 {
   font-weight: 600;
 }
