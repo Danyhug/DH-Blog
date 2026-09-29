@@ -20,7 +20,7 @@
     </div>
 
     <div class="mt-[15px] px-[8px]" v-loading="loading">
-      <el-table :data="ipData" @scroll.native="loadMore" style="overflow-y: auto; max-height: 315px;"
+      <el-table :data="ipData" @scroll.native="loadMore" class="overflow-y-auto! max-h-[315px]"
         @row-click="handleRowClick" :row-class-name="tableRowClassName">
 
         <el-table-column type="index" label="No" min-width="8%"></el-table-column>

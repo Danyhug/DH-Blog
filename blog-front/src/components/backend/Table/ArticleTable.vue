@@ -1,5 +1,5 @@
 <template>
-  <el-table :data="props.articles" style="width: 100%;">
+  <el-table :data="props.articles" class="w-full">
     <el-table-column prop="id" label="编号" width="70" />
     <el-table-column label="文章标题" min-width="220">
       <template #default="scope">

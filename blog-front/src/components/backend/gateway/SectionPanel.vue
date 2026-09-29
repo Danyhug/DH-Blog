@@ -1,11 +1,11 @@
 <template>
-    <section class="panel bg-white border border-[#edf0f3] rounded-[14px] shadow-[0_1px_2px_rgba(16,24,40,0.04)] overflow-hidden">
+    <section class="panel [&+.panel]:mt-[18px] bg-white border border-[#edf0f3] rounded-[14px] shadow-[0_1px_2px_rgba(16,24,40,0.04)] overflow-hidden">
         <header class="flex items-center gap-[12px] px-[20px] py-[16px] border-b border-[#f2f4f7]">
             <span v-if="$slots.icon" class="inline-flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-[#eef4ff] text-[#3f8cff] text-[17px]">
                 <slot name="icon" />
             </span>
             <div class="min-w-0 flex-1">
-                <h3 class="panel-title m-0 text-[15px] text-[#1f2937]">{{ title }}</h3>
+                <h3 class="font-semibold! m-0 text-[15px] text-[#1f2937]">{{ title }}</h3>
                 <p v-if="subtitle" class="mt-[3px] mb-0 text-[12px] leading-[1.5] text-[#98a2b3]">{{ subtitle }}</p>
             </div>
             <div v-if="$slots.extra" class="shrink-0">
@@ -27,15 +27,3 @@ withDefaults(defineProps<{ title: string; subtitle?: string; flush?: boolean }>(
     flush: false
 });
 </script>
-
-<style scoped>
-/* 相邻兄弟选择器：面板间距无工具类写法 */
-.panel+.panel {
-    margin-top: 18px;
-}
-
-/* 字重：style.less 全局 h1,h2,h3{font-weight:400} 是无层级规则，压过工具类 */
-.panel-title {
-    font-weight: 600;
-}
-</style>

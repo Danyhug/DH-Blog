@@ -1,6 +1,6 @@
 <template>
   <div class="common-layout">
-    <el-container style="position: relative;">
+    <el-container class="relative">
       <el-aside class="sticky top-0 h-screen bg-[#fbfbfb] shadow-[4px_0_10px_rgb(248,248,248)] transition-[width] duration-[600ms] [--el-aside-width:234px]">
         <AdminSide></AdminSide>
       </el-aside>
@@ -8,7 +8,7 @@
         <el-main class="bg-[var(--dh-admin-bg)]">
           <router-view></router-view>
         </el-main>
-        <el-footer style="display: flex; align-items: center; justify-content: center;">
+        <el-footer class="flex items-center justify-center">
           <AdminFooter></AdminFooter>
         </el-footer>
       </el-container>

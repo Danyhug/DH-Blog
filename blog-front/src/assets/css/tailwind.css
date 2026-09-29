@@ -76,6 +76,16 @@
   --animate-highlight-pulse: highlight-pulse 2s ease-in-out infinite;
   --animate-fade-in-up: fade-in-up 1s cubic-bezier(0.215, 0.61, 0.355, 1) both;
   --animate-fade-in: fade-in 0.3s ease;
+  --animate-upload-progress: upload-progress 2s ease-in-out infinite;
+
+  @keyframes upload-progress {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
 
   @keyframes dialog-appear {
     from {

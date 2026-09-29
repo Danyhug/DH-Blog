@@ -28,7 +28,7 @@
 
       <div class="flex justify-between">
         <el-input placeholder="输入文章标题" clearable class="title-input" v-model="article.title" />
-        <el-switch class="w-[120px]" style="--el-switch-on-color: #13ce66; --el-switch-off-color: #4aa0ff"
+        <el-switch class="w-[120px] [--el-switch-on-color:#13ce66]! [--el-switch-off-color:#4aa0ff]!"
           inactive-text="公开" active-text="私密" v-model="article.isLocked" @change="changeArticleStatus" />
       </div>
 
@@ -50,7 +50,7 @@
     <template #defToolbars>
       <Emoji :emojis="emojis" :selectAfterInsert="false">
         <template #trigger>
-          <span style="font-size: 1.5rem;">🐶</span>
+          <span class="text-[1.5rem]">🐶</span>
         </template>
       </Emoji>
     </template>

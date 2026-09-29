@@ -2,7 +2,7 @@
   <div class="fixed top-1/2 left-1/2 z-[1102] w-[450px] max-w-[95vw] bg-[rgba(255,255,255,0.95)] backdrop-blur-[24px] rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.2)] pointer-events-auto [transform:translate(-50%,-50%)]">
     <div class="p-6 max-h-[80vh] overflow-y-auto">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="modal-title text-[1.125rem] text-[#111827] m-0">文件上传</h3>
+        <h3 class="font-semibold! text-[1.125rem] text-[#111827] m-0">文件上传</h3>
         <button class="p-2 rounded-md cursor-pointer transition-[background-color] duration-200 ease-[ease] hover:bg-[rgba(156,163,175,0.1)]" @click="$emit('close')">
           <XIcon class="w-4 h-4" />
         </button>
@@ -37,8 +37,8 @@
           :key="index"
           class="flex items-center gap-3 p-2 rounded-md w-full box-border bg-[#f9fafb] transition-[background-color] duration-300 ease-[ease]"
         >
-          <div class="file-icon-container" :class="getFileIconClass(file)">
-            <component :is="getFileIcon(file)" class="file-icon" />
+          <div class="size-10 min-w-10 rounded-lg flex items-center justify-center" :class="getFileIconClass(file)">
+            <component :is="getFileIcon(file)" class="size-5" />
           </div>
           <div class="flex-1 min-w-0 overflow-hidden">
             <p class="text-[0.875rem] font-medium text-[#111827] m-0 whitespace-nowrap overflow-hidden text-ellipsis">{{ file.name }}</p>
@@ -59,8 +59,8 @@
           class="flex items-center gap-3 p-2 rounded-md w-full box-border transition-[background-color] duration-300 ease-[ease]"
           :class="uploadItemStateClass(result.status)"
         >
-          <div class="file-icon-container" :class="getFileIconClass(result.file)">
-            <component :is="getFileIcon(result.file)" class="file-icon" />
+          <div class="size-10 min-w-10 rounded-lg flex items-center justify-center" :class="getFileIconClass(result.file)">
+            <component :is="getFileIcon(result.file)" class="size-5" />
           </div>
           <div class="flex-1 min-w-0 overflow-hidden">
             <p class="text-[0.875rem] font-medium text-[#111827] m-0 whitespace-nowrap overflow-hidden text-ellipsis">{{ result.file.name }}</p>
@@ -70,17 +70,17 @@
                   ({{ result.uploadedChunks }}/{{ result.totalChunks }})
                 </span>
               </p>
-              <span v-if="result.status === 'success'" class="status-badge success">成功</span>
-              <span v-else-if="result.status === 'error'" class="status-badge error">失败</span>
-              <span v-else-if="result.status === 'pending'" class="status-badge pending">
-                <span class="loading-spinner"></span>上传中
+              <span v-if="result.status === 'success'" class="items-center py-0.5 px-2 rounded-[1rem] text-[0.75rem] font-medium inline-flex bg-[rgba(16,185,129,0.1)] text-[#10b981]">成功</span>
+              <span v-else-if="result.status === 'error'" class="items-center py-0.5 px-2 rounded-[1rem] text-[0.75rem] font-medium inline-flex bg-[rgba(239,68,68,0.1)] text-[#ef4444]">失败</span>
+              <span v-else-if="result.status === 'pending'" class="items-center py-0.5 px-2 rounded-[1rem] text-[0.75rem] font-medium flex gap-1 bg-[rgba(59,130,246,0.1)] text-[#3b82f6]">
+                <span class="inline-block size-3 border-2 border-[rgba(59,130,246,0.3)] border-t-[#3b82f6] rounded-[50%] animate-spin"></span>上传中
               </span>
             </div>
             <!-- 横向进度条 -->
             <div v-if="result.status === 'uploading' || result.status === 'pending'" class="mt-2 w-full">
               <div class="h-1 bg-[#e5e7eb] rounded-[2px] overflow-hidden">
                 <div
-                  class="progress-fill"
+                  class="h-full bg-[#3b82f6] rounded-[2px] [transition:width_0.3s_ease] animate-upload-progress"
                   :style="{
                     width: result.totalChunks && result.uploadedChunks !== undefined 
                       ? `${(result.uploadedChunks / result.totalChunks) * 100}%` 
@@ -118,7 +118,7 @@
 
       <div v-if="isUploading" class="mt-4">
         <div class="w-full h-2 bg-[#e5e7eb] rounded overflow-hidden">
-          <div class="progress-fill" :style="{ width: `${uploadProgress}%` }"></div>
+          <div class="h-full bg-[#3b82f6] rounded-[2px] [transition:width_0.3s_ease] animate-upload-progress" :style="{ width: `${uploadProgress}%` }"></div>
         </div>
         <p class="text-[0.75rem] text-[#6b7280] mt-1 mb-0 text-center">总进度：{{ uploadProgress }}%</p>
         <p class="text-[0.75rem] text-[#6b7280] mt-1 mb-0 text-center">
@@ -308,13 +308,13 @@ function getFileIconClass(file: File) {
   const fileType = file.type
   
   if (fileType.startsWith('image/')) {
-    return 'purple'
+    return 'bg-[#e9d5ff] [&>svg]:text-[#7c3aed]'
   } else if (fileType.startsWith('video/')) {
-    return 'orange'
+    return 'bg-[#ffedd5] [&>svg]:text-[#ea580c]'
   } else if (fileType.startsWith('audio/')) {
-    return 'blue'
+    return 'bg-[#dbeafe] [&>svg]:text-[#2563eb]'
   } else {
-    return 'gray'
+    return 'bg-[#f3f4f6] [&>svg]:text-[#6b7280]'
   }
 }
 
@@ -346,127 +346,3 @@ defineExpose({
   maxRetries
 })
 </script>
-
-<style scoped>
-/* 字重：style.less 全局规则是无层级的，压过工具类 */
-.modal-title {
-  font-weight: 600;
-}
-
-/* 组件类：4 种文件类型配色，容器底色与图标颜色靠后代选择器配对 */
-.file-icon-container {
-  width: 2.5rem;
-  height: 2.5rem;
-  min-width: 2.5rem;
-  border-radius: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.file-icon-container.blue {
-  background: #dbeafe;
-}
-
-.file-icon-container.purple {
-  background: #e9d5ff;
-}
-
-.file-icon-container.orange {
-  background: #ffedd5;
-}
-
-.file-icon-container.gray {
-  background: #f3f4f6;
-}
-
-.file-icon {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-.file-icon-container.blue .file-icon {
-  color: #2563eb;
-}
-
-.file-icon-container.purple .file-icon {
-  color: #7c3aed;
-}
-
-.file-icon-container.orange .file-icon {
-  color: #ea580c;
-}
-
-.file-icon-container.gray .file-icon {
-  color: #6b7280;
-}
-
-/* 组件类：状态徽标 3 处复用 */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.125rem 0.5rem;
-  border-radius: 1rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.status-badge.success {
-  background-color: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-}
-
-.status-badge.error {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-}
-
-.status-badge.pending {
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-/* 必须与下方 @keyframes 同块：Vue 会给 scoped 里的 keyframes 改名，animation 挪进工具类会失配 */
-.loading-spinner {
-  display: inline-block;
-  width: 0.75rem;
-  height: 0.75rem;
-  border: 2px solid rgba(59, 130, 246, 0.3);
-  border-radius: 50%;
-  border-top-color: #3b82f6;
-  animation: spin 1s linear infinite;
-}
-
-.progress-fill {
-  height: 100%;
-  background: #3b82f6;
-  border-radius: 2px;
-  transition: width 0.3s ease;
-  animation: progress-animation 2s ease-in-out infinite;
-}
-
-@keyframes progress-animation {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-</style>

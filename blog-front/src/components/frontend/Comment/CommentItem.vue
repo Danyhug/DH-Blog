@@ -20,7 +20,7 @@
           </div>
 
           <div class="reply-button mt-4 text-[12px]">
-            <span class="inline-block cursor-pointer" :class="{ 'reply-enter': replay == comment.id }" @click="replyComment(comment.id)">回复</span>
+            <span class="inline-block cursor-pointer" :class="{ 'text-[rgb(31,109,218)] font-bold': replay == comment.id }" @click="replyComment(comment.id)">回复</span>
 
             <Transition>
               <div class="reply-edit mt-4" v-if="replay == comment.id">
@@ -59,11 +59,6 @@
   }
 }
 
-/* 由 :class 运行时切换，模板里写不出固定 class 串 */
-.reply-enter {
-  color: rgb(31, 109, 218);
-  font-weight: bold;
-}
 </style>
 
 <script setup>

@@ -3,7 +3,7 @@
         <el-tabs v-model="activeTab">
             <el-tab-pane name="overview" lazy>
                 <template #label>
-                    <span class="tab-label">
+                    <span class="inline-flex items-center gap-[6px]">
                         <el-icon>
                             <DataAnalysis />
                         </el-icon> 概览
@@ -14,7 +14,7 @@
 
             <el-tab-pane name="providers" lazy>
                 <template #label>
-                    <span class="tab-label">
+                    <span class="inline-flex items-center gap-[6px]">
                         <el-icon>
                             <Connection />
                         </el-icon> 供应商
@@ -25,7 +25,7 @@
 
             <el-tab-pane name="routing" lazy>
                 <template #label>
-                    <span class="tab-label">
+                    <span class="inline-flex items-center gap-[6px]">
                         <el-icon>
                             <Switch />
                         </el-icon> 调度策略
@@ -36,7 +36,7 @@
 
             <el-tab-pane name="mcp" lazy>
                 <template #label>
-                    <span class="tab-label">
+                    <span class="inline-flex items-center gap-[6px]">
                         <el-icon>
                             <Cpu />
                         </el-icon> MCP 能力
@@ -47,7 +47,7 @@
 
             <el-tab-pane name="keys" lazy>
                 <template #label>
-                    <span class="tab-label">
+                    <span class="inline-flex items-center gap-[6px]">
                         <el-icon>
                             <Key />
                         </el-icon> 接入密钥
@@ -58,7 +58,7 @@
 
             <el-tab-pane name="logs" lazy>
                 <template #label>
-                    <span class="tab-label">
+                    <span class="inline-flex items-center gap-[6px]">
                         <el-icon>
                             <Document />
                         </el-icon> 请求日志
@@ -104,13 +104,6 @@ onMounted(loadProviders);
 </script>
 
 <style scoped>
-/* 组件类：6 个标签共用 */
-.tab-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
 :deep(.el-tabs__header) {
     margin-bottom: 20px;
 }

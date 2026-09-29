@@ -2,7 +2,7 @@
   <div class="absolute top-32 left-1/2 z-[25] w-[360px] bg-[rgba(255,255,255,0.95)] backdrop-blur-[24px] rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.2)] [transform:translateX(-50%)_translateX(8rem)]">
     <div class="p-5">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="popup-title text-[1rem] text-[#111827] m-0">创建分享链接</h3>
+        <h3 class="font-semibold! text-[1rem] text-[#111827] m-0">创建分享链接</h3>
         <button class="p-2 rounded-md cursor-pointer transition-[background-color] duration-200 ease-[ease] hover:bg-[rgba(156,163,175,0.1)]" @click="$emit('close')">
           <XIcon class="w-4 h-4" />
         </button>
@@ -23,9 +23,9 @@
         <template v-if="!shareCreated">
           <div class="flex items-center justify-between">
             <span class="text-[0.875rem] text-[#374151]">设置密码</span>
-            <label class="toggle-switch">
-              <input type="checkbox" v-model="usePassword" />
-              <span class="toggle-slider"></span>
+            <label class="relative inline-block w-[44px] h-6">
+              <input type="checkbox" v-model="usePassword" class="peer opacity-0 size-0" />
+              <span class="absolute cursor-pointer inset-0 bg-[#ccc] [transition:0.4s] rounded-[24px] before:absolute before:content-[''] before:size-[18px] before:left-[3px] before:bottom-[3px] before:bg-white before:[transition:0.4s] before:rounded-[50%] peer-checked:bg-[#3b82f6] peer-checked:before:[transform:translateX(20px)]"></span>
             </label>
           </div>
 
@@ -34,14 +34,14 @@
               type="text"
               v-model="password"
               placeholder="请输入访问密码"
-              class="url-input"
+              class="flex-1 py-2 px-3 border border-[#d1d5db] rounded-md text-[0.875rem] bg-[#f9fafb] focus:outline-none focus:border-[#2563eb]"
               maxlength="32"
             />
           </div>
 
           <div class="flex items-center justify-between">
             <span class="text-[0.875rem] text-[#374151]">过期时间</span>
-            <select v-model="expireDays" class="select-input">
+            <select v-model="expireDays" class="py-1.5 px-3 border border-[#d1d5db] rounded-md text-[0.875rem] bg-[#f9fafb] cursor-pointer focus:outline-none focus:border-[#2563eb]">
               <option :value="0">永不过期</option>
               <option :value="1">1天</option>
               <option :value="7">7天</option>
@@ -52,7 +52,7 @@
 
           <div class="flex items-center justify-between">
             <span class="text-[0.875rem] text-[#374151]">下载次数限制</span>
-            <select v-model="maxDownloadCount" class="select-input">
+            <select v-model="maxDownloadCount" class="py-1.5 px-3 border border-[#d1d5db] rounded-md text-[0.875rem] bg-[#f9fafb] cursor-pointer focus:outline-none focus:border-[#2563eb]">
               <option :value="0">不限制</option>
               <option :value="1">1次</option>
               <option :value="10">10次</option>
@@ -61,7 +61,7 @@
             </select>
           </div>
 
-          <button class="create-btn" @click="createShareLink" :disabled="creating">
+          <button class="w-full py-3 px-4 text-white border-none rounded-lg text-[0.875rem] font-medium cursor-pointer [transition:background-color_0.2s] mt-2 disabled:opacity-60 disabled:cursor-not-allowed bg-[#2563eb] [&:hover:not(:disabled)]:bg-[#1d4ed8]" @click="createShareLink" :disabled="creating">
             {{ creating ? '创建中...' : '创建分享链接' }}
           </button>
         </template>
@@ -75,10 +75,10 @@
                 type="text"
                 :value="shareUrl"
                 readonly
-                class="url-input"
+                class="flex-1 py-2 px-3 border border-[#d1d5db] rounded-md text-[0.875rem] bg-[#f9fafb] focus:outline-none focus:border-[#2563eb]"
                 ref="urlInput"
               />
-              <button class="copy-btn" @click="copyUrl">复制</button>
+              <button class="bg-[#2563eb] text-white border-none py-2 px-4 rounded-md text-[0.875rem] cursor-pointer [transition:background-color_0.2s] whitespace-nowrap [&:hover]:bg-[#1d4ed8]" @click="copyUrl">复制</button>
             </div>
           </div>
 
@@ -89,9 +89,9 @@
                 type="text"
                 :value="displayPassword"
                 readonly
-                class="url-input"
+                class="flex-1 py-2 px-3 border border-[#d1d5db] rounded-md text-[0.875rem] bg-[#f9fafb] focus:outline-none focus:border-[#2563eb]"
               />
-              <button class="copy-btn" @click="copyPassword">复制</button>
+              <button class="bg-[#2563eb] text-white border-none py-2 px-4 rounded-md text-[0.875rem] cursor-pointer [transition:background-color_0.2s] whitespace-nowrap [&:hover]:bg-[#1d4ed8]" @click="copyPassword">复制</button>
             </div>
           </div>
 
@@ -108,7 +108,7 @@
             </p>
           </div>
 
-          <button class="create-btn secondary" @click="resetShare">
+          <button class="w-full py-3 px-4 text-white border-none rounded-lg text-[0.875rem] font-medium cursor-pointer [transition:background-color_0.2s] mt-2 disabled:opacity-60 disabled:cursor-not-allowed bg-[#6b7280] [&:hover]:bg-[#4b5563]" @click="resetShare">
             创建新的分享
           </button>
         </template>
@@ -232,132 +232,3 @@ function resetShare() {
   maxDownloadCount.value = 0
 }
 </script>
-
-<style scoped>
-/* 字重：style.less 全局规则是无层级的，压过工具类 */
-.popup-title {
-  font-weight: 600;
-}
-
-/* 重复 ≥2 次且带状态伪类的表单控件类，内联会撑长 class 串 */
-.url-input {
-  flex: 1;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  background: #f9fafb;
-}
-
-.url-input:focus {
-  outline: none;
-  border-color: #2563eb;
-}
-
-.copy-btn {
-  background: #2563eb;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  white-space: nowrap;
-}
-
-.copy-btn:hover {
-  background: #1d4ed8;
-}
-
-/* 纯 CSS 状态机：input:checked + ... 兄弟选择器无工具类写法 */
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 44px;
-  height: 24px;
-}
-
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.toggle-slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  transition: 0.4s;
-  border-radius: 24px;
-}
-
-.toggle-slider:before {
-  position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  transition: 0.4s;
-  border-radius: 50%;
-}
-
-input:checked + .toggle-slider {
-  background-color: #3b82f6;
-}
-
-input:checked + .toggle-slider:before {
-  transform: translateX(20px);
-}
-
-.select-input {
-  padding: 0.375rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  background: #f9fafb;
-  cursor: pointer;
-}
-
-.select-input:focus {
-  outline: none;
-  border-color: #2563eb;
-}
-
-.create-btn {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  margin-top: 0.5rem;
-}
-
-.create-btn:hover:not(:disabled) {
-  background: #1d4ed8;
-}
-
-.create-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.create-btn.secondary {
-  background: #6b7280;
-}
-
-.create-btn.secondary:hover {
-  background: #4b5563;
-}
-</style>

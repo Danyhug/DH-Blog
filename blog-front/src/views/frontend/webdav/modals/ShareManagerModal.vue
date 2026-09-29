@@ -2,7 +2,7 @@
   <div class="absolute top-16 left-1/2 z-[25] w-[min(560px,calc(100%-2rem))] [transform:translateX(-50%)]">
     <div class="bg-[rgba(255,255,255,0.97)] backdrop-blur-[24px] rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.2)] p-5">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="panel-title flex items-center gap-2 m-0 text-[1rem] text-[#111827] truncate">
+        <h3 class="font-semibold! flex items-center gap-2 m-0 text-[1rem] text-[#111827] truncate">
           <button v-if="logsFor" class="px-2 py-[0.35rem] rounded-md cursor-pointer text-[#6b7280] text-[1rem] transition-[background-color] duration-200 ease-[ease] hover:bg-[rgba(156,163,175,0.12)]" @click="closeLogs">←</button>
           {{ logsFor ? `访问日志 · ${logsFor.file_name || logsFor.file_key}` : '我的分享' }}
         </h3>
@@ -13,8 +13,8 @@
 
       <!-- 分享列表 -->
       <div v-if="!logsFor" class="max-h-[26rem] overflow-y-auto">
-        <p v-if="loading" class="hint">加载中…</p>
-        <p v-else-if="shares.length === 0" class="hint">还没有创建过分享链接</p>
+        <p v-if="loading" class="text-[#9ca3af] text-[0.8rem] text-center py-8 px-0 m-0">加载中…</p>
+        <p v-else-if="shares.length === 0" class="text-[#9ca3af] text-[0.8rem] text-center py-8 px-0 m-0">还没有创建过分享链接</p>
 
         <ul v-else class="list-none m-0 p-0">
           <li v-for="share in shares" :key="share.id" class="py-3 border-b border-[rgba(229,231,235,0.8)] last:border-b-0">
@@ -23,10 +23,10 @@
                 {{ share.file_missing ? '文件已删除' : share.file_name }}
               </p>
               <div class="flex gap-1 shrink-0">
-                <span v-if="share.has_password" class="badge">密码</span>
-                <span v-if="share.is_expired" class="badge danger">已过期</span>
-                <span v-else-if="share.expire_at" class="badge">{{ formatExpire(share.expire_at) }} 到期</span>
-                <span v-else class="badge warn">永不过期</span>
+                <span v-if="share.has_password" class="text-[0.6875rem] py-[0.1rem] px-[0.4rem] rounded whitespace-nowrap bg-[#eef2ff] text-[#4f46e5]">密码</span>
+                <span v-if="share.is_expired" class="text-[0.6875rem] py-[0.1rem] px-[0.4rem] rounded whitespace-nowrap bg-[#fee2e2] text-[#b91c1c]">已过期</span>
+                <span v-else-if="share.expire_at" class="text-[0.6875rem] py-[0.1rem] px-[0.4rem] rounded whitespace-nowrap bg-[#eef2ff] text-[#4f46e5]">{{ formatExpire(share.expire_at) }} 到期</span>
+                <span v-else class="text-[0.6875rem] py-[0.1rem] px-[0.4rem] rounded whitespace-nowrap bg-[#fef3c7] text-[#b45309]">永不过期</span>
               </div>
             </div>
 
@@ -38,10 +38,10 @@
             </p>
 
             <div class="flex gap-3">
-              <button class="link-btn" @click="copyLink(share)">复制链接</button>
-              <button class="link-btn" @click="openLogs(share)">访问日志</button>
+              <button class="bg-transparent border-none p-0 text-[0.75rem] cursor-pointer [&:hover:not(:disabled)]:underline disabled:cursor-not-allowed text-[#2563eb] disabled:text-[#9ca3af]" @click="copyLink(share)">复制链接</button>
+              <button class="bg-transparent border-none p-0 text-[0.75rem] cursor-pointer [&:hover:not(:disabled)]:underline disabled:cursor-not-allowed text-[#2563eb] disabled:text-[#9ca3af]" @click="openLogs(share)">访问日志</button>
               <button
-                class="link-btn danger"
+                class="bg-transparent border-none p-0 text-[0.75rem] cursor-pointer [&:hover:not(:disabled)]:underline disabled:cursor-not-allowed text-[#dc2626]"
                 :disabled="revoking[share.id]"
                 @click="revoke(share)"
               >
@@ -52,16 +52,16 @@
         </ul>
 
         <div v-if="totalPages > 1" class="flex items-center justify-center gap-4 pt-3 border-t border-[rgba(229,231,235,0.8)] mt-2">
-          <button class="link-btn" :disabled="page <= 1" @click="goPage(page - 1)">上一页</button>
+          <button class="bg-transparent border-none p-0 text-[0.75rem] cursor-pointer [&:hover:not(:disabled)]:underline disabled:cursor-not-allowed text-[#2563eb] disabled:text-[#9ca3af]" :disabled="page <= 1" @click="goPage(page - 1)">上一页</button>
           <span class="text-[0.75rem] text-[#6b7280]">{{ page }} / {{ totalPages }}</span>
-          <button class="link-btn" :disabled="page >= totalPages" @click="goPage(page + 1)">下一页</button>
+          <button class="bg-transparent border-none p-0 text-[0.75rem] cursor-pointer [&:hover:not(:disabled)]:underline disabled:cursor-not-allowed text-[#2563eb] disabled:text-[#9ca3af]" :disabled="page >= totalPages" @click="goPage(page + 1)">下一页</button>
         </div>
       </div>
 
       <!-- 访问日志 -->
       <div v-else class="max-h-[26rem] overflow-y-auto">
-        <p v-if="logsLoading" class="hint">加载中…</p>
-        <p v-else-if="logs.length === 0" class="hint">这个分享还没有被访问过</p>
+        <p v-if="logsLoading" class="text-[#9ca3af] text-[0.8rem] text-center py-8 px-0 m-0">加载中…</p>
+        <p v-else-if="logs.length === 0" class="text-[#9ca3af] text-[0.8rem] text-center py-8 px-0 m-0">这个分享还没有被访问过</p>
 
         <ul v-else class="list-none m-0 p-0">
           <li v-for="log in logs" :key="log.id" class="flex items-center gap-3 py-2 border-b border-[rgba(229,231,235,0.6)] last:border-b-0 text-[0.75rem] text-[#4b5563]">
@@ -72,9 +72,9 @@
         </ul>
 
         <div v-if="logsTotalPages > 1" class="flex items-center justify-center gap-4 pt-3 border-t border-[rgba(229,231,235,0.8)] mt-2">
-          <button class="link-btn" :disabled="logsPage <= 1" @click="goLogsPage(logsPage - 1)">上一页</button>
+          <button class="bg-transparent border-none p-0 text-[0.75rem] cursor-pointer [&:hover:not(:disabled)]:underline disabled:cursor-not-allowed text-[#2563eb] disabled:text-[#9ca3af]" :disabled="logsPage <= 1" @click="goLogsPage(logsPage - 1)">上一页</button>
           <span class="text-[0.75rem] text-[#6b7280]">{{ logsPage }} / {{ logsTotalPages }}</span>
-          <button class="link-btn" :disabled="logsPage >= logsTotalPages" @click="goLogsPage(logsPage + 1)">下一页</button>
+          <button class="bg-transparent border-none p-0 text-[0.75rem] cursor-pointer [&:hover:not(:disabled)]:underline disabled:cursor-not-allowed text-[#2563eb] disabled:text-[#9ca3af]" :disabled="logsPage >= logsTotalPages" @click="goLogsPage(logsPage + 1)">下一页</button>
         </div>
       </div>
     </div>
@@ -211,60 +211,3 @@ function formatExpire(value: string) {
 
 onMounted(loadShares)
 </script>
-
-<style scoped>
-/* 字重：style.less 全局规则是无层级的，压过工具类 */
-.panel-title {
-  font-weight: 600;
-}
-
-/* 组件类：.hint 4 处、.badge 4 处、.link-btn 7 处复用 */
-.hint {
-  color: #9ca3af;
-  font-size: 0.8rem;
-  text-align: center;
-  padding: 2rem 0;
-  margin: 0;
-}
-
-.badge {
-  font-size: 0.6875rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 0.25rem;
-  background: #eef2ff;
-  color: #4f46e5;
-  white-space: nowrap;
-}
-
-.badge.danger {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
-.badge.warn {
-  background: #fef3c7;
-  color: #b45309;
-}
-
-.link-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: 0.75rem;
-  color: #2563eb;
-  cursor: pointer;
-}
-
-.link-btn:hover:not(:disabled) {
-  text-decoration: underline;
-}
-
-.link-btn:disabled {
-  color: #9ca3af;
-  cursor: not-allowed;
-}
-
-.link-btn.danger {
-  color: #dc2626;
-}
-</style>

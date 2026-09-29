@@ -1,5 +1,5 @@
 <template>
-  <div style="width: 100%;">
+  <div class="w-full">
     <el-row>
       <el-col>
         <el-card class="box w-full min-h-screen">
@@ -18,7 +18,7 @@
               <Icon iconName="icon-31erweima" iconSize="2"></Icon>
             </a>
             <a class="cursor-pointer">
-              <Icon iconName="icon-fangda" style="margin-top: 3px;" iconSize="1.56"
+              <Icon iconName="icon-fangda" class="mt-[3px]" iconSize="1.56"
                 @click="store.aritcleModel.isFullPreview = !store.aritcleModel.isFullPreview"></Icon>
             </a>
             <a class="cursor-pointer">

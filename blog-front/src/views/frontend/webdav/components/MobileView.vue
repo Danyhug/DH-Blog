@@ -2,16 +2,16 @@
   <div class="w-full h-screen bg-white flex flex-col relative">
       <div class="p-4 border-b border-[#f3f4f6]">
       <div class="flex mb-4">
-        <div class="tab active">
-          <HomeIcon class="icon-sm" />
+        <div class="flex-1 flex flex-col items-center gap-1 p-2 text-[0.75rem] text-[#2563eb]">
+          <HomeIcon class="size-5" />
           <span>首页</span>
         </div>
-        <div class="tab">
-          <StarIcon class="icon-sm" />
+        <div class="flex-1 flex flex-col items-center gap-1 p-2 text-[0.75rem] text-[#6b7280]">
+          <StarIcon class="size-5" />
           <span>收藏</span>
           </div>
-        <div class="tab">
-          <CloudIcon class="icon-sm" />
+        <div class="flex-1 flex flex-col items-center gap-1 p-2 text-[0.75rem] text-[#6b7280]">
+          <CloudIcon class="size-5" />
           <span>云盘</span>
         </div>
       </div>
@@ -46,35 +46,35 @@
     </div>
 
     <div class="fixed right-6 bottom-6 w-14 h-14 rounded-[50%] bg-[#2563eb] text-white flex items-center justify-center shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06)] cursor-pointer z-10" @click="$emit('upload')">
-      <PlusIcon class="icon-sm" />
+      <PlusIcon class="size-5" />
       </div>
 
     <div v-if="showOptionsMenu" class="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 p-4">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-[1rem] text-[#111827]">{{ selectedFile?.name }}</h3>
         <button class="p-2 cursor-pointer" @click="showOptionsMenu = false">
-          <XIcon class="icon-sm" />
+          <XIcon class="size-5" />
           </button>
       </div>
       <div class="flex flex-col">
-        <div class="option-item" @click="openFile">
-          <FileIcon class="icon-sm" />
+        <div class="flex items-center gap-4 p-4 cursor-pointer [&:hover]:bg-[#f9fafb] [&:hover]:rounded-lg" @click="openFile">
+          <FileIcon class="size-5" />
           <span>打开</span>
         </div>
-        <div class="option-item" @click="shareFile">
-          <UploadIcon class="icon-sm" />
+        <div class="flex items-center gap-4 p-4 cursor-pointer [&:hover]:bg-[#f9fafb] [&:hover]:rounded-lg" @click="shareFile">
+          <UploadIcon class="size-5" />
           <span>分享</span>
         </div>
-        <div class="option-item" @click="downloadFile">
-          <UploadIcon class="icon-sm" transform="rotate(180)" />
+        <div class="flex items-center gap-4 p-4 cursor-pointer [&:hover]:bg-[#f9fafb] [&:hover]:rounded-lg" @click="downloadFile">
+          <UploadIcon class="size-5" transform="rotate(180)" />
           <span>下载</span>
         </div>
-        <div class="option-item" @click="renameFile">
-          <FileTextIcon class="icon-sm" />
+        <div class="flex items-center gap-4 p-4 cursor-pointer [&:hover]:bg-[#f9fafb] [&:hover]:rounded-lg" @click="renameFile">
+          <FileTextIcon class="size-5" />
           <span>重命名</span>
         </div>
-        <div class="option-item text-[#ef4444]" @click="deleteFile">
-          <XIcon class="icon-sm" />
+        <div class="flex items-center gap-4 p-4 cursor-pointer [&:hover]:bg-[#f9fafb] [&:hover]:rounded-lg text-[#ef4444]" @click="deleteFile">
+          <XIcon class="size-5" />
           <span>删除</span>
         </div>
       </div>
@@ -175,44 +175,3 @@ function deleteFile() {
   }
 }
 </script>
-
-<style scoped>
-/* 组件类：.tab 3 处、.option-item 5 处、.icon-sm 8 处复用 */
-.tab {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.5rem;
-  color: #6b7280;
-  font-size: 0.75rem;
-}
-
-.tab.active {
-  color: #2563eb;
-}
-
-.option-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  cursor: pointer;
-}
-
-.option-item:hover {
-  background: #f9fafb;
-  border-radius: 0.5rem;
-}
-
-.icon-sm {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-/* 字重：style.less 全局 h1,h2,h3{font-weight:400} 是无层级规则，压过工具类 */
-.options-header h3 {
-  font-weight: 600;
-}
-</style>

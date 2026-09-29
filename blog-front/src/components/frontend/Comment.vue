@@ -1,6 +1,6 @@
 <template>
   <div class="mt-[60px] bg-[rgb(250,250,250)] px-0 pt-[30px] pb-9">
-    <div style="width: 92%; margin: 0 auto">
+    <div class="w-[92%] mx-auto">
       <Publish v-if="site.open_comment" @comment-submitted="send" />
       <p v-else class="mt-0 mb-6 py-[18px] text-center text-[#999] text-[14px]">评论功能已关闭</p>
       <View :key="store.commentKey" />

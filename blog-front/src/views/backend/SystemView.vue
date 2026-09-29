@@ -144,12 +144,12 @@
                                             5120: '5MB',
                                             10240: '10MB'
                                         }" show-stops :format-tooltip="formatChunkSizeTooltip"
-                                        class="w-full" style="margin: 0 8px; font-size: 12px;" />
+                                        class="w-full mx-2! my-0! text-[12px]!" />
                                 </div>
                                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                     <div>
-                                        <span class="font-semibold text-gray-800 mr-2" style="font-size: 12px;">{{ formatSize(storageConfig.webdav_chunk_size ?? 5120) }}</span>
-                                        <span class="text-gray-400" style="font-size: 12px;">({{ storageConfig.webdav_chunk_size ?? 5120 }} KB)</span>
+                                        <span class="font-semibold text-gray-800 mr-2 text-[12px]">{{ formatSize(storageConfig.webdav_chunk_size ?? 5120) }}</span>
+                                        <span class="text-gray-400 text-[12px]">({{ storageConfig.webdav_chunk_size ?? 5120 }} KB)</span>
                                     </div>
                                     <div>
                                         <el-tag :type="getSizeTagType(storageConfig.webdav_chunk_size ?? 5120)" size="small"
@@ -337,7 +337,7 @@
                                 </el-icon> 系统配置管理</span>
                         </div>
                     </template>
-                    <el-table :data="systemSettings" style="width: 100%" size="default">
+                    <el-table :data="systemSettings" class="w-full" size="default">
                         <el-table-column prop="settingKey" label="Key" min-width="180" />
                         <el-table-column prop="settingValue" label="Value" min-width="220" />
                         <el-table-column prop="configType" label="类型" min-width="120" />

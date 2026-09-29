@@ -34,7 +34,7 @@
         </li>
         <li v-if="site.bilibili_link" class="inline-block px-[0.9375rem]">
           <a :href="site.bilibili_link" target="_blank">
-            <Icon iconName="icon-bilibili" iconSize="2.2" style="fill: rgb(250,116,153)"></Icon>
+            <Icon iconName="icon-bilibili" iconSize="2.2" class="fill-[rgb(250,116,153)]"></Icon>
           </a>
         </li>
       </ul>

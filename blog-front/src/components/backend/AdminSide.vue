@@ -56,7 +56,7 @@
             transition: 'all 0.3s',
           }"
         >
-          <Fold @click="fold()" style="cursor: pointer;" />
+          <Fold @click="fold()" class="cursor-pointer" />
         </el-icon>
       </div>
     </div>

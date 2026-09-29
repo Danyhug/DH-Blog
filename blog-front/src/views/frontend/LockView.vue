@@ -17,7 +17,7 @@
         <div class="form m-[30px]">
           <input type="text" ref="input" autofocus v-model="data.password" @keyup.enter="check"
             class="bg-[#2b2b2f] text-[#f5f5f5] [border:none] p-[10px] grow z-[2] -mr-[10px] pt-[15px] pb-[11px] text-[1.8em] pr-[80px] text-center w-[460px] tracking-[1.5em] focus:border-[#66afe9] focus:[outline:0] focus:[box-shadow:inset_0_1px_1px_rgba(0,0,0,0.075),0_0_8px_rgba(102,175,233,0.6)]" />
-          <el-icon size="2em" style="vertical-align: text-bottom; position: relative; left: -50px; cursor: pointer;"
+          <el-icon size="2em" class="align-text-bottom relative -left-[50px] cursor-pointer"
             @click="check">
             <Unlock />
           </el-icon>
