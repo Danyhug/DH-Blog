@@ -45,7 +45,8 @@ mkdir -p blog-backend/internal/frontend/dist && \
 cd blog-backend && go build -o ../blog-deploy/backend/dhblog_dev ./cmd/blog-backend
 ```
 
-`blog-backend/.air.toml` 已过期（把 `../blog-deploy/backend` 当成源码目录，那里没有 Go 文件），air 热重载不可用。
+`blog-backend/.air.toml` 可用，在 `blog-backend/` 下执行 `air` 即热重载（只监听 `internal/`、`cmd/` 下的 `.go`，产物输出到 `../blog-deploy/backend/dhblog_dev`）。若 shell 报 `command not found: air`，它在 `~/go/bin/air`（不在默认 PATH 里）。
+注意配置键必须是 `bin`（air v1.x）：写成旧版的 `entrypoint` 会被**静默忽略**、回落到默认的 `./tmp/main`，报 `No such file or directory` 后以 exit 127 退出——看起来像「配置过期」，其实是键名过时。
 
 ### 前端（`blog-front/`）
 

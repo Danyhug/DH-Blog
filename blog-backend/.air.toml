@@ -1,12 +1,15 @@
 # air 热重载配置：监听 blog-backend 下的 Go 源码，编译并重启后端
 # 注意：编译产物必须输出到 blog-deploy/backend/dhblog_dev，
 # 后端的数据目录/配置文件是相对可执行文件所在目录解析的。
+# 注意：air v1.x 用 `bin` 指定「编译产物路径」，它同时就是要运行的入口。
+# 早期版本叫 `entrypoint`（数组），该键在当前版本已被忽略 —— 一旦写成它，
+# air 会回落到默认的 ./tmp/main 并报 "No such file or directory"（exit 127）。
 root = "."
 tmp_dir = "tmp"
 
 [build]
 cmd = "go build -o ../blog-deploy/backend/dhblog_dev ./cmd/blog-backend"
-entrypoint = ["../blog-deploy/backend/dhblog_dev"]
+bin = "../blog-deploy/backend/dhblog_dev"
 include_ext = ["go"]
 exclude_dir = ["tmp"]
 exclude_regex = ["_test\\.go"]
