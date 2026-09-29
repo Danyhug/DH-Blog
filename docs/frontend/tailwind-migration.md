@@ -413,29 +413,29 @@ v4 的 `rotate-45` 写的是独立属性 `rotate: 45deg`，`translate-x-1/2` 写
 > 顺序：**先后台、再变量层、后前台**。后台 CSS 多为 flex/间距/颜色，最好迁、风险最低；
 > 前台主题嵌套深、伪元素多、依赖全局变量与全局媒体查询，放最后且等 P1 变量类可用后再动。
 
-### P0 · 后台（19 个文件，≈ 1,361 行）— 最先做
+### P0 · 后台（19 个文件，1,205 → 564 行）— 最先做
 
 | 批次 | 文件 | 行数 | 备注 |
 |---|---|---|---|
-| 0a 样板 | `components/backend/DashBoard/TotalItem.vue` | 69 | **首块样板**；4 个静态 `<li>` 的 nth-child 渐变 → 逐项 class（§2.2）✅ `d3580d4` |
-| 0b 小组件 | `views/backend/ManagerView.vue` | 5 | 凑批；`.box-card` 为死样式（模板未引用），整块删除 ✅ `39936b2` |
-| | `components/backend/AdminFooter.vue` | 14 | ✅ `39936b2` |
+| 0a 样板 | `components/backend/DashBoard/TotalItem.vue` | 69 → 0 | **首块样板**；4 个静态 `<li>` 的 nth-child 渐变 → 逐项 class（§2.2）✅ `d3580d4` |
+| 0b 小组件 | `views/backend/ManagerView.vue` | 5 → 0 | 凑批；`.box-card` 为死样式（模板未引用），整块删除 ✅ `39936b2` |
+| | `components/backend/AdminFooter.vue` | 14 → 0 | ✅ `39936b2` |
 | | `components/backend/gateway/GatewayKeys.vue` | 15 → 15 | ⚠️ 0b 误删了 `.masked` 规则（该文件 `<style>` 块被整块移除），导致徽标被父级 `:deep(code)` 兜底变色；`e74e50b` 已补回 ✅ `39936b2` + `e74e50b` |
-| | `views/backend/AdminView.vue` | 16 | 保留 `.el-aside { overflow: hidden }`（§4.8）✅ `39936b2` |
-| | `components/backend/DashBoard/VisitTable.vue` | 19 | 保留 `.ban-row`（库内部 `<tr>`，工具类够不着）✅ `39936b2` |
-| 0c 中组件 | `components/backend/gateway/GatewayOverview.vue` | 40 | 4 个 tile 类各用 1 次，全部内联，CSS 清零 |
-| | `components/backend/gateway/GatewayMcp.vue` | 43 | 保留 `.scope-group+.scope-group`（相邻兄弟选择器）、`.step`（§4.5，3 次）+ `:deep()` |
-| | `views/backend/SystemView.vue` | 52 | **无需改动**：整块样式都是 `:deep()`，已符合 §4.3 |
-| | `views/backend/DashBoardView.vue` | 52 | 保留 `:deep(>div)`（跨组件覆盖 VisitTable/VisitChart），`.chart-item` 留作锚点 |
-| | `views/backend/GatewayView.vue` | 54 | 保留 `.tab-label`（§4.5，6 次）+ 全部 `:deep()` |
-| | `components/backend/gateway/SectionPanel.vue` | 55 | 保留 `.panel+.panel`（相邻兄弟）与 `.panel-title` 字重（§4.8，被全局 h3 规则压住） |
+| | `views/backend/AdminView.vue` | 16 → 9 | 保留 `.el-aside { overflow: hidden }`（§4.8）✅ `39936b2` |
+| | `components/backend/DashBoard/VisitTable.vue` | 19 → 9 | 保留 `.ban-row`（库内部 `<tr>`，工具类够不着）✅ `39936b2` |
+| 0c 中组件 | `components/backend/gateway/GatewayOverview.vue` | 40 → 0 | 4 个 tile 类各用 1 次，全部内联，CSS 清零 ✅ `78cb419` |
+| | `components/backend/gateway/GatewayMcp.vue` | 43 → 29 | 保留 `.scope-group+.scope-group`（相邻兄弟选择器）、`.step`（§4.5，3 次）+ `:deep()` ✅ `78cb419` |
+| | `views/backend/SystemView.vue` | 52 → 52 | **无需改动**：整块样式都是 `:deep()`，已符合 §4.3 ✅ `78cb419` |
+| | `views/backend/DashBoardView.vue` | 52 → 45 | 保留 `:deep(>div)`（跨组件覆盖 VisitTable/VisitChart），`.chart-item` 留作锚点 ✅ `78cb419` |
+| | `views/backend/GatewayView.vue` | 54 → 55 | 保留 `.tab-label`（§4.5，6 次）+ 全部 `:deep()`。（+1 是加了一行说明注释，全项目唯一「迁移后比迁移前多」的文件）✅ `78cb419` |
+| | `components/backend/gateway/SectionPanel.vue` | 55 → 17 | 保留 `.panel+.panel`（相邻兄弟）与 `.panel-title` 字重（§4.8，被全局 h3 规则压住） ✅ `78cb419` |
 | 0d 大组件 | `components/backend/gateway/GatewayRouting.vue` | 64 → 0 | 按钮三态改 `optionClass()` 整体切换（§4.9），`el-icon` 尺寸/颜色改用 props（§4.8）✅ `e2e0acb` |
 | | `components/backend/DashBoard/VisitChart.vue` | 71 → 20 | 原为**非 scoped**（§4.7）→ 改 scoped；保留 `.chart-select` 定宽与 `:deep(.el-radio-button__inner)`；`item-top/item-title/item-sub` 三个类名是父组件 `:deep(>div)` 的锚点，必须留 ✅ `b9e1180` |
 | | `components/backend/AdminSide.vue` | 86 → 78 | 只迁 `.container` 布局与 `.tool`；保留 `h1`（§4.8）、`:deep(.el-menu)`、`.el-menu-item`/`.is-active`（EP 内部类 + 运行期状态类）、`.fold-container`（运行期切换）✅ `721cab0` |
 | | `components/backend/gateway/GatewayProviders.vue` | 124 → 70 | 卡片三态用「静态 class 不含该属性 + `:class` 只给一份值」；保留 `.hint`/`.group-title`/`.group-sub`（各 4 处）、`.link`（全局 `a` 规则）、`.masked`（父级 `:deep(code)`）、`.key-row`（相邻兄弟锚点）、`.card-off :deep(...)` ✅ `994095b` |
 | | `views/backend/CommentView.vue` | 226 → 85 | 后台最大；正文截断用 `line-clamp-2`；保留四个 CSS 变量、`.title-block h2`（§4.8）、`.comment-table`/`.article-title`（EP 同名属性，§4.8）、全部 `:deep()` + reduced-motion 媒体查询 ✅ `45aba5d` |
-| | `views/backend/PublishView.vue` | 97 → 54 | 保留 `.title-input`（EP `.el-input` 的 width/font-size 压工具类）与第二个**非 scoped** 块——EP 的 Upload 根节点不带类名、`el-upload` 在其内部，`.emojis` 属第三方 `@vavt/v3-extension` ✅ `32238c7` |
-| | `views/backend/LoginView.vue` | 103 → 19 | 非 scoped 整块迁完（泄漏面为零）；保留 `.login-title` 字重与 `.login-btn-main` 的 display/height/background-color；logo 用 arbitrary transform、断点用 arbitrary media（§4.11）✅ `7133aea` |
+| | `views/backend/PublishView.vue` | 97 → 59 | 保留 `.title-input`（EP `.el-input` 的 width/font-size 压工具类）与第二个**非 scoped** 块——EP 的 Upload 根节点不带类名、`el-upload` 在其内部，`.emojis` 属第三方 `@vavt/v3-extension` ✅ `32238c7` |
+| | `views/backend/LoginView.vue` | 103 → 21 | 非 scoped 整块迁完（泄漏面为零）；保留 `.login-title` 字重与 `.login-btn-main` 的 display/height/background-color；logo 用 arbitrary transform、断点用 arbitrary media（§4.11）✅ `7133aea` |
 
 **人工测试点**：管理后台每个菜单页（仪表盘/文章/评论/分类标签/系统/网关）正常态 + 弹窗 + 移动端。
 
@@ -450,21 +450,21 @@ v4 的 `rotate-45` 写的是独立属性 `rotate: 45deg`，`translate-x-1/2` 写
 
 **人工测试点**：全站随便点几个页面，确认配色/阴影无变化。
 
-### P2 · webdav 模块（7 个文件，≈ 2,383 行）— 完成，CSS 2,383 → 780 行
+### P2 · webdav 模块（7 个文件）— 完成，CSS 2,193 → 894 行
 
 | 批次 | 文件 | 行数 | 备注 |
 |---|---|---|---|
-| 2a | `views/frontend/webdav/components/DriveHeader.vue` | **0** | 文档此处笔误：该文件在基线里就没有 `<style>` 块（早已是纯 Tailwind）✅ 无需迁移 |
-| | `views/frontend/webdav/components/FilePreview.vue` | 136 → 127 | 图标色改由 `getIconClass` 返回完整工具类（§4.9 的坑）；`.markdown-content` / `.code-content` 是运行时 HTML，保留（§4.3.1）；根节点 `animate-[fade-in…]` 本就失效（Vue 改名了 keyframes），未擅自修复 ✅ `5e15f36` |
+| 2a | `views/frontend/webdav/components/DriveHeader.vue` | 0 → 0 | 文档此处笔误：该文件在基线里就没有 `<style>` 块（早已是纯 Tailwind）✅ 无需迁移 |
+| | `views/frontend/webdav/components/FilePreview.vue` | 136 → 129 | 图标色改由 `getIconClass` 返回完整工具类（§4.9 的坑）；`.markdown-content` / `.code-content` 是运行时 HTML，保留（§4.3.1）；根节点 `animate-[fade-in…]` 本就失效（Vue 改名了 keyframes），未擅自修复 ✅ `5e15f36` |
 | 2b | `views/frontend/webdav/components/MobileView.vue` | 201 → 47 | 保留 `.tab`/`.option-item`/`.icon-sm`（§4.5）与 h3 字重（§4.8）；字号用任意值避免行高差（§4.11 ③）✅ `eb242aa` |
 | | `views/frontend/webdav/modals/ShareManagerModal.vue` | 222 → 60 | 保留 `.hint`/`.badge`(+danger,warn)/`.link-btn`(+danger,disabled,hover) 三组组件类；`last:border-b-0` 替代 `:last-child`；多态颜色整组二选一（§4.9）✅ `6fa0a79` |
 | 2c | `views/frontend/webdav/modals/ShareLinkPopup.vue` | 271 → 128 | 保留开关的纯 CSS 状态机（`input:checked + .toggle-slider`，兄弟选择器无工具类写法）、带 :focus/:hover/:disabled 且重复的表单控件类、`.popup-title` 字重（§4.8）✅ `49ec57b` |
 | | `views/frontend/webdav/modals/UploadModal.vue` | 489 → 132 | 拖放区三态 / 上传项四态走 §4.9 整体切换；`.loading-spinner` 与 `.progress-fill` 连同 `@keyframes spin` / `progress-animation` 保留（animation 必须与声明同块）；`.progress-fill` 原有两条重复规则合并（实测等价）✅ `c12a366` |
-| 2d | `views/frontend/webdav/components/WebDriveView.vue` | 874 → 386 | 全项目第二大，且原为**非 scoped** 的 `lang="less"`（全局泄漏）；收紧为 scoped 前逐条核对过泄漏面。3 处 keyframes 按 §4.1 挪进 `tailwind.css`。断点用 arbitrary variant（§4.11②）✅ `a512430` |
+| 2d | `views/frontend/webdav/components/WebDriveView.vue` | 874 → 398 | 全项目第二大，且原为**非 scoped** 的 `lang="less"`（全局泄漏）；收紧为 scoped 前逐条核对过泄漏面。3 处 keyframes 按 §4.1 挪进 `tailwind.css`。断点用 arbitrary variant（§4.11②）✅ `a512430` |
 
 **人工测试点**：云盘列表/预览/上传/分享弹窗，桌面 + 手机两种宽度。
 
-### P3 · 前台主题（19 个文件）— 最后做、最谨慎
+### P3 · 前台主题（19 个文件）— 最后做、最谨慎；CSS 1,848 → 879 行
 
 依赖全局变量与全局媒体查询最多，视觉敏感（博客门面）。**一批一个页面，逐页人工验收。**
 
@@ -473,7 +473,7 @@ v4 的 `rotate-45` 写的是独立属性 `rotate: 45deg`，`translate-x-1/2` 写
 | 3a 小组件 | `components/Child/Icon.vue` / `App.vue` | 0 / 1 → 0 | Icon 无样式；App 删掉空的 `<style></style>` ✅ `f691617` |
 | | `components/frontend/Footer.vue` | 9 → 0 | ✅ `f691617` |
 | | `components/frontend/Side/HomeSide.vue` | 49 → 0 | 首次用上 P1 的 `text-grey-7` / `border-grey-4` ✅ `f691617` |
-| | `components/frontend/Banner.vue` | 48 → 25 | `#banner`/`.info` 内联；`.fade-in-article` 由 JS 运行时 add/remove，连同 `@keyframes fadeIn` 整组保留（§4.1/§4.3.1）。实测 `bg-[url(@/assets/images/banner.png)]` 能被 Vite alias 解析并 emit 资源 ✅ `f691617` |
+| | `components/frontend/Banner.vue` | 48 → 34 | `#banner`/`.info` 内联；`.fade-in-article` 由 JS 运行时 add/remove，连同 `@keyframes fadeIn` 整组保留（§4.1/§4.3.1）。实测 `bg-[url(@/assets/images/banner.png)]` 能被 Vite alias 解析并 emit 资源 ✅ `f691617` |
 | 3b 中组件 | `components/frontend/Comment/View.vue` | 13 → 0 | ✅ `1ab55d3` |
 | | `views/frontend/ErrorView.vue` | 33 → 0 | 原为**非 scoped**；内联后 CSS chunk 整个消失 ✅ `1ab55d3` |
 | | `views/frontend/MainView.vue` | 17 → 0 | 标签选择器 `Article` → 给 `<ArticleBox>` 加 `mb-[46px]`；先确认 ArticleBox 没在自己的根元素上写 margin（§4.8）✅ `1ab55d3` |
@@ -487,7 +487,7 @@ v4 的 `rotate-45` 写的是独立属性 `rotate: 45deg`，`translate-x-1/2` 写
 | 3d 复杂 | `views/frontend/LockView.vue` | 166 → 48 | 只留移动端覆盖块与 `.right button:hover span`。删掉一条**原本就失效**的移动端 `justify-content: center` ✅ `b473e6b` |
 | | `components/frontend/ArticleBox.vue` | 193 → 63 | `.cover div{width:50%}` 等后代选择器按**实际命中对象**逐个内联；删掉三行**原本就失效**的移动端 `.private-summary` 声明。实测两坑：`shadow-[rgba(...)_…]` 被当作 shadow color（须写 `[box-shadow:…]`）；额外的 `-webkit-line-clamp` 会把 `display` 块化成 `flow-root` ✅ `b473e6b` |
 | | `components/frontend/Comment/Publish.vue` | 339 → 244 | 三个 style 块：①79 行全内联；②61 行只留 3 条祖先 hover；③199 行是 Uiverse 书签动画控件，按 §4.1 **装饰组件豁免**整块保留。实测 `transition` 简写会重置 `transition-delay`，须合并成 `[transition:all_0.5s_ease_300ms]` ✅ `a4633b3` |
-| | `views/frontend/Knowledge.vue` | 467 → 258 | 单块最大。**顺带删掉 13 条已证死规则**（`.section-categories`/`.section-tags` 两族 + 只含它们的 `@media(min-width:901px)` 块——这两个类名在模板里从未出现，见 §4.12）；`fadeInUp` 挪进 `tailwind.css`（§4.1）；其余按「非 v-for、非伪元素、非断点」逐块内联 ✅ `a2b9e7c` |
+| | `views/frontend/Knowledge.vue` | 467 → 260 | 单块最大。**顺带删掉 13 条已证死规则**（`.section-categories`/`.section-tags` 两族 + 只含它们的 `@media(min-width:901px)` 块——这两个类名在模板里从未出现，见 §4.12）；`fadeInUp` 挪进 `tailwind.css`（§4.1）；其余按「非 v-for、非伪元素、非断点」逐块内联 ✅ `a2b9e7c` |
 
 **人工测试点**：首页 / 文章详情 / 评论区 / 知识页 / 解锁页，桌面 + 平板 + 手机三档宽度，重点看首屏与封面。
 
@@ -495,28 +495,34 @@ v4 的 `rotate-45` 写的是独立属性 `rotate: 45deg`，`translate-x-1/2` 写
 
 ## 6. 进度跟踪
 
+> **行数口径**：均指 `<style>` 块的总行数，**含 `<style>` / `</style>` 两行标签**，
+> 与 §1 基线（6,288 行）同口径。可用 `git show <rev>:<文件>` 逐文件复核。
+> 个别文件的「迁移后」含后续补写的说明性注释（如 `FilePreview`、`Knowledge`、`GatewayView`）。
+>
 > 每完成一个文件就在对应行尾打 `✅` 并注明 commit；批次完成后更新下方计数。
 
 | 阶段 | 文件数 | 状态 |
 |---|---|---|
-| P0 后台 | **19 / 19** ✅ | 完成；后台 CSS 1165 → 533 行（净 -632），6 个文件清零 |
+| P0 后台 | **19 / 19** ✅ | 完成；后台 CSS 1,205 → 564 行（净 -641），5 个文件清零 |
 | P1 变量层 | **1 / 1** ✅ | 完成；`@theme inline` 映射，产物与改动前逐字节相同 |
-| P2 webdav | **7 / 7** ✅ | 完成；webdav CSS 2,383 → 780 行（净 -1,603） |
-| P3 前台 | **19 / 19** ✅ | 完成；前台 CSS 1,839 → 877 行（净 -962） |
+| P2 webdav | **7 / 7** ✅ | 完成；webdav CSS 2,193 → 894 行（净 -1,299） |
+| P3 前台 | **19 / 19** ✅ | 完成；前台 CSS 1,848 → 879 行（净 -969） |
 | **合计** | **46 / 46** ✅ | 全部完成 |
+
+**自洽校验**（可随时重跑）：§5 逐文件求和 = 5,246 → 2,337 行；加上豁免的
+`Pet.vue` 950 + `Loading.vue` 92 = 1,042，得 6,288 → **3,379**，与 §1 基线及 §8.1 一致。
 
 ---
 
 ## 6.1 迁移过程中发现、已单独修复的既有问题
 
-按「每个改动只含样式迁移、不夹带功能改动」（§7.3），这些问题当时只登记、不混在迁移里，
-后来各自单独开 commit 修复（因为两者都是**行为变更**：原本失效的效果开始生效）。
+按「每个改动只含样式迁移、不夹带功能改动」（§7.3），这几个问题当时只登记、不混在迁移里，
+后来各自单独开 commit 修复（因为都是**行为变更**：原本失效的效果开始生效）。
 
 | 位置 | 现象 | 说明 |
 |---|---|---|
 | `webdav/components/FilePreview.vue` | 根节点的 `animate-[fade-in_0.3s_ease]` 从未播放 | Vue 把 scoped 块里的 `@keyframes` 改名成 `fade-in-<scope>`，工具类引用的仍是 `fade-in` → 失配。✅ 已修 `d03c59c`：keyframes 挪进 `tailwind.css` 的 `@theme`，根元素改 `animate-fade-in`。实测 `getAnimations()` 由 0 → 1 个动画，逐帧采样 `opacity` 为 0 → 0.802 → 1 |
 | `views/frontend/Knowledge.vue` | 弹窗遮罩的 `backdrop-filter: blur(5px)` 在 Chrome 下不生效 | 原文同时写了无前缀与 `-webkit-` 两行，lightningcss 按目标浏览器归并后**只剩 `-webkit-`**，而当前 Chrome 不认它。✅ 已修 `9866bea`：只留无前缀那一条，让 lightningcss 自行补前缀。实测 `backdropFilter` 由 `none` → `blur(5px)`，遮罩区边缘强度 5.75 → 0.45 |
-| `views/frontend/Knowledge.vue` | 文章弹窗遮罩的 `backdrop-filter: blur(5px)` 在 Chrome 下不生效 | 原文同时写了无前缀与 `-webkit-backdrop-filter` 两行，lightningcss 按目标浏览器归并后产物**只剩 `-webkit-` 那行**，而实测当前 Chrome 不认 `-webkit-backdrop-filter`（隔离实验：只写它时边缘强度 6.01，与完全不写相同；只写无前缀 0.47）。**只有 Safari 之类认前缀的浏览器能看到模糊。** 迁移时按「不改观感」原则原样保留了这条声明（`a2b9e7c`）；想用 `backdrop-blur-[5px]` 打开它请单独开 commit |
 
 ---
 
