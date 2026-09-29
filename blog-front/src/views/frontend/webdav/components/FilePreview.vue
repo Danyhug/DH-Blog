@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full flex flex-col bg-white animate-[fade-in_0.3s_ease] relative"
+  <div class="w-full flex flex-col bg-white animate-fade-in relative"
     :class="shareMode ? 'min-h-screen share-mode' : 'flex-1 min-h-0'">
     <DriveHeader :sticky="shareMode" :title="currentFileName">
       <template #left>
@@ -851,11 +851,13 @@ onMounted(() => {
 </script>
 
 <style lang="less" scoped>
-/* 动画 */
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+/*
+  原来的 `@keyframes fade-in` 放在这里是个 bug：Vue 会把 scoped 块内的 keyframes
+  改名成 `fade-in-<scope>`，而根元素上的 `animate-[fade-in_0.3s_ease]` 引用的是
+  未改名的 `fade-in`，两者永远匹配不上 —— 实测 `getAnimations()` 返回 0 个动画，
+  也就是这个淡入从未播放过。已按 §4.1 把 keyframes 挪到 tailwind.css 的 @theme
+  （`--animate-fade-in`），根元素改用 `animate-fade-in`。
+*/
 
 /* Markdown 内容样式 - 因为是动态生成的 HTML 需要保留 */
 .markdown-content {
