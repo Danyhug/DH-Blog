@@ -352,16 +352,18 @@ onMounted(() => {
 }
 
 /*
-  只此一条：原文同时写了 `backdrop-filter: blur(5px)` 与 `-webkit-backdrop-filter: blur(5px)`，
-  lightningcss 按目标浏览器把两者归并，最终产物**只剩 `-webkit-` 那行**；
-  而实测当前 Chrome（154）不认 `-webkit-backdrop-filter`（隔离实验：只写它时边缘强度 6.01，
-  与完全不写相同；只写无前缀时 0.47）——**这个模糊在 Chrome 下一直是失效的**，
-  只有 Safari 之类认前缀的浏览器能看到。
-  本方案只做样式迁移、不改观感，故原样保留。若要用 `backdrop-blur-[5px]` 打开它，
-  请单开一个 commit（已登记在文档 §6.1）。
+  弹窗遮罩的毛玻璃。
+
+  原文同时写了 `backdrop-filter: blur(5px)` 与 `-webkit-backdrop-filter: blur(5px)`，
+  lightningcss 认为两者等价、按目标浏览器归并成一条，结果**只剩下排在后面的 `-webkit-`**；
+  而实测当前 Chrome 不认 `-webkit-backdrop-filter`（隔离实验：只写它时边缘强度 6.01，
+  与完全不写相同；只写无前缀时 0.47）—— 也就是这个模糊在 Chrome 下一直是失效的。
+
+  修法：**只留无前缀那一条**。不再给 lightningcss 两个「等价声明」让它二选一，
+  它会按目标浏览器自行决定是否补 `-webkit-` 前缀。
 */
 .modal-overlay {
-    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
 }
 
 @media (max-width: 900px) {
