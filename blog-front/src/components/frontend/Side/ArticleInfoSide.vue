@@ -2,35 +2,18 @@
   <div class="w-full">
     <el-row>
       <el-col>
-        <el-card class="box w-full min-h-screen">
+        <el-card class="w-full min-h-screen" :class="store.aritcleModel.isDarkMode ? 'bg-[#191919]! text-[#d4d4d4]! border-[#303030]! [--el-bg-color:#191919] [--el-text-color-regular:#aaa] [--el-border-color:#303030]' : 'bg-white!'">
           <img :src="store.homeHeaderInfo.thumbnailUrl" class="image w-[95%] mx-auto" />
 
           <div>
             <p class="title text-[1.15rem] my-3">{{ store.homeHeaderInfo.title }}</p>
             <div class="schedule">
               <el-progress :color="customColors" :percentage="sideInfo.process"></el-progress>
-              <p class="text-[14px] text-[#606266]">已阅读时长：{{ formatSeconds(second) }}</p>
+              <p class="text-[14px] text-[#606266] [.article-night_&]:text-[#aaa]">已阅读时长：{{ formatSeconds(second) }}</p>
             </div>
           </div>
 
-          <div class="links grid grid-cols-[repeat(5,1fr)] justify-items-center w-full text-[#909399] text-[12px] mt-[14px] pt-2">
-            <a class="cursor-pointer">
-              <Icon iconName="icon-31erweima" iconSize="2"></Icon>
-            </a>
-            <a class="cursor-pointer">
-              <Icon iconName="icon-fangda" class="mt-[3px]" iconSize="1.56"
-                @click="store.aritcleModel.isFullPreview = !store.aritcleModel.isFullPreview"></Icon>
-            </a>
-            <a class="cursor-pointer">
-              <Icon iconName="icon-forward" iconSize="2"></Icon>
-            </a>
-            <a class="cursor-pointer">
-              <Icon iconName="icon-share" iconSize="2"></Icon>
-            </a>
-            <a class="cursor-pointer">
-              <Icon iconName="icon-setting" iconSize="2"></Icon>
-            </a>
-          </div>
+          <ArticleReadingTools class="mt-[14px] pt-2" />
 
           <div class="tags w-full text-[#909399] text-[14px]">
             <el-divider>
@@ -43,7 +26,7 @@
           </div>
 
           <div class="catelog flex-1 overflow-y-auto text-left">
-            <MdCatalog editorId="dh-editor" :scrollElement="scrollElement" theme="light" />
+            <MdCatalog editorId="dh-editor" :scrollElement="scrollElement" :theme="store.aritcleModel.isDarkMode ? 'dark' : 'light'" />
           </div>
         </el-card>
       </el-col>
@@ -53,6 +36,7 @@
 
 <script setup>
 import { useUserStore } from '@/store';
+import ArticleReadingTools from '@/components/frontend/ArticleReadingTools.vue';
 import { reactive, onMounted, onBeforeUnmount, ref } from 'vue'
 import { debounce } from '@/utils/tool'
 const store = useUserStore()
@@ -93,7 +77,9 @@ const scrollListener = debounce(() => {
   let scrollTop = window.scrollY
 
   // 获取div的高度
-  let height = document.querySelector('.blog-container').scrollHeight
+  const container = document.querySelector('.blog-container')
+  if (!container || store.aritcleModel.isFullPreview) return
+  let height = container.scrollHeight
 
   // 计算阅读百分比
   let process = Math.floor((scrollTop / height) * 100)
@@ -115,11 +101,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="less" scoped>
-/* .el-card 自带 background-color（无层级），压过 bg-white */
-.box {
-  background-color: #fff;
-}
-
 /* :deep()：EP 卡片内容区加不上 class */
 :deep(.el-card__body) {
   height: 100vh;

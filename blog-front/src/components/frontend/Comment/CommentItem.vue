@@ -9,12 +9,12 @@
         </div>
         <div class="comment-main ml-[15px] text-[14px] w-full">
           <div class="comment-main-top h-[44px] flex flex-col justify-between">
-            <div class="comment-meta flex items-baseline text-[#666]">
+            <div class="comment-meta flex items-baseline text-[#666] [.article-night_&]:text-[#aaa]">
               <div class="comment-author"><a>{{ comment.author }}</a></div>
               <span v-if="comment.isAdmin" class="admin-tag text-white bg-[#6b7280] py-px px-[3px] text-[10px] leading-[1.1] font-medium rounded-[3px] inline-block opacity-90 mr-[3px] ml-[2px]">博主</span>
-              <time class="comment-time text-[#6b7280] text-[10px] ml-px"> • {{ formatDate(comment.createTime) }}</time>
+              <time class="comment-time text-[#6b7280] [.article-night_&]:text-[#aaa] text-[10px] ml-px"> • {{ formatDate(comment.createTime) }}</time>
             </div>
-            <div class="comment-content text-[rgb(74,85,104)]">
+            <div class="comment-content text-[rgb(74,85,104)] [.article-night_&]:text-[#ccc]">
               <p>{{ comment.content }}</p>
             </div>
           </div>

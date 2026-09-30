@@ -3,4 +3,5 @@ export interface ArticleModel {
   isFullPreview: boolean;
   // 是否开启暗黑模式
   isDarkMode: boolean;
+  fontSize: number;
 }

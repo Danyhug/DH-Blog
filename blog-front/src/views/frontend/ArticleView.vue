@@ -1,17 +1,28 @@
 <template>
   <!-- 文章浏览页 -->
   <div>
-    <!-- 全屏观看文章信息 -->
-    <div :class="['blog-container', store.aritcleModel.isFullPreview
-      ? 'full-screen-preview fixed top-0 left-0 w-full h-full overflow-y-auto p-0 bg-white'
-      : 'px-6 pt-0 pb-5']"
-      @click="openPreviewLinkInNewTab">
-      <p class="title pt-[1.875rem] px-0 pb-4 text-[1.6rem] font-bold text-center cursor-pointer [font-family:宋体]" v-show="store.aritcleModel.isFullPreview" @click="changeIsFullPreview()">{{ title }}</p>
-      <MdPreview :editorId="system.mdEditorInit.editorId" :modelValue="content"
-        :previewTheme="system.mdEditorInit.previewTheme" :codeFoldable="system.mdEditorInit.codeFoldable"
-        :theme="system.mdEditorInit.theme" :scrollElement="scrollElement" />
-    </div>
-    <div class="info py-[10px] px-0 text-[12px] text-[#606266] text-right border-t border-grey-4">
+    <Teleport to="body" :disabled="!store.aritcleModel.isFullPreview">
+      <section id="article-reading" ref="readingContainer" tabindex="-1" aria-label="文章阅读区"
+        :class="[store.aritcleModel.isFullPreview ? 'fixed inset-0 z-[2000] overflow-y-auto' : '',
+          store.aritcleModel.isDarkMode ? 'bg-[#191919] text-[#d4d4d4]' : 'bg-white text-[#333]']">
+        <div v-if="store.aritcleModel.isFullPreview" class="sticky top-0 z-10 border-b px-4 py-2"
+          :class="store.aritcleModel.isDarkMode ? 'bg-[#191919] border-[#303030]' : 'bg-white border-grey-3'">
+          <ArticleReadingTools class="mx-auto max-w-[320px]" />
+        </div>
+        <ArticleReadingTools v-else class="mx-4 mb-2 [@media(min-width:1025px)]:hidden" />
+        <div id="article-body" class="blog-container px-6 pt-0 pb-5 [&_.md-editor-preview]:text-[length:var(--article-font-size)]! [&_.md-editor-preview_pre_code]:text-[length:var(--article-code-font-size)]!"
+          :class="{ 'mx-auto max-w-[960px] px-4! sm:px-6!': store.aritcleModel.isFullPreview }"
+          :style="{ '--article-font-size': `${store.aritcleModel.fontSize}px`, '--article-code-font-size': `${store.aritcleModel.fontSize - 1}px` }"
+          @click="openPreviewLinkInNewTab">
+          <h1 v-if="store.aritcleModel.isFullPreview" class="pt-6 pb-4 text-[1.6rem] font-bold! text-center">{{ title }}</h1>
+          <MdPreview :editorId="system.mdEditorInit.editorId" :modelValue="content"
+            :previewTheme="system.mdEditorInit.previewTheme" :codeFoldable="system.mdEditorInit.codeFoldable"
+            :theme="store.aritcleModel.isDarkMode ? 'dark' : 'light'"
+            :class="store.aritcleModel.isDarkMode ? '[--md-bk-color:#191919]! [--md-color:#d4d4d4]!' : ''" />
+        </div>
+      </section>
+    </Teleport>
+    <div class="info py-[10px] px-0 text-[12px] text-[#606266] [.article-night_&]:text-[#aaa] text-right border-t border-grey-4 [.article-night_&]:border-[#303030]">
       <span class="mx-[10px]">
         更新于 {{ update }}
       </span>
@@ -34,11 +45,13 @@ import { Article } from '@/types/Article.ts'
 import { Tag } from 'element-plus';
 import { useUserStore, useSystemStore } from '@/store';
 import { getArticleBg, formatDate } from '@/utils/tool';
-import { watch } from 'vue';
+import { nextTick, watch } from 'vue';
 import router from '@/router';
+import ArticleReadingTools from '@/components/frontend/ArticleReadingTools.vue';
 
 export default {
   name: 'HomeView',
+  components: { ArticleReadingTools },
   data() {
     return {
       // 文章信息
@@ -52,18 +65,34 @@ export default {
       authorName: '',
       store: useUserStore(),
       system: useSystemStore(),
-      scrollElement: document.documentElement,
+      savedScrollY: 0,
+      savedBodyOverflow: '',
+      savedFocus: null as HTMLElement | null,
     }
   },
   mounted() {
-    // 监听是否全屏浏览状态
-    watch(() => this.store.aritcleModel.isFullPreview, (val) => {
+    // Teleport avoids transformed ancestors constraining the fixed reading pane.
+    watch(() => this.store.aritcleModel.isFullPreview, async (val) => {
       if (val) {
+        this.savedScrollY = window.scrollY;
+        this.savedBodyOverflow = document.body.style.overflow;
+        this.savedFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        const offset = Math.max(0, -(document.getElementById('article-body')?.getBoundingClientRect().top || 0));
         document.body.style.overflow = 'hidden';
+        await nextTick();
+        const container = this.$refs.readingContainer as HTMLElement;
+        if (!container) return;
+        container.scrollTop = offset;
+        container.focus({ preventScroll: true });
       } else {
-        document.body.style.overflow = '';
+        document.body.style.overflow = this.savedBodyOverflow;
+        await nextTick();
+        if (!this.$refs.readingContainer) return;
+        window.scrollTo({ top: this.savedScrollY, behavior: 'instant' });
+        this.savedFocus?.focus({ preventScroll: true });
       }
     })
+    window.addEventListener('keydown', this.onReadingKeydown);
 
     let unlockData = localStorage.getItem('unlockArticle')
     if (unlockData) {
@@ -83,8 +112,10 @@ export default {
     })
   },
   methods: {
-    changeIsFullPreview() {
-      this.store.aritcleModel.isFullPreview = !this.store.aritcleModel.isFullPreview
+    onReadingKeydown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !event.defaultPrevented) {
+        this.store.aritcleModel.isFullPreview = false;
+      }
     },
     // 正文里的 <a> 没有 target，单击会直接替换掉当前文章页；
     // 改为补上 target=_blank 后交给浏览器默认行为，在新标签页打开。
@@ -128,7 +159,9 @@ export default {
   },
   // 卸载组件时
   beforeUnmount() {
-    document.body.style.overflow = '';
+    window.removeEventListener('keydown', this.onReadingKeydown);
+    if (this.store.aritcleModel.isFullPreview) document.body.style.overflow = this.savedBodyOverflow;
+    this.store.aritcleModel.isFullPreview = false;
   }
 }
 </script>
@@ -149,21 +182,6 @@ export default {
     font-style: normal;
   }
 }
-
-/* 全屏态由 JS 切换，也是下方 :deep() 的锚点 */
-.full-screen-preview {
-  :deep(.md-editor-preview) {
-    padding: 0 10px;
-    background-color: rgb(250, 250, 250);
-    font-size: 17.5px;
-    line-height: 2em;
-  }
-
-  :deep(.md-editor-preview .md-editor-code pre code) {
-    font-size: 18px;
-  }
-}
-
 
 /** 平板移动端适配 */
 @media screen and (max-width: 1024px) {

@@ -3,7 +3,7 @@ import { ArticleModel } from "@/types/ArticleModel";
 import { Category } from "@/types/Category";
 import { Tag } from "@/types/Tag";
 import { defineStore } from "pinia";
-import { reactive, ref } from "vue";
+import { reactive, ref, watch } from "vue";
 import { MdInit } from "@/types/MdEditor";
 import { Article } from "@/types/Article";
 import { Page } from "@/types/Page";
@@ -106,9 +106,34 @@ export const useUserStore = defineStore("user", () => {
   });
 
   // 文章状态控制
+  const readingStorageKey = 'dh-blog:reading';
+  let readingPreferences = { isDarkMode: false, fontSize: 16 };
+  try {
+    const saved = JSON.parse(localStorage.getItem(readingStorageKey) || 'null');
+    if (saved && typeof saved === 'object') {
+      readingPreferences = {
+        isDarkMode: saved.isDarkMode === true,
+        fontSize: Number.isInteger(saved.fontSize) && saved.fontSize >= 14 && saved.fontSize <= 24
+          ? saved.fontSize : 16,
+      };
+    }
+  } catch {
+    // Reading controls still work when storage is unavailable or malformed.
+  }
   const aritcleModel = reactive<ArticleModel>({
-    isDarkMode: false,
+    ...readingPreferences,
     isFullPreview: false,
+  });
+
+  watch(() => [aritcleModel.isDarkMode, aritcleModel.fontSize], () => {
+    try {
+      localStorage.setItem(readingStorageKey, JSON.stringify({
+        isDarkMode: aritcleModel.isDarkMode,
+        fontSize: aritcleModel.fontSize,
+      }));
+    } catch {
+      // Persist only preferences, never the transient focus-reading state.
+    }
   });
 
   // 首页文章列表
