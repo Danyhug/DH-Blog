@@ -67,6 +67,7 @@ declare module 'vue' {
     ElTag: typeof import('element-plus/es')['ElTag']
     ElTree: typeof import('element-plus/es')['ElTree']
     ElUpload: typeof import('element-plus/es')['ElUpload']
+    FadeTransition: typeof import('./src/components/Child/FadeTransition.vue')['default']
     Footer: typeof import('./src/components/frontend/Footer.vue')['default']
     GatewayKeys: typeof import('./src/components/backend/gateway/GatewayKeys.vue')['default']
     GatewayLogs: typeof import('./src/components/backend/gateway/GatewayLogs.vue')['default']

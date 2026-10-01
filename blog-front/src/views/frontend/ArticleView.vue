@@ -1,41 +1,45 @@
 <template>
-  <!-- 文章浏览页 -->
-  <div>
-    <Teleport to="body" :disabled="!store.aritcleModel.isFullPreview">
-      <section id="article-reading" ref="readingContainer" tabindex="-1" aria-label="文章阅读区"
-        :class="[store.aritcleModel.isFullPreview ? 'fixed inset-0 z-[2000] overflow-y-auto' : '',
-          store.aritcleModel.isDarkMode ? 'bg-[#191919] text-[#d4d4d4]' : 'bg-white text-[#333]']">
-        <div v-if="store.aritcleModel.isFullPreview" class="sticky top-0 z-10 border-b px-4 py-2"
-          :class="store.aritcleModel.isDarkMode ? 'bg-[#191919] border-[#303030]' : 'bg-white border-grey-3'">
-          <ArticleReadingTools class="mx-auto max-w-[320px]" />
-        </div>
-        <ArticleReadingTools v-else class="mx-4 mb-2 [@media(min-width:1025px)]:hidden" />
-        <div id="article-body" class="blog-container px-6 pt-0 pb-5 [&_.md-editor-preview]:text-[length:var(--article-font-size)]! [&_.md-editor-preview_pre_code]:text-[length:var(--article-code-font-size)]!"
-          :class="{ 'mx-auto max-w-[960px] px-4! sm:px-6!': store.aritcleModel.isFullPreview }"
-          :style="{ '--article-font-size': `${store.aritcleModel.fontSize}px`, '--article-code-font-size': `${store.aritcleModel.fontSize - 1}px` }"
-          @click="openPreviewLinkInNewTab">
-          <h1 v-if="store.aritcleModel.isFullPreview" class="pt-6 pb-4 text-[1.6rem] font-bold! text-center">{{ title }}</h1>
-          <MdPreview :editorId="system.mdEditorInit.editorId" :modelValue="content"
-            :previewTheme="system.mdEditorInit.previewTheme" :codeFoldable="system.mdEditorInit.codeFoldable"
-            :theme="store.aritcleModel.isDarkMode ? 'dark' : 'light'"
-            :class="store.aritcleModel.isDarkMode ? '[--md-bk-color:#191919]! [--md-color:#d4d4d4]!' : ''" />
-        </div>
-      </section>
-    </Teleport>
-    <div class="info py-[10px] px-0 text-[12px] text-[#606266] [.article-night_&]:text-[#aaa] text-right border-t border-grey-4 [.article-night_&]:border-[#303030]">
-      <span class="mx-[10px]">
-        更新于 {{ update }}
-      </span>
-      <span class="mx-[10px]">
-        阅读次数 {{ viewnum }} 次
-      </span>
-      <el-tag v-if="authorType === 'agent'" size="small" type="warning" effect="plain" class="ml-2">
-        AI · {{ authorName }}
-      </el-tag>
+  <div class="flex flex-1 flex-col justify-between">
+    <!-- 文章浏览页。必须是单根元素且根部不能有注释：dev 模式会保留根部注释，组件变成片段，
+         HomeView 的 out-in 过渡就收不到离开完成的回调，首页再也渲染不出来。
+         flex 布局沿用父容器的 justify-between，让评论区在短文时仍贴底 -->
+    <div>
+      <Teleport to="body" :disabled="!store.aritcleModel.isFullPreview">
+        <section id="article-reading" ref="readingContainer" tabindex="-1" aria-label="文章阅读区"
+          :class="[store.aritcleModel.isFullPreview ? 'fixed inset-0 z-[2000] overflow-y-auto' : '',
+            store.aritcleModel.isDarkMode ? 'bg-[#191919] text-[#d4d4d4]' : 'bg-white text-[#333]']">
+          <div v-if="store.aritcleModel.isFullPreview" class="sticky top-0 z-10 border-b px-4 py-2"
+            :class="store.aritcleModel.isDarkMode ? 'bg-[#191919] border-[#303030]' : 'bg-white border-grey-3'">
+            <ArticleReadingTools class="mx-auto max-w-[320px]" />
+          </div>
+          <ArticleReadingTools v-else class="mx-4 mb-2 [@media(min-width:1025px)]:hidden" />
+          <div id="article-body" class="blog-container px-6 pt-0 pb-5 [&_.md-editor-preview]:text-[length:var(--article-font-size)]! [&_.md-editor-preview_pre_code]:text-[length:var(--article-code-font-size)]!"
+            :class="{ 'mx-auto max-w-[960px] px-4! sm:px-6!': store.aritcleModel.isFullPreview }"
+            :style="{ '--article-font-size': `${store.aritcleModel.fontSize}px`, '--article-code-font-size': `${store.aritcleModel.fontSize - 1}px` }"
+            @click="openPreviewLinkInNewTab">
+            <h1 v-if="store.aritcleModel.isFullPreview" class="pt-6 pb-4 text-[1.6rem] font-bold! text-center">{{ title }}</h1>
+            <MdPreview :editorId="system.mdEditorInit.editorId" :modelValue="content"
+              :previewTheme="system.mdEditorInit.previewTheme" :codeFoldable="system.mdEditorInit.codeFoldable"
+              :theme="store.aritcleModel.isDarkMode ? 'dark' : 'light'"
+              :class="store.aritcleModel.isDarkMode ? '[--md-bk-color:#191919]! [--md-color:#d4d4d4]!' : ''" />
+          </div>
+        </section>
+      </Teleport>
+      <div class="info py-[10px] px-0 text-[12px] text-[#606266] [.article-night_&]:text-[#aaa] text-right border-t border-grey-4 [.article-night_&]:border-[#303030]">
+        <span class="mx-[10px]">
+          更新于 {{ update }}
+        </span>
+        <span class="mx-[10px]">
+          阅读次数 {{ viewnum }} 次
+        </span>
+        <el-tag v-if="authorType === 'agent'" size="small" type="warning" effect="plain" class="ml-2">
+          AI · {{ authorName }}
+        </el-tag>
+      </div>
     </div>
-  </div>
-  <div class="comment" :style="{ display: store.aritcleModel.isFullPreview ? 'none' : '' }">
-    <Comment />
+    <div class="comment" :style="{ display: store.aritcleModel.isFullPreview ? 'none' : '' }">
+      <Comment />
+    </div>
   </div>
 </template>
 

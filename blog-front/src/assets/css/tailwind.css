@@ -143,3 +143,33 @@
 @utility bg-nav {
   background-image: var(--nav-bg);
 }
+
+/*
+  系统「减少动态效果」的统一兜底，免得每个类都要记得写 motion-reduce:。
+  放在 base 层：层内的 !important 优先级反而最高，能压过 utilities 层和组件内联 style。
+  时长取 0.01ms 而不是 0：Vue <Transition> 和 v-reveal 都依赖 transitionend / animationend 收尾，为 0 时浏览器不触发这两个事件。
+*/
+@layer base {
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      animation-delay: 0s !important;
+      transition-duration: 0.01ms !important;
+      transition-delay: 0s !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/*
+  夜间模式切换的圆形扩散（ArticleReadingTools.vue 用 element.animate 驱动 clip-path）。
+  关掉默认的交叉淡入，否则新旧快照半透明叠在一起，看不清圆的边界。
+*/
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}

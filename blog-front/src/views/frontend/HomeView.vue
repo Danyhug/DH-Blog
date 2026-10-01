@@ -18,14 +18,16 @@
     <div :class="{ 'bg-[#141414]': isNightReading }">
       <div class="inner px-[25px] flex justify-between">
         <div class="left bg-white [.article-night_&]:bg-[#191919] flex flex-col items-center w-[30%] h-screen text-center sticky top-0 my-[9.6px]" ref="leftElement">
-          <transition mode="out-in">
+          <FadeTransition>
             <component :is="sideShowComponent" />
-          </transition>
+          </FadeTransition>
         </div>
         <div class="right bg-white [.article-night_&]:bg-[#191919] [.article-night_&]:shadow-none w-[67%] shadow-[0_0.5rem_0.75rem_0.0625rem_rgb(235,235,235)] rounded-[0.3125rem] my-[9.6px] pt-4 flex flex-col justify-between">
-          <transition mode="out-in">
-            <router-view />
-          </transition>
+          <router-view v-slot="{ Component }">
+            <FadeTransition>
+              <component :is="Component" />
+            </FadeTransition>
+          </router-view>
         </div>
       </div>
 
@@ -40,6 +42,7 @@ import Banner from '@/components/frontend/Banner.vue';
 import HomeSide from '@/components/frontend/Side/HomeSide.vue';
 import ArticleInfoSide from '@/components/frontend/Side/ArticleInfoSide.vue';
 import Footer from '@/components/frontend/Footer.vue';
+import FadeTransition from '@/components/Child/FadeTransition.vue';
 
 import { computed, shallowRef, watch } from 'vue';
 
@@ -76,23 +79,5 @@ watch(() => route.path, _ => {
 /* 字重：style.less 全局 h1,h2,h3{font-weight:normal} 是无层级规则；scoped 的 h3 特异性更高本来能赢，换成工具类就会输 */
 h3 {
   font-weight: bold;
-}
-
-/* Vue transition 运行时类 */
-.v-enter-from,
-.v-leave-to {
-  opacity: 0;
-  transform: scale(.5);
-}
-
-.v-leave-from,
-.v-enter-to {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.v-enter-active,
-.v-leave-active {
-  transition: all .6s ease;
 }
 </style>
