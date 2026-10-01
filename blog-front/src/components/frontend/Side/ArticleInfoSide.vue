@@ -19,9 +19,9 @@
             <el-divider>
               <Icon iconName="icon-shili" iconSize="1.56"></Icon>
             </el-divider>
-            <div class="tag-list flex flex-wrap gap-2 w-full">
-              <span class="tag inline-flex items-center max-w-full text-white rounded-[5px] py-[3px] px-[6px] leading-[1.45] [overflow-wrap:anywhere] [word-break:break-word] whitespace-normal" v-for="(item, index) in store.homeHeaderInfo.tags" :key="item.id ?? item.name"
-                :style="{ backgroundColor: tags[index % tags.length] }">{{ item.name }}</span>
+            <div class="tag-list flex flex-wrap gap-2 w-full mb-4">
+              <span class="tag inline-flex items-center max-w-full rounded-full py-0.5 px-2.5 text-[13px] leading-[1.6] text-(--tag) bg-(--tag)/10 dark:bg-(--tag)/20 dark:text-[color-mix(in_oklab,var(--tag)_60%,white)] [overflow-wrap:anywhere] [word-break:break-word] whitespace-normal" v-for="(item, index) in store.homeHeaderInfo.tags" :key="item.id ?? item.name"
+                :style="{ '--tag': tagColors[index] }"><span class="mr-0.5 opacity-60" aria-hidden="true">#</span>{{ item.name }}</span>
             </div>
           </div>
 
@@ -37,19 +37,35 @@
 <script setup>
 import { useUserStore } from '@/store';
 import ArticleReadingTools from '@/components/frontend/ArticleReadingTools.vue';
-import { reactive, onMounted, onBeforeUnmount, ref } from 'vue'
+import { computed, reactive, onMounted, onBeforeUnmount, ref } from 'vue'
 import { debounce } from '@/utils/tool'
 const store = useUserStore()
 
 const scrollElement = document.documentElement
 
-const getRandomColor = () => {
-  const tagColors = [
-    "#037ef3", "#f85a40", "#00c16e", "#7552cc", "#0cb9c1", "#f48924", "#ff4f81"
-  ]
-  return tagColors[Math.floor(Math.random() * tagColors.length)];
-}
-const tags = Array.from({ length: 9 }, () => getRandomColor())
+// Ordered by hue: red → orange → … → pink → rose.
+const tagPalette = [
+  "#dc2626", "#ea580c", "#d97706", "#65a30d", "#16a34a", "#0d9488", "#0891b2",
+  "#0284c7", "#2563eb", "#4f46e5", "#7c3aed", "#c026d3", "#db2777", "#e11d48",
+]
+// Coprime with the palette length, so probing visits every colour; 5 of 14 also jumps well away in hue.
+const TAG_PROBE_STEP = 5
+// Each tag starts from the colour its name hashes to, so it keeps that colour across articles.
+// Within one article it moves on a clash: first to a colour whose hue neighbours are free too
+// (red beside rose reads as the same colour), else to any unused one, so no two chips share a colour.
+const tagColors = computed(() => {
+  const size = tagPalette.length
+  const used = new Set()
+  const isolated = (index) => [size - 1, 0, 1].every(offset => !used.has((index + offset) % size))
+  return (store.homeHeaderInfo.tags ?? []).map(({ name }) => {
+    let hash = 0
+    for (const char of name) hash = (hash * 31 + char.codePointAt(0)) >>> 0
+    const probes = Array.from({ length: size }, (_, step) => (hash + step * TAG_PROBE_STEP) % size)
+    const index = probes.find(isolated) ?? probes.find(index => !used.has(index)) ?? probes[0]
+    used.add(index)
+    return tagPalette[index]
+  })
+})
 
 const customColors = [
   { color: 'rgb(57,157,254)', percentage: 80 },
