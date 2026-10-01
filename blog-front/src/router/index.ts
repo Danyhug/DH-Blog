@@ -42,13 +42,14 @@ const routes = [
   { path: '/', redirect: '/view/home' },
   // 前台页面
   {
-    path: '/view', component: HomeView, children:
+    // blogTheme：参与读者的夜间模式（App.vue）；子路由的 meta 会与父级合并
+    path: '/view', component: HomeView, meta: { blogTheme: true }, children:
       [
         { path: 'home', component: MainView, name: 'Home', meta: { title: '我的个人纪录' } },
         { path: 'article/:id', component: ArticleView, name: 'ArticleInfo', meta: { title: '文章详情' } },
       ],
   },
-  { path: '/knowledge', component: KnowledgeView, name: 'Knowledge', meta: { title: '知识星图' } },
+  { path: '/knowledge', component: KnowledgeView, name: 'Knowledge', meta: { title: '知识星图', blogTheme: true } },
   // 后台页面
   {
     path: '/admin', redirect: '/admin/dashboard', component: AdminView, name: 'Admin', meta: { title: '后台管理' }, children:
@@ -72,9 +73,9 @@ const routes = [
   // 登录页面
   { path: '/login', component: LoginView, name: 'Login', meta: { title: '登录' } },
   // 加密页面
-  { path: '/lock', component: LockView, name: 'Lock', meta: { title: '私密文章' } },
+  { path: '/lock', component: LockView, name: 'Lock', meta: { title: '私密文章', blogTheme: true } },
   // 错误页面
-  { path: '/error', component: ErrorView, name: 'Error', meta: { title: '错误页面' } },
+  { path: '/error', component: ErrorView, name: 'Error', meta: { title: '错误页面', blogTheme: true } },
   // 分享访问页面（公开，无需登录）
   { path: '/share/:shareId', component: FilePreview, name: 'Share', meta: { title: '文件分享' }, props: (route: RouteLocationNormalizedLoaded) => ({ shareMode: true, shareId: route.params.shareId, file: { id: '', name: '', type: 'file' } }) },
   // WebDAV 实用页面

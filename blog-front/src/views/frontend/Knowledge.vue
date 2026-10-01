@@ -1,10 +1,10 @@
 <template>
-    <div class="knowledge-page [@media(max-width:900px)]:h-auto [@media(max-width:900px)]:min-h-screen flex flex-col h-screen bg-[var(--bg-color)] text-[var(--text-color)] overflow-hidden [font-family:[-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,'Helvetica_Neue',Arial,sans-serif]]">
+    <div class="knowledge-page [@media(max-width:900px)]:h-auto [@media(max-width:900px)]:min-h-screen flex flex-col h-screen dark:[--bg-color:#141414]! dark:[--card-bg-color:#202020]! dark:[--text-color:#d4d4d4]! dark:[--border-color:#303030]! dark:[--shadow-color:rgba(0,0,0,0.4)]! bg-[var(--bg-color)] text-[var(--text-color)] overflow-hidden [font-family:[-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,'Helvetica_Neue',Arial,sans-serif]]">
         <div id="particles-js" class="fixed top-0 left-0 w-full h-full z-0"></div>
         <main class="[@media(max-width:900px)]:flex-col [@media(max-width:900px)]:h-auto [@media(max-width:900px)]:p-5 [@media(max-width:900px)]:gap-5 flex grow p-10 gap-10 z-[1] relative h-[calc(100vh-80px)]">
             <section class="first-of-type:[animation-delay:0.2s] [&:nth-of-type(2)]:[animation-delay:0.4s] [@media(max-width:900px)]:basis-auto! [@media(max-width:900px)]:h-[50vh] animate-fade-in-up">
                 <h2 class="[@media(max-width:900px)]:text-[1.5em] [@media(max-width:900px)]:p-5 text-[2em] text-center text-[var(--text-color)] py-[25px] px-5 m-0 shrink-0 [text-shadow:none] border-b border-b-[var(--border-color)]">📂 文章分类</h2>
-                <div class="grid-wrapper [@media(max-width:900px)]:p-5 [&::-webkit-scrollbar]:w-2! [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#CBD5E0]! [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb:hover]:bg-[#A0AEC0]! grow p-[25px] [scrollbar-gutter:stable]">
+                <div class="grid-wrapper [@media(max-width:900px)]:p-5 [&::-webkit-scrollbar]:w-2! [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#CBD5E0]! dark:[&::-webkit-scrollbar-thumb]:bg-[#444]! [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb:hover]:bg-[#A0AEC0]! dark:[&::-webkit-scrollbar-thumb:hover]:bg-[#555]! grow p-[25px] [scrollbar-gutter:stable]">
                     <div v-if="isLoading" class="loading-state text-center p-10 text-[var(--text-color)] text-[1.1em]">
                         <i class="fas fa-spinner fa-spin mr-[10px]"></i> 加载中...
                     </div>
@@ -14,7 +14,7 @@
                             :style="{ animationDelay: 200 + index * 50 + 'ms' }" @click.prevent="openModal(category)">
                             <div class="bg-transparent rounded-[10px] p-5 text-center text-[var(--text-color)] text-[1.1em] font-medium flex justify-center items-center relative overflow-hidden">
                                 <span class="[transition:color_0.3s_ease-out]">{{ category.name }}</span>
-                                <span class="bg-[#EDF2F7] text-[#718096] text-[0.8em] py-1 px-[10px] rounded-[20px] ml-[15px] [transition:color_0.3s_ease-out,background-color_0.3s_ease-out]">{{ category.count }}篇</span>
+                                <span class="bg-[#EDF2F7] text-[#718096] dark:bg-[#2a2a2a] dark:text-[#aaa] text-[0.8em] py-1 px-[10px] rounded-[20px] ml-[15px] [transition:color_0.3s_ease-out,background-color_0.3s_ease-out]">{{ category.count }}篇</span>
                             </div>
                         </a>
                     </div>
@@ -24,7 +24,7 @@
             <!-- Tags Section -->
             <section class="first-of-type:[animation-delay:0.2s] [&:nth-of-type(2)]:[animation-delay:0.4s] [@media(max-width:900px)]:basis-auto! [@media(max-width:900px)]:h-[50vh] flex-1 animate-fade-in-up">
                 <h2 class="[@media(max-width:900px)]:text-[1.5em] [@media(max-width:900px)]:p-5 text-[2em] text-center text-[var(--text-color)] py-[25px] px-5 m-0 shrink-0 [text-shadow:none] border-b border-b-[var(--border-color)]">🏷️ 热门标签</h2>
-                <div class="grid-wrapper [@media(max-width:900px)]:p-5 [&::-webkit-scrollbar]:w-2! [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#CBD5E0]! [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb:hover]:bg-[#A0AEC0]! grow p-[25px] [scrollbar-gutter:stable]">
+                <div class="grid-wrapper [@media(max-width:900px)]:p-5 [&::-webkit-scrollbar]:w-2! [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#CBD5E0]! dark:[&::-webkit-scrollbar-thumb]:bg-[#444]! [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb:hover]:bg-[#A0AEC0]! dark:[&::-webkit-scrollbar-thumb:hover]:bg-[#555]! grow p-[25px] [scrollbar-gutter:stable]">
                     <div v-if="isLoading" class="loading-state text-center p-10 text-[var(--text-color)] text-[1.1em]">
                         <i class="fas fa-spinner fa-spin mr-[10px]"></i> 加载中...
                     </div>
@@ -45,16 +45,16 @@
         <!-- Modal with Vue Transition -->
         <!-- ✨ Replaced GSAP with Vue's <Transition> component -->
         <Transition enter-active-class="[transition:opacity_0.4s_ease]" leave-active-class="[transition:opacity_0.4s_ease]" enter-from-class="opacity-0" leave-to-class="opacity-0">
-            <div v-if="isModalVisible" class="modal-overlay fixed top-0 left-0 w-full h-full bg-[rgba(244,247,252,0.8)] z-[1000] flex justify-center items-center p-5" @click.self="closeModal">
+            <div v-if="isModalVisible" class="modal-overlay fixed top-0 left-0 w-full h-full bg-[rgba(244,247,252,0.8)] dark:bg-black/60 z-[1000] flex justify-center items-center p-5" @click.self="closeModal">
                 <Transition enter-active-class="[transition:all_0.4s_cubic-bezier(0.215,0.61,0.355,1)] delay-100" leave-active-class="[transition:all_0.3s_ease-in]" enter-from-class="opacity-0 [transform:translateY(50px)_scale(0.95)]" leave-to-class="opacity-0 [transform:translateY(50px)_scale(0.95)]">
                     <div v-if="isModalVisible" class="[@media(max-width:900px)]:p-5 bg-[var(--card-bg-color)] border border-[var(--border-color)] rounded-2xl py-[25px] px-[30px] w-full max-w-[700px] max-h-[85vh] flex flex-col relative shadow-[0_15px_50px_rgba(45,55,72,0.15)]">
-                        <button class="[&:hover]:bg-[#E2E8F0] [&:hover]:[transform:rotate(90deg)] absolute top-[15px] right-[15px] bg-[#EDF2F7] [border:none] text-[var(--text-color)] w-9 h-9 rounded-[50%] text-[24px] leading-[36px] text-center cursor-pointer [transition:background_0.3s,transform_0.3s]" @click="closeModal">×</button>
+                        <button class="[&:hover]:bg-[#E2E8F0] dark:[&:hover]:bg-[#333] [&:hover]:[transform:rotate(90deg)] absolute top-[15px] right-[15px] bg-[#EDF2F7] dark:bg-[#2a2a2a] [border:none] text-[var(--text-color)] w-9 h-9 rounded-[50%] text-[24px] leading-[36px] text-center cursor-pointer [transition:background_0.3s,transform_0.3s]" @click="closeModal">×</button>
                         <h3 class="[@media(max-width:900px)]:text-[1.5em] text-[1.8em] text-[var(--text-color)] mx-0 mt-0 mb-5 pb-[15px] pr-10 border-b border-b-[var(--border-color)] [text-shadow:none]">{{ modalTitle }}</h3>
-                        <ul class="[&::-webkit-scrollbar]:w-2! [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#CBD5E0]! [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb:hover]:bg-[#A0AEC0]! list-none p-0 pr-[15px] m-0 overflow-y-auto grow">
+                        <ul class="[&::-webkit-scrollbar]:w-2! [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#CBD5E0]! dark:[&::-webkit-scrollbar-thumb]:bg-[#444]! [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb:hover]:bg-[#A0AEC0]! dark:[&::-webkit-scrollbar-thumb:hover]:bg-[#555]! list-none p-0 pr-[15px] m-0 overflow-y-auto grow">
                             <li v-for="(article, index) in modalArticles" :key="index" @click="goToArticle(article)"
-                                class="last:border-b-0 [&:hover]:bg-[#F7FAFC] [&:hover]:text-[var(--accent-color-1)] [&:hover]:pl-[25px] before:content-['›'] before:absolute before:left-2 before:top-1/2 before:[transform:translateY(-50%)] before:text-[var(--accent-color-1)] before:opacity-0 before:[transition:opacity_0.3s] before:font-bold [&:hover]:before:opacity-100 border-b border-b-[var(--border-color)] cursor-pointer py-[18px] pr-[10px] pl-5 text-[1.1em] [transition:all_0.3s_ease] relative">
+                                class="last:border-b-0 [&:hover]:bg-[#F7FAFC] dark:[&:hover]:bg-[#262626] [&:hover]:text-[var(--accent-color-1)] [&:hover]:pl-[25px] before:content-['›'] before:absolute before:left-2 before:top-1/2 before:[transform:translateY(-50%)] before:text-[var(--accent-color-1)] before:opacity-0 before:[transition:opacity_0.3s] before:font-bold [&:hover]:before:opacity-100 border-b border-b-[var(--border-color)] cursor-pointer py-[18px] pr-[10px] pl-5 text-[1.1em] [transition:all_0.3s_ease] relative">
                                 <div>{{ article.title }}</div>
-                                <div class="article-info text-[0.85em] text-[#666] mt-[6px]">
+                                <div class="article-info text-[0.85em] text-[#666] dark:text-[#999] mt-[6px]">
                                     <span class="mr-3"><i class="fas fa-eye mr-1"></i> {{ article.views }} 阅读</span>
                                     <span class="mr-3"><i class="fas fa-file-word mr-1"></i> {{ article.wordNum }} 字</span>
                                     <span class="mr-3"><i class="fas fa-calendar-alt mr-1"></i> {{ article.createTime }}</span>
@@ -143,6 +143,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 夜间值写在模板根节点的 dark:[--*]! 上：这里是无层级规则，工具类要带 ! 才能覆盖 */
 .knowledge-page {
     --accent-color-1: hsl(180, 100%, 40%);
     --accent-color-2: hsl(280, 100%, 55%);

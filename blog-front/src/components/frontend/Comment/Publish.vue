@@ -1,5 +1,5 @@
 <template>
-  <div class="comment-form relative w-full mx-auto py-4 px-2 bg-white [.article-night_&]:bg-[#222] [.article-night_&]:text-[#ccc] rounded-xl text-[12px]">
+  <div class="comment-form relative w-full mx-auto py-4 px-2 bg-white dark:bg-[#222] dark:text-[#ccc] rounded-xl text-[12px]">
     <div class="right-top absolute right-3 top-2">
       <label class="ui-bookmark">
         <input type="checkbox" v-model="comment.isPublic" />
@@ -14,10 +14,10 @@
         </div>
       </label>
     </div>
-    <div class="author-info w-full grid grid-cols-3 leading-[24px]">
+    <div class="author-info w-full grid grid-cols-3 leading-[24px] dark:border-b-[#444]!">
       <input class="input border-none text-[12px] py-2 px-3 focus:[outline:none]" type="text" placeholder="* 昵称" maxlength="15" v-model="comment.author" />
       <input class="input border-none text-[12px] py-2 px-3 focus:[outline:none]" type="email" placeholder="* 邮箱" maxlength="20" v-model="comment.email" />
-      <div class="text-[#666] [.article-night_&]:text-[#aaa] mr-[30px]">
+      <div class="text-[#666] dark:text-[#aaa] mr-[30px]">
         {{ comment.isPublic ? '评论已公开，任何人均可阅读' : '评论已私密，仅博主可见' }}
       </div>
     </div>

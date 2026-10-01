@@ -1,16 +1,16 @@
 <template>
-  <div role="toolbar" aria-label="文章阅读工具" class="flex items-center justify-evenly gap-1"
-    :class="model.isDarkMode ? 'text-[#b8b8b8]' : 'text-[#606266]'">
+  <div role="toolbar" aria-label="文章阅读工具" class="flex items-center justify-evenly gap-1 text-[#606266] dark:text-[#b8b8b8]">
     <button type="button" :class="buttonClass" :title="focusLabel" :aria-label="focusLabel"
       :aria-pressed="model.isFullPreview" @click="model.isFullPreview = !model.isFullPreview">
       <Close v-if="model.isFullPreview" class="size-5" />
       <FullScreen v-else class="size-5" />
     </button>
-    <el-popover v-model:visible="qrPanelOpen" trigger="click" placement="bottom" :width="240"
-      :persistent="false" :effect="model.isDarkMode ? 'dark' : 'light'">
+    <!-- 弹层不设 effect：默认 light 在 html.dark 下已取 Element Plus 的夜间变量；effect="dark" 反而会变成浅底 -->
+    <el-popover v-model:visible="qrPanelOpen" trigger="click" placement="bottom" :width="240" :persistent="false">
       <template #reference>
         <button type="button" :class="buttonClass" title="生成二维码" aria-label="生成文章二维码">
-          <Icon iconName="icon-31erweima" iconSize="1.25" aria-hidden="true" />
+          <!-- 图标自带 fill="#231F20"，不吃 currentColor，夜间只能反色 -->
+          <Icon iconName="icon-31erweima" iconSize="1.25" class="dark:invert" aria-hidden="true" />
         </button>
       </template>
       <div class="flex flex-col items-center gap-2" role="group" aria-label="文章二维码">
@@ -19,8 +19,7 @@
         <p class="m-0 text-center text-[13px]">扫码阅读这篇文章</p>
       </div>
     </el-popover>
-    <el-popover v-model:visible="fontPanelOpen" trigger="click" placement="bottom" :width="220"
-      :persistent="false" :effect="model.isDarkMode ? 'dark' : 'light'">
+    <el-popover v-model:visible="fontPanelOpen" trigger="click" placement="bottom" :width="220" :persistent="false">
       <template #reference>
         <button type="button" :class="buttonClass" title="调整字号" aria-label="调整字号">
           <span class="text-[18px] font-medium" aria-hidden="true">Aa</span>
@@ -34,7 +33,7 @@
         <div class="flex items-center justify-between gap-2">
           <button type="button" :class="buttonClass" aria-label="减小字号" :disabled="model.fontSize <= 14"
             @click="model.fontSize = Math.max(14, model.fontSize - 2)"><Minus class="size-4" /></button>
-          <button type="button" class="cursor-pointer rounded px-2 py-1 text-[13px] hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-blue-500"
+          <button type="button" class="cursor-pointer rounded px-2 py-1 text-[13px] hover:bg-black/5 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-blue-500"
             @click="model.fontSize = 16">恢复默认</button>
           <button type="button" :class="buttonClass" aria-label="增大字号" :disabled="model.fontSize >= 24"
             @click="model.fontSize = Math.min(24, model.fontSize + 2)"><Plus class="size-4" /></button>
@@ -102,9 +101,6 @@ const toggleDarkMode = (event: MouseEvent) => {
     // Transition was skipped (e.g. tab hidden); the theme has still switched.
   });
 };
-const buttonClass = computed(() => [
-  'inline-flex size-11 shrink-0 items-center justify-center rounded-lg border-0 bg-transparent cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:opacity-40 disabled:cursor-not-allowed',
-  model.isDarkMode ? 'hover:bg-white/10' : 'hover:bg-black/5',
-]);
+const buttonClass = 'inline-flex size-11 shrink-0 items-center justify-center rounded-lg border-0 bg-transparent cursor-pointer hover:bg-black/5 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:opacity-40 disabled:cursor-not-allowed';
 
 </script>

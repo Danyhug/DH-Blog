@@ -1,5 +1,5 @@
 <template>
-  <div class="relative w-full my-[30px] mx-auto text-[rgb(49,49,49)] [.article-night_&]:text-[#ccc]">
+  <div class="relative w-full my-[30px] mx-auto text-[rgb(49,49,49)] dark:text-[#ccc]">
     <Loading v-if="isLoading" />
 
     <div>

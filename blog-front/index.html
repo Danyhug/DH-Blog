@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="en">
+<!-- dark: 由 App.vue 在前台博客路由上切换 html.dark；body 的浅色渐变与滚动条在 style.less 里是无层级规则，需 ! 才压得住 -->
+<html lang="en" class="dark:[&::-webkit-scrollbar-thumb]:bg-white/20!">
 
 <head>
   <meta charset="UTF-8" />
@@ -9,7 +10,7 @@
   <title>Danyhug的个人记录 - DH-Blog</title>
 </head>
 
-<body>
+<body class="dark:bg-none! dark:bg-[#141414]! dark:text-[#d4d4d4]!">
   <div id="app"></div>
   <script type="module" src="/src/main.ts"></script>
 </body>

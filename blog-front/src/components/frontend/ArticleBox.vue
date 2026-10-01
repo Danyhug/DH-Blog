@@ -1,13 +1,14 @@
 <template>
   <article class="type-img-left">
     <router-link :to="'./article/' + article.id">
-      <div class="cover flex w-full min-h-[244px] rounded-2xl bg-grey-0 overflow-hidden border border-[#eee]">
+      <div class="cover flex w-full min-h-[244px] rounded-2xl bg-grey-0 overflow-hidden border border-[#eee] dark:bg-[#202020] dark:border-[#303030]">
         <div class="left w-1/2 relative overflow-hidden [clip-path:polygon(0_0,92%_0%,100%_100%,0%_100%)]">
           <img :src="getArticleBg(article.thumbnailUrl, article.id)" :alt="article.title" loading="lazy"
             class="block w-full h-full object-cover [transition:all_0.5s]">
         </div>
-        <div class="right w-1/2 relative flex flex-col p-4 pt-[0.3rem]">
-          <div class="top w-full flex justify-end text-[0.75rem] text-[#606266]">
+        <!-- 手机端 style.less 把这里画成盖在封面上的白色毛玻璃（无层级规则），夜间要 ! 才换得掉 -->
+        <div class="right w-1/2 relative flex flex-col p-4 pt-[0.3rem] max-[768px]:dark:bg-black/50!">
+          <div class="top w-full flex justify-end text-[0.75rem] text-[#606266] dark:text-[#aaa]">
             <span class="date ml-[1.45rem]">
               <Icon iconName="icon-calendar" iconSize="1.35"></Icon>
               {{ article.createTime?.slice(0, 10) }}
@@ -33,10 +34,10 @@
             <span class="private-lock inline-flex [flex:0_0_2.65rem] items-center justify-center w-[2.65rem] h-[2.65rem] text-white rounded-[50%] bg-[linear-gradient(135deg,var(--color-pink),var(--color-orange))] shadow-[0_6px_16px_rgba(233,84,107,0.22)]" aria-hidden="true">
               <el-icon><Lock /></el-icon>
             </span>
-            <span class="private-copy flex flex-col min-w-0 text-grey-7 leading-[1.35]">
+            <span class="private-copy flex flex-col min-w-0 text-grey-7 dark:text-[#d4d4d4] leading-[1.35]">
               <span class="private-label mb-[0.15rem] text-color-red text-[0.625rem] font-bold tracking-[0.14em]">PRIVATE ENTRY</span>
               <strong class="text-[0.95rem]">这篇文章已上锁</strong>
-              <span class="private-hint mt-[0.2rem] text-grey-6 text-[0.75rem]">正文需使用密钥解锁后阅读</span>
+              <span class="private-hint mt-[0.2rem] text-grey-6 dark:text-[#aaa] text-[0.75rem]">正文需使用密钥解锁后阅读</span>
             </span>
           </div>
           <p v-else class="text text-[0.875rem] leading-[2] max-h-[128px] [display:-webkit-box] [-webkit-box-orient:vertical] [line-clamp:3] text-ellipsis overflow-hidden">{{ article.summary }}</p>

@@ -1,6 +1,6 @@
 <template>
   <nav v-if="totalPages > 1"
-    class="flex items-center justify-center w-full min-h-[46px] py-1 [@media(max-width:600px)]:min-h-[42px] [@media(max-width:600px)]:py-[2px]"
+    class="flex items-center justify-center w-full min-h-[46px] dark:[--grey-6:#aaa] dark:[--grey-4:#555] py-1 [@media(max-width:600px)]:min-h-[42px] [@media(max-width:600px)]:py-[2px]"
     aria-label="文章列表分页">
     <el-pagination
       v-model:current-page="currentPageModel"
@@ -37,6 +37,7 @@ const totalPages = computed(() => Math.ceil(props.total / props.pageSize))
 
 <style lang="less" scoped>
 /* :deep()：EP 内部 DOM。.el-pagination 自带 --el-pagination-hover-color 等无层级声明，压过工具类 */
+/* 夜间配色不在这里写：<nav> 上的 dark:[--grey-6] / dark:[--grey-4] 就地覆盖了下面引用的变量 */
 :deep(.article-pagination.el-pagination) {
   --el-pagination-hover-color: var(--primary-color);
   flex-wrap: nowrap;

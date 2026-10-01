@@ -2,14 +2,14 @@
   <div class="w-full">
     <el-row>
       <el-col>
-        <el-card class="w-full min-h-screen" :class="store.aritcleModel.isDarkMode ? 'bg-[#191919]! text-[#d4d4d4]! border-[#303030]! [--el-bg-color:#191919] [--el-text-color-regular:#aaa] [--el-border-color:#303030]' : 'bg-white!'">
+        <el-card class="w-full min-h-screen bg-white! dark:bg-[#191919]! dark:text-[#d4d4d4]! dark:border-[#303030]! dark:[--el-bg-color:#191919] dark:[--el-text-color-regular:#aaa] dark:[--el-border-color:#303030]">
           <img :src="store.homeHeaderInfo.thumbnailUrl" class="image w-[95%] mx-auto" />
 
           <div>
             <p class="title text-[1.15rem] my-3">{{ store.homeHeaderInfo.title }}</p>
             <div class="schedule">
               <el-progress :color="customColors" :percentage="sideInfo.process"></el-progress>
-              <p class="text-[14px] text-[#606266] [.article-night_&]:text-[#aaa]">已阅读时长：{{ formatSeconds(second) }}</p>
+              <p class="text-[14px] text-[#606266] dark:text-[#aaa]">已阅读时长：{{ formatSeconds(second) }}</p>
             </div>
           </div>
 

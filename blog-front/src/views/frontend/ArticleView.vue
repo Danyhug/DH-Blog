@@ -6,10 +6,9 @@
     <div>
       <Teleport to="body" :disabled="!store.aritcleModel.isFullPreview">
         <section id="article-reading" ref="readingContainer" tabindex="-1" aria-label="文章阅读区"
-          :class="[store.aritcleModel.isFullPreview ? 'fixed inset-0 z-[2000] overflow-y-auto' : '',
-            store.aritcleModel.isDarkMode ? 'bg-[#191919] text-[#d4d4d4]' : 'bg-white text-[#333]']">
-          <div v-if="store.aritcleModel.isFullPreview" class="sticky top-0 z-10 border-b px-4 py-2"
-            :class="store.aritcleModel.isDarkMode ? 'bg-[#191919] border-[#303030]' : 'bg-white border-grey-3'">
+          class="bg-white text-[#333] dark:bg-[#191919] dark:text-[#d4d4d4]"
+          :class="{ 'fixed inset-0 z-[2000] overflow-y-auto': store.aritcleModel.isFullPreview }">
+          <div v-if="store.aritcleModel.isFullPreview" class="sticky top-0 z-10 border-b border-grey-3 bg-white px-4 py-2 dark:border-[#303030] dark:bg-[#191919]">
             <ArticleReadingTools class="mx-auto max-w-[320px]" />
           </div>
           <ArticleReadingTools v-else class="mx-4 mb-2 [@media(min-width:1025px)]:hidden" />
@@ -21,11 +20,11 @@
             <MdPreview :editorId="system.mdEditorInit.editorId" :modelValue="content"
               :previewTheme="system.mdEditorInit.previewTheme" :codeFoldable="system.mdEditorInit.codeFoldable"
               :theme="store.aritcleModel.isDarkMode ? 'dark' : 'light'"
-              :class="store.aritcleModel.isDarkMode ? '[--md-bk-color:#191919]! [--md-color:#d4d4d4]!' : ''" />
+              class="dark:[--md-bk-color:#191919]! dark:[--md-color:#d4d4d4]!" />
           </div>
         </section>
       </Teleport>
-      <div class="info py-[10px] px-0 text-[12px] text-[#606266] [.article-night_&]:text-[#aaa] text-right border-t border-grey-4 [.article-night_&]:border-[#303030]">
+      <div class="info py-[10px] px-0 text-[12px] text-[#606266] dark:text-[#aaa] text-right border-t border-grey-4 dark:border-[#303030]">
         <span class="mx-[10px]">
           更新于 {{ update }}
         </span>

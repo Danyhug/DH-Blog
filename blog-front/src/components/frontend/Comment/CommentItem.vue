@@ -5,16 +5,16 @@
         <div class="comment-avatar cursor-pointer">
           <img :alt="`${comment.author}'s avatar`"
             :src="`//cravatar.cn/avatar/${comment.email == 'danyhug@qq.com' ? '4831d466a6ba28c45b70edefc025fa8f' : comment.email}?s=256&d=monsterid`"
-            class="avatar w-[44px] h-[44px] rounded-[5px] [transition:all_0.5s] border border-[#ddd] hover:rounded-[30%_70%_70%_30%/30%_30%_70%_70%]">
+            class="avatar w-[44px] h-[44px] rounded-[5px] [transition:all_0.5s] border border-[#ddd] dark:border-[#444] hover:rounded-[30%_70%_70%_30%/30%_30%_70%_70%]">
         </div>
         <div class="comment-main ml-[15px] text-[14px] w-full">
           <div class="comment-main-top h-[44px] flex flex-col justify-between">
-            <div class="comment-meta flex items-baseline text-[#666] [.article-night_&]:text-[#aaa]">
+            <div class="comment-meta flex items-baseline text-[#666] dark:text-[#aaa]">
               <div class="comment-author"><a>{{ comment.author }}</a></div>
               <span v-if="comment.isAdmin" class="admin-tag text-white bg-[#6b7280] py-px px-[3px] text-[10px] leading-[1.1] font-medium rounded-[3px] inline-block opacity-90 mr-[3px] ml-[2px]">博主</span>
-              <time class="comment-time text-[#6b7280] [.article-night_&]:text-[#aaa] text-[10px] ml-px"> • {{ formatDate(comment.createTime) }}</time>
+              <time class="comment-time text-[#6b7280] dark:text-[#aaa] text-[10px] ml-px"> • {{ formatDate(comment.createTime) }}</time>
             </div>
-            <div class="comment-content text-[rgb(74,85,104)] [.article-night_&]:text-[#ccc]">
+            <div class="comment-content text-[rgb(74,85,104)] dark:text-[#ccc]">
               <p>{{ comment.content }}</p>
             </div>
           </div>

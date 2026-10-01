@@ -4,21 +4,21 @@
     <div class="leading-[2.2em]">
       <p class="sub-title">{{ site.signature }}</p>
       <ul class="mt-6 mb-5 flex justify-between">
-        <li class="text-grey-7 list-none">
+        <li class="text-grey-7 dark:text-[#d4d4d4] list-none">
           <a href="">
             <p class="num font-bold text-[22px]">{{ data.articleCount }}</p>
             文章
           </a>
         </li>
-        <span class="block border-l border-grey-4"></span>
-        <li class="text-grey-7 list-none">
+        <span class="block border-l border-grey-4 dark:border-[#444]"></span>
+        <li class="text-grey-7 dark:text-[#d4d4d4] list-none">
           <a href="">
             <p class="num font-bold text-[22px]">{{ data.categoryCount }}</p>
             分类
           </a>
         </li>
-        <span class="block border-l border-grey-4"></span>
-        <li class="text-grey-7 list-none">
+        <span class="block border-l border-grey-4 dark:border-[#444]"></span>
+        <li class="text-grey-7 dark:text-[#d4d4d4] list-none">
           <a href="">
             <p class="num font-bold text-[22px]">{{ data.tagCount }}</p>
             标签

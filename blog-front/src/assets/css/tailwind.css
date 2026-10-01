@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
 /*
+  夜间模式由 <html class="dark"> 驱动（App.vue 只在前台博客路由上加），不跟随系统 prefers-color-scheme。
+  与 Element Plus 的 dark/css-vars.css 用的是同一个开关，两边总是一起切换。
+*/
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
   P1：把 style.less 的主题变量映射成语义工具类（bg-grey-0 / text-color-red / shadow-dh-normal …）。
 
   用 @theme inline 而不是 @theme：

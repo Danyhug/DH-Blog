@@ -7,6 +7,7 @@ import App from './App.vue'
 import '@/assets/iconfont/iconfont.js'
 import { MdEditor, MdPreview, MdCatalog } from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
+import 'element-plus/theme-chalk/dark/css-vars.css'
 import { createPinia } from 'pinia';
 
 import '@/assets/css/style.less'
