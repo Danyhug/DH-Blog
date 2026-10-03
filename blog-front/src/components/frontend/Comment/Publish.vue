@@ -14,30 +14,50 @@
         </div>
       </label>
     </div>
-    <div class="author-info w-full grid grid-cols-3 leading-[24px] dark:border-b-[#444]!">
-      <input class="input border-none text-[12px] py-2 px-3 focus:[outline:none]" type="text" placeholder="* 昵称" maxlength="15" v-model="comment.author" />
-      <input class="input border-none text-[12px] py-2 px-3 focus:[outline:none]" type="email" placeholder="* 邮箱" maxlength="20" v-model="comment.email" />
+    <div class="author-info w-full grid grid-cols-3 items-start leading-[24px] dark:border-b-[#444]!">
+      <div class="min-w-0">
+        <input ref="authorInput" class="input w-full border-none text-[12px] py-2 px-3 focus:[outline:none]" type="text"
+          placeholder="* 昵称" maxlength="15" v-model="comment.author" @input="authorTouched = true"
+          :aria-invalid="!!authorHint" />
+        <!-- 恒定占位：提示出现/消失不改动卡片高度，滚动条就不会跟着跳 -->
+        <p class="hint-line" aria-live="polite">{{ authorHint }}</p>
+      </div>
+      <div class="min-w-0">
+        <input ref="emailInput" class="input w-full border-none text-[12px] py-2 px-3 focus:[outline:none]" type="email"
+          placeholder="* 邮箱" maxlength="20" v-model="comment.email" @input="emailTouched = true"
+          @blur="emailTouched = true" :aria-invalid="!!emailHint" />
+        <p class="hint-line" aria-live="polite">{{ emailHint }}</p>
+      </div>
       <div class="text-[#666] dark:text-[#aaa] mr-[30px]">
         {{ comment.isPublic ? '评论已公开，任何人均可阅读' : '评论已私密，仅博主可见' }}
       </div>
     </div>
     <div class="comment-content mt-4">
-      <textarea @focus="viewState.showEmoji = true" @blur="viewState.showEmoji = false"
+      <textarea @focus="viewState.showEmoji = true" @blur="handleTextareaBlur"
         class="input border-none w-full h-[70px] py-2 px-[13px] resize-y min-h-[70px] focus:[outline:none]" type="textarea"
-        placeholder="想要说些什么呢" ref="textarea" v-model="comment.content"></textarea>
+        placeholder="想要说些什么呢" ref="textarea" v-model="comment.content" @input="contentTouched = true"
+        :aria-invalid="!!contentHint"></textarea>
+      <p class="hint-line" aria-live="polite">{{ contentHint }}</p>
     </div>
 
     <div class="comment-action mt-2 w-full flex justify-between">
       <div class="action-left flex-1">
         <div class="emoji">
-          <ul class="list-none text-[18px] grid grid-cols-[repeat(10,1fr)] gap-[6px]" v-show="viewState.showEmoji">
-            <li class="mr-[10px] cursor-pointer" v-for="ji in emojis" :key="ji" @click="addEmj(ji)">{{ ji }}</li>
-          </ul>
+          <Transition name="emoji-panel">
+            <!-- mousedown 挂在整个面板上：输入框不失焦，面板才不会在点中表情之前先收起 -->
+            <ul v-show="viewState.showEmoji" ref="emojiPanel"
+              class="list-none text-[18px] grid grid-cols-[repeat(10,1fr)] gap-[6px]"
+              @mousedown="keepTextareaFocus">
+              <li v-for="(ji, index) in emojis" :key="ji" class="animate-emoji-pop mr-[10px] cursor-pointer"
+                :style="{ animationDelay: emojiDelay(index) }" @click="insertEmoji(ji)">{{ ji }}</li>
+            </ul>
+          </Transition>
         </div>
       </div>
       <div class="action-right ml-[30px] relative left-[10px]">
         <button @click="submitComment"
-          class="[transform:scale(0.87)] flex items-center justify-center gap-[10px] py-0 px-[10px] text-white [text-shadow:2px_2px_rgb(116,116,116)] uppercase cursor-pointer border-solid border-2 border-black tracking-[1px] font-semibold text-[17px] bg-[hsl(49deg_98%_60%)] rounded-[50px] relative overflow-hidden [transition:all_0.5s_ease] active:[transform:scale(0.77)] active:[transition:all_100ms_ease]">
+          :disabled="submitting"
+          class="[transform:scale(0.87)] flex items-center justify-center gap-[10px] py-0 px-[10px] text-white [text-shadow:2px_2px_rgb(116,116,116)] uppercase cursor-pointer border-solid border-2 border-black tracking-[1px] font-semibold text-[17px] bg-[hsl(49deg_98%_60%)] rounded-[50px] relative overflow-hidden [transition:all_0.5s_ease] active:[transform:scale(0.77)] active:[transition:all_100ms_ease] disabled:pointer-events-none disabled:opacity-60">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36px" height="36px"
             class="[transition:all_0.5s_ease] z-[2]">
             <rect width="36" height="36" x="0" y="0" fill="#fdd835"></rect>
@@ -87,6 +107,33 @@ button:hover .now {
 button:hover .play {
   transform: translateX(200%);
   transition-delay: 300ms;
+}
+
+/*
+  固定一行高度：提示文字出现/消失不改变卡片高度，页面滚动条也就不会突然长出一截。
+  用 min-height 而不是 height，长提示换行时不会被裁掉。
+*/
+.hint-line {
+  margin: 1px 0 0;
+  min-height: 16px;
+  color: var(--color-red);
+  font-size: 11px;
+  line-height: 16px;
+  /* 占位行本身不响应点击，免得它挡住下面一点点的空白区域 */
+  pointer-events: none;
+}
+
+/* 面板从上方落下再收回。用 transition 而不是 @keyframes：进、出两个方向共用一套，
+   也避开「scoped 里的 keyframes 被 Vue 改名」那个坑。 */
+.emoji-panel-enter-active,
+.emoji-panel-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.emoji-panel-enter-from,
+.emoji-panel-leave-to {
+  opacity: 0;
+  transform: translateY(-0.375rem);
 }
 </style>
 
@@ -296,7 +343,7 @@ button:hover .play {
 <script setup>
 import { emojis } from '@/types/Constant';
 import { useUserStore } from '@/store/index'
-import { notify } from '@/utils/notification'
+import { addComment } from '@/api/user.ts'
 
 const store = useUserStore()
 
@@ -308,55 +355,153 @@ const props = defineProps({
   }
 })
 
-const viewState = {
-  showEmoji: false,
+const viewState = reactive({ showEmoji: false })
+const emojiPanel = ref(null)
+
+// 焦点还在面板里（Tab 到某个表情上）就先别收起，否则面板会在点中它之前先消失。
+const handleTextareaBlur = (event) => {
+  const nextFocus = event.relatedTarget
+  if (nextFocus instanceof Node && emojiPanel.value?.contains(nextFocus)) return
+  viewState.showEmoji = false
 }
 
-const def = {
-  articleId: null,
-  author: '',
-  content: '',
-  email: '',
-  parentId: props.parentId,
-  isPublic: true
+// 逐个错峰浮入。封顶是为了表情多起来以后，最后一排不用等太久。
+const EMOJI_STAGGER_MS = 12
+const EMOJI_STAGGER_LIMIT = 18
+const emojiDelay = (index) => `${Math.min(index, EMOJI_STAGGER_LIMIT) * EMOJI_STAGGER_MS}ms`
+
+const AUTHOR_MINIMUM = 2
+const CONTENT_MINIMUM = 3
+const EMAIL_PATTERN = /^([a-zA-Z0-9_-])+@([a-zA-Z0-9_-])+((\.[a-zA-Z0-9_-]{2,3}){1,2})$/
+
+const commenterStorageKey = 'dh-blog:commenter'
+
+function readSavedCommenter() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(commenterStorageKey) || 'null')
+    if (!saved || typeof saved !== 'object') return emptyCommenter()
+    return {
+      author: typeof saved.author === 'string' ? saved.author.slice(0, 15) : '',
+      email: typeof saved.email === 'string' ? saved.email.slice(0, 20) : '',
+      isPublic: saved.isPublic !== false,
+    }
+  } catch {
+    return emptyCommenter()
+  }
 }
-const comment = reactive({ ...def })
+
+function emptyCommenter() {
+  return { author: '', email: '', isPublic: true }
+}
+
+// 只记身份，不记正文：成功后的评论内容不该再填回输入框。
+function saveCommenter(commenter) {
+  try {
+    localStorage.setItem(commenterStorageKey, JSON.stringify({
+      author: commenter.author,
+      email: commenter.email,
+      isPublic: commenter.isPublic,
+    }))
+  } catch {
+    // 无痕模式或配额满时评论已经发出，存档失败不打断发表。
+  }
+}
+
+const savedCommenter = readSavedCommenter()
+const comment = reactive({
+  articleId: null,
+  author: savedCommenter.author,
+  content: '',
+  email: savedCommenter.email,
+  parentId: props.parentId,
+  isPublic: savedCommenter.isPublic,
+})
 
 const textarea = ref(null)
+const authorInput = ref(null)
+const emailInput = ref(null)
+const submitting = ref(false)
 
-const addEmj = (e) => {
-  comment.content += e
-  textarea.value.focus()
+// 没碰过就不报错，否则空表单一进来就满屏红字。
+const authorTouched = ref(false)
+const emailTouched = ref(false)
+const contentTouched = ref(false)
+
+const authorHint = computed(() => {
+  if (!authorTouched.value || comment.author.length >= AUTHOR_MINIMUM) return ''
+  return `昵称至少 ${AUTHOR_MINIMUM} 个字`
+})
+
+const emailHint = computed(() => {
+  if (EMAIL_PATTERN.test(comment.email)) return ''
+  // 只在写完了 @ 之后才挑格式，免得刚打第一个字母就被说「格式不正确」；失焦或提交后一律提示。
+  if (!emailTouched.value && !comment.email.includes('@')) return ''
+  return comment.email ? '邮箱格式不正确' : '请填写邮箱'
+})
+
+const contentHint = computed(() => {
+  if (!contentTouched.value || comment.content.length >= CONTENT_MINIMUM) return ''
+  const remaining = CONTENT_MINIMUM - comment.content.length
+  return comment.content ? `还差 ${remaining} 个字` : `评论至少 ${CONTENT_MINIMUM} 个字`
+})
+
+// 按下表情时阻止默认行为：输入框不失焦，面板就不会在插入之前先收起，光标也留在原处。
+const keepTextareaFocus = (event) => event.preventDefault()
+
+// 插到光标处而不是末尾；插完光标停在表情后面，可以接着打字。
+const insertEmoji = (emoji) => {
+  const field = textarea.value
+  const caretStart = field ? field.selectionStart ?? comment.content.length : comment.content.length
+  const caretEnd = field ? field.selectionEnd ?? caretStart : caretStart
+
+  comment.content = comment.content.slice(0, caretStart) + emoji + comment.content.slice(caretEnd)
+  contentTouched.value = true
+  if (!field) return
+
+  // v-model 要等这次渲染才把新值写回 DOM，提前摆光标会被覆盖掉。
+  nextTick(() => {
+    const caretAfterEmoji = caretStart + emoji.length
+    field.focus()
+    field.setSelectionRange(caretAfterEmoji, caretAfterEmoji)
+  })
 }
 
-const submitComment = () => {
-  // 严格对名称，邮箱和内容做校验
-  if (comment.author.length < 2) {
-    return notify.error({
-      title: '提示信息',
-      message: "用户名需大于2",
-    })
-  } else if (comment.content.length < 3) {
-    return notify.error({
-      title: '提示信息',
-      message: "评论内容需大于3",
-    })
-  }
-  // 校验邮箱
-  if (!/^([a-zA-Z0-9_-])+@([a-zA-Z0-9_-])+((\.[a-zA-Z0-9_-]{2,3}){1,2})$/.test(comment.email)) {
-    return notify.error({
-      title: '提示信息',
-      message: "邮箱格式不正确",
-    })
+const submitComment = async () => {
+  if (submitting.value) return
+
+  // 提示就在各自的输入框下面，这里只补一次「都摸过了」并把光标送过去，不再叠一层 toast。
+  authorTouched.value = true
+  emailTouched.value = true
+  contentTouched.value = true
+  const firstInvalidInput = [
+    [authorHint.value, authorInput],
+    [emailHint.value, emailInput],
+    [contentHint.value, textarea],
+  ].find(([hint]) => hint)?.[1]
+  if (firstInvalidInput) {
+    firstInvalidInput.value?.focus()
+    return
   }
 
-  comment.articleId = store.homeHeaderInfo.id
-  emit('comment-submitted', comment);
-  clear()
-};
-
-const clear = () => {
-  // 还原初始值
-  Object.assign(comment, def)
+  submitting.value = true
+  try {
+    await addComment({
+      articleId: store.homeHeaderInfo.id,
+      author: comment.author,
+      email: comment.email,
+      content: comment.content,
+      isPublic: comment.isPublic,
+      parentId: props.parentId,
+    })
+    saveCommenter(comment)
+    comment.content = ''
+    // 发完刚清空，别立刻在下面顶出一行「评论至少 3 个字」。
+    contentTouched.value = false
+    emit('comment-submitted')
+  } catch {
+    // 拦截器已经提示；失败不存档，输入留着让人改完再发。
+  } finally {
+    submitting.value = false
+  }
 }
 </script>

@@ -11,7 +11,6 @@
 <script setup>
 import View from "@/components/frontend/Comment/View.vue";
 import Publish from "@/components/frontend/Comment/Publish.vue";
-import { addComment } from '@/api/user.ts'
 import { useUserStore, useSiteStore } from "@/store";
 import { storeToRefs } from "pinia";
 const store = useUserStore()
@@ -20,8 +19,7 @@ const { site } = storeToRefs(siteStore)
 
 onMounted(() => siteStore.loadSite())
 
-const send = async (comment) => {
-  await addComment(comment)
+const send = () => {
   store.commentKey = !store.commentKey
 }
 </script>

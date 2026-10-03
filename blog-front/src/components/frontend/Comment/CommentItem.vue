@@ -64,7 +64,6 @@
 <script setup>
 import { defineProps } from 'vue'
 import { formatDate } from '@/utils/tool'
-import { addComment } from '@/api/user.ts'
 import CommentItem from '@/components/frontend/Comment/CommentItem.vue';
 import Publish from '@/components/frontend/Comment/Publish.vue';
 import { useUserStore } from '@/store';
@@ -79,8 +78,7 @@ const replyComment = (commentId) => {
   }
 }
 
-const send = (comment) => {
-  addComment(comment)
+const send = () => {
   store.commentKey = !store.commentKey
 }
 
