@@ -25,9 +25,10 @@
               <el-tag size="small" type="warning" effect="plain">AI · {{ article.authorName }}</el-tag>
             </span>
           </div>
-          <p class="title mt-[26px] mb-4 font-bold">
-            <span class="title-link text-[1.5rem] text-[rgb(233,84,107)]">{{ article.title }}</span>
-          </p>
+          <!-- 字号写在被测量的元素上，v-clamp 才能按真实行高截断 -->
+          <p v-clamp="{ text: article.title, lines: 2 }"
+            class="title mt-[26px] mb-4 w-full min-w-0 font-bold text-[1.5rem] text-[rgb(233,84,107)] [overflow-wrap:anywhere]"
+            :title="article.title" :aria-label="article.title"></p>
           <div v-if="article.isLocked && !article.canAccess"
             class="private-summary w-full relative flex items-center gap-[0.875rem] min-h-[82px] mt-[0.2rem] mb-4 py-[0.8rem] px-4 overflow-hidden border border-dashed border-color-pink-a3 rounded-xl bg-[linear-gradient(135deg,var(--color-red-a1),rgba(236,140,105,0.08))]"
             role="note" aria-label="私密文章提示">
@@ -40,7 +41,10 @@
               <span class="private-hint mt-[0.2rem] text-grey-6 dark:text-[#aaa] text-[0.75rem]">正文需使用密钥解锁后阅读</span>
             </span>
           </div>
-          <p v-else class="text text-[0.875rem] leading-[2] max-h-[128px] [display:-webkit-box] [-webkit-box-orient:vertical] [line-clamp:3] text-ellipsis overflow-hidden">{{ article.summary }}</p>
+          <!-- 窄屏卡片高度固定，摘要少留一行，避免和两行标题一起被封面裁掉 -->
+          <p v-else v-clamp="{ text: article.summary ?? '', lines: summaryLineCount }"
+            class="text w-full min-w-0 text-[0.875rem] leading-[2] [overflow-wrap:anywhere]"
+            :title="article.summary" :aria-label="article.summary || undefined"></p>
           <div class="bottom w-full flex items-end justify-end mt-auto">
             <span class="more [flex:0_0_6rem] w-24 h-[2.625rem] leading-[2.625rem] text-center text-[rgba(255,255,255,0.6)] [border-radius:1rem_0] bg-[linear-gradient(to_right,var(--color-pink)_0,var(--color-orange)_100%)] [transition:all_0.5s]">{{ article.isLocked && !article.canAccess ? '解锁...' : 'more...' }}</span>
           </div>
@@ -54,8 +58,21 @@
 import { Article } from '@/types/Article.ts'
 import { Tag } from '@/types/Tag'
 import { getArticleBg } from '@/utils/tool'
+import { vClamp } from '@/directives/clamp'
+import { onMounted, onUnmounted, ref } from 'vue'
 const props = defineProps(['article'])
 const article: Article<Tag> = props.article
+
+const NARROW_SCREEN = '(max-width: 768px)'
+const narrowScreenQuery = window.matchMedia(NARROW_SCREEN)
+const summaryLineCount = ref(narrowScreenQuery.matches ? 2 : 3)
+
+const syncSummaryLineCount = () => {
+  summaryLineCount.value = narrowScreenQuery.matches ? 2 : 3
+}
+
+onMounted(() => narrowScreenQuery.addEventListener('change', syncSummaryLineCount))
+onUnmounted(() => narrowScreenQuery.removeEventListener('change', syncSummaryLineCount))
 </script>
 
 <style lang="less" scoped>
