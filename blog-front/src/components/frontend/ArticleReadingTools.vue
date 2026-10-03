@@ -49,11 +49,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Close, FullScreen, Minus, Moon, Plus, Sunny } from '@element-plus/icons-vue';
 import { useRoute } from 'vue-router';
 import { useUserStore } from '@/store';
 import QrcodeVue from 'qrcode.vue';
+import { revealThemeChange } from '@/utils/themeTransition';
 
 const model = useUserStore().aritcleModel;
 const route = useRoute();
@@ -75,31 +76,8 @@ watch([() => model.isFullPreview, () => route.fullPath], () => {
 });
 const focusLabel = computed(() => model.isFullPreview ? '退出专注阅读' : '专注阅读');
 const themeLabel = computed(() => model.isDarkMode ? '切换日间模式' : '切换夜间模式');
-// Reveal the new theme as a circle growing from the button (styles in tailwind.css).
 const toggleDarkMode = (event: MouseEvent) => {
-  const flip = () => { model.isDarkMode = !model.isDarkMode; };
-  // element.animate() ignores the global reduced-motion CSS, so honour the preference here.
-  if (typeof document.startViewTransition !== 'function' || matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    flip();
-    return;
-  }
-  // Use the button's centre rather than the pointer: keyboard activation reports 0,0.
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-  const x = rect.left + rect.width / 2;
-  const y = rect.top + rect.height / 2;
-  const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
-  const transition = document.startViewTransition(async () => {
-    flip();
-    await nextTick();
-  });
-  transition.ready.then(() => {
-    document.documentElement.animate(
-      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
-      { duration: 450, easing: 'ease-in-out', pseudoElement: '::view-transition-new(root)' },
-    );
-  }).catch(() => {
-    // Transition was skipped (e.g. tab hidden); the theme has still switched.
-  });
+  revealThemeChange(event.currentTarget as HTMLElement, () => { model.isDarkMode = !model.isDarkMode; });
 };
 const buttonClass = 'inline-flex size-11 shrink-0 items-center justify-center rounded-lg border-0 bg-transparent cursor-pointer hover:bg-black/5 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:opacity-40 disabled:cursor-not-allowed';
 

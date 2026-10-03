@@ -89,6 +89,70 @@
      按钮 hover 的 scale-110 会被动画的 fill 帧盖掉 */
   --animate-emoji-pop: emoji-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 
+  /* 词云里每个词各自轻微浮动；时长与相位由组件按词错开，避免整齐划一 */
+  --animate-float: float 6s ease-in-out infinite;
+  /* 渐变文字缓慢流动（需配合 bg-size-[200%_auto]） */
+  --animate-gradient-pan: gradient-pan 8s ease-in-out infinite;
+  /* 字距由宽收拢并淡入，终值与使用处的 tracking-[0.4em] 一致 */
+  --animate-tracking-in: tracking-in 1.2s cubic-bezier(0.215, 0.61, 0.355, 1) both;
+  /* 进度条上掠过的一道高光 */
+  --animate-shimmer: shimmer 1.4s ease-in-out infinite;
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+
+  @keyframes gradient-pan {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  @keyframes tracking-in {
+    from {
+      letter-spacing: 1em;
+      opacity: 0;
+      filter: blur(4px);
+    }
+    to {
+      letter-spacing: 0.4em;
+      opacity: 1;
+      filter: blur(0);
+    }
+  }
+
+  @keyframes shimmer {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  /* 词云逐词弹出。只用 backwards：forwards/both 会在结束后锁住 opacity，悬停时其余词变淡的效果就失效 */
+  --animate-word-pop: word-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+
+  @keyframes word-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.3);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
   @keyframes tag-item-in {
     from {
       opacity: 0;

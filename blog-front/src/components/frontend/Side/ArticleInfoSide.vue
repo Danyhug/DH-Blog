@@ -101,6 +101,7 @@ import { useRouter } from 'vue-router'
 import { ArrowRight } from '@element-plus/icons-vue'
 import { getArticlesByTaxonomy } from '@/api/user'
 import { debounce } from '@/utils/tool'
+import { TAG_PALETTE as tagPalette, tagNameHash } from '@/utils/tagColor'
 const store = useUserStore()
 const router = useRouter()
 
@@ -133,11 +134,6 @@ const goToArticle = (id) => router.push({ name: 'ArticleInfo', params: { id } })
 
 const scrollElement = document.documentElement
 
-// Ordered by hue: red → orange → … → pink → rose.
-const tagPalette = [
-  "#dc2626", "#ea580c", "#d97706", "#65a30d", "#16a34a", "#0d9488", "#0891b2",
-  "#0284c7", "#2563eb", "#4f46e5", "#7c3aed", "#c026d3", "#db2777", "#e11d48",
-]
 // Coprime with the palette length, so probing visits every colour; 5 of 14 also jumps well away in hue.
 const TAG_PROBE_STEP = 5
 // Each tag starts from the colour its name hashes to, so it keeps that colour across articles.
@@ -148,8 +144,7 @@ const tagColors = computed(() => {
   const used = new Set()
   const isolated = (index) => [size - 1, 0, 1].every(offset => !used.has((index + offset) % size))
   return (store.homeHeaderInfo.tags ?? []).map(({ name }) => {
-    let hash = 0
-    for (const char of name) hash = (hash * 31 + char.codePointAt(0)) >>> 0
+    const hash = tagNameHash(name)
     const probes = Array.from({ length: size }, (_, step) => (hash + step * TAG_PROBE_STEP) % size)
     const index = probes.find(isolated) ?? probes.find(index => !used.has(index)) ?? probes[0]
     used.add(index)
