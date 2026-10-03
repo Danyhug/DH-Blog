@@ -19,13 +19,15 @@
       <div class="inner px-[25px] flex justify-between">
         <div class="left bg-white dark:bg-[#191919] flex flex-col items-center w-[30%] h-screen text-center sticky top-0 my-[9.6px]" ref="leftElement">
           <FadeTransition>
-            <component :is="sideShowComponent" />
+            <!-- key 跟随路由：文章间跳转（同一路由只换 :id）时重建侧栏，阅读时长/进度/目录随之重置 -->
+            <component :is="sideShowComponent" :key="route.path" />
           </FadeTransition>
         </div>
         <div class="right bg-white dark:bg-[#191919] dark:shadow-none w-[67%] shadow-[0_0.5rem_0.75rem_0.0625rem_rgb(235,235,235)] rounded-[0.3125rem] my-[9.6px] pt-4 flex flex-col justify-between">
           <router-view v-slot="{ Component }">
             <FadeTransition>
-              <component :is="Component" />
+              <!-- 同上：否则 /view/article/1 → /2 会复用 ArticleView 实例，mounted 不再执行，文章不刷新 -->
+              <component :is="Component" :key="route.path" />
             </FadeTransition>
           </router-view>
         </div>

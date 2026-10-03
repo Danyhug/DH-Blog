@@ -83,6 +83,20 @@
   --animate-fade-in-up: fade-in-up 1s cubic-bezier(0.215, 0.61, 0.355, 1) both;
   --animate-fade-in: fade-in 0.3s ease;
   --animate-upload-progress: upload-progress 2s ease-in-out infinite;
+  /* 标签弹层的文章列表逐项错峰浮入；both 让 animation-delay 期间保持起始帧，不先闪一下 */
+  --animate-tag-item-in: tag-item-in 0.35s cubic-bezier(0.215, 0.61, 0.355, 1) both;
+
+  @keyframes tag-item-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 
   @keyframes upload-progress {
     0%, 100% {
