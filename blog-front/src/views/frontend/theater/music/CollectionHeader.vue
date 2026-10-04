@@ -24,7 +24,7 @@
       </p>
       <p v-if="meta" class="m-0 mt-2 text-[13px] text-black/50 dark:text-white/50">{{ meta }}</p>
       <div class="mt-5 flex flex-wrap items-center gap-3 max-md:justify-center">
-        <button :class="[primaryButton]" :disabled="!playable" @click="emit('play')">
+        <button :class="[primaryButton]" :disabled="!playable" data-nav-autofocus @click="emit('play')">
           <PlayIcon class="size-4" /> 播放
         </button>
         <button :class="[secondaryButton]" :disabled="!playable" @click="emit('shuffle')">

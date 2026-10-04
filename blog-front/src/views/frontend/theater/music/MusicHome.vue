@@ -52,6 +52,7 @@
         <router-link :to="{ name: 'TheaterVideos' }" :class="footerLink"><FilmIcon class="size-4" />影视</router-link>
         <button :class="footerLink" @click="theater.openSettings()"><SettingsIcon class="size-4" />媒体库设置</button>
         <ThemeToggle v-slot="{ dark }" :class="footerLink" icon-class="size-4">{{ dark ? '日间模式' : '夜间模式' }}</ThemeToggle>
+        <button :class="footerLink" :aria-pressed="tvMode" @click="setTvMode(!tvMode)"><TvIcon class="size-4" />{{ tvMode ? '关闭 TV 模式' : '开启 TV 模式' }}</button>
         <router-link to="/webdav" :class="footerLink"><FolderIcon class="size-4" />返回网盘</router-link>
       </div>
     </aside>
@@ -105,7 +106,7 @@
             <h1 :class="pageTitle">立即收听</h1>
             <MissingNotice :missing="music.missing" kind="音频" class="-mt-2 mb-6" />
             <section class="mb-10 grid grid-cols-3 gap-4 max-lg:grid-cols-1">
-              <button :class="heroCard" class="from-[#fa2d48] to-[#a3123a]" @click="player.playList(music.tracks, 0, { shuffle: true })">
+              <button :class="heroCard" class="from-[#fa2d48] to-[#a3123a]" data-nav-autofocus @click="player.playList(music.tracks, 0, { shuffle: true })">
                 <ShuffleIcon class="size-7" />
                 <span class="text-xl font-bold">随机播放全部</span>
                 <span class="text-sm text-white/75">{{ music.tracks.length }} 首歌曲</span>
@@ -342,12 +343,13 @@ import ShelfSection from './ShelfSection.vue'
 import AddToPlaylistDialog from './AddToPlaylistDialog.vue'
 import MissingNotice from '../components/MissingNotice.vue'
 import ThemeToggle from '@/components/Child/ThemeToggle.vue'
+import { setTvMode, tvMode } from '../utils/tv'
 import { buildAlbums, buildArtists, buildFolders, matches, totalDuration, type Album, type FolderList } from './library'
 import { musicLink, type MusicView } from './links'
 import { formatTotal, timeValue } from '../utils/format'
 import {
   AlbumIcon, ClockIcon, FilmIcon, FolderIcon, HomeIcon, MicIcon, MoreIcon, MusicNoteIcon,
-  PlusIcon, QueueIcon, SearchIcon, SettingsIcon, ShuffleIcon, SparkIcon
+  PlusIcon, QueueIcon, SearchIcon, SettingsIcon, ShuffleIcon, SparkIcon, TvIcon
 } from '../components/icons'
 
 const route = useRoute()
@@ -523,8 +525,10 @@ function playRecentlyAdded() {
 }
 
 // 从网盘预览页「在影院中播放」跳过来：?play=<文件ID>，以所在文件夹为上下文播放
-watch([() => music.loaded, () => route.query.play], ([loaded, play]) => {
+watch([() => music.loaded, () => route.query.play], async ([loaded, play]) => {
   if (!loaded || !play) return
+  // 先去掉 ?play 再展开「正在播放」：展开会往历史里压一条（返回键收起用），两次导航不能交错
+  await router.replace({ name: 'TheaterMusic', query: { ...route.query, play: undefined } })
   const track = music.trackById.get(String(play))
   if (track) {
     const folder = folders.value.find(item => item.id === track.folder_id)
@@ -534,7 +538,6 @@ watch([() => music.loaded, () => route.query.play], ([loaded, play]) => {
   } else {
     notify.warning('该音频不在音乐库中，可能被媒体库设置排除了')
   }
-  router.replace({ name: 'TheaterMusic', query: { ...route.query, play: undefined } })
 }, { immediate: true })
 
 // ---- 歌单 ----

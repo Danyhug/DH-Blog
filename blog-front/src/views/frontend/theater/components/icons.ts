@@ -67,3 +67,5 @@ export const ChevronLeftIcon = line('M15 18l-6-6 6-6')
 export const ChevronRightIcon = line('M9 18l6-6-6-6')
 export const ChevronDownIcon = line('M6 9l6 6 6-6')
 export const CheckIcon = line('M20 6 9 17l-5-5')
+// 电视：TV 模式开关
+export const TvIcon = line('M3 6.5A1.5 1.5 0 0 1 4.5 5h15A1.5 1.5 0 0 1 21 6.5v10a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 16.5z', 'M8 21h8', 'M12 18v3')

@@ -1,7 +1,7 @@
 <template>
   <!-- 全屏「正在播放」：封面取色般的模糊背景、大封面、逐行滚动的同步歌词。
        和 Apple Music 一样压暗的封面色背景在日间也保持深色，根节点挂 dark 让子组件与玻璃都走夜间样式。 -->
-  <div class="dark fixed inset-0 z-[70] overflow-hidden bg-black text-white">
+  <div data-nav-scope class="dark fixed inset-0 z-[70] overflow-hidden bg-black text-white">
     <div class="absolute inset-0">
       <img v-if="cover" :src="cover" alt="" class="absolute inset-0 size-full scale-125 object-cover opacity-80 blur-[80px] saturate-[1.8]" />
       <div v-else class="absolute inset-0 opacity-70" :style="{ background: gradientFor(track.album) }"></div>
@@ -21,16 +21,17 @@
         <span class="size-10"></span>
       </header>
 
-      <div class="flex min-h-0 flex-1 items-center gap-16 px-[6vw] pb-8 max-lg:flex-col max-lg:gap-6 max-lg:overflow-y-auto max-lg:px-6 max-lg:pt-6">
+      <!-- short（横屏矮屏，如电视）：保持左右并排、封面按高度缩小、音量条收起（电视用遥控器调音量），一屏放下全部控件 -->
+      <div class="flex min-h-0 flex-1 items-center gap-16 px-[6vw] pb-8 max-lg:flex-col max-lg:gap-6 max-lg:overflow-y-auto max-lg:px-6 max-lg:pt-6 short:flex-row! short:gap-10! short:overflow-hidden! short:px-[5vw]! short:pt-0! short:pb-4!">
         <!-- 左：封面与控制 -->
-        <section class="flex w-full max-w-[460px] shrink-0 flex-col max-lg:mx-auto">
+        <section class="flex w-full max-w-[460px] shrink-0 flex-col max-lg:mx-auto short:mx-0! short:max-w-[320px]!">
           <Artwork
             :src="cover"
             :seed="track.album"
-            class="aspect-square w-full rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.55)] transition-transform duration-500 ease-out"
+            class="aspect-square w-full rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.55)] transition-transform duration-500 ease-out short:mx-auto short:w-[38vh]!"
             :class="player.playing ? 'scale-100' : 'scale-[0.86]'"
           />
-          <div class="mt-8 flex items-start justify-between gap-4">
+          <div class="mt-8 flex items-start justify-between gap-4 short:mt-3!">
             <div class="min-w-0">
               <h2 class="m-0 truncate text-[22px] font-bold">{{ track.title }}</h2>
               <p class="m-0 mt-1 truncate text-lg text-white/65">
@@ -52,8 +53,9 @@
             </el-dropdown>
           </div>
 
-          <div class="mt-6">
+          <div class="mt-6 short:mt-3!">
             <ProgressBar
+              label="播放进度"
               :value="scrubRatio ?? ratio"
               :buffered="player.duration ? player.buffered / player.duration : 0"
               fill-class="bg-white/90"
@@ -70,12 +72,12 @@
             </div>
           </div>
 
-          <div class="glass mt-5 flex items-center justify-between rounded-full px-6 py-3">
+          <div class="glass mt-5 flex items-center justify-between rounded-full px-6 py-3 short:mt-3! short:py-1.5!">
             <button :class="[iconButton, player.shuffle ? 'text-[#fa2d48]' : 'text-white/60']" title="随机播放" @click="player.toggleShuffle()">
               <ShuffleIcon class="size-5" />
             </button>
             <button :class="[iconButton, 'text-white']" title="上一首" @click="player.prev()"><PrevIcon class="size-9" /></button>
-            <button :class="[iconButton, 'text-white']" :title="player.playing ? '暂停' : '播放'" @click="player.toggle()">
+            <button ref="playRef" :class="[iconButton, 'text-white']" :title="player.playing ? '暂停' : '播放'" @click="player.toggle()">
               <PauseIcon v-if="player.playing" class="size-12" />
               <PlayIcon v-else class="size-12" />
             </button>
@@ -86,19 +88,19 @@
             </button>
           </div>
 
-          <div class="mt-5 flex items-center gap-3 px-2 text-white/60">
+          <div class="mt-5 flex items-center gap-3 px-2 text-white/60 short:hidden">
             <MuteIcon class="size-4 shrink-0" />
-            <ProgressBar class="flex-1" :value="player.muted ? 0 : player.volume" fill-class="bg-white/90" track-class="bg-white/25" :knob="false" @scrub="player.setVolume" @seek="player.setVolume" />
+            <ProgressBar class="flex-1" label="音量" :value="player.muted ? 0 : player.volume" fill-class="bg-white/90" track-class="bg-white/25" :knob="false" @scrub="player.setVolume" @seek="player.setVolume" />
             <VolumeIcon class="size-4 shrink-0" />
           </div>
         </section>
 
         <!-- 右：歌词 / 待播清单 -->
-        <section class="relative h-full min-h-[50vh] w-full min-w-0 flex-1">
+        <section class="relative h-full min-h-[50vh] w-full min-w-0 flex-1 short:min-h-0! short:h-[calc(100vh-110px)]!">
           <div
             v-if="player.panel === 'lyrics'"
             ref="lyricsRef"
-            class="absolute inset-0 overflow-y-auto [mask-image:linear-gradient(transparent,black_15%,black_85%,transparent)] max-lg:relative max-lg:max-h-[60vh]"
+            class="absolute inset-0 overflow-y-auto [mask-image:linear-gradient(transparent,black_15%,black_85%,transparent)] max-lg:relative max-lg:max-h-[60vh] short:absolute! short:max-h-none!"
             @wheel.passive="userScrolledAt = Date.now()"
             @touchmove.passive="userScrolledAt = Date.now()"
           >
@@ -108,7 +110,7 @@
               <p class="m-0 text-lg">暂无歌词</p>
               <p class="m-0 text-sm text-white/35">把同名的 .lrc 文件放在歌曲旁边即可自动识别</p>
             </div>
-            <div v-else class="py-[40vh] max-lg:py-12">
+            <div v-else class="py-[40vh] max-lg:py-12 short:py-[30vh]!">
               <p
                 v-for="(line, i) in lyrics.lines"
                 :key="i"
@@ -122,7 +124,7 @@
             </div>
           </div>
 
-          <div v-else class="glass-thick absolute inset-0 overflow-y-auto rounded-[28px] p-4 max-lg:relative">
+          <div v-else class="glass-thick absolute inset-0 overflow-y-auto rounded-[28px] p-4 max-lg:relative short:absolute!">
             <h3 class="m-0 mb-2 text-sm font-semibold uppercase tracking-wider text-white/50">正在播放</h3>
             <QueueRow :track="track" :active="true" />
             <div class="mb-2 mt-6 flex items-center justify-between">
@@ -160,6 +162,7 @@ import AddToPlaylistDialog from './AddToPlaylistDialog.vue'
 import { formatTime, gradientFor } from '../utils/format'
 import { activeLyricIndex, parseLyrics, type LyricLine } from '../utils/lrc'
 import { goToAlbum, goToArtist } from './links'
+import { useFocusRestore } from '../utils/tv'
 import {
   ChevronDownIcon, LyricsIcon, MoreIcon, MuteIcon, NextIcon, PauseIcon, PlayIcon, PrevIcon,
   RepeatIcon, RepeatOneIcon, ShuffleIcon, VolumeIcon
@@ -179,7 +182,7 @@ const tabs = [
 ]
 const roundButton = 'glass-button flex size-10 cursor-pointer items-center justify-center rounded-full text-white'
 const tabButton = 'cursor-pointer rounded-full px-4 py-1.5 font-medium transition-all'
-const iconButton = 'flex cursor-pointer items-center justify-center border-none bg-transparent p-0 transition-transform hover:scale-110 active:scale-95'
+const iconButton = 'flex cursor-pointer items-center justify-center rounded-full border-none bg-transparent p-0 transition-transform hover:scale-110 focus-visible:scale-110 active:scale-95'
 const linkButton = 'cursor-pointer border-none bg-transparent p-0 text-inherit hover:text-white hover:underline'
 
 function commitSeek(r: number) {
@@ -249,6 +252,12 @@ function onKey(event: KeyboardEvent) {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', onKey))
+// 遥控器打开「正在播放」后焦点直接在播放键上，关闭后回到打开它的按钮
+const playRef = ref<HTMLButtonElement | null>(null)
+useFocusRestore()
+onMounted(() => {
+  window.addEventListener('keydown', onKey)
+  nextTick(() => playRef.value?.focus({ preventScroll: true }))
+})
 onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>

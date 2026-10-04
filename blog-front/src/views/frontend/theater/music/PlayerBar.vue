@@ -45,6 +45,7 @@
             :value="scrubRatio ?? ratio"
             :buffered="player.duration ? player.buffered / player.duration : 0"
             fill-class="bg-zinc-700 dark:bg-white/80"
+            label="播放进度"
             height-class="h-1 group-hover/bar:h-1.5"
             @scrub="r => (scrubRatio = r)"
             @seek="commitSeek"
@@ -66,7 +67,7 @@
             <MuteIcon v-if="player.muted || player.volume === 0" class="size-4" />
             <VolumeIcon v-else class="size-4" />
           </button>
-          <ProgressBar class="flex-1" :value="player.muted ? 0 : player.volume" fill-class="bg-zinc-700 dark:bg-white/80" @scrub="player.setVolume" @seek="player.setVolume" />
+          <ProgressBar class="flex-1" label="音量" :value="player.muted ? 0 : player.volume" fill-class="bg-zinc-700 dark:bg-white/80" @scrub="player.setVolume" @seek="player.setVolume" />
         </div>
       </div>
     </div>
@@ -93,7 +94,7 @@ const ratio = computed(() => (player.duration ? player.currentTime / player.dura
 const scrubRatio = ref<number | null>(null)
 const scrubTime = computed(() => (scrubRatio.value === null ? null : scrubRatio.value * player.duration))
 
-const iconButton = 'flex cursor-pointer items-center justify-center border-none bg-transparent p-0 transition-colors hover:text-zinc-900 dark:hover:text-white'
+const iconButton = 'flex cursor-pointer items-center justify-center rounded-full border-none bg-transparent p-0 transition-colors hover:text-zinc-900 dark:hover:text-white'
 const accent = 'text-[#fa2d48] hover:text-[#ff4f67]'
 const repeatTitle = computed(() => ({ off: '循环：关', all: '循环：全部', one: '循环：单曲' })[player.repeat])
 

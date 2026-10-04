@@ -1,8 +1,12 @@
 <template>
   <div
-    class="group flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-2 py-2 transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+    class="group flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-2 py-2 transition-colors hover:bg-black/5 focus-visible:bg-black/5 dark:hover:bg-white/10 dark:focus-visible:bg-white/10"
     :class="active && 'glass'"
+    tabindex="0"
+    role="button"
+    :aria-label="track.title"
     @click="emit('play')"
+    @keydown.enter.self.prevent="emit('play')"
   >
     <Artwork :src="trackCoverUrl(track)" :seed="track.album" class="size-11 shrink-0 rounded-[10px] ring-1 ring-black/5 dark:ring-white/10" />
     <div class="min-w-0 flex-1">

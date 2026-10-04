@@ -1,10 +1,18 @@
 <template>
   <!-- 可拖动的进度条：视频进度、音乐进度、音量共用。
-       拖动过程中只回显本地比例（scrub），松手才提交 seek，避免拖动时反复跳播。 -->
+       拖动过程中只回显本地比例（scrub），松手才提交 seek，避免拖动时反复跳播。
+       也是一个可聚焦的滑块：遥控器 / 键盘聚焦后左右键按 step 调整。 -->
   <div
     ref="trackRef"
-    class="group/bar relative flex items-center cursor-pointer touch-none select-none"
+    class="group/bar relative flex items-center cursor-pointer touch-none select-none rounded-full"
     :class="hitClass"
+    tabindex="0"
+    role="slider"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    :aria-valuenow="Math.round(shown * 100)"
+    :aria-label="label"
+    @keydown="onKey"
     @pointerdown="onDown"
     @pointermove="onMove"
     @pointerup="onUp"
@@ -22,7 +30,7 @@
     <div
       v-if="knob"
       class="pointer-events-none absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full shadow transition-transform duration-150"
-      :class="[knobClass, dragging ? 'scale-100' : 'scale-0 group-hover/bar:scale-100']"
+      :class="[knobClass, dragging ? 'scale-100' : 'scale-0 group-hover/bar:scale-100 group-focus-visible/bar:scale-100']"
       :style="{ left: percent(shown) }"
     ></div>
     <div
@@ -54,6 +62,10 @@ const props = withDefaults(defineProps<{
   /** 可点击区域的高度，比可见条更高，方便命中 */
   hitClass?: string
   hoverPreview?: boolean
+  /** 左右键一次调整的比例 */
+  step?: number
+  /** 读屏用的名称 */
+  label?: string
 }>(), {
   buffered: 0,
   fillClass: 'bg-zinc-800 dark:bg-white',
@@ -63,7 +75,9 @@ const props = withDefaults(defineProps<{
   heightClass: 'h-1 group-hover/bar:h-1.5',
   dragHeightClass: 'h-1.5',
   hitClass: 'h-4',
-  hoverPreview: false
+  hoverPreview: false,
+  step: 0.05,
+  label: ''
 })
 
 const emit = defineEmits<{
@@ -116,5 +130,12 @@ function onUp(event: PointerEvent) {
 
 function onCancel() {
   dragging.value = false
+}
+
+function onKey(event: KeyboardEvent) {
+  const delta = event.key === 'ArrowRight' ? props.step : event.key === 'ArrowLeft' ? -props.step : 0
+  if (!delta) return
+  event.preventDefault()
+  emit('seek', clamp(clamp(props.value) + delta))
 }
 </script>

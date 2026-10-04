@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" title="媒体库设置" width="560px" append-to-body align-center class="glass-popup" modal-class="backdrop-blur-md" @open="load">
+  <el-dialog v-model="visible" title="媒体库设置" width="560px" append-to-body align-center class="glass-popup" modal-class="backdrop-blur-md tv:backdrop-blur-none" @open="load">
     <div v-loading="loading" class="flex flex-col gap-6">
       <p class="m-0 text-sm leading-relaxed text-zinc-500 dark:text-[#a3a3a3]">
         默认自动识别整个网盘里的音频和视频。如果网盘里杂物较多，可以只指定几个文件夹作为音乐库或影视库（包含子文件夹）。

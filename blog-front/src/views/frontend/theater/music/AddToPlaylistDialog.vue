@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" title="添加到歌单" width="420px" append-to-body align-center class="glass-popup" modal-class="backdrop-blur-md">
+  <el-dialog v-model="visible" title="添加到歌单" width="420px" append-to-body align-center class="glass-popup" modal-class="backdrop-blur-md tv:backdrop-blur-none">
     <div class="flex flex-col gap-1">
       <button :class="rowClass" @click="createAndAdd">
         <span class="flex size-11 items-center justify-center rounded-md bg-black/5 dark:bg-white/10 text-[#fa2d48]"><PlusIcon class="size-5" /></span>

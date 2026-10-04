@@ -1,6 +1,7 @@
 <template>
   <!-- 作品详情（Netflix 的「更多信息」弹层）：大剧照 + 播放按钮 + 选集列表 -->
-  <div class="fixed inset-0 z-[80] overflow-y-auto bg-black/25 px-4 dark:bg-black/45 py-8 backdrop-blur-xl" @click.self="emit('close')">
+  <!-- data-nav-scope：打开时遥控器的焦点只在详情里移动，打开即落在播放键上 -->
+  <div data-nav-scope class="fixed inset-0 z-[80] overflow-y-auto bg-black/25 px-4 dark:bg-black/45 py-8 backdrop-blur-xl tv:backdrop-blur-none" @click.self="emit('close')">
     <div class="glass-thick relative mx-auto w-full max-w-[880px] overflow-hidden rounded-[30px] animate-dialog-appear">
       <button class="glass-button absolute right-4 top-4 z-10 flex size-10 cursor-pointer items-center justify-center rounded-full text-zinc-900 dark:text-white" title="关闭" @click="emit('close')">
         <CloseIcon class="size-5" />
@@ -12,7 +13,7 @@
         <div class="absolute inset-x-0 bottom-0 px-12 pb-10 max-md:px-5 max-md:pb-5">
           <h2 class="m-0 mb-5 max-w-[80%] text-[42px] font-black leading-none tracking-tight text-zinc-900 dark:text-white drop-shadow-xl max-md:mb-3 max-md:text-2xl">{{ title.name }}</h2>
           <div class="flex items-center gap-3">
-            <button :class="playButton" @click="emit('play', target)">
+            <button ref="playRef" :class="playButton" data-nav-autofocus @click="emit('play', target)">
               <PlayIcon class="size-6" />
               {{ resumeLabel }}
             </button>
@@ -89,12 +90,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import type { Video } from '@/api/media'
 import VideoThumb from './VideoThumb.vue'
 import { episodeLabel, resumeTarget, seasonsOf, type Title } from './catalog'
 import { formatRuntime } from '../utils/format'
 import { CloseIcon, PlayIcon, RepeatIcon } from '../components/icons'
+import { focusElement, useFocusRestore } from '../utils/tv'
 
 const props = defineProps<{ title: Title }>()
 const emit = defineEmits<{
@@ -142,8 +144,14 @@ function formatSize(size: number) {
 }
 
 function onKey(event: KeyboardEvent) {
-  if (event.key === 'Escape') emit('close')
+  // 播放器叠在详情上面时 Esc 归播放器（它先处理并 preventDefault）
+  if (event.key === 'Escape' && !event.defaultPrevented) emit('close')
 }
-onMounted(() => window.addEventListener('keydown', onKey))
+const playRef = ref<HTMLButtonElement | null>(null)
+useFocusRestore()
+onMounted(() => {
+  window.addEventListener('keydown', onKey)
+  nextTick(() => focusElement(playRef.value!))
+})
 onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>

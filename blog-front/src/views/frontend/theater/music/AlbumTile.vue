@@ -1,17 +1,20 @@
 <template>
-  <div class="group min-w-0 cursor-pointer" @click="emit('open')">
+  <!-- 整块可聚焦，遥控器确认键打开；焦点样式与悬停一致，封面再加一圈粉框 -->
+  <div class="group min-w-0 cursor-pointer rounded-[20px] focus-visible:outline-none!" tabindex="0" role="button" :aria-label="title"
+    @click="emit('open')" @keydown.enter.self.prevent="emit('open')">
     <div class="relative">
       <Artwork
         :src="cover"
         :seed="seed"
         :icon="icon"
-        class="aspect-square w-full shadow-[0_12px_30px_-8px_rgba(0,0,0,0.6)] ring-1 ring-black/5 dark:ring-white/10 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.7)]"
+        class="aspect-square w-full shadow-[0_12px_30px_-8px_rgba(0,0,0,0.6)] ring-1 ring-black/5 dark:ring-white/10 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.7)] group-focus-visible:-translate-y-1 group-focus-visible:scale-[1.04] group-focus-visible:ring-[3px] group-focus-visible:ring-[#fa2d48]"
         :class="round ? 'rounded-full' : 'rounded-[18px]'"
       />
-      <div class="pointer-events-none absolute inset-0 bg-black/0 transition-all duration-300 group-hover:-translate-y-1 group-hover:bg-black/20" :class="round ? 'rounded-full' : 'rounded-[18px]'"></div>
+      <div class="pointer-events-none absolute inset-0 bg-black/0 transition-all duration-300 group-hover:-translate-y-1 group-hover:bg-black/20 group-focus-visible:-translate-y-1 group-focus-visible:scale-[1.04]" :class="round ? 'rounded-full' : 'rounded-[18px]'"></div>
       <button
         v-if="!round"
         class="glass-button absolute bottom-3 left-3 flex size-10 translate-y-1 cursor-pointer items-center justify-center rounded-full text-zinc-900 dark:text-white opacity-0 transition-all duration-200 group-hover:-translate-y-0.5 group-hover:opacity-100"
+        tabindex="-1"
         title="播放"
         @click.stop="emit('play')"
       >

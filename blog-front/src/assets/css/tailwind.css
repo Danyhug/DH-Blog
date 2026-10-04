@@ -7,6 +7,15 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
+  影院的 TV 模式（theater/utils/tv.ts 在 <html> 上挂 .tv）。电视盒子的 GPU 扛不住大面积 backdrop-filter，
+  滚动片单时会掉帧甚至卡死；玻璃在这个变体下去掉模糊，改用更实的底色保证文字可读。
+*/
+@custom-variant tv (&:where(.tv, .tv *));
+/* 横屏且矮的屏幕：电视（1080p 电视的浏览器视口通常只有 960×540）与横放的手机。宽度不够 lg 但高度更紧，
+   按宽度断点做的上下堆叠布局在这里会把控件挤出屏幕，改用左右并排。 */
+@custom-variant short (@media (orientation: landscape) and (max-height: 640px));
+
+/*
   P1：把 style.less 的主题变量映射成语义工具类（bg-grey-0 / text-color-red / shadow-dh-normal …）。
 
   用 @theme inline 而不是 @theme：
@@ -355,6 +364,14 @@
       inset 0 0 24px 0 rgb(255 255 255 / 0.03),
       0 12px 40px -12px rgb(0 0 0 / 0.6);
   }
+  @variant tv {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: rgb(255 255 255 / 0.78);
+    @variant dark {
+      background-color: rgb(28 28 34 / 0.82);
+    }
+  }
 }
 
 /* 承载大段文字的面板（侧边栏、弹层、播放控制栏）：底色更实，保证可读 */
@@ -380,6 +397,14 @@
       inset 0 1px 0 0 rgb(255 255 255 / 0.2),
       inset 0 -1px 0 0 rgb(255 255 255 / 0.04),
       0 24px 60px -16px rgb(0 0 0 / 0.7);
+  }
+  @variant tv {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: rgb(255 255 255 / 0.9);
+    @variant dark {
+      background-color: rgb(28 28 34 / 0.92);
+    }
   }
 }
 
@@ -409,6 +434,14 @@
       box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.4), 0 8px 26px -8px rgb(0 0 0 / 0.55);
     }
   }
+  @variant tv {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: rgb(255 255 255 / 0.82);
+    @variant dark {
+      background-color: rgb(28 28 34 / 0.86);
+    }
+  }
 }
 
 /*
@@ -436,5 +469,13 @@
     box-shadow:
       inset 0 1px 0 0 rgb(255 255 255 / 0.22),
       0 30px 80px -20px rgb(0 0 0 / 0.75) !important;
+  }
+  @variant tv {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background-color: rgb(255 255 255 / 0.96) !important;
+    @variant dark {
+      background-color: rgb(28 28 34 / 0.96) !important;
+    }
   }
 }

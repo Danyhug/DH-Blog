@@ -1,31 +1,37 @@
 <template>
-  <!-- 卡片内容全压在剧照上，日夜都用深色玻璃与白字：根节点挂 dark -->
+  <!-- 卡片内容全压在剧照上，日夜都用深色玻璃与白字：根节点挂 dark。
+       遥控器靠焦点操作：卡片本身可聚焦，确认键打开详情；获得焦点时和悬停一样放大，外加一圈白框。
+       卡片里的小按钮只给鼠标用（tabindex=-1），焦点不会停在看不见的按钮上。 -->
   <div
-    class="dark group/card relative shrink-0 cursor-pointer transition-transform duration-300 ease-out hover:z-10 hover:scale-[1.06] max-md:hover:scale-100"
+    class="dark group/card relative shrink-0 cursor-pointer transition-transform duration-300 ease-out hover:z-10 hover:scale-[1.06] focus-visible:z-10 focus-visible:scale-[1.08] focus-visible:outline-none! max-md:hover:scale-100"
     :class="sizeClass"
+    tabindex="0"
+    role="button"
+    :aria-label="title.name"
     @click="emit('open')"
+    @keydown.enter.self.prevent="emit('open')"
   >
     <VideoThumb
       :image-id="title.imageId"
       :frame-id="frameVideo.id"
       :seed="title.name"
       :label="title.name"
-      class="aspect-video w-full rounded-2xl shadow-[0_10px_30px_-8px_rgba(0,0,0,0.7)] ring-1 ring-white/10 transition-shadow duration-300 group-hover/card:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.85)] group-hover/card:ring-white/25"
+      class="aspect-video w-full rounded-2xl shadow-[0_10px_30px_-8px_rgba(0,0,0,0.7)] ring-1 ring-white/10 transition-shadow duration-300 group-hover/card:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.85)] group-hover/card:ring-white/25 group-focus-visible/card:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.85)] group-focus-visible/card:ring-[3px] group-focus-visible/card:ring-white"
     >
       <!-- 有图时把片名压在左下角，Netflix 的卡片都带标题字 -->
       <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
       <!-- 标题栏是一条贴在卡片底部的毛玻璃，悬停时整块玻璃浮起来 -->
-      <div class="absolute inset-x-1.5 bottom-1.5 rounded-xl border border-transparent p-2 transition-all duration-300 group-hover/card:glass">
+      <div class="absolute inset-x-1.5 bottom-1.5 rounded-xl border border-transparent p-2 transition-all duration-300 group-hover/card:glass group-focus-visible/card:glass">
         <div class="flex items-end justify-between gap-2">
           <div class="min-w-0">
             <p class="m-0 truncate text-sm font-bold text-white drop-shadow">{{ title.name }}</p>
             <p v-if="subtitle" class="m-0 truncate text-[11px] text-white/70">{{ subtitle }}</p>
           </div>
           <div class="flex shrink-0 gap-1.5 opacity-0 transition-opacity group-hover/card:opacity-100 max-md:hidden">
-            <button :class="circleButton" class="border-none bg-white/95 text-black shadow-[inset_0_1px_0_white] hover:bg-white" title="播放" @click.stop="emit('play')">
+            <button :class="circleButton" class="border-none bg-white/95 text-black shadow-[inset_0_1px_0_white] hover:bg-white" tabindex="-1" title="播放" @click.stop="emit('play')">
               <PlayIcon class="ml-0.5 size-3.5" />
             </button>
-            <button :class="circleButton" class="glass-button text-white" title="详情" @click.stop="emit('open')">
+            <button :class="circleButton" class="glass-button text-white" tabindex="-1" title="详情" @click.stop="emit('open')">
               <ChevronDownIcon class="size-4" />
             </button>
           </div>
@@ -40,6 +46,7 @@
       <button
         v-if="removable"
         class="glass-button absolute right-1.5 top-1.5 flex size-7 cursor-pointer items-center justify-center rounded-full text-white opacity-0 transition-opacity group-hover/card:opacity-100 max-md:opacity-100"
+        tabindex="-1"
         title="从继续观看中移除"
         @click.stop="emit('remove')"
       >

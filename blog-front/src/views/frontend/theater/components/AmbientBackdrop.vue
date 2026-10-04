@@ -11,9 +11,10 @@
       <img v-if="image" :key="image" :src="image" alt="" class="absolute inset-0 size-full scale-125 object-cover opacity-45 blur-[90px] saturate-[1.8] dark:opacity-60" />
     </transition>
 
-    <div class="absolute -left-[10%] -top-[15%] size-[55vw] animate-ambient-drift rounded-full blur-[120px]" :class="palette[0]"></div>
-    <div class="absolute -right-[15%] top-[20%] size-[50vw] animate-ambient-drift rounded-full blur-[130px] [animation-delay:-9s] [animation-duration:34s]" :class="palette[1]"></div>
-    <div class="absolute -bottom-[25%] left-[25%] size-[45vw] animate-ambient-drift rounded-full blur-[120px] [animation-delay:-17s] [animation-duration:40s]" :class="palette[2]"></div>
+    <!-- TV 模式下光斑不再漂移：大面积模糊层每帧重绘，电视盒子的 GPU 吃不消（tv 变体见 tailwind.css） -->
+    <div class="absolute -left-[10%] -top-[15%] size-[55vw] animate-ambient-drift rounded-full tv:animate-none blur-[120px]" :class="palette[0]"></div>
+    <div class="absolute -right-[15%] top-[20%] size-[50vw] animate-ambient-drift rounded-full tv:animate-none blur-[130px] [animation-delay:-9s] [animation-duration:34s]" :class="palette[1]"></div>
+    <div class="absolute -bottom-[25%] left-[25%] size-[45vw] animate-ambient-drift rounded-full tv:animate-none blur-[120px] [animation-delay:-17s] [animation-duration:40s]" :class="palette[2]"></div>
 
     <!-- 日间罩一层白雾、夜间压暗，前景文字两种模式下都读得清 -->
     <div class="absolute inset-0 bg-gradient-to-b from-white/10 via-white/30 to-white/60 dark:from-black/25 dark:via-black/45 dark:to-black/75"></div>

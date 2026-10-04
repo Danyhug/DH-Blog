@@ -24,8 +24,8 @@
             <MusicNoteIcon class="size-4" />音乐
           </router-link>
         </nav>
-        <!-- 窄屏：标签收进下拉 -->
-        <el-dropdown class="md:hidden" trigger="click" popper-class="glass-popup">
+        <!-- 窄屏：标签收进下拉。Element Plus 给 .el-dropdown 写了无层级的 display，md:hidden 要加 ! 才压得住 -->
+        <el-dropdown class="md:hidden!" trigger="click" popper-class="glass-popup">
           <button class="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-sm text-zinc-900 dark:text-white">
             {{ tabs.find(item => item.value === tab)?.label }}<ChevronDownIcon class="size-4" />
           </button>
@@ -51,6 +51,10 @@
             />
           </div>
           <ThemeToggle :class="navIcon" />
+          <!-- TV 模式：去掉毛玻璃与动画、播放器方向键改为遥控器习惯；电视上会自动打开，这里可手动切换 -->
+          <button :class="[navIcon, tvMode && 'bg-black/10! dark:bg-white/15!']" :title="tvMode ? '关闭 TV 模式' : '开启 TV 模式（遥控器操作、关闭毛玻璃）'" :aria-pressed="tvMode" @click="setTvMode(!tvMode)">
+            <TvIcon class="size-[18px]" />
+          </button>
           <button :class="navIcon" title="媒体库设置" @click="theater.openSettings()"><SettingsIcon class="size-[18px]" /></button>
           <router-link to="/webdav" :class="navIcon" title="返回网盘"><FolderIcon class="size-[18px]" /></router-link>
         </div>
@@ -121,7 +125,7 @@
             <span class="truncate text-black/55 dark:text-white/55">{{ featured.videos[0].folder_path || '我的网盘' }}</span>
           </p>
           <div class="mt-6 flex gap-3">
-            <button :class="whiteButton" @click="playTitle(featured)"><PlayIcon class="size-5" />{{ heroPlayLabel }}</button>
+            <button :class="whiteButton" data-nav-autofocus @click="playTitle(featured)"><PlayIcon class="size-5" />{{ heroPlayLabel }}</button>
             <button :class="greyButton" @click="selected = featured"><InfoIcon class="size-5" />更多信息</button>
           </div>
         </div>
@@ -190,9 +194,10 @@ import VideoThumb from './VideoThumb.vue'
 import MissingNotice from '../components/MissingNotice.vue'
 import ThemeToggle from '@/components/Child/ThemeToggle.vue'
 import { buildTitles, continueWatching, matchesTitle, resumeTarget, type Title } from './catalog'
+import { setTvMode, tvMode, useHistoryLayer } from '../utils/tv'
 import { formatRuntime } from '../utils/format'
 import {
-  ChevronDownIcon, FilmIcon, FolderIcon, InfoIcon, MusicNoteIcon, PlayIcon, SearchIcon, SettingsIcon
+  ChevronDownIcon, FilmIcon, FolderIcon, InfoIcon, MusicNoteIcon, PlayIcon, SearchIcon, SettingsIcon, TvIcon
 } from '../components/icons'
 
 type Tab = 'home' | 'series' | 'movies' | 'recent'
@@ -317,9 +322,13 @@ const session = ref<{ video: Video; title: Title; startAt?: number } | null>(nul
 function openPlayer(video: Video, title: Title, startAt?: number) {
   // 影片和音乐不该同时出声
   musicPlayer.pause()
-  selected.value = null
+  // 详情页留在播放器下面：退出播放回到详情，和电视上的 Netflix 一样
   session.value = { video, title, startAt }
 }
+
+// 详情和播放器都记进浏览器历史，遥控器的返回键逐层关闭它们，而不是直接退出影院
+useHistoryLayer('detail', computed(() => !!selected.value), () => (selected.value = null))
+useHistoryLayer('player', computed(() => !!session.value), () => (session.value = null))
 
 function playTitle(title: Title) {
   openPlayer(resumeTarget(title), title)
@@ -333,8 +342,10 @@ async function removeFromContinue(title: Title) {
 }
 
 // 从网盘预览页「在影院中播放」跳过来：?play=<文件ID>
-watch([videos, () => route.query.play], ([list, play]) => {
+watch([videos, () => route.query.play], async ([list, play]) => {
   if (!play || !list.length) return
+  // 先把 ?play 从地址里去掉再打开播放器：播放器会往历史里压一条，两次导航不能交错
+  await router.replace({ name: 'TheaterVideos', query: { ...route.query, play: undefined } })
   const target = list.find(video => video.id === String(play))
   if (target) {
     const title = titles.value.find(item => item.videos.some(video => video.id === target.id))
@@ -342,7 +353,6 @@ watch([videos, () => route.query.play], ([list, play]) => {
   } else {
     notify.warning('该视频不在影视库中，可能被媒体库设置排除了')
   }
-  router.replace({ name: 'TheaterVideos', query: { ...route.query, play: undefined } })
 })
 
 // ---- 导航栏随滚动变实色 ----

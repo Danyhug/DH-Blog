@@ -14,7 +14,7 @@
         gridClass,
         'group cursor-default rounded-xl px-3 py-2 transition-colors',
         i % 2 === 1 && variant === 'album' ? 'bg-black/[0.02] dark:bg-white/[0.03]' : '',
-        isCurrent(track) ? 'glass' : 'border border-transparent hover:bg-black/5 dark:hover:bg-white/[0.07]',
+        isCurrent(track) ? 'glass' : 'border border-transparent hover:bg-black/5 focus-within:bg-black/5 dark:hover:bg-white/[0.07] dark:focus-within:bg-white/[0.07]',
         dragOver === i ? 'ring-1 ring-[#fa2d48]' : ''
       ]"
       :draggable="!!playlist"
@@ -25,21 +25,23 @@
       @drop.prevent="drop(i)"
       @dragend="endDrag"
     >
-      <!-- 序号 / 封面列：悬停时换成播放按钮，正在播放时显示跳动的音柱 -->
+      <!-- 序号 / 封面列：悬停时换成播放按钮，正在播放时显示跳动的音柱。
+           遥控器没有悬停：焦点落在这一行的按钮上时同样露出播放键（group-focus-within / focus-visible） -->
       <div class="flex min-w-0 items-center gap-3">
         <div class="relative flex shrink-0 items-center justify-center" :class="variant === 'album' ? 'w-6' : 'size-10'">
           <Artwork v-if="variant === 'list'" :src="trackCoverUrl(track)" :seed="track.album" class="size-10 rounded" />
-          <span v-else class="tabular-nums text-black/45 dark:text-white/45 group-hover:invisible" :class="isCurrent(track) && 'invisible'">{{ track.track_no || i + 1 }}</span>
+          <span v-else class="tabular-nums text-black/45 dark:text-white/45 group-hover:invisible group-focus-within:invisible" :class="isCurrent(track) && 'invisible'">{{ track.track_no || i + 1 }}</span>
           <button
-            class="absolute inset-0 flex cursor-pointer items-center justify-center rounded border-none p-0 opacity-0 transition-opacity group-hover:opacity-100"
+            class="absolute inset-0 flex cursor-pointer items-center justify-center rounded border-none p-0 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
             :class="variant === 'list' ? 'bg-black/50 text-white' : 'bg-transparent text-zinc-900 dark:text-white'"
             title="播放"
+            data-nav-reveal
             @click="isCurrent(track) ? player.toggle() : emit('play', i)"
           >
             <PauseIcon v-if="isCurrent(track) && player.playing" class="size-4" />
             <PlayIcon v-else class="size-4" />
           </button>
-          <span v-if="isCurrent(track) && player.playing" class="pointer-events-none absolute inset-0 flex items-end justify-center gap-[2px] pb-[30%] group-hover:hidden" :class="variant === 'list' && 'bg-black/40 rounded'">
+          <span v-if="isCurrent(track) && player.playing" class="pointer-events-none absolute inset-0 flex items-end justify-center gap-[2px] pb-[30%] group-hover:hidden group-focus-within:hidden" :class="variant === 'list' && 'bg-black/40 rounded'">
             <span class="h-3.5 w-[3px] origin-bottom animate-equalizer rounded-sm bg-[#fa2d48]"></span>
             <span class="h-3.5 w-[3px] origin-bottom animate-equalizer rounded-sm bg-[#fa2d48] [animation-delay:-0.3s] [animation-duration:0.7s]"></span>
             <span class="h-3.5 w-[3px] origin-bottom animate-equalizer rounded-sm bg-[#fa2d48] [animation-delay:-0.6s] [animation-duration:1.1s]"></span>
@@ -60,7 +62,7 @@
       <span class="text-right text-xs tabular-nums text-black/45 dark:text-white/45">{{ track.duration ? formatTime(track.duration) : '—' }}</span>
 
       <el-dropdown trigger="click" placement="bottom-end" popper-class="glass-popup">
-        <button class="flex size-7 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-black/60 dark:text-white/60 opacity-0 transition hover:bg-black/5 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white group-hover:opacity-100 max-md:opacity-100" title="更多">
+        <button class="flex size-7 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-black/60 dark:text-white/60 opacity-0 transition hover:bg-black/5 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white group-hover:opacity-100 focus-visible:opacity-100 max-md:opacity-100" title="更多" data-nav-reveal>
           <MoreIcon class="size-4" />
         </button>
         <template #dropdown>

@@ -557,5 +557,7 @@ export const useMusicPlayerStore = defineStore("musicPlayer", () => {
     jumpTo,
     removeFromQueue,
     clearUpNext,
+    // 影院的视频播放器关闭时调用，把系统媒体控制交还给音乐
+    updateMediaSession,
   };
 });

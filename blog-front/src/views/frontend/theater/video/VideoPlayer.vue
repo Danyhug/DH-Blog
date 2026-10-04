@@ -3,6 +3,7 @@
        画面背后永远是黑的，所以不随日间模式变化：根节点挂 dark，里面的 dark: 变体与玻璃材质一律走夜间样式。 -->
   <div
     ref="rootRef"
+    data-nav-scope
     class="dark fixed inset-0 z-[90] select-none bg-black text-white"
     :class="!controlsVisible && 'cursor-none'"
     @mousemove="poke"
@@ -67,7 +68,7 @@
     </transition>
 
     <!-- 出错 -->
-    <div v-if="errorMessage" class="absolute inset-0 flex items-center justify-center bg-black/50 px-6 text-center backdrop-blur-2xl">
+    <div v-if="errorMessage" class="absolute inset-0 flex items-center justify-center bg-black/50 px-6 text-center backdrop-blur-2xl tv:backdrop-blur-none">
       <div class="glass-thick flex max-w-xl flex-col items-center gap-4 rounded-[28px] px-8 py-8">
       <p class="m-0 text-2xl font-bold">无法播放此视频</p>
       <p class="m-0 max-w-lg text-sm leading-relaxed text-white/65">{{ errorMessage }}</p>
@@ -79,7 +80,7 @@
     </div>
 
     <!-- 播完：下一集倒计时 -->
-    <div v-if="ended && !errorMessage" class="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-2xl">
+    <div v-if="ended && !errorMessage" class="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-2xl tv:backdrop-blur-none">
       <div v-if="upcoming" class="glass-thick flex w-[min(520px,90vw)] flex-col gap-4 rounded-[28px] p-6">
         <p class="m-0 text-sm text-white/60">{{ countdown > 0 ? `${countdown} 秒后播放下一集` : '即将播放下一集' }}</p>
         <div class="flex gap-4">
@@ -105,7 +106,7 @@
 
     <!-- ===== 控制层 ===== -->
     <transition enter-active-class="transition-opacity duration-200" enter-from-class="opacity-0" leave-active-class="transition-opacity duration-500" leave-to-class="opacity-0">
-      <div v-show="controlsVisible && !errorMessage" class="pointer-events-none absolute inset-0">
+      <div v-show="controlsVisible && !errorMessage" ref="controlsRef" class="pointer-events-none absolute inset-0">
         <!-- 顶栏 -->
         <div class="pointer-events-auto absolute inset-x-0 top-0 flex items-center gap-4 bg-gradient-to-b from-black/50 to-transparent px-[3%] pb-16 pt-6">
           <button class="glass-button flex size-12 cursor-pointer items-center justify-center rounded-full text-white" title="返回（Esc）" @click="close"><BackIcon class="size-6" /></button>
@@ -129,6 +130,8 @@
               drag-height-class="h-[7px]"
               hit-class="h-5"
               hover-preview
+              label="播放进度"
+              :step="duration ? 10 / duration : 0.01"
               @scrub="r => (scrubRatio = r)"
               @seek="commitSeek"
             >
@@ -140,7 +143,7 @@
           </div>
 
           <div class="mt-3 flex items-center gap-6 max-md:gap-3">
-            <button :class="iconButton" :title="playing ? '暂停（空格）' : '播放（空格）'" @click="togglePlay">
+            <button ref="playButtonRef" :class="iconButton" data-nav-autofocus :title="playing ? '暂停（空格）' : '播放（空格）'" @click="togglePlay">
               <PauseIcon v-if="playing" class="size-9 max-md:size-7" />
               <PlayIcon v-else class="size-9 max-md:size-7" />
             </button>
@@ -171,7 +174,7 @@
             <!-- 选集 -->
             <div v-if="title.kind === 'series'" class="relative">
               <button :class="iconButton" title="选集" @click="toggleMenu('episodes')"><EpisodesIcon class="size-8 max-md:size-6" /></button>
-              <div v-if="menu === 'episodes'" :class="[menuPanel, 'w-[min(420px,85vw)]']">
+              <div v-if="menu === 'episodes'" data-menu-panel :class="[menuPanel, 'w-[min(420px,85vw)]']">
                 <p class="m-0 border-b border-white/10 px-4 py-3 text-base font-bold">{{ title.name }}</p>
                 <div class="max-h-[50vh] overflow-y-auto">
                   <button
@@ -192,7 +195,7 @@
             <!-- 字幕 -->
             <div class="relative">
               <button :class="[iconButton, !subtitles.length && 'opacity-40']" :title="subtitles.length ? '字幕（C）' : '没有找到同名字幕文件'" @click="toggleMenu('subtitles')"><SubtitleIcon class="size-8 max-md:size-6" /></button>
-              <div v-if="menu === 'subtitles'" :class="[menuPanel, 'w-60']">
+              <div v-if="menu === 'subtitles'" data-menu-panel :class="[menuPanel, 'w-60']">
                 <p class="m-0 px-4 pb-2 pt-3 text-base font-bold">字幕</p>
                 <button :class="menuItem" @click="selectSubtitle(-1)">
                   <CheckIcon class="size-4" :class="subtitleIndex === -1 ? 'opacity-100' : 'opacity-0'" />关闭
@@ -208,7 +211,7 @@
             <!-- 倍速 -->
             <div class="relative max-md:hidden">
               <button :class="iconButton" title="播放速度" @click="toggleMenu('speed')"><SpeedIcon class="size-8" /></button>
-              <div v-if="menu === 'speed'" :class="[menuPanel, 'w-44']">
+              <div v-if="menu === 'speed'" data-menu-panel :class="[menuPanel, 'w-44']">
                 <p class="m-0 px-4 pb-2 pt-3 text-base font-bold">播放速度</p>
                 <button v-for="speed in speeds" :key="speed" :class="menuItem" @click="setRate(speed)">
                   <CheckIcon class="size-4" :class="rate === speed ? 'opacity-100' : 'opacity-0'" />{{ speed === 1 ? '1x（正常）' : `${speed}x` }}
@@ -230,7 +233,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useMusicPlayerStore } from '@/store'
 import { mediaStreamUrl, saveProgress, type Video, type VideoProgress } from '@/api/media'
 import { getDownloadUrl } from '@/api/file'
 import ProgressBar from '../components/ProgressBar.vue'
@@ -239,6 +243,7 @@ import { episodeLabel, nextEpisode, type Title } from './catalog'
 import { formatTime } from '../utils/format'
 import { activeCues, parseSubtitles, type Cue } from '../utils/subtitle'
 import { rememberDuration } from '../utils/durationProbe'
+import { tvMode, useFocusRestore } from '../utils/tv'
 import {
   BackIcon, CheckIcon, EpisodesIcon, ExitFullscreenIcon, Forward10Icon, FullscreenIcon, MuteIcon, NextIcon,
   PauseIcon, PipIcon, PlayIcon, RepeatIcon, Rewind10Icon, SpeedIcon, SubtitleIcon, VolumeIcon
@@ -264,6 +269,9 @@ const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
 const rootRef = ref<HTMLElement | null>(null)
 const videoRef = ref<HTMLVideoElement | null>(null)
+const controlsRef = ref<HTMLElement | null>(null)
+const playButtonRef = ref<HTMLButtonElement | null>(null)
+useFocusRestore()
 
 const streamUrl = computed(() => mediaStreamUrl(props.video.id))
 const downloadUrl = computed(() => getDownloadUrl(props.video.id))
@@ -380,13 +388,14 @@ function onLoadedMetadata() {
   }
 }
 
+// 关闭播放器时 <video> 被移出文档会补发一次 pause / timeupdate，那时 ref 已经清空
 function onTimeUpdate() {
-  currentTime.value = el().currentTime
+  if (videoRef.value) currentTime.value = videoRef.value.currentTime
 }
 
 function onProgress() {
-  const ranges = el().buffered
-  buffered.value = ranges.length ? ranges.end(ranges.length - 1) : 0
+  const ranges = videoRef.value?.buffered
+  buffered.value = ranges?.length ? ranges.end(ranges.length - 1) : 0
 }
 
 function onPlaying() {
@@ -529,6 +538,54 @@ function poke() {
 function toggleMenu(name: 'subtitles' | 'speed' | 'episodes') {
   menu.value = menu.value === name ? null : name
   poke()
+  // 用遥控器打开的菜单，焦点直接进到第一项（当前选中项优先），不必再按方向键找
+  if (menu.value && controlFocused()) {
+    nextTick(() => {
+      const panel = rootRef.value?.querySelector('[data-menu-panel]')
+      const items = [...(panel?.querySelectorAll<HTMLElement>('button') ?? [])]
+      ;(items.find(item => item.classList.contains('bg-white/10') || item.querySelector('.opacity-100')) ?? items[0])?.focus()
+    })
+  }
+}
+
+// ---- Media Session ----
+// 遥控器上的播放/暂停、快进快退键在 Android 上走系统的媒体会话，而不是 keydown；
+// 把它们接到当前视频上，关闭时交还给音乐播放器。
+const musicPlayer = useMusicPlayerStore()
+
+function updateMediaSession() {
+  if (!('mediaSession' in navigator)) return
+  const session = navigator.mediaSession
+  session.metadata = new MediaMetadata({ title: props.title.name, artist: episodeText.value || props.video.folder_path || '' })
+  const handlers: [MediaSessionAction, MediaSessionActionHandler | null][] = [
+    ['play', () => { lastMediaAction = Date.now(); el().play().catch(() => {}) }],
+    ['pause', () => { lastMediaAction = Date.now(); el().pause() }],
+    ['seekbackward', () => skip(-10)],
+    ['seekforward', () => skip(10)],
+    ['seekto', details => { if (details.seekTime !== undefined) el().currentTime = details.seekTime }],
+    ['nexttrack', next.value ? () => switchTo(next.value!) : null],
+    ['previoustrack', null],
+  ]
+  for (const [action, handler] of handlers) {
+    try {
+      session.setActionHandler(action, handler)
+    } catch {
+      // 老版本浏览器不认识的动作直接跳过
+    }
+  }
+}
+
+function releaseMediaSession() {
+  if (!('mediaSession' in navigator)) return
+  for (const action of ['play', 'pause', 'seekbackward', 'seekforward', 'seekto', 'nexttrack', 'previoustrack'] as MediaSessionAction[]) {
+    try {
+      navigator.mediaSession.setActionHandler(action, null)
+    } catch {
+      // 同上
+    }
+  }
+  navigator.mediaSession.metadata = null
+  musicPlayer.updateMediaSession()
 }
 
 // ---- 全屏 / 画中画 ----
@@ -553,27 +610,71 @@ async function togglePip() {
   }
 }
 
-// ---- 键盘 ----
+// ---- 键盘与遥控器 ----
+// 焦点在某个控件上（键盘/遥控器移过去的，即 :focus-visible）时，方向键交给影院的空间导航在控件间移动、
+// 确认键和空格交给按钮自己；否则方向键直接快退快进。鼠标点过的按钮虽有焦点但不是 focus-visible，不受影响。
+function controlFocused() {
+  const active = document.activeElement
+  return !!active && controlsVisible.value && !!controlsRef.value?.contains(active) && active.matches(':focus-visible')
+}
+
+// 遥控器的上下键没有音量可调（电视有自己的音量键），改为唤出控制栏并聚焦播放键
+function focusControls() {
+  poke()
+  nextTick(() => playButtonRef.value?.focus())
+}
+
+// 同一次按键可能既作为 keydown 又作为 Media Session 动作送达，切换类操作只认先到的那个
+let lastMediaAction = 0
+function mediaToggle() {
+  if (Date.now() - lastMediaAction < 400) return
+  lastMediaAction = Date.now()
+  togglePlay()
+}
+
 function onKey(event: KeyboardEvent) {
+  if (event.defaultPrevented) return
   if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return
+  poke()
+  if (controlFocused() && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(event.key)) return
   switch (event.key) {
     case ' ':
     case 'k':
+    case 'Enter':
       togglePlay()
       break
     case 'ArrowLeft':
     case 'j':
+    case 'MediaRewind':
       skip(-10)
       break
     case 'ArrowRight':
     case 'l':
+    case 'MediaFastForward':
       skip(10)
       break
     case 'ArrowUp':
-      setVolume(el().volume + 0.1)
+      if (tvMode.value) focusControls()
+      else setVolume(el().volume + 0.1)
       break
     case 'ArrowDown':
-      setVolume(el().volume - 0.1)
+      if (tvMode.value) focusControls()
+      else setVolume(el().volume - 0.1)
+      break
+    case 'MediaPlayPause':
+      mediaToggle()
+      break
+    case 'MediaPlay':
+      el().play().catch(() => {})
+      break
+    case 'MediaPause':
+      el().pause()
+      break
+    case 'MediaTrackNext':
+      if (next.value) switchTo(next.value)
+      break
+    case 'MediaStop':
+      close()
       break
     case 'f':
       toggleFullscreen()
@@ -624,12 +725,18 @@ watch(() => props.video.id, () => {
   cancelCountdown()
   upcoming.value = undefined
   selectSubtitle(defaultSubtitle())
+  updateMediaSession()
 })
 
 onMounted(() => {
   poke()
   selectSubtitle(defaultSubtitle())
-  window.addEventListener('keydown', onKey)
+  // 挂在 document 而不是 window：先于影院的空间导航与详情页的 Esc 处理（都在 window 上），
+  // 播放器处理过的按键 preventDefault 后它们就不再响应
+  document.addEventListener('keydown', onKey)
+  updateMediaSession()
+  // 电视上直接全屏，藏掉浏览器的地址栏；打开播放器的那次按键/点击就是全屏需要的用户手势
+  if (tvMode.value) rootRef.value?.requestFullscreen().catch(() => {})
   document.addEventListener('fullscreenchange', onFullscreenChange)
   saveTimer = setInterval(() => {
     if (playing.value) persist()
@@ -642,8 +749,9 @@ onMounted(() => {
 onBeforeUnmount(persist)
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', onKey)
+  document.removeEventListener('keydown', onKey)
   document.removeEventListener('fullscreenchange', onFullscreenChange)
+  releaseMediaSession()
   if (saveTimer) clearInterval(saveTimer)
   if (pausedTimer) clearInterval(pausedTimer)
   if (hideTimer) clearTimeout(hideTimer)
