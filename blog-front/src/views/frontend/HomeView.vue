@@ -6,14 +6,19 @@
         <h1 class="text-[3.5em]">我的个人纪录</h1>
         <h2 class="text-[2.5em] [text-shadow:rgba(0,0,0,0.5)_0rem_0.2rem_0.3rem]">DH-BLOG</h2>
       </template>
-      <template v-else>
-        <h3 class="text-[2.2em] [text-shadow:rgba(0,0,0,0.5)_0rem_0.2rem_0.3rem] tracking-[0.125rem]">{{ store.homeHeaderInfo.title }}</h3>
-        <div class="top mt-[18px]">
+      <!-- 文章接口回来之前 store 里还是上一篇（或空）的信息，先显示骨架条，避免旧标题闪一下再换 -->
+      <template v-else-if="isCurrentArticle">
+        <h3 class="text-[2.2em] [text-shadow:rgba(0,0,0,0.5)_0rem_0.2rem_0.3rem] tracking-[0.125rem] animate-fade-in">{{ store.homeHeaderInfo.title }}</h3>
+        <div class="top mt-[18px] animate-fade-in">
           <span class="date mr-5">发表于 {{ store.homeHeaderInfo.created }}</span>
           <span class="num-word mr-5">本文字数 {{ store.homeHeaderInfo.wordNum }} 字</span>
           <span class="time-consum mr-5">阅读时长 {{ store.homeHeaderInfo.timConSum }} 分钟</span>
         </div>
       </template>
+      <div v-else class="flex flex-col items-center" aria-busy="true" aria-label="文章信息加载中">
+        <div class="h-[1.6em] w-[min(18em,70vw)] rounded-md bg-white/25 animate-pulse text-[2.2em]"></div>
+        <div class="mt-[18px] h-[1.2em] w-[min(26em,80vw)] rounded-md bg-white/20 animate-pulse"></div>
+      </div>
     </Banner>
     <div>
       <div class="inner px-[25px] flex justify-between">
@@ -46,7 +51,7 @@ import ArticleInfoSide from '@/components/frontend/Side/ArticleInfoSide.vue';
 import Footer from '@/components/frontend/Footer.vue';
 import FadeTransition from '@/components/Child/FadeTransition.vue';
 
-import { shallowRef, watch } from 'vue';
+import { computed, shallowRef, watch } from 'vue';
 
 import { useUserStore } from '@/store/index'
 import { useRoute } from 'vue-router';
@@ -55,6 +60,10 @@ const sideShowComponent = shallowRef<any>(HomeSide);
 
 const store = useUserStore();
 const route = useRoute()
+
+// homeHeaderInfo is filled by ArticleView once the article request returns; until then it still holds
+// the previous article (or nothing), so only show it when it belongs to the article in the URL.
+const isCurrentArticle = computed(() => String(store.homeHeaderInfo.id) === String(route.params.id))
 
 if (route.path == '/view/home') {
   sideShowComponent.value = HomeSide;

@@ -342,10 +342,10 @@ button:hover .play {
 
 <script setup>
 import { emojis } from '@/types/Constant';
-import { useUserStore } from '@/store/index'
 import { addComment } from '@/api/user.ts'
+import { useRoute } from 'vue-router'
 
-const store = useUserStore()
+const route = useRoute()
 
 const emit = defineEmits(['comment-submitted']);
 const props = defineProps({
@@ -486,7 +486,8 @@ const submitComment = async () => {
   submitting.value = true
   try {
     await addComment({
-      articleId: store.homeHeaderInfo.id,
+      // 同 View.vue：store 里的 id 在文章接口返回前还是上一篇的
+      articleId: Number(route.params.id),
       author: comment.author,
       email: comment.email,
       content: comment.content,

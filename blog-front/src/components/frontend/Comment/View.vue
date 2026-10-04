@@ -16,9 +16,11 @@ import { reactive } from 'vue';
 import CommentItem from '@/components/frontend/Comment/CommentItem.vue';
 import { formatDate } from '@/utils/tool'
 import { getCommentList } from '@/api/user'
-import { useUserStore } from '@/store/index';
+import { useRoute } from 'vue-router';
 import Loading from '@/components/frontend/Loading.vue'
-const store = useUserStore()
+// 用路由上的文章 id 而不是 store.homeHeaderInfo.id：后者要等文章接口返回才更新，
+// 文章接口慢于下面的 1.5s 时会拉到上一篇文章的评论
+const route = useRoute()
 const commentList = ref([]);
 const length = ref(0);
 
@@ -32,7 +34,7 @@ onMounted(() => {
 })
 
 const changComment = async () => {
-  const data = await getCommentList(store.homeHeaderInfo.id);
+  const data = await getCommentList(Number(route.params.id));
   commentList.value = data.list
   length.value = data.total
 }

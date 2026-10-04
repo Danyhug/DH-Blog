@@ -3,11 +3,14 @@
     <el-row>
       <el-col>
         <el-card class="w-full min-h-screen bg-white! dark:bg-[#191919]! dark:text-[#d4d4d4]! dark:border-[#303030]! dark:[--el-bg-color:#191919] dark:[--el-text-color-regular:#aaa] dark:[--el-border-color:#303030]">
-          <!-- 加载中先按默认封面的 8:5 占位，侧栏下方内容不会在图片到达时整体下移太多 -->
-          <img v-img-fade="'aspect-[8/5]'" :src="store.homeHeaderInfo.thumbnailUrl" alt="" decoding="async" class="image w-[95%] mx-auto" />
+          <!-- 加载中先按默认封面的 8:5 占位，侧栏下方内容不会在图片到达时整体下移太多。
+               文章接口回来之前 store 里还是上一篇的封面，这段时间只显示占位块，免得旧图闪一下再换掉 -->
+          <img v-if="coverUrl" v-img-fade="'aspect-[8/5]'" :src="coverUrl" alt="" decoding="async" class="image w-[95%] mx-auto" />
+          <div v-else class="w-[95%] mx-auto aspect-[8/5] animate-pulse bg-black/5 dark:bg-white/10" aria-hidden="true"></div>
 
           <div>
-            <p class="title text-[1.15rem] my-3">{{ store.homeHeaderInfo.title }}</p>
+            <p v-if="isCurrentArticle" class="title text-[1.15rem] my-3 animate-fade-in">{{ store.homeHeaderInfo.title }}</p>
+            <div v-else class="mx-auto my-3 h-[1.15rem] w-3/5 rounded bg-black/5 dark:bg-white/10 animate-pulse" aria-hidden="true"></div>
             <div class="schedule">
               <el-progress :color="customColors" :percentage="sideInfo.process"></el-progress>
               <p class="text-[14px] text-[#606266] dark:text-[#aaa]">已阅读时长：{{ formatSeconds(second) }}</p>
@@ -23,7 +26,7 @@
             <div class="tag-list flex flex-wrap gap-2 w-full mb-4">
               <!-- 弹层不设 effect：默认 light 在 html.dark 下已取 Element Plus 的夜间变量；
                    el-zoom-in-top 是 Element Plus 自带的过渡（下拉框同款），弹层从标签处向下展开 -->
-              <el-popover v-for="(item, index) in store.homeHeaderInfo.tags" :key="item.id ?? item.name"
+              <el-popover v-for="(item, index) in currentTags" :key="item.id ?? item.name"
                 trigger="click" placement="bottom" :width="300" :persistent="false" transition="el-zoom-in-top"
                 popper-class="p-0! overflow-hidden rounded-xl! shadow-lg!"
                 :visible="openTag === item.name" @update:visible="visible => visible ? onTagShow(item.name) : onTagHide(item.name)">
@@ -98,7 +101,7 @@
 import { useUserStore } from '@/store';
 import ArticleReadingTools from '@/components/frontend/ArticleReadingTools.vue';
 import { computed, reactive, onMounted, onBeforeUnmount, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ArrowRight } from '@element-plus/icons-vue'
 import { getArticlesByTaxonomy } from '@/api/user'
 import { debounce } from '@/utils/tool'
@@ -106,6 +109,13 @@ import { vImgFade } from '@/directives/imgFade'
 import { TAG_PALETTE as tagPalette, tagNameHash } from '@/utils/tagColor'
 const store = useUserStore()
 const router = useRouter()
+const route = useRoute()
+
+// homeHeaderInfo is filled by ArticleView once the article request returns; until then it still holds
+// the previous article, so only trust its cover when it belongs to the article in the URL.
+const isCurrentArticle = computed(() => String(store.homeHeaderInfo.id) === String(route.params.id))
+const coverUrl = computed(() => isCurrentArticle.value ? store.homeHeaderInfo.thumbnailUrl : '')
+const currentTags = computed(() => isCurrentArticle.value ? store.homeHeaderInfo.tags ?? [] : [])
 
 // Keyed by tag name; fetched on first open only, so reopening a tag's popover is instant.
 const tagArticles = reactive({})
@@ -145,7 +155,7 @@ const tagColors = computed(() => {
   const size = tagPalette.length
   const used = new Set()
   const isolated = (index) => [size - 1, 0, 1].every(offset => !used.has((index + offset) % size))
-  return (store.homeHeaderInfo.tags ?? []).map(({ name }) => {
+  return currentTags.value.map(({ name }) => {
     const hash = tagNameHash(name)
     const probes = Array.from({ length: size }, (_, step) => (hash + step * TAG_PROBE_STEP) % size)
     const index = probes.find(isolated) ?? probes.find(index => !used.has(index)) ?? probes[0]
