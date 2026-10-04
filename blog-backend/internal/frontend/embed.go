@@ -4,8 +4,11 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
+	"mime"
 	"net/http"
 	"os"
+	"path"
+	"strconv"
 	"strings"
 
 	"dh-blog/internal/config"
@@ -39,7 +42,9 @@ func RegisterFrontendRoutes(router *gin.Engine, conf *config.Config) {
 	if err == nil {
 		// 使用带缓存控制的处理器
 		router.Use(cacheControlMiddleware())
-		router.StaticFS("/assets", http.FS(assetsFS))
+		assets := serveAssets(assetsFS)
+		router.GET("/assets/*filepath", assets)
+		router.HEAD("/assets/*filepath", assets)
 	}
 
 	// 为其他静态文件创建带缓存控制的处理函数
@@ -124,6 +129,64 @@ func cacheControlMiddleware() gin.HandlerFunc {
 		}
 		c.Next()
 	}
+}
+
+// serveAssets serves the hashed build assets, preferring a precompressed
+// sibling "<name>.gz" (written by blog-deploy/build.sh) when the client
+// accepts gzip. The binary has no reverse proxy guaranteed in front of it, and
+// the JS bundles are megabytes uncompressed, so this cuts first-load transfer
+// to roughly a third without spending CPU on every request.
+func serveAssets(assets fs.FS) gin.HandlerFunc {
+	fileServer := http.FileServer(http.FS(assets))
+	return func(c *gin.Context) {
+		name := strings.TrimPrefix(c.Param("filepath"), "/")
+		if name == "" || strings.HasSuffix(name, "/") {
+			c.Status(http.StatusNotFound)
+			return
+		}
+
+		gz, err := fs.ReadFile(assets, name+".gz")
+		if err == nil {
+			// Caches must keep the two encodings apart, even for clients that got the plain file.
+			c.Header("Vary", "Accept-Encoding")
+			if acceptsGzip(c.GetHeader("Accept-Encoding")) {
+				contentType := mime.TypeByExtension(path.Ext(name))
+				if contentType == "" {
+					contentType = "application/octet-stream"
+				}
+				c.Header("Content-Encoding", "gzip")
+				c.Data(http.StatusOK, contentType, gz)
+				return
+			}
+		}
+
+		c.Request.URL.Path = "/" + name
+		fileServer.ServeHTTP(c.Writer, c.Request)
+	}
+}
+
+// acceptsGzip reports whether an Accept-Encoding header allows gzip.
+// An explicit "gzip" entry wins over "*"; q=0 opts out.
+func acceptsGzip(header string) bool {
+	star := false
+	for _, part := range strings.Split(header, ",") {
+		coding, params, _ := strings.Cut(part, ";")
+		coding = strings.ToLower(strings.TrimSpace(coding))
+		if coding != "gzip" && coding != "*" {
+			continue
+		}
+		allowed := true
+		if v, ok := strings.CutPrefix(strings.ReplaceAll(strings.ToLower(params), " ", ""), "q="); ok {
+			if q, err := strconv.ParseFloat(v, 64); err == nil {
+				allowed = q > 0
+			}
+		}
+		if coding == "gzip" {
+			return allowed
+		}
+		star = allowed
+	}
+	return star
 }
 
 // serveCachedFile 服务单个带缓存控制的文件

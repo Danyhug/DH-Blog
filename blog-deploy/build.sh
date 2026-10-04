@@ -17,11 +17,17 @@ mkdir -p "$EMBED_DIR"
 
 # 2. 构建前端
 echo "构建前端..."
-(cd "$FRONTEND_DIR" && bun run build -- --mode production)
+# --frozen-lockfile：依赖与 bun.lock 不一致时直接失败，而不是悄悄装出另一套版本
+(cd "$FRONTEND_DIR" && bun install --frozen-lockfile && bun run build -- --mode production)
 
 # 3. 嵌入前端到后端
 echo "嵌入前端到后端..."
 cp -r "$FRONTEND_DIR/dist"/* "$EMBED_DIR/"
+
+# 预压缩文本资源：后端对接受 gzip 的浏览器直接返回 .gz（internal/frontend/embed.go 的 serveAssets），
+# 首屏 JS/CSS 传输量降到约 1/3。图片、音频本身已压缩，不再处理。-n 不写入文件名和时间戳，产物可复现。
+echo "预压缩前端资源..."
+find "$EMBED_DIR/assets" -type f \( -name '*.js' -o -name '*.css' -o -name '*.svg' -o -name '*.json' \) -exec gzip -9 -k -n {} +
 
 # 4. 多平台构建
 build_for_platform() {
@@ -31,13 +37,11 @@ build_for_platform() {
     local output="$BUILD_DIR/${BINARY_NAME}${ext}"
     echo "构建 $os/$arch ..."
     # nomsgpack: 排除 gin v1.12 无条件引入的 msgpack 绑定及 ugorji codec，省约 5MB
-    (cd "$BACKEND_DIR" && GOOS=$os GOARCH=$arch go build -tags nomsgpack -trimpath -ldflags="-s -w" -o "$output" ./cmd/blog-backend)
-    if [ $? -eq 0 ]; then
-        echo "✅ $output"
-    else
-        echo "❌ $os/$arch 构建失败"
-        exit 1
-    fi
+    # CGO_ENABLED=0: SQLite 用的是纯 Go 驱动，关掉 cgo 后本机 darwin 产物也和交叉编译的一样是静态链接
+    # （set -e 下失败会直接退出，不需要再判断 $?）
+    (cd "$BACKEND_DIR" && CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -tags nomsgpack -trimpath -ldflags="-s -w" -o "$output" ./cmd/blog-backend) \
+        || { echo "❌ $os/$arch 构建失败"; exit 1; }
+    echo "✅ $output"
 }
 
 build_for_platform "darwin" "arm64" "-darwin-arm64"
@@ -53,8 +57,7 @@ if [ -d "$FRONTEND_DIR/dist" ]; then
     echo "✅ 已清理前端构建目录: $FRONTEND_DIR/dist"
 fi
 
-# 注意：嵌入目录(EMBED_DIR)在编译后清理，避免//go:embed找不到文件
-# 清理嵌入目录将在构建完成后进行
+# 嵌入目录(EMBED_DIR)保留不删：internal/frontend 的 //go:embed 需要它，删掉后本地 go build / go test 会失败
 
 echo "🎉 全部构建完成！最终产物："
 echo "- 后端二进制文件: $BUILD_DIR/"
