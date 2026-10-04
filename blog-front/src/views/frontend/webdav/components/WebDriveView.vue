@@ -277,8 +277,16 @@
         <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] dark:hover:bg-white/5 [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px]" @click="renameFile(contextMenu.file)">
           <FileTextIcon class="size-4 [@media(max-width:768px)]:size-[18px]" /> 重命名
         </li>
-        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] dark:hover:bg-white/5 [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px] text-[#ff4d4f]" @click="deleteFile(contextMenu.file)">
-          <XIcon class="size-4 [@media(max-width:768px)]:size-[18px]" /> 删除
+        <!-- 删除就地确认：第一次点击把这一项变成红色的「确认删除」，再点一次才删；点菜单外任意处即取消 -->
+        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] transition-colors duration-200 [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px]"
+          :class="confirmingDelete ? 'bg-[#ff4d4f] text-white hover:bg-[#f5222d] rounded-b-lg' : 'text-[#ff4d4f] hover:bg-[#fff1f0] dark:hover:bg-red-500/10'"
+          @click.stop="confirmingDelete ? deleteFile(contextMenu.file) : (confirmingDelete = true)">
+          <XIcon class="size-4 shrink-0 [@media(max-width:768px)]:size-[18px]" />
+          <span v-if="!confirmingDelete">删除</span>
+          <span v-else class="flex flex-col animate-pop-in">
+            <span class="font-medium">确认删除</span>
+            <span v-if="contextMenu.file?.type === 'folder'" class="text-xs opacity-80">文件夹里的内容会一起删除</span>
+          </span>
         </li>
       </ul>
     </div>
@@ -365,6 +373,8 @@ const selectedFile = ref<FileItem>({
   size: ''
 })
 const showFilePreview = ref(false)
+// 右键菜单里的「删除」是否已点过一次、正等着再点确认
+const confirmingDelete = ref(false)
 const contextMenu = ref({
   show: false,
   x: 0,
@@ -1196,9 +1206,7 @@ function shareSelectedFiles() {
 async function deleteFile(file: FileItem) {
   const id = file.id;
   if (!id) return;
-  const confirmed = confirm(`确定要删除 ${file.name} 吗？`);
   closeContextMenu();
-  if (!confirmed) return;
 
   try {
     await apiDeleteFile(id);
@@ -1228,6 +1236,7 @@ async function deleteFile(file: FileItem) {
 function showContextMenu(event: MouseEvent, file: FileItem) {
   event.preventDefault();
   contextMenu.value.show = true;
+  confirmingDelete.value = false;
   contextMenu.value.x = event.clientX;
   contextMenu.value.y = event.clientY;
   contextMenu.value.file = file;
@@ -1239,6 +1248,7 @@ function showContextMenu(event: MouseEvent, file: FileItem) {
 // 关闭上下文菜单
 function closeContextMenu() {
   contextMenu.value.show = false;
+  confirmingDelete.value = false;
   document.removeEventListener('click', closeContextMenu);
 }
 
