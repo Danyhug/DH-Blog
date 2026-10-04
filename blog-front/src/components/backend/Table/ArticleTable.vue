@@ -42,7 +42,6 @@
 import { useRouter } from 'vue-router'
 import { reactive } from 'vue'
 import { MagicStick } from '@element-plus/icons-vue'
-import { ElMessageBox } from 'element-plus'
 import { generateAITags, generateAISummary, deleteArticle } from '@/api/admin'
 import { notify } from '@/utils/notification'
 import { Article } from '@/types/Article'

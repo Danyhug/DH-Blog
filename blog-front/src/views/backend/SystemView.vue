@@ -396,7 +396,6 @@ import {
 } from '@/api/admin';
 import { getDirectoryTree } from '@/api/file';
 import type { BlogConfig, AIConfig, AIPrompt, StorageConfig } from '@/types/SystemConfig';
-import { ElMessageBox } from 'element-plus';
 import { notify } from '@/utils/notification';
 // 导入 Element Plus 图标
 import {

@@ -129,7 +129,6 @@ import type { AgentGrant } from '@/api/agent';
 import { Article } from '@/types/Article';
 
 import { CopyDocument, Key, MagicStick } from '@element-plus/icons-vue'
-import { ElMessageBox } from 'element-plus'
 import { notify } from '@/utils/notification'
 import { Tag } from '@/types/Tag';
 import { onMounted, onUnmounted, reactive, computed } from 'vue';

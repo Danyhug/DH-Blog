@@ -331,7 +331,6 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
-import { ElMessageBox } from 'element-plus';
 import { Connection, InfoFilled, Odometer, Refresh, Setting } from '@element-plus/icons-vue';
 import { notify } from '@/utils/notification';
 import ProviderLogo from './ProviderLogo.vue';

@@ -263,7 +263,7 @@ import {
 import axios from 'axios'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import hljs from 'highlight.js'
+import hljs from '../utils/highlight'
 import 'highlight.js/styles/github.css' // 引入GitHub样式的高亮CSS
 import {
   detectFileType,

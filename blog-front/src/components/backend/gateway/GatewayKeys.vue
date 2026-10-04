@@ -183,7 +183,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { ElMessageBox } from 'element-plus';
 import { CopyDocument, Key, Link, Plus, Refresh } from '@element-plus/icons-vue';
 import { notify } from '@/utils/notification';
 import SectionPanel from './SectionPanel.vue';

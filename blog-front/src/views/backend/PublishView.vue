@@ -66,6 +66,7 @@ import type { UploadProps } from 'element-plus'
 import { SERVER_URL } from '@/types/Constant'
 import { Plus } from '@element-plus/icons-vue'
 import { Emoji } from '@vavt/v3-extension'
+import { MdEditor } from 'md-editor-v3'
 
 import {
   addArticle, updateArticle, uploadFile
