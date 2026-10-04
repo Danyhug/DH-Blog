@@ -3,7 +3,8 @@
     <el-row>
       <el-col>
         <el-card class="w-full min-h-screen bg-white! dark:bg-[#191919]! dark:text-[#d4d4d4]! dark:border-[#303030]! dark:[--el-bg-color:#191919] dark:[--el-text-color-regular:#aaa] dark:[--el-border-color:#303030]">
-          <img :src="store.homeHeaderInfo.thumbnailUrl" class="image w-[95%] mx-auto" />
+          <!-- 加载中先按默认封面的 8:5 占位，侧栏下方内容不会在图片到达时整体下移太多 -->
+          <img v-img-fade="'aspect-[8/5]'" :src="store.homeHeaderInfo.thumbnailUrl" alt="" decoding="async" class="image w-[95%] mx-auto" />
 
           <div>
             <p class="title text-[1.15rem] my-3">{{ store.homeHeaderInfo.title }}</p>
@@ -101,6 +102,7 @@ import { useRouter } from 'vue-router'
 import { ArrowRight } from '@element-plus/icons-vue'
 import { getArticlesByTaxonomy } from '@/api/user'
 import { debounce } from '@/utils/tool'
+import { vImgFade } from '@/directives/imgFade'
 import { TAG_PALETTE as tagPalette, tagNameHash } from '@/utils/tagColor'
 const store = useUserStore()
 const router = useRouter()

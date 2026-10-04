@@ -97,6 +97,8 @@
   --animate-tracking-in: tracking-in 1.2s cubic-bezier(0.215, 0.61, 0.355, 1) both;
   /* 进度条上掠过的一道高光 */
   --animate-shimmer: shimmer 1.4s ease-in-out infinite;
+  /* 网络图片加载完成后淡入（v-img-fade 在 load 时挂上），盖住加载中的占位底色 */
+  --animate-image-in: fade-in 0.6s ease-out backwards;
   /*
     网盘：文件卡片错峰浮入、弹层/菜单/按钮弹出。
     关键帧只动独立的 translate / scale 属性，不碰 transform：弹层靠 transform 居中、

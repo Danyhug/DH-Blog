@@ -3,7 +3,8 @@
     <router-link :to="'./article/' + article.id">
       <div class="cover flex w-full min-h-[244px] rounded-2xl bg-grey-0 overflow-hidden border border-[#eee] dark:bg-[#202020] dark:border-[#303030]">
         <div class="left w-1/2 relative overflow-hidden [clip-path:polygon(0_0,92%_0%,100%_100%,0%_100%)]">
-          <img :src="getArticleBg(article.thumbnailUrl, article.id)" :alt="article.title" loading="lazy"
+          <!-- 封面多来自外站图床，慢时先显示占位底色，加载完再淡入 -->
+          <img v-img-fade :src="getArticleBg(article.thumbnailUrl, article.id)" :alt="article.title" loading="lazy" decoding="async"
             class="block w-full h-full object-cover [transition:all_0.5s]">
         </div>
         <!-- 手机端 style.less 把这里画成盖在封面上的白色毛玻璃（无层级规则），夜间要 ! 才换得掉 -->
@@ -59,6 +60,7 @@ import { Article } from '@/types/Article.ts'
 import { Tag } from '@/types/Tag'
 import { getArticleBg } from '@/utils/tool'
 import { vClamp } from '@/directives/clamp'
+import { vImgFade } from '@/directives/imgFade'
 import { onMounted, onUnmounted, ref } from 'vue'
 const props = defineProps(['article'])
 const article: Article<Tag> = props.article

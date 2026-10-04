@@ -12,7 +12,8 @@
             <ArticleReadingTools class="mx-auto max-w-[320px]" />
           </div>
           <ArticleReadingTools v-else class="mx-4 mb-2 [@media(min-width:1025px)]:hidden" />
-          <div id="article-body" class="blog-container px-6 pt-0 pb-5 [&_.md-editor-preview]:text-[length:var(--article-font-size)]! [&_.md-editor-preview_pre_code]:text-[length:var(--article-code-font-size)]!"
+          <!-- v-img-fade：正文图片加载中显示占位块，到达后淡入（懒加载在 main.ts 的 markdown-it 配置里） -->
+          <div id="article-body" v-img-fade class="blog-container px-6 pt-0 pb-5 [&_.md-editor-preview]:text-[length:var(--article-font-size)]! [&_.md-editor-preview_pre_code]:text-[length:var(--article-code-font-size)]!"
             :class="{ 'mx-auto max-w-[960px] px-4! sm:px-6!': store.aritcleModel.isFullPreview }"
             :style="{ '--article-font-size': `${store.aritcleModel.fontSize}px`, '--article-code-font-size': `${store.aritcleModel.fontSize - 1}px` }"
             @click="openPreviewLinkInNewTab">
@@ -51,10 +52,12 @@ import { getArticleBg, formatDate } from '@/utils/tool';
 import { nextTick, watch } from 'vue';
 import router from '@/router';
 import ArticleReadingTools from '@/components/frontend/ArticleReadingTools.vue';
+import { vImgFade } from '@/directives/imgFade';
 
 export default {
   name: 'HomeView',
   components: { ArticleReadingTools },
+  directives: { ImgFade: vImgFade },
   data() {
     return {
       // 文章信息
