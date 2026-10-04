@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
-  夜间模式由 <html class="dark"> 驱动（App.vue 只在前台博客路由上加），不跟随系统 prefers-color-scheme。
+  夜间模式由 <html class="dark"> 驱动（App.vue 只在带 meta.blogTheme 的路由上加：博客、网盘、影院），不跟随系统 prefers-color-scheme。
   与 Element Plus 的 dark/css-vars.css 用的是同一个开关，两边总是一起切换。
 */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -97,6 +97,32 @@
   --animate-tracking-in: tracking-in 1.2s cubic-bezier(0.215, 0.61, 0.355, 1) both;
   /* 进度条上掠过的一道高光 */
   --animate-shimmer: shimmer 1.4s ease-in-out infinite;
+  /* 影院背景里缓慢漂移的光斑，给上层的毛玻璃一点可以折射的颜色 */
+  --animate-ambient-drift: ambient-drift 28s ease-in-out infinite alternate;
+
+  @keyframes ambient-drift {
+    0% {
+      transform: translate(0, 0) scale(1);
+    }
+    50% {
+      transform: translate(6vw, -4vh) scale(1.15);
+    }
+    100% {
+      transform: translate(-4vw, 5vh) scale(0.95);
+    }
+  }
+
+  /* 影院音乐列表里「正在播放」的跳动音柱；时长由组件按柱错开 */
+  --animate-equalizer: equalizer 0.9s ease-in-out infinite;
+
+  @keyframes equalizer {
+    0%, 100% {
+      transform: scaleY(0.3);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
 
   @keyframes float {
     0%, 100% {
@@ -271,4 +297,119 @@
 ::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
+}
+
+/*
+  个人影院的「液态玻璃 + 毛玻璃」材质。
+  毛玻璃靠 backdrop-filter 的模糊与饱和度提升；液态玻璃的质感来自边缘的高光：
+  顶部一道亮内描边模拟光从上方打进来，左上角一团径向高光模拟曲面反光，
+  底部弱内描边让玻璃有厚度。材质集中在这里定义，组件里只写 glass / glass-thick。
+  日间是偏白的乳白玻璃，夜间（html.dark 或任意 .dark 祖先，例如始终深色的视频播放器）是烟色玻璃。
+*/
+@utility glass {
+  background-color: rgb(255 255 255 / 0.42);
+  background-image:
+    radial-gradient(120% 90% at 0% 0%, rgb(255 255 255 / 0.55), transparent 55%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.3), rgb(255 255 255 / 0.08));
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgb(255 255 255 / 0.6);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.9),
+    inset 0 -1px 0 0 rgb(15 23 42 / 0.04),
+    0 12px 40px -14px rgb(15 23 42 / 0.22);
+  @variant dark {
+    background-color: rgb(255 255 255 / 0.07);
+    background-image:
+      radial-gradient(120% 90% at 0% 0%, rgb(255 255 255 / 0.16), transparent 55%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0.015));
+    border-color: rgb(255 255 255 / 0.13);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.28),
+      inset 0 -1px 0 0 rgb(255 255 255 / 0.05),
+      inset 0 0 24px 0 rgb(255 255 255 / 0.03),
+      0 12px 40px -12px rgb(0 0 0 / 0.6);
+  }
+}
+
+/* 承载大段文字的面板（侧边栏、弹层、播放控制栏）：底色更实，保证可读 */
+@utility glass-thick {
+  background-color: rgb(255 255 255 / 0.62);
+  background-image:
+    radial-gradient(120% 70% at 0% 0%, rgb(255 255 255 / 0.6), transparent 50%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.25), rgb(255 255 255 / 0));
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  backdrop-filter: blur(40px) saturate(200%);
+  border: 1px solid rgb(255 255 255 / 0.7);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.95),
+    inset 0 -1px 0 0 rgb(15 23 42 / 0.05),
+    0 24px 60px -18px rgb(15 23 42 / 0.28);
+  @variant dark {
+    background-color: rgb(20 20 26 / 0.55);
+    background-image:
+      radial-gradient(120% 70% at 0% 0%, rgb(255 255 255 / 0.12), transparent 50%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0));
+    border-color: rgb(255 255 255 / 0.1);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.2),
+      inset 0 -1px 0 0 rgb(255 255 255 / 0.04),
+      0 24px 60px -16px rgb(0 0 0 / 0.7);
+  }
+}
+
+/* 可点击的玻璃（按钮、胶囊标签）：悬停时玻璃变亮、按下时微缩 */
+@utility glass-button {
+  background-color: rgb(255 255 255 / 0.5);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.6), rgb(255 255 255 / 0.15));
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgb(255 255 255 / 0.7);
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.95), 0 6px 20px -8px rgb(15 23 42 / 0.25);
+  transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  &:hover {
+    background-color: rgb(255 255 255 / 0.75);
+    box-shadow: inset 0 1px 0 0 white, 0 8px 26px -8px rgb(15 23 42 / 0.3);
+  }
+  &:active {
+    transform: scale(0.96);
+  }
+  @variant dark {
+    background-color: rgb(255 255 255 / 0.09);
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0.02));
+    border-color: rgb(255 255 255 / 0.16);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.3), 0 6px 20px -8px rgb(0 0 0 / 0.5);
+    &:hover {
+      background-color: rgb(255 255 255 / 0.17);
+      box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.4), 0 8px 26px -8px rgb(0 0 0 / 0.55);
+    }
+  }
+}
+
+/*
+  Element Plus 的弹窗、下拉、消息框用 popper-class / class / custom-class 挂上它。
+  Element 的样式不在 cascade layer 里，会压过 Tailwind 的 utilities 层，只能用 !important。
+  弹层 teleport 到 body，只能跟随 html.dark，文字颜色交给 Element 自己的日/夜变量。
+*/
+@utility glass-popup {
+  --el-bg-color-overlay: transparent;
+  --el-dialog-bg-color: transparent;
+  --el-messagebox-bg-color: transparent;
+  background-color: rgb(255 255 255 / 0.72) !important;
+  background-image: radial-gradient(120% 70% at 0% 0%, rgb(255 255 255 / 0.7), transparent 50%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
+  backdrop-filter: blur(40px) saturate(200%) !important;
+  border: 1px solid rgb(255 255 255 / 0.8) !important;
+  border-radius: 18px !important;
+  box-shadow:
+    inset 0 1px 0 0 white,
+    0 30px 80px -20px rgb(15 23 42 / 0.35) !important;
+  @variant dark {
+    background-color: rgb(28 28 34 / 0.62) !important;
+    background-image: radial-gradient(120% 70% at 0% 0%, rgb(255 255 255 / 0.12), transparent 50%) !important;
+    border-color: rgb(255 255 255 / 0.12) !important;
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.22),
+      0 30px 80px -20px rgb(0 0 0 / 0.75) !important;
+  }
 }

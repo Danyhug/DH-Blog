@@ -1,31 +1,31 @@
 <template>
-  <div class="absolute top-32 left-1/2 z-[25] w-[360px] bg-[rgba(255,255,255,0.95)] backdrop-blur-[24px] rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.2)] [transform:translateX(-50%)_translateX(8rem)]">
+  <div class="absolute top-32 left-1/2 z-[25] w-[360px] bg-[rgba(255,255,255,0.95)] dark:bg-zinc-900/95 backdrop-blur-[24px] rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.2)] [transform:translateX(-50%)_translateX(8rem)]">
     <div class="p-5">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="font-semibold! text-[1rem] text-[#111827] m-0">创建分享链接</h3>
+        <h3 class="font-semibold! text-[1rem] text-[#111827] dark:text-zinc-100 m-0">创建分享链接</h3>
         <button class="p-2 rounded-md cursor-pointer transition-[background-color] duration-200 ease-[ease] hover:bg-[rgba(156,163,175,0.1)]" @click="$emit('close')">
           <XIcon class="w-4 h-4" />
         </button>
       </div>
 
       <div class="flex flex-col gap-4">
-        <div class="flex items-center gap-3 p-3 bg-[rgba(249,250,251,0.5)] rounded-lg">
-          <div class="w-8 h-8 bg-[#dbeafe] rounded-lg flex items-center justify-center">
-            <component :is="file.icon || FileTextIcon" class="w-4 h-4 text-[#2563eb]" />
+        <div class="flex items-center gap-3 p-3 bg-[rgba(249,250,251,0.5)] dark:bg-white/5 rounded-lg">
+          <div class="w-8 h-8 bg-[#dbeafe] dark:bg-blue-500/15 rounded-lg flex items-center justify-center">
+            <component :is="file.icon || FileTextIcon" class="w-4 h-4 text-[#2563eb] dark:text-blue-400" />
           </div>
           <div class="flex-1">
-            <p class="text-[0.875rem] font-medium text-[#111827] m-0 [word-break:break-all]">{{ file.name }}</p>
-            <p class="text-[0.75rem] text-[#6b7280] mt-1 mb-0">{{ file.size }}</p>
+            <p class="text-[0.875rem] font-medium text-[#111827] dark:text-zinc-100 m-0 [word-break:break-all]">{{ file.name }}</p>
+            <p class="text-[0.75rem] text-[#6b7280] dark:text-zinc-400 mt-1 mb-0">{{ file.size }}</p>
           </div>
         </div>
 
         <!-- 分享设置 -->
         <template v-if="!shareCreated">
           <div class="flex items-center justify-between">
-            <span class="text-[0.875rem] text-[#374151]">设置密码</span>
+            <span class="text-[0.875rem] text-[#374151] dark:text-zinc-200">设置密码</span>
             <label class="relative inline-block w-[44px] h-6">
               <input type="checkbox" v-model="usePassword" class="peer opacity-0 size-0" />
-              <span class="absolute cursor-pointer inset-0 bg-[#ccc] [transition:0.4s] rounded-[24px] before:absolute before:content-[''] before:size-[18px] before:left-[3px] before:bottom-[3px] before:bg-white before:[transition:0.4s] before:rounded-[50%] peer-checked:bg-[#3b82f6] peer-checked:before:[transform:translateX(20px)]"></span>
+              <span class="absolute cursor-pointer inset-0 bg-[#ccc] dark:bg-zinc-600 [transition:0.4s] rounded-[24px] before:absolute before:content-[''] before:size-[18px] before:left-[3px] before:bottom-[3px] before:bg-white before:[transition:0.4s] before:rounded-[50%] peer-checked:bg-[#3b82f6] peer-checked:before:[transform:translateX(20px)]"></span>
             </label>
           </div>
 
@@ -34,14 +34,14 @@
               type="text"
               v-model="password"
               placeholder="请输入访问密码"
-              class="flex-1 py-2 px-3 border border-[#d1d5db] rounded-md text-[0.875rem] bg-[#f9fafb] focus:outline-none focus:border-[#2563eb]"
+              class="flex-1 py-2 px-3 border border-[#d1d5db] dark:border-white/15 rounded-md text-[0.875rem] bg-[#f9fafb] dark:bg-white/5 focus:outline-none focus:border-[#2563eb]"
               maxlength="32"
             />
           </div>
 
           <div class="flex items-center justify-between">
-            <span class="text-[0.875rem] text-[#374151]">过期时间</span>
-            <select v-model="expireDays" class="py-1.5 px-3 border border-[#d1d5db] rounded-md text-[0.875rem] bg-[#f9fafb] cursor-pointer focus:outline-none focus:border-[#2563eb]">
+            <span class="text-[0.875rem] text-[#374151] dark:text-zinc-200">过期时间</span>
+            <select v-model="expireDays" class="py-1.5 px-3 border border-[#d1d5db] dark:border-white/15 rounded-md text-[0.875rem] bg-[#f9fafb] dark:bg-white/5 cursor-pointer focus:outline-none focus:border-[#2563eb]">
               <option :value="0">永不过期</option>
               <option :value="1">1天</option>
               <option :value="7">7天</option>
@@ -51,8 +51,8 @@
           </div>
 
           <div class="flex items-center justify-between">
-            <span class="text-[0.875rem] text-[#374151]">下载次数限制</span>
-            <select v-model="maxDownloadCount" class="py-1.5 px-3 border border-[#d1d5db] rounded-md text-[0.875rem] bg-[#f9fafb] cursor-pointer focus:outline-none focus:border-[#2563eb]">
+            <span class="text-[0.875rem] text-[#374151] dark:text-zinc-200">下载次数限制</span>
+            <select v-model="maxDownloadCount" class="py-1.5 px-3 border border-[#d1d5db] dark:border-white/15 rounded-md text-[0.875rem] bg-[#f9fafb] dark:bg-white/5 cursor-pointer focus:outline-none focus:border-[#2563eb]">
               <option :value="0">不限制</option>
               <option :value="1">1次</option>
               <option :value="10">10次</option>
@@ -69,13 +69,13 @@
         <!-- 分享链接展示 -->
         <template v-else>
           <div class="flex flex-col gap-2">
-            <label class="text-[0.75rem] text-[#6b7280]">分享链接</label>
+            <label class="text-[0.75rem] text-[#6b7280] dark:text-zinc-400">分享链接</label>
             <div class="flex gap-2">
               <input
                 type="text"
                 :value="shareUrl"
                 readonly
-                class="flex-1 py-2 px-3 border border-[#d1d5db] rounded-md text-[0.875rem] bg-[#f9fafb] focus:outline-none focus:border-[#2563eb]"
+                class="flex-1 py-2 px-3 border border-[#d1d5db] dark:border-white/15 rounded-md text-[0.875rem] bg-[#f9fafb] dark:bg-white/5 focus:outline-none focus:border-[#2563eb]"
                 ref="urlInput"
               />
               <button class="bg-[#2563eb] text-white border-none py-2 px-4 rounded-md text-[0.875rem] cursor-pointer [transition:background-color_0.2s] whitespace-nowrap [&:hover]:bg-[#1d4ed8]" @click="copyUrl">复制</button>
@@ -83,27 +83,27 @@
           </div>
 
           <div v-if="shareInfo?.password" class="flex flex-col gap-2">
-            <label class="text-[0.75rem] text-[#6b7280]">访问密码</label>
+            <label class="text-[0.75rem] text-[#6b7280] dark:text-zinc-400">访问密码</label>
             <div class="flex gap-2">
               <input
                 type="text"
                 :value="displayPassword"
                 readonly
-                class="flex-1 py-2 px-3 border border-[#d1d5db] rounded-md text-[0.875rem] bg-[#f9fafb] focus:outline-none focus:border-[#2563eb]"
+                class="flex-1 py-2 px-3 border border-[#d1d5db] dark:border-white/15 rounded-md text-[0.875rem] bg-[#f9fafb] dark:bg-white/5 focus:outline-none focus:border-[#2563eb]"
               />
               <button class="bg-[#2563eb] text-white border-none py-2 px-4 rounded-md text-[0.875rem] cursor-pointer [transition:background-color_0.2s] whitespace-nowrap [&:hover]:bg-[#1d4ed8]" @click="copyPassword">复制</button>
             </div>
           </div>
 
-          <div class="p-3 bg-[#f0fdf4] rounded-lg border border-[#bbf7d0]">
-            <p v-if="expireDays > 0" class="m-0 text-[0.75rem] text-[#166534] flex items-center gap-2">
+          <div class="p-3 bg-[#f0fdf4] dark:bg-green-500/10 rounded-lg border border-[#bbf7d0] dark:border-green-500/30">
+            <p v-if="expireDays > 0" class="m-0 text-[0.75rem] text-[#166534] dark:text-green-400 flex items-center gap-2">
               <span class="text-[1rem]">⏰</span> {{ expireDays }}天后过期
             </p>
-            <p v-else class="m-0 text-[0.75rem] text-[#166534] flex items-center gap-2">
+            <p v-else class="m-0 text-[0.75rem] text-[#166534] dark:text-green-400 flex items-center gap-2">
               <span class="text-[1rem]">✨</span> 永不过期
             </p>
             <!-- 原 `.share-tips p + p { margin-top: .5rem }`：p1/p2 互斥，DOM 里的第二个 p 恒为这一条 -->
-            <p v-if="maxDownloadCount > 0" class="m-0 mt-2 text-[0.75rem] text-[#166534] flex items-center gap-2">
+            <p v-if="maxDownloadCount > 0" class="m-0 mt-2 text-[0.75rem] text-[#166534] dark:text-green-400 flex items-center gap-2">
               <span class="text-[1rem]">📥</span> 最多下载{{ maxDownloadCount }}次
             </p>
           </div>

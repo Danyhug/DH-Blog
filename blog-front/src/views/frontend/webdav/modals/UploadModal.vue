@@ -1,8 +1,8 @@
 <template>
-  <div class="fixed top-1/2 left-1/2 z-[1102] w-[450px] max-w-[95vw] bg-[rgba(255,255,255,0.95)] backdrop-blur-[24px] rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.2)] pointer-events-auto [transform:translate(-50%,-50%)]">
+  <div class="fixed top-1/2 left-1/2 z-[1102] w-[450px] max-w-[95vw] bg-[rgba(255,255,255,0.95)] dark:bg-zinc-900/95 backdrop-blur-[24px] rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.2)] pointer-events-auto [transform:translate(-50%,-50%)]">
     <div class="p-6 max-h-[80vh] overflow-y-auto">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="font-semibold! text-[1.125rem] text-[#111827] m-0">文件上传</h3>
+        <h3 class="font-semibold! text-[1.125rem] text-[#111827] dark:text-zinc-100 m-0">文件上传</h3>
         <button class="p-2 rounded-md cursor-pointer transition-[background-color] duration-200 ease-[ease] hover:bg-[rgba(156,163,175,0.1)]" @click="$emit('close')">
           <XIcon class="w-4 h-4" />
         </button>
@@ -12,15 +12,15 @@
       <div
         class="border-2 border-dashed rounded-lg text-center transition-all duration-300 ease-[ease]"
         :class="[
-          isDragging ? 'border-[#3b82f6] bg-[rgba(59,130,246,0.05)]' : 'border-[#e5e7eb]',
+          isDragging ? 'border-[#3b82f6] bg-[rgba(59,130,246,0.05)]' : 'border-[#e5e7eb] dark:border-white/10',
           isDropAreaCollapsed ? 'p-3 my-3' : 'p-8 my-6'
         ]"
         @dragover.prevent="isDragging = true"
         @dragleave.prevent="isDragging = false"
         @drop.prevent="handleFileDrop"
       >
-        <UploadIcon class="text-[#6b7280] inline-block" :class="isDropAreaCollapsed ? 'w-6 h-6 mb-2' : 'w-10 h-10 mb-4'" />
-        <p class="text-[#6b7280]" :class="isDropAreaCollapsed ? 'mb-2 text-[0.875rem]' : 'mb-4'">拖放文件至此处上传，或</p>
+        <UploadIcon class="text-[#6b7280] dark:text-zinc-400 inline-block" :class="isDropAreaCollapsed ? 'w-6 h-6 mb-2' : 'w-10 h-10 mb-4'" />
+        <p class="text-[#6b7280] dark:text-zinc-400" :class="isDropAreaCollapsed ? 'mb-2 text-[0.875rem]' : 'mb-4'">拖放文件至此处上传，或</p>
         <input
           type="file"
           ref="fileInput"
@@ -35,16 +35,16 @@
         <div
           v-for="(file, index) in selectedFiles"
           :key="index"
-          class="flex items-center gap-3 p-2 rounded-md w-full box-border bg-[#f9fafb] transition-[background-color] duration-300 ease-[ease]"
+          class="flex items-center gap-3 p-2 rounded-md w-full box-border bg-[#f9fafb] dark:bg-white/5 transition-[background-color] duration-300 ease-[ease]"
         >
           <div class="size-10 min-w-10 rounded-lg flex items-center justify-center" :class="getFileIconClass(file)">
             <component :is="getFileIcon(file)" class="size-5" />
           </div>
           <div class="flex-1 min-w-0 overflow-hidden">
-            <p class="text-[0.875rem] font-medium text-[#111827] m-0 whitespace-nowrap overflow-hidden text-ellipsis">{{ file.name }}</p>
-            <p class="text-[0.75rem] text-[#6b7280] mt-1 mb-0">{{ formatFileSize(file.size) }}</p>
+            <p class="text-[0.875rem] font-medium text-[#111827] dark:text-zinc-100 m-0 whitespace-nowrap overflow-hidden text-ellipsis">{{ file.name }}</p>
+            <p class="text-[0.75rem] text-[#6b7280] dark:text-zinc-400 mt-1 mb-0">{{ formatFileSize(file.size) }}</p>
           </div>
-          <button class="p-1 rounded cursor-pointer text-[#9ca3af] transition-[color] duration-200 ease-[ease] hover:text-[#ef4444]" @click="removeFile(index)">
+          <button class="p-1 rounded cursor-pointer text-[#9ca3af] dark:text-zinc-500 transition-[color] duration-200 ease-[ease] hover:text-[#ef4444]" @click="removeFile(index)">
             <XIcon class="w-4 h-4" />
           </button>
         </div>
@@ -63,9 +63,9 @@
             <component :is="getFileIcon(result.file)" class="size-5" />
           </div>
           <div class="flex-1 min-w-0 overflow-hidden">
-            <p class="text-[0.875rem] font-medium text-[#111827] m-0 whitespace-nowrap overflow-hidden text-ellipsis">{{ result.file.name }}</p>
+            <p class="text-[0.875rem] font-medium text-[#111827] dark:text-zinc-100 m-0 whitespace-nowrap overflow-hidden text-ellipsis">{{ result.file.name }}</p>
             <div class="flex items-center justify-between">
-              <p class="text-[0.75rem] text-[#6b7280] mt-1 mb-0">{{ formatFileSize(result.file.size) }}
+              <p class="text-[0.75rem] text-[#6b7280] dark:text-zinc-400 mt-1 mb-0">{{ formatFileSize(result.file.size) }}
                 <span v-if="result.uploadedChunks !== undefined && result.totalChunks !== undefined" class="text-[#2a8aff] font-medium ml-2">
                   ({{ result.uploadedChunks }}/{{ result.totalChunks }})
                 </span>
@@ -78,7 +78,7 @@
             </div>
             <!-- 横向进度条 -->
             <div v-if="result.status === 'uploading' || result.status === 'pending'" class="mt-2 w-full">
-              <div class="h-1 bg-[#e5e7eb] rounded-[2px] overflow-hidden">
+              <div class="h-1 bg-[#e5e7eb] dark:bg-white/10 rounded-[2px] overflow-hidden">
                 <div
                   class="h-full bg-[#3b82f6] rounded-[2px] [transition:width_0.3s_ease] animate-upload-progress"
                   :style="{
@@ -94,16 +94,16 @@
         </div>
       </div>
 
-      <div v-if="selectedFiles.length > 0 && !isUploading" class="my-4 p-3 bg-[#f8fafc] rounded-lg border border-[#e2e8f0]">
+      <div v-if="selectedFiles.length > 0 && !isUploading" class="my-4 p-3 bg-[#f8fafc] dark:bg-white/5 rounded-lg border border-[#e2e8f0] dark:border-white/10">
         <div class="mt-3 ml-6">
-          <label class="text-[0.875rem] text-[#475569] flex items-center gap-2">
+          <label class="text-[0.875rem] text-[#475569] dark:text-zinc-400 flex items-center gap-2">
             重试次数（0表示无限重试）：
             <input
               type="number"
               v-model.number="maxRetries"
               min="0"
               max="100"
-              class="w-16 px-2 py-1 border border-[#d1d5db] rounded text-[0.875rem] text-center focus:outline-none focus:border-[#3b82f6] focus:shadow-[0_0_0_2px_rgba(59,130,246,0.1)]"
+              class="w-16 px-2 py-1 border border-[#d1d5db] dark:border-white/15 rounded text-[0.875rem] text-center focus:outline-none focus:border-[#3b82f6] focus:shadow-[0_0_0_2px_rgba(59,130,246,0.1)]"
               placeholder="0"
             />
           </label>
@@ -117,11 +117,11 @@
       </div>
 
       <div v-if="isUploading" class="mt-4">
-        <div class="w-full h-2 bg-[#e5e7eb] rounded overflow-hidden">
+        <div class="w-full h-2 bg-[#e5e7eb] dark:bg-white/10 rounded overflow-hidden">
           <div class="h-full bg-[#3b82f6] rounded-[2px] [transition:width_0.3s_ease] animate-upload-progress" :style="{ width: `${uploadProgress}%` }"></div>
         </div>
-        <p class="text-[0.75rem] text-[#6b7280] mt-1 mb-0 text-center">总进度：{{ uploadProgress }}%</p>
-        <p class="text-[0.75rem] text-[#6b7280] mt-1 mb-0 text-center">
+        <p class="text-[0.75rem] text-[#6b7280] dark:text-zinc-400 mt-1 mb-0 text-center">总进度：{{ uploadProgress }}%</p>
+        <p class="text-[0.75rem] text-[#6b7280] dark:text-zinc-400 mt-1 mb-0 text-center">
           已完成: {{ getCompletedCount() }}/{{ uploadResults.length }}
           <span v-if="getSuccessCount() > 0" class="text-[#10b981]">(成功: {{ getSuccessCount() }})</span>
           <span v-if="getErrorCount() > 0" class="text-[#ef4444]">(失败: {{ getErrorCount() }})</span>
@@ -129,7 +129,7 @@
       </div>
 
       <div v-if="!isUploading && uploadResults.length > 0" class="mt-4 flex flex-col items-center gap-3">
-        <p class="text-[0.875rem] text-[#6b7280] m-0">
+        <p class="text-[0.875rem] text-[#6b7280] dark:text-zinc-400 m-0">
           上传完成: {{ getSuccessCount() }} 成功, {{ getErrorCount() }} 失败
         </p>
         <div class="flex gap-3">
@@ -139,7 +139,7 @@
           <button class="bg-[#3b82f6] text-white px-4 py-2 rounded-md font-medium cursor-pointer transition-[background-color] duration-200 ease-[ease] hover:bg-[#2563eb]" @click="clearResults">
             继续上传
           </button>
-          <button class="bg-transparent text-[#6b7280] border border-[#d1d5db] px-4 py-2 rounded-md font-medium cursor-pointer transition-all duration-200 ease-[ease] hover:bg-[#f3f4f6] hover:text-[#4b5563]" @click="$emit('close')">
+          <button class="bg-transparent text-[#6b7280] dark:text-zinc-400 border border-[#d1d5db] dark:border-white/15 px-4 py-2 rounded-md font-medium cursor-pointer transition-all duration-200 ease-[ease] hover:bg-[#f3f4f6] dark:hover:bg-white/10 hover:text-[#4b5563] dark:hover:text-zinc-300" @click="$emit('close')">
             关闭
           </button>
         </div>
@@ -192,7 +192,7 @@ function uploadItemStateClass(status: UploadResult['status']) {
   if (status === 'success') return 'bg-[rgba(16,185,129,0.1)] border-l-[3px] border-l-[#10b981]'
   if (status === 'error') return 'bg-[rgba(239,68,68,0.1)] border-l-[3px] border-l-[#ef4444]'
   if (status === 'pending') return 'bg-[rgba(59,130,246,0.1)] border-l-[3px] border-l-[#3b82f6]'
-  return 'bg-[#f9fafb]'
+  return 'bg-[#f9fafb] dark:bg-white/5'
 }
 
 // 触发文件选择
@@ -308,13 +308,13 @@ function getFileIconClass(file: File) {
   const fileType = file.type
   
   if (fileType.startsWith('image/')) {
-    return 'bg-[#e9d5ff] [&>svg]:text-[#7c3aed]'
+    return 'bg-[#e9d5ff] dark:bg-purple-500/20 [&>svg]:text-[#7c3aed]'
   } else if (fileType.startsWith('video/')) {
-    return 'bg-[#ffedd5] [&>svg]:text-[#ea580c]'
+    return 'bg-[#ffedd5] dark:bg-orange-500/15 [&>svg]:text-[#ea580c]'
   } else if (fileType.startsWith('audio/')) {
-    return 'bg-[#dbeafe] [&>svg]:text-[#2563eb]'
+    return 'bg-[#dbeafe] dark:bg-blue-500/15 [&>svg]:text-[#2563eb]'
   } else {
-    return 'bg-[#f3f4f6] [&>svg]:text-[#6b7280]'
+    return 'bg-[#f3f4f6] dark:bg-white/10 [&>svg]:text-[#6b7280]'
   }
 }
 

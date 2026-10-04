@@ -1,5 +1,5 @@
 <template>
-  <div class="p-5 h-full flex flex-col min-h-[calc(100vh-40px)] bg-white" @mousedown="startBoxSelect">
+  <div class="p-5 h-full flex flex-col min-h-[calc(100vh-40px)] bg-white dark:bg-zinc-900 dark:min-h-screen dark:text-zinc-200 dark:scheme-dark" @mousedown="startBoxSelect">
     <!-- 响应式文件管理视图 -->
     <div class="flex flex-col flex-1 min-h-0">
       <!-- 文件预览组件 -->
@@ -15,8 +15,17 @@
             />
           </template>
           <template #actions>
+            <router-link
+              :to="{ name: 'TheaterVideos' }"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full no-underline text-sm font-medium bg-[#141414] text-white! transition-all duration-200 hover:bg-[#e50914] dark:bg-white dark:text-[#141414]! dark:hover:bg-[#e50914] dark:hover:text-white!"
+              title="个人影院：看网盘里的视频、听网盘里的音乐"
+            >
+              <PlayCircleIcon class="w-4 h-4" />
+              影院
+            </router-link>
+            <ThemeToggle class="flex p-2 rounded-full border-none bg-transparent cursor-pointer text-[#666] dark:text-zinc-400 transition-all duration-200 hover:bg-[#f0f5ff] dark:hover:bg-blue-500/15 hover:text-[#2a8aff]" icon-class="w-5 h-5" />
             <button
-              class="p-2 rounded-full border-none bg-transparent cursor-pointer text-[#666] transition-all duration-200 hover:bg-[#f0f5ff] hover:text-[#2a8aff]"
+              class="p-2 rounded-full border-none bg-transparent cursor-pointer text-[#666] dark:text-zinc-400 transition-all duration-200 hover:bg-[#f0f5ff] dark:hover:bg-blue-500/15 hover:text-[#2a8aff]"
               title="我的分享"
               @click="showShareManager = true"
             >
@@ -39,6 +48,12 @@
               <UploadIcon class="size-4" />
               上传
             </button>
+            <button v-if="!isSearchMode" :class="[toolbarButtonClass, outlineButtonClass]" :disabled="isSyncing"
+              title="在网盘之外（直接拷贝、外接盘、其他程序）改动过存储目录后，用它让网盘列表与磁盘一致"
+              @click="syncWithDisk">
+              <RefreshIcon class="size-4" :class="isSyncing && 'animate-spin'" />
+              {{ isSyncing ? '同步中...' : '从磁盘同步' }}
+            </button>
             <button v-if="selectedFiles.size > 0" :class="[toolbarButtonClass, primaryButtonClass]" @click="downloadSelectedFiles">
               <UploadIcon class="size-4" transform="rotate(180)" />
               下载 ({{ selectedFiles.size }})
@@ -58,18 +73,18 @@
           </div>
           <div class="[@media(max-width:768px)]:w-full">
             <div class="relative">
-              <SearchIcon class="absolute left-[10px] top-1/2 [transform:translateY(-50%)] size-4 text-[#999] [@media(max-width:768px)]:left-3 [@media(max-width:768px)]:size-[18px]" />
+              <SearchIcon class="absolute left-[10px] top-1/2 [transform:translateY(-50%)] size-4 text-[#999] dark:text-zinc-500 [@media(max-width:768px)]:left-3 [@media(max-width:768px)]:size-[18px]" />
               <input
                 type="text"
                 v-model="searchQuery"
                 placeholder="搜索全部文件..."
                 title="搜索范围是整个网盘，包含所有子目录"
-                class="py-2 pr-[10px] pl-[35px] border border-[#ddd] rounded w-[250px] text-[14px] focus:outline-none focus:border-[#2a8aff] [@media(max-width:768px)]:w-full [@media(480px<width<=768px)]:py-[10px] [@media(480px<width<=768px)]:pr-3 [@media(480px<width<=768px)]:pl-10 [@media(480px<width<=768px)]:text-[15px] [@media(480px<width<=768px)]:min-h-[44px] [@media(max-width:480px)]:py-3 [@media(max-width:480px)]:pr-3 [@media(max-width:480px)]:pl-10 [@media(max-width:480px)]:text-[16px] [@media(max-width:480px)]:min-h-[48px]"
+                class="py-2 pr-[10px] pl-[35px] border border-[#ddd] dark:border-white/15 rounded w-[250px] text-[14px] focus:outline-none focus:border-[#2a8aff] [@media(max-width:768px)]:w-full [@media(480px<width<=768px)]:py-[10px] [@media(480px<width<=768px)]:pr-3 [@media(480px<width<=768px)]:pl-10 [@media(480px<width<=768px)]:text-[15px] [@media(480px<width<=768px)]:min-h-[44px] [@media(max-width:480px)]:py-3 [@media(max-width:480px)]:pr-3 [@media(max-width:480px)]:pl-10 [@media(max-width:480px)]:text-[16px] [@media(max-width:480px)]:min-h-[48px]"
                 @keyup.esc="clearSearch"
               />
               <button
                 v-if="searchQuery"
-                class="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full border-none bg-transparent cursor-pointer text-[#999] transition-colors duration-200 hover:bg-[#f0f0f0] hover:text-[#666]"
+                class="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full border-none bg-transparent cursor-pointer text-[#999] dark:text-zinc-500 transition-colors duration-200 hover:bg-[#f0f0f0] dark:hover:bg-white/10 hover:text-[#666] dark:hover:text-zinc-300"
                 title="清空搜索（Esc）"
                 @click="clearSearch"
               >
@@ -79,31 +94,31 @@
           </div>
         </div>
 
-        <div class="flex-1 overflow-visible flex flex-col min-h-[400px] bg-white p-[10px]">
+        <div class="flex-1 overflow-visible flex flex-col min-h-[400px] bg-white dark:bg-zinc-900 p-[10px]">
           <transition mode="out-in" enter-active-class="[transition:opacity_0.25s_ease]" leave-active-class="[transition:opacity_0.25s_ease]" enter-from-class="opacity-0" leave-to-class="opacity-0">
             <div v-if="isLoading || isSearching" key="loading"
               class="flex flex-col items-center justify-center h-full min-h-[300px] flex-1">
-              <div class="w-10 h-10 border-[3px] border-[#f3f3f3] border-t-[#2a8aff] rounded-[50%] animate-spin mb-[15px]"></div>
-              <p class="text-[#666] text-[14px]">{{ isSearching ? `正在全盘搜索「${trimmedQuery}」...` : '加载中...' }}</p>
+              <div class="w-10 h-10 border-[3px] border-[#f3f3f3] dark:border-white/10 border-t-[#2a8aff] rounded-[50%] animate-spin mb-[15px]"></div>
+              <p class="text-[#666] dark:text-zinc-400 text-[14px]">{{ isSearching ? `正在全盘搜索「${trimmedQuery}」...` : '加载中...' }}</p>
             </div>
 
             <!-- 空态：搜索无结果和空目录是两种完全不同的处境，给的下一步操作也不同 -->
             <div v-else-if="filteredFiles.length === 0" key="empty"
               class="flex flex-1 flex-col items-center justify-center min-h-[300px] px-6 text-center">
-              <div class="flex items-center justify-center w-16 h-16 mb-5 rounded-full bg-[#f4f6fa] text-[#9aa4b2]">
+              <div class="flex items-center justify-center w-16 h-16 mb-5 rounded-full bg-[#f4f6fa] dark:bg-white/5 text-[#9aa4b2] dark:text-zinc-500">
                 <SearchIcon v-if="isSearchMode" class="w-7 h-7" />
                 <FolderIcon v-else class="w-7 h-7" />
               </div>
               <template v-if="isSearchMode">
-                <p class="text-base font-medium text-[#333] mb-2">没有找到包含「{{ trimmedQuery }}」的文件</p>
-                <p class="text-sm text-[#888] mb-5">搜索范围是整个网盘，可以试试更短的关键词或换个说法</p>
+                <p class="text-base font-medium text-[#333] dark:text-zinc-100 mb-2">没有找到包含「{{ trimmedQuery }}」的文件</p>
+                <p class="text-sm text-[#888] dark:text-zinc-500 mb-5">搜索范围是整个网盘，可以试试更短的关键词或换个说法</p>
                 <button
-                  class="px-4 py-2 rounded-md text-sm font-medium cursor-pointer border border-[#ddd] bg-white text-[#555] transition-all duration-200 hover:border-[#2a8aff] hover:text-[#2a8aff]"
+                  class="px-4 py-2 rounded-md text-sm font-medium cursor-pointer border border-[#ddd] dark:border-white/15 bg-white dark:bg-zinc-900 text-[#555] dark:text-zinc-400 transition-all duration-200 hover:border-[#2a8aff] hover:text-[#2a8aff]"
                   @click="clearSearch">清空搜索</button>
               </template>
               <template v-else>
-                <p class="text-base font-medium text-[#333] mb-2">这个文件夹还是空的</p>
-                <p class="text-sm text-[#888] mb-5">把文件拖进来，或者点上方的「上传」按钮</p>
+                <p class="text-base font-medium text-[#333] dark:text-zinc-100 mb-2">这个文件夹还是空的</p>
+                <p class="text-sm text-[#888] dark:text-zinc-500 mb-5">把文件拖进来，或者点上方的「上传」按钮</p>
                 <button
                   class="px-4 py-2 rounded-md text-sm font-medium cursor-pointer border-none bg-[#2a8aff] text-white transition-all duration-200 hover:bg-[#1c7ae8]"
                   @click="openUploadModal">上传文件</button>
@@ -113,9 +128,9 @@
             <div v-else :key="isSearchMode ? 'search' : (currentParentId || 'root')" class="flex flex-col overflow-visible flex-1">
               <!-- 搜索结果条：说明这是全盘范围，并在被截断时明确提示 -->
               <div v-if="isSearchMode"
-                class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-4 px-4 py-2.5 rounded-lg bg-[#f0f6ff] text-sm text-[#4a5568]">
+                class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-4 px-4 py-2.5 rounded-lg bg-[#f0f6ff] dark:bg-blue-500/10 text-sm text-[#4a5568] dark:text-zinc-400">
                 <span>在全部文件中找到 <strong class="text-[#2a8aff]">{{ filteredFiles.length }}</strong> 个结果</span>
-                <span v-if="searchTruncated" class="text-[#c2740a]">
+                <span v-if="searchTruncated" class="text-[#c2740a] dark:text-amber-400">
                   · 匹配项过多，仅显示前 {{ searchLimit }} 条，请输入更精确的关键词
                 </span>
                 <button
@@ -123,16 +138,16 @@
                   @click="clearSearch">返回目录</button>
               </div>
 
-              <div class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4 flex-1 bg-white overflow-visible p-[10px] [@media(max-width:768px)]:grid-cols-[repeat(auto-fill,minmax(140px,1fr))] [@media(max-width:768px)]:gap-3 [@media(max-width:768px)]:p-2 [@media(max-width:480px)]:grid-cols-[repeat(auto-fit,minmax(120px,1fr))] [@media(max-width:480px)]:gap-2 [@media(max-width:480px)]:p-[5px]">
+              <div class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4 flex-1 bg-white dark:bg-zinc-900 overflow-visible p-[10px] [@media(max-width:768px)]:grid-cols-[repeat(auto-fill,minmax(140px,1fr))] [@media(max-width:768px)]:gap-3 [@media(max-width:768px)]:p-2 [@media(max-width:480px)]:grid-cols-[repeat(auto-fit,minmax(120px,1fr))] [@media(max-width:480px)]:gap-2 [@media(max-width:480px)]:p-[5px]">
                 <div v-for="(file, index) in filteredFiles" :key="file.id || index"
-                  class="group/file cursor-pointer rounded-lg p-[15px] transition-all duration-300 ease-[ease] relative h-[140px] flex border-2 hover:bg-[#f5f5f5] hover:[transform:translateY(-3px)] hover:shadow-[0_5px_15px_rgba(0,0,0,0.05)] [@media(max-width:768px)]:h-[120px] [@media(max-width:768px)]:p-3 [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:h-[100px] [@media(max-width:480px)]:p-[10px] [@media(max-width:480px)]:rounded"
+                  class="group/file cursor-pointer rounded-lg p-[15px] transition-all duration-300 ease-[ease] relative h-[140px] flex border-2 hover:bg-[#f5f5f5] dark:hover:bg-white/5 hover:[transform:translateY(-3px)] hover:shadow-[0_5px_15px_rgba(0,0,0,0.05)] [@media(max-width:768px)]:h-[120px] [@media(max-width:768px)]:p-3 [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:h-[100px] [@media(max-width:480px)]:p-[10px] [@media(max-width:480px)]:rounded"
                   :data-file-id="file.id"
                   :class="{
                     'folder-item': file.type === 'folder',
                     'new-uploaded-file': newUploadedFileIds.includes(file.id || ''),
                     'animate-highlight-pulse': newUploadedFileIds.includes(file.id || ''),
-                    'bg-white border-transparent': !(file.id && selectedFiles.has(file.id)),
-                    'bg-[#e6f0ff] border-[#2a8aff] shadow-[0_5px_15px_rgba(42,138,255,0.2)] hover:bg-[#e6f0ff] hover:shadow-[0_5px_15px_rgba(42,138,255,0.2)]': !!(file.id && selectedFiles.has(file.id))
+                    'bg-white dark:bg-zinc-900 border-transparent': !(file.id && selectedFiles.has(file.id)),
+                    'bg-[#e6f0ff] dark:bg-blue-500/15 border-[#2a8aff] shadow-[0_5px_15px_rgba(42,138,255,0.2)] hover:bg-[#e6f0ff] dark:hover:bg-blue-500/20 hover:shadow-[0_5px_15px_rgba(42,138,255,0.2)]': !!(file.id && selectedFiles.has(file.id))
                   }"
                   @click="handleFileClick(file)"
                   @dblclick="handleFileDoubleClick(file)"
@@ -147,17 +162,17 @@
                     <div class="text-center w-full flex flex-col h-[50px] [@media(max-width:768px)]:h-[45px] [@media(max-width:480px)]:h-[40px]">
                       <p class="text-[14px] mt-0 mx-0 mb-[3px] whitespace-nowrap overflow-hidden text-ellipsis max-w-full leading-[1.2] [@media(max-width:768px)]:text-[13px] [@media(max-width:480px)]:text-[12px]" :title="file.name">{{ file.name }}</p>
                       <div class="h-[30px]">
-                        <p class="text-[12px] text-[#999] m-0 leading-[1.2] [@media(max-width:480px)]:text-[11px]">{{ file.size }}</p>
+                        <p class="text-[12px] text-[#999] dark:text-zinc-500 m-0 leading-[1.2] [@media(max-width:480px)]:text-[11px]">{{ file.size }}</p>
                         <!-- 搜索态下文件散落在各级目录，位置比修改时间更值得看，
                              所以占用日期那一行而不是另起一行——卡片高度是固定的。 -->
                         <button v-if="isSearchMode"
-                          class="flex w-fit max-w-full mx-auto items-center gap-1 px-1.5 rounded-full border-none bg-transparent cursor-pointer text-xs leading-[1.2] text-[#a0a8b8] transition-colors duration-200 hover:bg-[rgba(42,138,255,0.12)] hover:text-[#2a8aff] max-[480px]:text-[11px]"
+                          class="flex w-fit max-w-full mx-auto items-center gap-1 px-1.5 rounded-full border-none bg-transparent cursor-pointer text-xs leading-[1.2] text-[#a0a8b8] dark:text-zinc-500 transition-colors duration-200 hover:bg-[rgba(42,138,255,0.12)] hover:text-[#2a8aff] max-[480px]:text-[11px]"
                           :title="`打开所在目录：${file.parentPath || '我的网盘'}`"
                           @click.stop="goToSearchHitLocation(file)">
                           <FolderIcon class="shrink-0 w-3 h-3" />
                           <span class="truncate">{{ file.parentPath || '我的网盘' }}</span>
                         </button>
-                        <p v-else-if="file.modified" class="text-[12px] text-[#999] m-0 leading-[1.2] [@media(max-width:480px)]:text-[11px]">{{ file.modified }}</p>
+                        <p v-else-if="file.modified" class="text-[12px] text-[#999] dark:text-zinc-500 m-0 leading-[1.2] [@media(max-width:480px)]:text-[11px]">{{ file.modified }}</p>
                       </div>
                     </div>
                   </div>
@@ -188,18 +203,18 @@
 
     <!-- 新建文件夹弹窗 -->
     <div v-if="showNewFolderDialog" class="fixed inset-0 bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-[1100]" @click.self="cancelDialog">
-      <div class="bg-white rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-[400px] max-w-[90%] overflow-hidden animate-dialog-appear [@media(max-width:768px)]:w-[95%] [@media(max-width:768px)]:max-w-[95%] [@media(max-width:768px)]:rounded-xl [@media(max-width:480px)]:w-full [@media(max-width:480px)]:max-w-full [@media(max-width:480px)]:h-full [@media(max-width:480px)]:max-h-full [@media(max-width:480px)]:rounded-none [@media(max-width:480px)]:flex [@media(max-width:480px)]:flex-col">
-        <div class="dialog-header flex justify-between items-center px-5 py-4 border-b border-[#eee] [@media(max-width:480px)]:p-5">
-          <h3 class="font-medium! m-0 text-[18px] text-[#333] [@media(max-width:768px)]:text-[20px] [@media(max-width:480px)]:text-[22px]">新建文件夹</h3>
-          <button class="bg-transparent border-none text-[20px] text-[#999] cursor-pointer p-0 hover:text-[#666] [@media(max-width:768px)]:text-[24px] [@media(max-width:768px)]:p-2 [@media(max-width:480px)]:text-[28px] [@media(max-width:480px)]:p-3" @click="cancelDialog">×</button>
+      <div class="bg-white dark:bg-zinc-900 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-[400px] max-w-[90%] overflow-hidden animate-dialog-appear [@media(max-width:768px)]:w-[95%] [@media(max-width:768px)]:max-w-[95%] [@media(max-width:768px)]:rounded-xl [@media(max-width:480px)]:w-full [@media(max-width:480px)]:max-w-full [@media(max-width:480px)]:h-full [@media(max-width:480px)]:max-h-full [@media(max-width:480px)]:rounded-none [@media(max-width:480px)]:flex [@media(max-width:480px)]:flex-col">
+        <div class="dialog-header flex justify-between items-center px-5 py-4 border-b border-[#eee] dark:border-white/10 [@media(max-width:480px)]:p-5">
+          <h3 class="font-medium! m-0 text-[18px] text-[#333] dark:text-zinc-100 [@media(max-width:768px)]:text-[20px] [@media(max-width:480px)]:text-[22px]">新建文件夹</h3>
+          <button class="bg-transparent border-none text-[20px] text-[#999] dark:text-zinc-500 cursor-pointer p-0 hover:text-[#666] dark:hover:text-zinc-300 [@media(max-width:768px)]:text-[24px] [@media(max-width:768px)]:p-2 [@media(max-width:480px)]:text-[28px] [@media(max-width:480px)]:p-3" @click="cancelDialog">×</button>
         </div>
         <div class="p-5 [@media(max-width:768px)]:p-6 [@media(max-width:480px)]:p-7 [@media(max-width:480px)]:flex-1">
           <input type="text" v-model="newFolderName" placeholder="请输入文件夹名称"
-            class="w-full px-3 py-[10px] border border-[#ddd] rounded text-[14px] focus:outline-none focus:border-[#2a8aff] focus:shadow-[0_0_0_2px_rgba(42,138,255,0.2)] [@media(max-width:768px)]:px-[14px] [@media(max-width:768px)]:py-3 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:px-4 [@media(max-width:480px)]:py-[14px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:rounded-lg"
+            class="w-full px-3 py-[10px] border border-[#ddd] dark:border-white/15 rounded text-[14px] focus:outline-none focus:border-[#2a8aff] focus:shadow-[0_0_0_2px_rgba(42,138,255,0.2)] [@media(max-width:768px)]:px-[14px] [@media(max-width:768px)]:py-3 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:px-4 [@media(max-width:480px)]:py-[14px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:rounded-lg"
             ref="folderNameInput"
             @keyup.enter="confirmNewFolder" />
         </div>
-        <div class="dialog-footer px-5 py-4 border-t border-[#eee] flex justify-end gap-[10px] [@media(max-width:480px)]:p-5 [@media(max-width:480px)]:mt-auto">
+        <div class="dialog-footer px-5 py-4 border-t border-[#eee] dark:border-white/10 flex justify-end gap-[10px] [@media(max-width:480px)]:p-5 [@media(max-width:480px)]:mt-auto">
           <button :class="[dialogButtonClass, outlineButtonClass]" @click="cancelDialog">取消</button>
           <button :class="[dialogButtonClass, primaryButtonClass]" @click="confirmNewFolder">确定</button>
         </div>
@@ -208,23 +223,23 @@
 
     <!-- 重命名弹窗 -->
     <div v-if="showRenameDialog" class="fixed inset-0 bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-[1100]" @click.self="cancelDialog">
-      <div class="bg-white rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-[400px] max-w-[90%] overflow-hidden animate-dialog-appear [@media(max-width:768px)]:w-[95%] [@media(max-width:768px)]:max-w-[95%] [@media(max-width:768px)]:rounded-xl [@media(max-width:480px)]:w-full [@media(max-width:480px)]:max-w-full [@media(max-width:480px)]:h-full [@media(max-width:480px)]:max-h-full [@media(max-width:480px)]:rounded-none [@media(max-width:480px)]:flex [@media(max-width:480px)]:flex-col">
-        <div class="dialog-header flex justify-between items-center px-5 py-4 border-b border-[#eee] [@media(max-width:480px)]:p-5">
-          <h3 class="font-medium! m-0 text-[18px] text-[#333] [@media(max-width:768px)]:text-[20px] [@media(max-width:480px)]:text-[22px]">重命名</h3>
-          <button class="bg-transparent border-none text-[20px] text-[#999] cursor-pointer p-0 hover:text-[#666] [@media(max-width:768px)]:text-[24px] [@media(max-width:768px)]:p-2 [@media(max-width:480px)]:text-[28px] [@media(max-width:480px)]:p-3" @click="cancelDialog">×</button>
+      <div class="bg-white dark:bg-zinc-900 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-[400px] max-w-[90%] overflow-hidden animate-dialog-appear [@media(max-width:768px)]:w-[95%] [@media(max-width:768px)]:max-w-[95%] [@media(max-width:768px)]:rounded-xl [@media(max-width:480px)]:w-full [@media(max-width:480px)]:max-w-full [@media(max-width:480px)]:h-full [@media(max-width:480px)]:max-h-full [@media(max-width:480px)]:rounded-none [@media(max-width:480px)]:flex [@media(max-width:480px)]:flex-col">
+        <div class="dialog-header flex justify-between items-center px-5 py-4 border-b border-[#eee] dark:border-white/10 [@media(max-width:480px)]:p-5">
+          <h3 class="font-medium! m-0 text-[18px] text-[#333] dark:text-zinc-100 [@media(max-width:768px)]:text-[20px] [@media(max-width:480px)]:text-[22px]">重命名</h3>
+          <button class="bg-transparent border-none text-[20px] text-[#999] dark:text-zinc-500 cursor-pointer p-0 hover:text-[#666] dark:hover:text-zinc-300 [@media(max-width:768px)]:text-[24px] [@media(max-width:768px)]:p-2 [@media(max-width:480px)]:text-[28px] [@media(max-width:480px)]:p-3" @click="cancelDialog">×</button>
         </div>
         <div class="p-5 [@media(max-width:768px)]:p-6 [@media(max-width:480px)]:p-7 [@media(max-width:480px)]:flex-1">
           <div v-if="fileToRename && !fileToRename.type.includes('folder')" class="flex items-center gap-[5px] w-full">
             <input type="text" v-model="fileNameWithoutExt" placeholder="文件名"
-              class="flex-1 w-full px-3 py-[10px] border border-[#ddd] rounded text-[14px] focus:outline-none focus:border-[#2a8aff] focus:shadow-[0_0_0_2px_rgba(42,138,255,0.2)] [@media(max-width:768px)]:px-[14px] [@media(max-width:768px)]:py-3 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:px-4 [@media(max-width:480px)]:py-[14px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:rounded-lg"
+              class="flex-1 w-full px-3 py-[10px] border border-[#ddd] dark:border-white/15 rounded text-[14px] focus:outline-none focus:border-[#2a8aff] focus:shadow-[0_0_0_2px_rgba(42,138,255,0.2)] [@media(max-width:768px)]:px-[14px] [@media(max-width:768px)]:py-3 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:px-4 [@media(max-width:480px)]:py-[14px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:rounded-lg"
               ref="fileNameInput" @keyup.enter="confirmRename" />
             <div class="flex items-center relative">
               <div class="w-20 cursor-pointer" @dblclick="enableExtensionEdit" :title="editingExtension ? '' : '双击编辑后缀名'">
                 <input type="text" v-model="fileExtension"
-                  class="w-full px-3 py-[10px] border border-[#ddd] rounded text-[14px] focus:outline-none focus:border-[#2a8aff] focus:shadow-[0_0_0_2px_rgba(42,138,255,0.2)] [@media(max-width:768px)]:px-[14px] [@media(max-width:768px)]:py-3 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:px-4 [@media(max-width:480px)]:py-[14px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:rounded-lg bg-[#f8f8f8] text-[#666] disabled:cursor-pointer disabled:opacity-80 disabled:pointer-events-none [:not(:disabled)]:bg-white [:not(:disabled)]:text-[#333]"
+                  class="w-full px-3 py-[10px] border border-[#ddd] dark:border-white/15 rounded text-[14px] focus:outline-none focus:border-[#2a8aff] focus:shadow-[0_0_0_2px_rgba(42,138,255,0.2)] [@media(max-width:768px)]:px-[14px] [@media(max-width:768px)]:py-3 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:px-4 [@media(max-width:480px)]:py-[14px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:rounded-lg bg-[#f8f8f8] dark:bg-white/5 text-[#666] dark:text-zinc-400 disabled:cursor-pointer disabled:opacity-80 disabled:pointer-events-none [:not(:disabled)]:bg-white [:not(:disabled)]:text-[#333]"
                   :disabled="!editingExtension" @keyup.enter="confirmRename" ref="extensionInput" />
               </div>
-              <button class="absolute right-2 bg-transparent border-none cursor-pointer p-0 text-[14px] flex items-center justify-center hover:text-[#666]" :class="editingExtension ? 'text-[#2a8aff]' : 'text-[#999]'" @click="toggleExtensionEdit"
+              <button class="absolute right-2 bg-transparent border-none cursor-pointer p-0 text-[14px] flex items-center justify-center hover:text-[#666] dark:hover:text-zinc-300" :class="editingExtension ? 'text-[#2a8aff]' : 'text-[#999] dark:text-zinc-500'" @click="toggleExtensionEdit"
                 :title="editingExtension ? '锁定后缀名' : '编辑后缀名'">
                 <span v-if="editingExtension">🔓</span>
                 <span v-else>🔒</span>
@@ -232,10 +247,10 @@
             </div>
           </div>
           <input v-else type="text" v-model="newFileName" placeholder="请输入新名称"
-            class="w-full px-3 py-[10px] border border-[#ddd] rounded text-[14px] focus:outline-none focus:border-[#2a8aff] focus:shadow-[0_0_0_2px_rgba(42,138,255,0.2)] [@media(max-width:768px)]:px-[14px] [@media(max-width:768px)]:py-3 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:px-4 [@media(max-width:480px)]:py-[14px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:rounded-lg"
+            class="w-full px-3 py-[10px] border border-[#ddd] dark:border-white/15 rounded text-[14px] focus:outline-none focus:border-[#2a8aff] focus:shadow-[0_0_0_2px_rgba(42,138,255,0.2)] [@media(max-width:768px)]:px-[14px] [@media(max-width:768px)]:py-3 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:px-4 [@media(max-width:480px)]:py-[14px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:rounded-lg"
             ref="folderNameInput" @keyup.enter="confirmRename" />
         </div>
-        <div class="dialog-footer px-5 py-4 border-t border-[#eee] flex justify-end gap-[10px] [@media(max-width:480px)]:p-5 [@media(max-width:480px)]:mt-auto">
+        <div class="dialog-footer px-5 py-4 border-t border-[#eee] dark:border-white/10 flex justify-end gap-[10px] [@media(max-width:480px)]:p-5 [@media(max-width:480px)]:mt-auto">
           <button :class="[dialogButtonClass, outlineButtonClass]" @click="cancelDialog">取消</button>
           <button :class="[dialogButtonClass, primaryButtonClass]" @click="confirmRename">确定</button>
         </div>
@@ -243,22 +258,22 @@
     </div>
 
     <!-- 右键菜单 -->
-    <div v-if="contextMenu.show" class="fixed bg-white rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] z-[1000] min-w-[180px] max-w-[250px] [@media(max-width:768px)]:rounded-xl [@media(max-width:768px)]:min-w-[200px] [@media(max-width:768px)]:shadow-[0_8px_30px_rgba(0,0,0,0.2)]" :style="contextMenuStyle">
+    <div v-if="contextMenu.show" class="fixed bg-white dark:bg-zinc-900 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] z-[1000] min-w-[180px] max-w-[250px] [@media(max-width:768px)]:rounded-xl [@media(max-width:768px)]:min-w-[200px] [@media(max-width:768px)]:shadow-[0_8px_30px_rgba(0,0,0,0.2)]" :style="contextMenuStyle">
       <ul class="list-none p-0 m-0">
-        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px]" @click="openFile(contextMenu.file)">
+        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] dark:hover:bg-white/5 [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px]" @click="openFile(contextMenu.file)">
           <FileIcon class="size-4 [@media(max-width:768px)]:size-[18px]" /> 打开
         </li>
-        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px]" @click="shareFile(contextMenu.file)">
+        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] dark:hover:bg-white/5 [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px]" @click="shareFile(contextMenu.file)">
           <UploadIcon class="size-4 [@media(max-width:768px)]:size-[18px]" /> 分享
         </li>
-        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px]" @click="downloadFile(contextMenu.file)">
+        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] dark:hover:bg-white/5 [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px]" @click="downloadFile(contextMenu.file)">
           <UploadIcon class="size-4 [@media(max-width:768px)]:size-[18px]" transform="rotate(180)" />
           {{ contextMenu.file?.type === 'folder' ? '下载 (打包)' : '下载' }}
         </li>
-        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px]" @click="renameFile(contextMenu.file)">
+        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] dark:hover:bg-white/5 [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px]" @click="renameFile(contextMenu.file)">
           <FileTextIcon class="size-4 [@media(max-width:768px)]:size-[18px]" /> 重命名
         </li>
-        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px] text-[#ff4d4f]" @click="deleteFile(contextMenu.file)">
+        <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] dark:hover:bg-white/5 [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px] text-[#ff4d4f]" @click="deleteFile(contextMenu.file)">
           <XIcon class="size-4 [@media(max-width:768px)]:size-[18px]" /> 删除
         </li>
       </ul>
@@ -275,6 +290,7 @@ import ShareLinkPopup from '../modals/ShareLinkPopup.vue'
 import FilePreview from './FilePreview.vue'
 import DriveHeader from './DriveHeader.vue'
 import DriveBreadcrumb from './DriveBreadcrumb.vue'
+import ThemeToggle from '@/components/Child/ThemeToggle.vue'
 import {
   ShareIcon,
   PlusIcon,
@@ -286,9 +302,11 @@ import {
   FileTextIcon,
   XIcon,
   ArrowLeftIcon,
+  PlayCircleIcon,
+  RefreshIcon,
 } from '../utils/icons'
 import { detectFileType, getFileIcon } from '../utils/fileType'
-import { listFiles, searchFiles as searchFilesApi, createFolder, getDownloadUrl, getBatchDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, getUploadedChunks, cancelChunkUpload, FileInfo, type SearchResult } from '@/api/file'
+import { syncFromDisk, listFiles, searchFiles as searchFilesApi, createFolder, getDownloadUrl, getBatchDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, getUploadedChunks, cancelChunkUpload, FileInfo, type SearchResult } from '@/api/file'
 import { notify } from '@/utils/notification'
 
 // Keep the two size ranges disjoint: arbitrary media variants are sorted lexically.
@@ -304,7 +322,7 @@ const dialogButtonClass = `
   [@media(max-width:480px)]:py-3 [@media(max-width:480px)]:px-6 [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[48px] [@media(max-width:480px)]:flex-1 [@media(max-width:480px)]:max-w-[120px]
 `
 const primaryButtonClass = 'bg-[#2a8aff] text-white border-none [&:hover]:bg-[#1a7aef]'
-const outlineButtonClass = 'bg-white text-[#666] border border-[#ddd] [&:hover]:bg-[#f5f5f5]'
+const outlineButtonClass = 'bg-white dark:bg-zinc-900 text-[#666] dark:text-zinc-400 border border-[#ddd] dark:border-white/15 [&:hover]:bg-[#f5f5f5] dark:[&:hover]:bg-white/5'
 const mobileActionClass = 'hidden! [@media(max-width:768px)]:flex! [@media(max-width:768px)]:flex-1 [@media(max-width:768px)]:min-w-full [@media(max-width:768px)]:mt-2 [@media(max-width:768px)]:justify-center'
 const fileIconColors: Partial<Record<FileItem['type'], string>> = {
   image: 'text-[#4CAF50]',
@@ -496,6 +514,36 @@ function refreshCurrentView() {
     return
   }
   fetchFiles(currentParentId.value)
+}
+
+// ========== 从磁盘同步 ==========
+// 网盘列表来自数据库索引。直接在磁盘上增删文件（或换了存储路径）后索引会过期：
+// 列表里有却打不开、磁盘上有却看不到。同步会按磁盘现状对账。
+const isSyncing = ref(false)
+
+async function syncWithDisk() {
+  const confirmed = await ElMessageBox.confirm(
+    '将扫描存储目录：磁盘上新增的文件会加入网盘，磁盘上已不存在的文件会从列表中移除（指向它们的分享链接也会失效）。磁盘上的文件本身不会被改动。',
+    '从磁盘重新同步',
+    { confirmButtonText: '开始同步', cancelButtonText: '取消', type: 'warning' }
+  ).then(() => true).catch(() => false)
+  if (!confirmed) return
+
+  isSyncing.value = true
+  try {
+    const stats = await syncFromDisk()
+    const changed = stats.added + stats.removed + stats.updated
+    notify.success(changed
+      ? `同步完成：新增 ${stats.added} 项，移除 ${stats.removed} 项，更新 ${stats.updated} 项`
+      : '同步完成：网盘列表与磁盘一致，没有变化')
+    // 当前所在目录可能已经被移除，回到根目录最稳妥
+    if (stats.removed && currentParentId.value) navigateToRoot()
+    else refreshCurrentView()
+  } catch {
+    // 失败提示由 axios 拦截器统一弹出
+  } finally {
+    isSyncing.value = false
+  }
 }
 
 // 跳转到搜索命中所在的目录。命中项不在当前目录下，

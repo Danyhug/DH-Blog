@@ -182,6 +182,15 @@ export const deleteFile = (fileId: string): Promise<any> => {
 }
 
 /**
+ * 从磁盘重新同步网盘索引（仅管理员）：补上磁盘里新增的文件，移除磁盘上已不存在的记录
+ * @returns 新增 / 移除 / 更新的条目数
+ */
+export const syncFromDisk = (): Promise<{ added: number; removed: number; updated: number }> => {
+  // 大目录的遍历可能超过默认 10 秒
+  return request.post('/files/sync', null, { timeout: 120_000 })
+}
+
+/**
  * 获取文件下载链接
  * @param fileId 文件ID
  * @param preview 是否为预览模式（用于音视频流式传输）

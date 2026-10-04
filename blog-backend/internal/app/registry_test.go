@@ -11,6 +11,7 @@ func TestModuleRegistrationsAreCompleteAndPreserveRouteOrder(t *testing.T) {
 		"logging",
 		"system",
 		"files",
+		"media",
 		"share",
 		"webdav",
 		"agentapi",

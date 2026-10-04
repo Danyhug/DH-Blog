@@ -1,23 +1,23 @@
 <template>
-  <div class="w-full h-screen bg-white flex flex-col relative">
-      <div class="p-4 border-b border-[#f3f4f6]">
+  <div class="w-full h-screen bg-white dark:bg-zinc-900 dark:text-zinc-200 dark:scheme-dark flex flex-col relative">
+      <div class="p-4 border-b border-[#f3f4f6] dark:border-white/10">
       <div class="flex mb-4">
-        <div class="flex-1 flex flex-col items-center gap-1 p-2 text-[0.75rem] text-[#2563eb]">
+        <div class="flex-1 flex flex-col items-center gap-1 p-2 text-[0.75rem] text-[#2563eb] dark:text-blue-400">
           <HomeIcon class="size-5" />
           <span>首页</span>
         </div>
-        <div class="flex-1 flex flex-col items-center gap-1 p-2 text-[0.75rem] text-[#6b7280]">
+        <div class="flex-1 flex flex-col items-center gap-1 p-2 text-[0.75rem] text-[#6b7280] dark:text-zinc-400">
           <StarIcon class="size-5" />
           <span>收藏</span>
           </div>
-        <div class="flex-1 flex flex-col items-center gap-1 p-2 text-[0.75rem] text-[#6b7280]">
+        <div class="flex-1 flex flex-col items-center gap-1 p-2 text-[0.75rem] text-[#6b7280] dark:text-zinc-400">
           <CloudIcon class="size-5" />
           <span>云盘</span>
         </div>
       </div>
       <div class="relative">
-        <SearchIcon class="absolute left-3 top-1/2 [transform:translateY(-50%)] text-[#9ca3af] w-4 h-4" />
-        <input type="text" placeholder="搜索文件..." class="w-full py-3 pr-4 pl-10 bg-[#f9fafb] border border-[#e5e7eb] rounded-lg text-[0.875rem]" v-model="searchQuery" />
+        <SearchIcon class="absolute left-3 top-1/2 [transform:translateY(-50%)] text-[#9ca3af] dark:text-zinc-500 w-4 h-4" />
+        <input type="text" placeholder="搜索文件..." class="w-full py-3 pr-4 pl-10 bg-[#f9fafb] dark:bg-white/5 border border-[#e5e7eb] dark:border-white/10 rounded-lg text-[0.875rem]" v-model="searchQuery" />
         </div>
       </div>
 
@@ -25,22 +25,22 @@
         <div
         v-for="(file, index) in filteredFiles"
           :key="index"
-          class="flex items-center py-3 border-b border-[#f3f4f6]"
+          class="flex items-center py-3 border-b border-[#f3f4f6] dark:border-white/10"
         @click="handleFileClick(file)"
         >
         <div class="mr-4">
-          <FolderIcon v-if="file.type === 'folder'" class="w-8 h-8 text-[#2563eb]" />
-          <component v-else-if="file.icon" :is="file.icon" class="w-8 h-8 text-[#6b7280]" />
-          <FileIcon v-else class="w-8 h-8 text-[#6b7280]" />
+          <FolderIcon v-if="file.type === 'folder'" class="w-8 h-8 text-[#2563eb] dark:text-blue-400" />
+          <component v-else-if="file.icon" :is="file.icon" class="w-8 h-8 text-[#6b7280] dark:text-zinc-400" />
+          <FileIcon v-else class="w-8 h-8 text-[#6b7280] dark:text-zinc-400" />
           </div>
         <div class="flex-1">
           <div class="flex justify-between items-center">
-            <p class="text-[0.875rem] font-medium text-[#111827]">{{ file.name }}</p>
-            <button class="p-2 cursor-pointer text-[#6b7280]" @click.stop="showOptions(file)">
+            <p class="text-[0.875rem] font-medium text-[#111827] dark:text-zinc-100">{{ file.name }}</p>
+            <button class="p-2 cursor-pointer text-[#6b7280] dark:text-zinc-400" @click.stop="showOptions(file)">
               <MoreHorizontalIcon class="w-4 h-4" />
             </button>
           </div>
-          <p class="text-[0.75rem] text-[#6b7280] mt-1">{{ file.size }}</p>
+          <p class="text-[0.75rem] text-[#6b7280] dark:text-zinc-400 mt-1">{{ file.size }}</p>
         </div>
       </div>
     </div>
@@ -49,31 +49,31 @@
       <PlusIcon class="size-5" />
       </div>
 
-    <div v-if="showOptionsMenu" class="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 p-4">
+    <div v-if="showOptionsMenu" class="fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 p-4">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-[1rem] text-[#111827]">{{ selectedFile?.name }}</h3>
+        <h3 class="text-[1rem] text-[#111827] dark:text-zinc-100">{{ selectedFile?.name }}</h3>
         <button class="p-2 cursor-pointer" @click="showOptionsMenu = false">
           <XIcon class="size-5" />
           </button>
       </div>
       <div class="flex flex-col">
-        <div class="flex items-center gap-4 p-4 cursor-pointer [&:hover]:bg-[#f9fafb] [&:hover]:rounded-lg" @click="openFile">
+        <div class="flex items-center gap-4 p-4 cursor-pointer [&:hover]:bg-[#f9fafb] dark:[&:hover]:bg-white/5 [&:hover]:rounded-lg" @click="openFile">
           <FileIcon class="size-5" />
           <span>打开</span>
         </div>
-        <div class="flex items-center gap-4 p-4 cursor-pointer [&:hover]:bg-[#f9fafb] [&:hover]:rounded-lg" @click="shareFile">
+        <div class="flex items-center gap-4 p-4 cursor-pointer [&:hover]:bg-[#f9fafb] dark:[&:hover]:bg-white/5 [&:hover]:rounded-lg" @click="shareFile">
           <UploadIcon class="size-5" />
           <span>分享</span>
         </div>
-        <div class="flex items-center gap-4 p-4 cursor-pointer [&:hover]:bg-[#f9fafb] [&:hover]:rounded-lg" @click="downloadFile">
+        <div class="flex items-center gap-4 p-4 cursor-pointer [&:hover]:bg-[#f9fafb] dark:[&:hover]:bg-white/5 [&:hover]:rounded-lg" @click="downloadFile">
           <UploadIcon class="size-5" transform="rotate(180)" />
           <span>下载</span>
         </div>
-        <div class="flex items-center gap-4 p-4 cursor-pointer [&:hover]:bg-[#f9fafb] [&:hover]:rounded-lg" @click="renameFile">
+        <div class="flex items-center gap-4 p-4 cursor-pointer [&:hover]:bg-[#f9fafb] dark:[&:hover]:bg-white/5 [&:hover]:rounded-lg" @click="renameFile">
           <FileTextIcon class="size-5" />
           <span>重命名</span>
         </div>
-        <div class="flex items-center gap-4 p-4 cursor-pointer [&:hover]:bg-[#f9fafb] [&:hover]:rounded-lg text-[#ef4444]" @click="deleteFile">
+        <div class="flex items-center gap-4 p-4 cursor-pointer [&:hover]:bg-[#f9fafb] dark:[&:hover]:bg-white/5 [&:hover]:rounded-lg text-[#ef4444]" @click="deleteFile">
           <XIcon class="size-5" />
           <span>删除</span>
         </div>

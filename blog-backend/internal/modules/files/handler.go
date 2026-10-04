@@ -316,6 +316,30 @@ func (h *handler) GetDirectoryTree(c *gin.Context) {
 	c.JSON(http.StatusOK, response.SuccessWithData(directoryTree))
 }
 
+// SyncFromDisk 立即把网盘索引与磁盘对账
+// @Summary 从磁盘重新同步
+// @Description 扫描存储目录：补上磁盘上新增的文件，移除磁盘上已不存在的记录。仅管理员可用
+// @Tags 文件
+// @Produce json
+// @Success 200 {object} files.SyncStats "新增/移除/更新数量"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器错误"
+// @Router /api/files/sync [post]
+func (h *handler) SyncFromDisk(c *gin.Context) {
+	// 对账作用于整张索引（所有用户），与目录树一样只对管理员开放
+	if h.getCurrentUserID(c) != 1 {
+		response.FailWithCode(c, http.StatusUnauthorized, "只有管理员可以同步磁盘")
+		return
+	}
+	stats, err := h.fileService.SyncFilesFromDisk()
+	if err != nil {
+		logrus.Errorf("从磁盘同步失败: %v", err)
+		response.FailWithCode(c, http.StatusInternalServerError, "同步失败: "+err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, response.SuccessWithData(stats))
+}
+
 // getCurrentUserID 获取当前用户ID
 func (h *handler) getCurrentUserID(c *gin.Context) uint64 {
 	userID, exists := c.Get("userID")

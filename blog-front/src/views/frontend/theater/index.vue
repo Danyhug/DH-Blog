@@ -1,0 +1,57 @@
+<template>
+  <!-- 个人影院外壳：影视（Netflix 风格）与音乐（Apple Music 风格）两个页面共用。
+       音乐播放器挂在这一层，所以在两个页面之间切换时音乐不会断。
+       页面本身都是透明的，叠在氛围背景上，玻璃材质才有东西可以模糊。 -->
+  <div class="relative isolate min-h-screen text-zinc-900 antialiased dark:text-white">
+    <AmbientBackdrop :image="ambient" :mode="route.name === 'TheaterMusic' ? 'music' : 'cinema'" />
+
+    <div class="relative z-[1]">
+      <router-view v-slot="{ Component }">
+        <keep-alive>
+          <component :is="Component" />
+        </keep-alive>
+      </router-view>
+
+      <MusicPlayerBar v-if="player.current" />
+      <transition
+        enter-active-class="transition duration-300 ease-out"
+        enter-from-class="translate-y-full opacity-0"
+        leave-active-class="transition duration-200 ease-in"
+        leave-to-class="translate-y-full opacity-0"
+      >
+        <NowPlaying v-if="player.expanded && player.current" />
+      </transition>
+    </div>
+
+    <LibrarySettingsDialog v-model="settingsOpen" @saved="libraryVersion++" />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { onUnmounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import { useMusicPlayerStore } from '@/store'
+import { provideTheater } from './context'
+import AmbientBackdrop from './components/AmbientBackdrop.vue'
+import LibrarySettingsDialog from './components/LibrarySettingsDialog.vue'
+import MusicPlayerBar from './music/PlayerBar.vue'
+import NowPlaying from './music/NowPlaying.vue'
+
+const route = useRoute()
+const player = useMusicPlayerStore()
+const settingsOpen = ref(false)
+const libraryVersion = ref(0)
+const ambient = ref('')
+
+provideTheater({
+  openSettings: () => (settingsOpen.value = true),
+  libraryVersion,
+  ambient
+})
+
+// 离开影院（回网盘/博客）时停掉音乐：播放条只在影院里渲染，继续出声就没地方暂停了
+onUnmounted(() => {
+  player.pause()
+  player.expanded = false
+})
+</script>

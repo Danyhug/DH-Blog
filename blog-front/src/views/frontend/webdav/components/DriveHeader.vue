@@ -5,7 +5,7 @@
   <div
     class="drive-header"
     :class="sticky
-      ? 'sticky top-0 z-10 backdrop-blur-[20px] bg-white/90 border-b border-black/5 shadow-[0_4px_20px_rgba(0,0,0,0.05)] py-2.5'
+      ? 'sticky top-0 z-10 backdrop-blur-[20px] bg-white/90 dark:bg-zinc-900/90 border-b border-black/5 dark:border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.05)] py-2.5'
       : 'shrink-0 mb-5'"
   >
     <!-- 窄屏只有在有标题时才换成竖排：标题要单独占一行并提到最前面（order-[-1]）；
@@ -23,7 +23,7 @@
 
       <div v-if="hasTitle" class="flex-1 min-w-0 text-center max-md:w-full max-md:order-[-1]">
         <slot name="title">
-          <h2 class="inline-block max-w-[400px] max-md:max-w-full m-0 px-4 py-2 text-lg font-semibold text-[#333] whitespace-nowrap overflow-hidden text-ellipsis rounded-lg bg-white/80 backdrop-blur-[4px] shadow-[0_2px_8px_rgba(0,0,0,0.03)]">{{ title }}</h2>
+          <h2 class="inline-block max-w-[400px] max-md:max-w-full m-0 px-4 py-2 text-lg font-semibold text-[#333] dark:text-zinc-100 whitespace-nowrap overflow-hidden text-ellipsis rounded-lg bg-white/80 dark:bg-zinc-900/80 backdrop-blur-[4px] shadow-[0_2px_8px_rgba(0,0,0,0.03)]">{{ title }}</h2>
         </slot>
       </div>
 

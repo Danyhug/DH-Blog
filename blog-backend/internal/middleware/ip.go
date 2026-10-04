@@ -46,9 +46,12 @@ func redactedRequestURL(u *url.URL) string {
 // Heartbeats are pure noise, and AI gateway traffic is machine-to-machine: it
 // would drown the blog's visitor statistics and trigger one geo-IP lookup per
 // agent call. The gateway keeps its own, richer request log instead.
+// Media requests are the player's own chatter (a progress save every few
+// seconds, one cover per album tile) and say nothing about visitors.
 var skippedResourceTypes = map[string]struct{}{
 	"heartbeat": {},
 	"gateway":   {},
+	"media":     {},
 }
 
 // scannerProbeMarkers 是漏洞扫描器的高频探测特征，来自生产库访问日志的

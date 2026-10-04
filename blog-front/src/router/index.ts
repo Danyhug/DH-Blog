@@ -11,6 +11,10 @@ const KnowledgeView = () => import(/* webpackChunkName: "knowledge" */ '../views
 
 // WebDAV相关组件
 const WebDriveView = () => import(/* webpackChunkName: "webdrive" */ '../views/frontend/webdav');
+// 个人影院：影视（Netflix 风格）与音乐（Apple Music 风格）
+const TheaterView = () => import(/* webpackChunkName: "theater" */ '../views/frontend/theater/index.vue');
+const VideoHome = () => import(/* webpackChunkName: "theater" */ '../views/frontend/theater/video/VideoHome.vue');
+const MusicHome = () => import(/* webpackChunkName: "theater" */ '../views/frontend/theater/music/MusicHome.vue');
 // 分享访问页面（使用webdav的文件预览组件）
 const FilePreview = () => import(/* webpackChunkName: "share" */ '../views/frontend/webdav/components/FilePreview.vue');
 
@@ -42,7 +46,7 @@ const routes = [
   { path: '/', redirect: '/view/home' },
   // 前台页面
   {
-    // blogTheme：参与读者的夜间模式（App.vue）；子路由的 meta 会与父级合并
+    // blogTheme：参与读者的夜间模式（App.vue），博客、网盘、影院共用同一个开关；子路由的 meta 会与父级合并
     path: '/view', component: HomeView, meta: { blogTheme: true }, children:
       [
         { path: 'home', component: MainView, name: 'Home', meta: { title: '我的个人纪录' } },
@@ -77,9 +81,17 @@ const routes = [
   // 错误页面
   { path: '/error', component: ErrorView, name: 'Error', meta: { title: '错误页面', blogTheme: true } },
   // 分享访问页面（公开，无需登录）
-  { path: '/share/:shareId', component: FilePreview, name: 'Share', meta: { title: '文件分享' }, props: (route: RouteLocationNormalizedLoaded) => ({ shareMode: true, shareId: route.params.shareId, file: { id: '', name: '', type: 'file' } }) },
+  { path: '/share/:shareId', component: FilePreview, name: 'Share', meta: { title: '文件分享', blogTheme: true }, props: (route: RouteLocationNormalizedLoaded) => ({ shareMode: true, shareId: route.params.shareId, file: { id: '', name: '', type: 'file' } }) },
   // WebDAV 实用页面
-  { path: '/webdav', component: WebDriveView, name: 'WebDAV', meta: { title: '我的网盘' } },
+  { path: '/webdav', component: WebDriveView, name: 'WebDAV', meta: { title: '我的网盘', blogTheme: true } },
+  // 个人影院
+  {
+    path: '/theater', component: TheaterView, redirect: '/theater/videos', meta: { blogTheme: true }, children:
+      [
+        { path: 'videos', component: VideoHome, name: 'TheaterVideos', meta: { title: '影院 · 影视' } },
+        { path: 'music', component: MusicHome, name: 'TheaterMusic', meta: { title: '影院 · 音乐' } },
+      ]
+  },
 ]
 
 const router = createRouter({
@@ -113,7 +125,7 @@ router.beforeEach(async (to, _, next) => {
     window.document.title = siteName;
   }
 
-  if (to.path.startsWith('/admin') || to.path.startsWith('/webdav')) {
+  if (to.path.startsWith('/admin') || to.path.startsWith('/webdav') || to.path.startsWith('/theater')) {
     await isAuthenticated(to)
 }
 

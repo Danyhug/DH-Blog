@@ -1,11 +1,11 @@
 <template>
-  <div class="w-full flex flex-col bg-white animate-fade-in relative"
+  <div class="w-full flex flex-col bg-white dark:bg-zinc-900 dark:text-zinc-200 dark:scheme-dark animate-fade-in relative"
     :class="shareMode ? 'min-h-screen share-mode' : 'flex-1 min-h-0'">
     <DriveHeader :sticky="shareMode" :title="currentFileName">
       <template #left>
         <!-- 分享页是独立入口，没有网盘上下文可回溯，用站点 Logo 顶替面包屑 -->
         <a v-if="shareMode" href="/" class="no-underline">
-          <span class="text-lg font-semibold text-[#333]">DH-Blog</span>
+          <span class="text-lg font-semibold text-[#333] dark:text-zinc-100">DH-Blog</span>
         </a>
         <DriveBreadcrumb
           v-else
@@ -15,11 +15,17 @@
         />
       </template>
       <template #actions>
+        <ThemeToggle class="flex p-2 rounded-full border-none bg-transparent cursor-pointer text-[#666] dark:text-zinc-400 transition-all duration-200 hover:bg-[#f0f5ff] dark:hover:bg-blue-500/15 hover:text-[#2a8aff]" icon-class="w-5 h-5" />
         <!-- 返回按钮 -->
-        <button class="flex items-center gap-2 rounded-lg cursor-pointer text-sm font-medium px-[18px] py-2.5 transition-all duration-300 bg-white/90 border border-[#eee] text-[#555] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:bg-white hover:border-[#ddd]" @click="handleBack">
+        <button class="flex items-center gap-2 rounded-lg cursor-pointer text-sm font-medium px-[18px] py-2.5 transition-all duration-300 bg-white/90 dark:bg-zinc-900/90 border border-[#eee] dark:border-white/10 text-[#555] dark:text-zinc-400 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:bg-white dark:hover:bg-zinc-800 hover:border-[#ddd] dark:hover:border-white/25" @click="handleBack">
           <ArrowLeftIcon class="w-4 h-4" />
           {{ shareMode ? '返回首页' : '返回' }}
         </button>
+        <!-- 音视频可以转到个人影院播放：字幕、续播、歌词、播放队列都在那边 -->
+        <router-link v-if="theaterLink" :to="theaterLink" class="flex items-center gap-2 rounded-lg cursor-pointer text-sm font-medium px-[18px] py-2.5 transition-all duration-300 no-underline bg-[#141414] border border-[#141414] text-white! dark:bg-white dark:border-white dark:text-[#141414]! hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.2)]">
+          <PlayCircleIcon class="w-4 h-4" />
+          在影院中播放
+        </router-link>
         <!-- 下载按钮 -->
         <button v-if="!shareMode || canPreview" class="flex items-center gap-2 rounded-lg cursor-pointer text-sm font-medium px-[18px] py-2.5 transition-all duration-300 bg-gradient-to-br from-[#4facfe] to-[#00f2fe] text-white border-none shadow-[0_4px_10px_rgba(79,172,254,0.2)] hover:-translate-y-0.5 hover:shadow-[0_6px_15px_rgba(79,172,254,0.3)] hover:from-[#4facfe] hover:to-[#00c6fb]" @click="handleDownload">
           <DownloadIcon class="w-4 h-4" />
@@ -28,57 +34,57 @@
       </template>
     </DriveHeader>
 
-    <div class="flex-1 flex justify-center items-center overflow-auto p-8 max-md:p-4 bg-[#f8f9fa]">
+    <div class="flex-1 flex justify-center items-center overflow-auto p-8 max-md:p-4 bg-[#f8f9fa] dark:bg-white/5">
       <!-- ========== 分享模式特殊状态处理 ========== -->
       <template v-if="shareMode && !canPreview">
         <!-- 分享加载中 -->
         <div v-if="shareLoading" class="flex flex-col items-center justify-center h-full">
           <div class="w-12 h-12 border-3 border-[rgba(56,161,219,0.1)] border-t-[var(--color-blue)] rounded-full animate-spin mb-5"></div>
-          <p class="text-[#666] text-base font-medium">加载中...</p>
+          <p class="text-[#666] dark:text-zinc-400 text-base font-medium">加载中...</p>
         </div>
 
         <!-- 分享错误 -->
-        <div v-else-if="shareError" class="flex flex-col items-center justify-center h-full max-w-[450px] bg-white p-10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+        <div v-else-if="shareError" class="flex flex-col items-center justify-center h-full max-w-[450px] bg-white dark:bg-zinc-900 p-10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
           <div class="w-[70px] h-[70px] rounded-full bg-linear-to-br from-[#ff4d4f] to-[#ff7875] text-white flex items-center justify-center text-[32px] font-bold mb-6 shadow-[0_8px_20px_rgba(255,77,79,0.2)]">!</div>
-          <h3 class="text-[22px] text-[#333] mb-4 font-semibold">访问失败</h3>
-          <p class="text-[#666] mb-7 text-center leading-relaxed text-[15px]">{{ shareError }}</p>
+          <h3 class="text-[22px] text-[#333] dark:text-zinc-100 mb-4 font-semibold">访问失败</h3>
+          <p class="text-[#666] dark:text-zinc-400 mb-7 text-center leading-relaxed text-[15px]">{{ shareError }}</p>
           <div class="flex gap-4">
-            <a href="/" class="px-6 py-3 rounded-[10px] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-linear-to-br from-[#4facfe] to-[#00f2fe] text-white border-none shadow-[0_4px_10px_rgba(79,172,254,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] hover:from-[#4facfe] hover:to-[#00c6fb]">返回首页</a>
+            <a href="/" class="px-6 py-3 rounded-[10px] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-linear-to-br from-[#4facfe] to-[#00f2fe] text-white! border-none shadow-[0_4px_10px_rgba(79,172,254,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] hover:from-[#4facfe] hover:to-[#00c6fb]">返回首页</a>
           </div>
         </div>
 
         <!-- 分享已过期 -->
-        <div v-else-if="shareInfo?.is_expired" class="flex flex-col items-center justify-center h-full max-w-[450px] bg-white p-10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+        <div v-else-if="shareInfo?.is_expired" class="flex flex-col items-center justify-center h-full max-w-[450px] bg-white dark:bg-zinc-900 p-10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
           <div class="w-[70px] h-[70px] rounded-full bg-linear-to-br from-[#ff4d4f] to-[#ff7875] text-white flex items-center justify-center text-[32px] font-bold mb-6 shadow-[0_8px_20px_rgba(255,77,79,0.2)]">!</div>
-          <h3 class="text-[22px] text-[#333] mb-4 font-semibold">分享已过期</h3>
-          <p class="text-[#666] mb-7 text-center leading-relaxed text-[15px]">此分享链接已过期，无法访问</p>
+          <h3 class="text-[22px] text-[#333] dark:text-zinc-100 mb-4 font-semibold">分享已过期</h3>
+          <p class="text-[#666] dark:text-zinc-400 mb-7 text-center leading-relaxed text-[15px]">此分享链接已过期，无法访问</p>
           <div class="flex gap-4">
-            <a href="/" class="px-6 py-3 rounded-[10px] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-linear-to-br from-[#4facfe] to-[#00f2fe] text-white border-none shadow-[0_4px_10px_rgba(79,172,254,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] hover:from-[#4facfe] hover:to-[#00c6fb]">返回首页</a>
+            <a href="/" class="px-6 py-3 rounded-[10px] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-linear-to-br from-[#4facfe] to-[#00f2fe] text-white! border-none shadow-[0_4px_10px_rgba(79,172,254,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] hover:from-[#4facfe] hover:to-[#00c6fb]">返回首页</a>
           </div>
         </div>
 
         <!-- 需要密码验证 -->
         <div v-else-if="shareInfo?.has_password && !passwordVerified" class="flex justify-center items-center w-full p-5">
-          <div class="bg-white rounded-[20px] px-10 py-12 shadow-[0_10px_40px_rgba(0,0,0,0.08)] max-w-[420px] w-full text-center max-md:px-6 max-md:mx-4">
+          <div class="bg-white dark:bg-zinc-900 rounded-[20px] px-10 py-12 shadow-[0_10px_40px_rgba(0,0,0,0.08)] max-w-[420px] w-full text-center max-md:px-6 max-md:mx-4">
             <div class="mb-6 flex justify-center items-center">
               <LockIcon class="w-12 h-12 p-4 bg-linear-to-br from-[rgba(79,172,254,0.1)] to-[rgba(0,242,254,0.1)] rounded-full text-[var(--color-blue)] box-content" />
             </div>
-            <h3 class="text-[22px] font-semibold text-[#1a1a1a] mb-3">此分享需要密码访问</h3>
-            <div class="flex flex-col gap-1.5 mb-8 p-4 bg-[#f8f9fa] rounded-xl">
-              <span class="font-semibold text-[15px] text-[#333] break-all leading-relaxed">{{ shareInfo.file_name }}</span>
-              <span class="text-[13px] text-[#888]">{{ formatFileSize(shareInfo.file_size) }}</span>
+            <h3 class="text-[22px] font-semibold text-[#1a1a1a] dark:text-zinc-100 mb-3">此分享需要密码访问</h3>
+            <div class="flex flex-col gap-1.5 mb-8 p-4 bg-[#f8f9fa] dark:bg-white/5 rounded-xl">
+              <span class="font-semibold text-[15px] text-[#333] dark:text-zinc-100 break-all leading-relaxed">{{ shareInfo.file_name }}</span>
+              <span class="text-[13px] text-[#888] dark:text-zinc-500">{{ formatFileSize(shareInfo.file_size) }}</span>
             </div>
             <div class="flex gap-2.5 mb-5">
               <input
                 v-model="password"
                 :type="showPassword ? 'text' : 'password'"
                 placeholder="请输入访问密码"
-                class="flex-1 px-[18px] py-4 border-2 border-[#e8e8e8] rounded-xl text-[15px] outline-none transition-all duration-300 bg-[#fafafa] focus:border-[var(--color-blue)] focus:bg-white focus:shadow-[0_0_0_4px_rgba(79,172,254,0.1)] placeholder:text-[#aaa]"
+                class="flex-1 px-[18px] py-4 border-2 border-[#e8e8e8] dark:border-white/10 rounded-xl text-[15px] outline-none transition-all duration-300 bg-[#fafafa] dark:bg-white/5 focus:border-[var(--color-blue)] focus:bg-white dark:focus:bg-zinc-900 focus:shadow-[0_0_0_4px_rgba(79,172,254,0.1)] placeholder:text-[#aaa]"
                 @keyup.enter="verifySharePasswordHandler"
               />
-              <button class="p-3.5 bg-[#f0f0f0] border-2 border-transparent rounded-xl cursor-pointer transition-all duration-300 flex items-center justify-center hover:bg-[#e5e5e5]" @click="showPassword = !showPassword">
-                <EyeIcon v-if="!showPassword" class="w-[22px] h-[22px] text-[#666]" />
-                <EyeOffIcon v-else class="w-[22px] h-[22px] text-[#666]" />
+              <button class="p-3.5 bg-[#f0f0f0] dark:bg-white/10 border-2 border-transparent rounded-xl cursor-pointer transition-all duration-300 flex items-center justify-center hover:bg-[#e5e5e5] dark:hover:bg-white/15" @click="showPassword = !showPassword">
+                <EyeIcon v-if="!showPassword" class="w-[22px] h-[22px] text-[#666] dark:text-zinc-400" />
+                <EyeOffIcon v-else class="w-[22px] h-[22px] text-[#666] dark:text-zinc-400" />
               </button>
             </div>
             <button class="w-full py-4 bg-linear-to-br from-[#4facfe] to-[#00f2fe] text-white border-none rounded-xl text-base font-semibold cursor-pointer transition-all duration-300 shadow-[0_4px_15px_rgba(79,172,254,0.3)] hover:enabled:-translate-y-0.5 hover:enabled:shadow-[0_8px_25px_rgba(79,172,254,0.4)] active:enabled:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed" @click="verifySharePasswordHandler" :disabled="verifying">
@@ -95,22 +101,22 @@
           <!-- 加载状态 -->
           <div v-if="isLoading" class="flex flex-col items-center justify-center h-full">
             <div class="w-12 h-12 border-3 border-[rgba(56,161,219,0.1)] border-t-[var(--color-blue)] rounded-full animate-spin mb-5"></div>
-            <p class="text-[#666] text-base font-medium">正在加载预览...</p>
+            <p class="text-[#666] dark:text-zinc-400 text-base font-medium">正在加载预览...</p>
           </div>
 
           <!-- 错误状态 -->
-          <div v-else-if="hasError" class="flex flex-col items-center justify-center h-full max-w-[450px] bg-white p-10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+          <div v-else-if="hasError" class="flex flex-col items-center justify-center h-full max-w-[450px] bg-white dark:bg-zinc-900 p-10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
             <div class="w-[70px] h-[70px] rounded-full bg-linear-to-br from-[#ff4d4f] to-[#ff7875] text-white flex items-center justify-center text-[32px] font-bold mb-6 shadow-[0_8px_20px_rgba(255,77,79,0.2)]">!</div>
-            <h3 class="text-[22px] text-[#333] mb-4 font-semibold">预览失败</h3>
-            <p class="text-[#666] mb-7 text-center leading-relaxed text-[15px]">{{ errorMessage }}</p>
+            <h3 class="text-[22px] text-[#333] dark:text-zinc-100 mb-4 font-semibold">预览失败</h3>
+            <p class="text-[#666] dark:text-zinc-400 mb-7 text-center leading-relaxed text-[15px]">{{ errorMessage }}</p>
             <div class="flex gap-4">
               <button class="px-6 py-3 rounded-[10px] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-linear-to-br from-[#4facfe] to-[#00f2fe] text-white border-none shadow-[0_4px_10px_rgba(79,172,254,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] hover:from-[#4facfe] hover:to-[#00c6fb]" @click="handleRetry">重试</button>
-              <button class="px-6 py-3 rounded-[10px] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-white text-[#555] border border-[#ddd] hover:bg-[#f9f9f9] hover:border-[#ccc] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)]" @click="handleDownload">下载文件</button>
+              <button class="px-6 py-3 rounded-[10px] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-white dark:bg-zinc-900 text-[#555] dark:text-zinc-400 border border-[#ddd] dark:border-white/15 hover:bg-[#f9f9f9] dark:hover:bg-white/5 hover:border-[#ccc] dark:hover:border-white/25 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)]" @click="handleDownload">下载文件</button>
             </div>
           </div>
 
           <!-- 图片预览 -->
-          <div v-else-if="currentFileType === 'image'" class="max-w-full max-h-full flex justify-center items-center bg-[#f5f5f5] rounded-xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+          <div v-else-if="currentFileType === 'image'" class="max-w-full max-h-full flex justify-center items-center bg-[#f5f5f5] dark:bg-white/5 rounded-xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
             <img :src="currentFileUrl" :alt="currentFileName" class="max-w-full max-h-[80vh] object-contain rounded-lg transition-transform duration-300 hover:scale-[1.02]" @load="onPreviewLoaded" @error="onPreviewError('图片加载失败')" />
           </div>
 
@@ -123,12 +129,12 @@
 
           <!-- 音频预览 -->
           <div v-else-if="currentFileType === 'audio'" class="w-full py-5 flex justify-center">
-            <div class="flex items-center gap-[30px] bg-linear-to-br from-white to-[#f8f9fa] p-10 rounded-[20px] shadow-[0_10px_30px_rgba(0,0,0,0.08)] max-w-[650px] w-full max-md:flex-col max-md:p-[30px]">
-              <div class="flex justify-center items-center w-[90px] h-[90px] bg-linear-to-br from-[#e3fdf5] to-[#ffe6fa] rounded-full shadow-[0_8px_20px_rgba(0,0,0,0.05)] max-md:mb-5">
+            <div class="flex items-center gap-[30px] bg-linear-to-br from-white dark:from-zinc-900 to-[#f8f9fa] dark:to-zinc-800 p-10 rounded-[20px] shadow-[0_10px_30px_rgba(0,0,0,0.08)] max-w-[650px] w-full max-md:flex-col max-md:p-[30px]">
+              <div class="flex justify-center items-center w-[90px] h-[90px] bg-linear-to-br from-[#e3fdf5] dark:from-emerald-500/15 to-[#ffe6fa] dark:to-pink-500/15 rounded-full shadow-[0_8px_20px_rgba(0,0,0,0.05)] max-md:mb-5">
                 <MusicIcon class="w-[45px] h-[45px] text-[var(--color-blue)]" />
               </div>
               <div class="flex-1">
-                <div class="text-lg font-semibold text-[#333] mb-5">{{ currentFileName }}</div>
+                <div class="text-lg font-semibold text-[#333] dark:text-zinc-100 mb-5">{{ currentFileName }}</div>
                 <audio controls :src="currentFileUrl" class="w-full h-10 outline-none" @loadeddata="onPreviewLoaded" @error="onPreviewError('音频加载失败')">
                   您的浏览器不支持音频播放
                 </audio>
@@ -139,38 +145,38 @@
           <!-- PDF预览 -->
           <!-- 高度用视口单位而非 h-full：父级是 items-center 的 flex 容器，
                子项不会被拉伸，百分比高度会塌成很小一条 -->
-          <div v-else-if="currentFileType === 'pdf'" class="w-full h-[80vh] bg-white rounded-xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+          <div v-else-if="currentFileType === 'pdf'" class="w-full h-[80vh] bg-white dark:bg-zinc-900 rounded-xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
             <iframe :src="currentFileUrl" frameborder="0" class="w-full h-full border-none" @load="onPreviewLoaded" @error="onPreviewError('PDF加载失败')"></iframe>
           </div>
 
           <!-- CSV/TSV 表格预览 -->
-          <div v-else-if="currentFileType === 'csv'" class="w-full h-full bg-white rounded-xl overflow-auto shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-5">
+          <div v-else-if="currentFileType === 'csv'" class="w-full h-full bg-white dark:bg-zinc-900 rounded-xl overflow-auto shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-5">
             <table class="w-full border-collapse text-sm">
               <thead>
                 <tr>
-                  <th v-for="(cell, i) in csvHeader" :key="i" class="sticky top-0 bg-[#f6f8fa] border border-[#e5e7eb] px-3 py-2 text-left font-semibold text-[#333] whitespace-nowrap">{{ cell }}</th>
+                  <th v-for="(cell, i) in csvHeader" :key="i" class="sticky top-0 bg-[#f6f8fa] dark:bg-white/5 border border-[#e5e7eb] dark:border-white/10 px-3 py-2 text-left font-semibold text-[#333] dark:text-zinc-100 whitespace-nowrap">{{ cell }}</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(row, r) in csvBody" :key="r" class="even:bg-[#fafbfc]">
-                  <td v-for="(cell, c) in row" :key="c" class="border border-[#e5e7eb] px-3 py-2 text-[#555] align-top">{{ cell }}</td>
+                <tr v-for="(row, r) in csvBody" :key="r" class="even:bg-[#fafbfc] dark:even:bg-white/5">
+                  <td v-for="(cell, c) in row" :key="c" class="border border-[#e5e7eb] dark:border-white/10 px-3 py-2 text-[#555] dark:text-zinc-400 align-top">{{ cell }}</td>
                 </tr>
               </tbody>
             </table>
-            <p v-if="csvTruncated" class="mt-4 text-center text-[13px] text-[#888]">仅显示前 {{ csvBody.length }} 行，完整内容请下载查看</p>
+            <p v-if="csvTruncated" class="mt-4 text-center text-[13px] text-[#888] dark:text-zinc-500">仅显示前 {{ csvBody.length }} 行，完整内容请下载查看</p>
           </div>
 
           <!-- 文本文件预览 -->
-          <div v-else-if="currentFileType === 'text'" class="w-full h-full bg-white rounded-xl overflow-auto shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-5">
-            <div v-if="isMarkdown" class="markdown-content p-5 leading-relaxed text-[#333] font-sans">
+          <div v-else-if="currentFileType === 'text'" class="w-full h-full bg-white dark:bg-zinc-900 rounded-xl overflow-auto shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-5">
+            <div v-if="isMarkdown" class="markdown-content p-5 leading-relaxed text-[#333] dark:text-zinc-100 font-sans">
               <div v-html="renderedMarkdown"></div>
             </div>
             <div v-else-if="isHtmlFile" class="w-full h-full flex flex-col">
-              <div class="flex gap-3 px-5 py-2.5 bg-[#f9f9fa] border-b border-[#eee] max-md:flex-col max-md:gap-2 max-md:px-4 max-md:py-2">
-                <button class="px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 border-none" :class="showHtmlPreview ? 'bg-[#3b82f6] text-white' : 'bg-[#e5e7eb] text-[#374151] hover:bg-[#d1d5db]'" @click="toggleHtmlPreview">
+              <div class="flex gap-3 px-5 py-2.5 bg-[#f9f9fa] dark:bg-white/5 border-b border-[#eee] dark:border-white/10 max-md:flex-col max-md:gap-2 max-md:px-4 max-md:py-2">
+                <button class="px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 border-none" :class="showHtmlPreview ? 'bg-[#3b82f6] text-white' : 'bg-[#e5e7eb] dark:bg-white/10 text-[#374151] dark:text-zinc-200 hover:bg-[#d1d5db] dark:hover:bg-white/15'" @click="toggleHtmlPreview">
                   {{ showHtmlPreview ? '查看源码' : '预览HTML' }}
                 </button>
-                <button class="px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 bg-white border border-[#d1d5db] text-[#4b5563] hover:bg-[#f9fafb] hover:border-[#9ca3af]" @click="openHtmlInNewWindow" title="在新窗口中打开">
+                <button class="px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 bg-white dark:bg-zinc-900 border border-[#d1d5db] dark:border-white/15 text-[#4b5563] dark:text-zinc-400 hover:bg-[#f9fafb] dark:hover:bg-white/5 hover:border-[#9ca3af] dark:hover:border-white/25" @click="openHtmlInNewWindow" title="在新窗口中打开">
                   <span>打开新窗口</span>
                 </button>
               </div>
@@ -185,32 +191,32 @@
               <div v-html="highlightedCode"></div>
             </div>
             <div v-else class="w-full h-full">
-              <pre class="font-mono text-sm leading-relaxed whitespace-pre-wrap break-all text-[#333] p-5 m-0 overflow-auto max-h-[70vh]">{{ textContent }}</pre>
+              <pre class="font-mono text-sm leading-relaxed whitespace-pre-wrap break-all text-[#333] dark:text-zinc-100 p-5 m-0 overflow-auto max-h-[70vh]">{{ textContent }}</pre>
             </div>
           </div>
         </template>
 
         <!-- 不支持预览的文件类型 -->
         <div v-else class="flex justify-center items-center h-full">
-          <div class="flex flex-col items-center justify-center bg-linear-to-br from-white to-[#f8f9fa] p-[50px] rounded-[20px] shadow-[0_10px_30px_rgba(0,0,0,0.08)] max-w-[440px] text-center max-md:p-[30px]">
-            <div class="mb-[30px] bg-linear-to-br from-[#e3fdf5] to-[#ffe6fa] w-[110px] h-[110px] rounded-full flex justify-center items-center shadow-[0_8px_20px_rgba(0,0,0,0.05)]">
+          <div class="flex flex-col items-center justify-center bg-linear-to-br from-white dark:from-zinc-900 to-[#f8f9fa] dark:to-zinc-800 p-[50px] rounded-[20px] shadow-[0_10px_30px_rgba(0,0,0,0.08)] max-w-[440px] text-center max-md:p-[30px]">
+            <div class="mb-[30px] bg-linear-to-br from-[#e3fdf5] dark:from-emerald-500/15 to-[#ffe6fa] dark:to-pink-500/15 w-[110px] h-[110px] rounded-full flex justify-center items-center shadow-[0_8px_20px_rgba(0,0,0,0.05)]">
               <component :is="file.icon || FileIcon" class="w-[55px] h-[55px]" :class="getIconClass(currentFileType)" />
             </div>
             <div class="text-center">
-              <h3 class="text-[22px] text-[#333] mb-4 font-semibold">无法预览此文件</h3>
-              <p class="text-[#666] mb-7 leading-relaxed text-[15px]">该文件类型暂不支持在线预览，您可以下载后在本地查看。</p>
-              <div class="flex flex-col gap-2.5 mb-7 bg-[rgba(245,247,250,0.5)] rounded-[10px] px-5 py-4 text-sm text-[#555] shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
-                <div class="flex justify-between items-center border-b border-dashed border-black/5 pb-2">
-                  <span class="font-medium text-[#333]">文件名</span>
-                  <span class="font-normal text-[#666] max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis">{{ currentFileName }}</span>
+              <h3 class="text-[22px] text-[#333] dark:text-zinc-100 mb-4 font-semibold">无法预览此文件</h3>
+              <p class="text-[#666] dark:text-zinc-400 mb-7 leading-relaxed text-[15px]">该文件类型暂不支持在线预览，您可以下载后在本地查看。</p>
+              <div class="flex flex-col gap-2.5 mb-7 bg-[rgba(245,247,250,0.5)] dark:bg-white/5 rounded-[10px] px-5 py-4 text-sm text-[#555] dark:text-zinc-400 shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
+                <div class="flex justify-between items-center border-b border-dashed border-black/5 dark:border-white/10 pb-2">
+                  <span class="font-medium text-[#333] dark:text-zinc-100">文件名</span>
+                  <span class="font-normal text-[#666] dark:text-zinc-400 max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis">{{ currentFileName }}</span>
                 </div>
-                <div v-if="currentFileSize" class="flex justify-between items-center border-b border-dashed border-black/5 pb-2">
-                  <span class="font-medium text-[#333]">大小</span>
-                  <span class="font-normal text-[#666] max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis">{{ formatFileSize(currentFileSize) }}</span>
+                <div v-if="currentFileSize" class="flex justify-between items-center border-b border-dashed border-black/5 dark:border-white/10 pb-2">
+                  <span class="font-medium text-[#333] dark:text-zinc-100">大小</span>
+                  <span class="font-normal text-[#666] dark:text-zinc-400 max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis">{{ formatFileSize(currentFileSize) }}</span>
                 </div>
                 <div v-if="currentFileCreateTime" class="flex justify-between items-center">
-                  <span class="font-medium text-[#333]">创建时间</span>
-                  <span class="font-normal text-[#666] max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis">{{ formatDate(currentFileCreateTime) }}</span>
+                  <span class="font-medium text-[#333] dark:text-zinc-100">创建时间</span>
+                  <span class="font-normal text-[#666] dark:text-zinc-400 max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis">{{ formatDate(currentFileCreateTime) }}</span>
                 </div>
               </div>
               <div class="flex justify-center mt-5">
@@ -218,7 +224,7 @@
                   <div class="w-[60px] h-[60px] bg-linear-to-br from-[#4facfe] to-[#00f2fe] rounded-full flex justify-center items-center mb-3 shadow-[0_5px_15px_rgba(79,172,254,0.3)] transition-all duration-300 group-hover:shadow-[0_8px_20px_rgba(79,172,254,0.4)] group-hover:from-[#4facfe] group-hover:to-[#00c6fb]">
                     <DownloadIcon class="w-7 h-7 text-white" />
                   </div>
-                  <span class="text-[15px] font-medium text-[#666] transition-colors duration-300 group-hover:text-[#4facfe]">下载文件</span>
+                  <span class="text-[15px] font-medium text-[#666] dark:text-zinc-400 transition-colors duration-300 group-hover:text-[#4facfe]">下载文件</span>
                 </button>
               </div>
             </div>
@@ -234,6 +240,7 @@ import { ref, computed, inject, nextTick, onMounted, watch, type Ref } from 'vue
 import type { FileItem, PathSegment } from '../utils/types/file'
 import DriveHeader from './DriveHeader.vue'
 import DriveBreadcrumb from './DriveBreadcrumb.vue'
+import ThemeToggle from '@/components/Child/ThemeToggle.vue'
 import { getDownloadUrl } from '@/api/file'
 import { SERVER_URL } from '@/types/Constant'
 import { notify } from '@/utils/notification'
@@ -246,6 +253,7 @@ import {
 import {
   ArrowLeftIcon,
   DownloadIcon,
+  PlayCircleIcon,
   MusicIcon,
   FileIcon,
   LockIcon,
@@ -317,6 +325,13 @@ const highlightedCode = ref('')
 
 // 计算属性：是否支持预览的文件类型
 const isSupportedPreviewType = computed(() => isPreviewable(props.file.type));
+
+const theaterLink = computed(() => {
+  if (props.shareMode || !props.file.id) return null
+  if (props.file.type === 'video') return { name: 'TheaterVideos', query: { play: props.file.id } }
+  if (props.file.type === 'audio') return { name: 'TheaterMusic', query: { play: props.file.id } }
+  return null
+});
 
 // ========== 统一计算属性（分享模式和普通模式共用） ==========
 
@@ -625,7 +640,7 @@ const getIconClass = (fileType: string) => {
     'presentation': 'text-[#eb2f96]'
   }
 
-  return typeClassMap[fileType as keyof typeof typeClassMap] || 'text-[#999]'
+  return typeClassMap[fileType as keyof typeof typeClassMap] || 'text-[#999] dark:text-zinc-500'
 }
 
 // 格式化文件大小

@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"dh-blog/internal/config"
@@ -19,6 +20,7 @@ import (
 	eventlogmodule "dh-blog/internal/modules/eventlog"
 	filesmodule "dh-blog/internal/modules/files"
 	loggingmodule "dh-blog/internal/modules/logging"
+	mediamodule "dh-blog/internal/modules/media"
 	sharemodule "dh-blog/internal/modules/share"
 	systemmodule "dh-blog/internal/modules/system"
 	usermodule "dh-blog/internal/modules/user"
@@ -93,6 +95,16 @@ var moduleRegistrations = []moduleRegistration{
 		MigrationModels: filesmodule.MigrationModels,
 		Build: func(ctx *buildContext) (router.Module, error) {
 			return ctx.files(), nil
+		},
+	},
+	{
+		Name:            "media",
+		MigrationModels: mediamodule.MigrationModels,
+		Build: func(ctx *buildContext) (router.Module, error) {
+			return mediamodule.New(mediamodule.Dependencies{
+				DB:    ctx.db,
+				Files: mediaFileCatalog{files: ctx.files().Catalog()},
+			}), nil
 		},
 	},
 	{
@@ -318,6 +330,43 @@ func (s blogImageSaver) SaveBlogImage(ctx context.Context, fileName string, data
 		return "", fmt.Errorf("保存博客图片失败: %w", err)
 	}
 	return "/api/" + filepath.ToSlash(file.StoragePath), nil
+}
+
+// mediaFileCatalog adapts the files module to the media library's catalog
+// port, so the media package never sees files' persistence types.
+type mediaFileCatalog struct{ files filesmodule.Catalog }
+
+func (c mediaFileCatalog) ListEntries(ctx context.Context, userID uint64) ([]mediamodule.Entry, error) {
+	records, err := c.files.ListUserFiles(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	entries := make([]mediamodule.Entry, len(records))
+	for i, record := range records {
+		entries[i] = toMediaEntry(record)
+	}
+	return entries, nil
+}
+
+func (c mediaFileCatalog) GetEntry(ctx context.Context, userID uint64, fileID string) (mediamodule.Entry, error) {
+	record, err := c.files.GetDownloadInfo(ctx, userID, fileID)
+	if err != nil {
+		return mediamodule.Entry{}, err
+	}
+	return toMediaEntry(record), nil
+}
+
+func toMediaEntry(record *filesmodule.File) mediamodule.Entry {
+	return mediamodule.Entry{
+		ID:        strconv.Itoa(record.ID),
+		ParentID:  record.ParentID,
+		Name:      record.Name,
+		IsFolder:  record.IsFolder,
+		Size:      record.Size,
+		MimeType:  record.MimeType,
+		Path:      record.StoragePath,
+		CreatedAt: record.CreatedAt.Time,
+	}
 }
 
 // agentapi wires the content-writing module. It is built before aigateway in

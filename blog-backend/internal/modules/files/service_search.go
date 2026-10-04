@@ -3,6 +3,7 @@ package files
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -123,4 +124,21 @@ func resolveParentSegments(foldersByID map[string]*File, parentID string) []Path
 		segments = append(segments, reversed[i])
 	}
 	return segments
+}
+
+// ListUserFiles 返回用户的全部文件与文件夹。不逐个 Stat：媒体库只在真正读取
+// 某个文件时才会碰磁盘，索引与磁盘不一致由读取方自行容错。
+func (s *fileService) ListUserFiles(ctx context.Context, userID uint64) ([]*File, error) {
+	records, err := s.repo.ListByUserID(ctx, userID)
+	if err != nil {
+		logrus.Errorf("加载文件索引失败: %v", err)
+		return nil, fmt.Errorf("加载文件索引失败")
+	}
+	root := s.GetStoragePath()
+	for _, record := range records {
+		if record.StoragePath != "" {
+			record.StoragePath = filepath.Join(root, record.StoragePath)
+		}
+	}
+	return records, nil
 }

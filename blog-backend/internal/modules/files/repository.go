@@ -23,6 +23,8 @@ type fileRepository interface {
 	SearchByName(ctx context.Context, userID uint64, keyword string, limit int) ([]*File, error)
 	// ListFolders 返回用户的全部文件夹，供搜索结果拼装所在目录路径
 	ListFolders(ctx context.Context, userID uint64) ([]*File, error)
+	// ListByUserID 返回用户的全部文件与文件夹，供媒体库一次性建索引
+	ListByUserID(ctx context.Context, userID uint64) ([]*File, error)
 
 	// CountByUserID 统计和批量操作
 	CountByUserID(ctx context.Context, userID uint64) (int64, error) // 统计用户的文件总数
@@ -193,6 +195,15 @@ func (r *Repository) ListFolders(ctx context.Context, userID uint64) ([]*File, e
 	}
 
 	return folders, nil
+}
+
+// ListByUserID 返回用户名下的全部文件与文件夹记录（不含软删）。
+func (r *Repository) ListByUserID(ctx context.Context, userID uint64) ([]*File, error) {
+	var files []*File
+	err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Find(&files).Error
+	return files, err
 }
 
 // escapeLikePattern 转义 LIKE 模式里的元字符，配合 ESCAPE '\' 使用。

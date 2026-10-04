@@ -191,9 +191,22 @@ func (s *fileService) SyncFilesFromDiskDebounced() {
 	})
 }
 
+// SyncStats 是一次磁盘对账的结果，供手动同步按钮向用户报告。
+type SyncStats struct {
+	Added   int `json:"added"`
+	Removed int `json:"removed"`
+	Updated int `json:"updated"`
+}
+
 // doSyncFilesFromDisk 增量同步磁盘到数据库，保留已有记录的文件 ID，
 // 否则每次 WebDAV 写操作都会重建索引、让所有按 ID 引用的分享链接失效。
-func (s *fileService) doSyncFilesFromDisk() (err error) {
+func (s *fileService) doSyncFilesFromDisk() error {
+	_, err := s.SyncFilesFromDisk()
+	return err
+}
+
+// SyncFilesFromDisk 立即执行一次磁盘对账并返回增删改数量（网盘的「从磁盘同步」按钮）。
+func (s *fileService) SyncFilesFromDisk() (stats SyncStats, err error) {
 	s.syncExecMu.Lock()
 	defer s.syncExecMu.Unlock()
 
@@ -205,19 +218,26 @@ func (s *fileService) doSyncFilesFromDisk() (err error) {
 		defer func() { s.events.SyncFinished(err) }()
 	}
 
+	// 存储根目录不可访问（外接盘没挂上、路径被删）时 Walk 会得到空列表，
+	// 对账会把整张索引当成「磁盘上已删除」清空，所以必须先拦下。
+	if info, statErr := os.Stat(s.filePath); statErr != nil || !info.IsDir() {
+		return stats, fmt.Errorf("存储目录不可访问: %s", s.filePath)
+	}
+
 	// 磁盘遍历放在事务外：Walk 是纯 IO，与索引读写无关，
 	// 没必要依赖 SQLite deferred BEGIN 的"写语句才拿锁"行为。
 	entries, err := s.scanDiskEntries()
 	if err != nil {
-		return fmt.Errorf("扫描磁盘失败: %w", err)
+		return stats, fmt.Errorf("扫描磁盘失败: %w", err)
 	}
 
 	ctx := context.Background()
 	// 对账逐条增删索引，包在事务里：中途失败整体回滚，避免留下半同步状态。
 	if err := s.repo.Transaction(ctx, func(repo fileRepository) error {
-		return s.reconcileIndexWithDisk(ctx, repo, entries)
+		stats = SyncStats{}
+		return s.reconcileIndexWithDisk(ctx, repo, entries, &stats)
 	}); err != nil {
-		return err
+		return SyncStats{}, err
 	}
 
 	// 确保固定目录存在（磁盘上没有时补建）
@@ -225,14 +245,14 @@ func (s *fileService) doSyncFilesFromDisk() (err error) {
 		logrus.Warnf("同步文件时创建固定目录失败: %v", err)
 	}
 
-	logrus.Info("磁盘文件同步完成")
-	return nil
+	logrus.Infof("磁盘文件同步完成: 新增 %d, 移除 %d, 更新 %d", stats.Added, stats.Removed, stats.Updated)
+	return stats, nil
 }
 
 // reconcileIndexWithDisk 把磁盘扫描结果与索引逐条对账：
 // 磁盘新增 → 建记录；磁盘删除 → 物理删记录；都在 → 保留 ID 只更新元数据。
 // repo 由调用方在事务内创建，保证对账要么整体成功要么整体回滚。
-func (s *fileService) reconcileIndexWithDisk(ctx context.Context, repo fileRepository, entries []diskEntry) error {
+func (s *fileService) reconcileIndexWithDisk(ctx context.Context, repo fileRepository, entries []diskEntry, stats *SyncStats) error {
 	diskDirs := make(map[string]diskEntry)
 	diskFiles := make(map[string]diskEntry)
 	for _, entry := range entries {
@@ -260,6 +280,10 @@ func (s *fileService) reconcileIndexWithDisk(ctx context.Context, repo fileRepos
 		if file.DeletedAt.Valid || (!dirOnDisk && !fileOnDisk) || typeMismatch {
 			if err := repo.HardDelete(ctx, file.ID); err != nil {
 				return fmt.Errorf("清理失效记录 %d 失败: %w", file.ID, err)
+			}
+			// 软删残留本来就不在网盘列表里，不算作用户可见的「移除」
+			if !file.DeletedAt.Valid {
+				stats.Removed++
 			}
 			continue
 		}
@@ -307,6 +331,7 @@ func (s *fileService) reconcileIndexWithDisk(ctx context.Context, repo fileRepos
 		if err := repo.Create(ctx, folder); err != nil {
 			return fmt.Errorf("添加目录记录 %s: %w", relPath, err)
 		}
+		stats.Added++
 		dirIDByPath[relPath] = fmt.Sprintf("%d", folder.ID)
 	}
 
@@ -322,6 +347,7 @@ func (s *fileService) reconcileIndexWithDisk(ctx context.Context, repo fileRepos
 				if err := repo.Update(ctx, file); err != nil {
 					return fmt.Errorf("更新文件记录 %s: %w", relPath, err)
 				}
+				stats.Updated++
 			}
 			continue
 		}
@@ -347,6 +373,7 @@ func (s *fileService) reconcileIndexWithDisk(ctx context.Context, repo fileRepos
 		if err := repo.Create(ctx, file); err != nil {
 			return fmt.Errorf("添加文件记录 %s: %w", relPath, err)
 		}
+		stats.Added++
 	}
 
 	return nil

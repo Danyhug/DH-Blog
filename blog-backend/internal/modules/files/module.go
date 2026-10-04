@@ -72,6 +72,20 @@ func (m *Module) Service() Service {
 	return m.service
 }
 
+// Catalog is the read-only view of a user's whole drive. It is kept apart from
+// Service so that consumers which only browse (the media library) do not force
+// every Service stub to grow another method.
+type Catalog interface {
+	// ListUserFiles returns every file and folder the user owns, with
+	// StoragePath already resolved to an absolute disk path.
+	ListUserFiles(ctx context.Context, userID uint64) ([]*File, error)
+	// GetDownloadInfo returns one owned file, checked to exist on disk.
+	GetDownloadInfo(ctx context.Context, userID uint64, fileID string) (*File, error)
+}
+
+// Catalog exposes the drive-wide read view.
+func (m *Module) Catalog() Catalog { return m.service }
+
 // MigrationModels declares the database table owned by this module.
 func MigrationModels() []any {
 	return []any{&File{}}
@@ -87,6 +101,7 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 	fileAPI.PUT("/rename/:id", m.handler.RenameFile)
 	fileAPI.DELETE("/:id", m.handler.DeleteFile)
 	fileAPI.GET("/directory-tree", m.handler.GetDirectoryTree)
+	fileAPI.POST("/sync", m.handler.SyncFromDisk)
 
 	chunkAPI := fileAPI.Group("/upload/chunk")
 	chunkAPI.POST("/init", m.chunkUploadHandler.InitChunkUpload)
