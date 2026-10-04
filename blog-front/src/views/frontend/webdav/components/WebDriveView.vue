@@ -292,6 +292,7 @@ import ShareManagerModal from '../modals/ShareManagerModal.vue'
 import UploadModal from '../modals/UploadModal.vue'
 import ShareLinkPopup from '../modals/ShareLinkPopup.vue'
 import FilePreview from './FilePreview.vue'
+import { captureLayout, dissolve } from '../utils/dissolve'
 import DriveHeader from './DriveHeader.vue'
 import DriveBreadcrumb from './DriveBreadcrumb.vue'
 import ThemeToggle from '@/components/Child/ThemeToggle.vue'
@@ -1191,22 +1192,36 @@ function shareSelectedFiles() {
   selectedFiles.value.clear();
 }
 
-// 删除文件
-function deleteFile(file: FileItem) {
-  if (!file.id) return;
-
-  if (confirm(`确定要删除 ${file.name} 吗？`)) {
-    apiDeleteFile(file.id)
-      .then(() => {
-        notify.success('删除成功');
-        refreshCurrentView();
-      })
-      .catch((error: any) => {
-        console.error('删除失败:', error);
-        notify.error('删除失败');
-      });
-  }
+// 删除文件：删除成功后卡片化作粒子被风吹散，其余卡片滑过来补位
+async function deleteFile(file: FileItem) {
+  const id = file.id;
+  if (!id) return;
+  const confirmed = confirm(`确定要删除 ${file.name} 吗？`);
   closeContextMenu();
+  if (!confirmed) return;
+
+  try {
+    await apiDeleteFile(id);
+  } catch (error) {
+    console.error('删除失败:', error);
+    notify.error('删除失败');
+    return;
+  }
+  notify.success('删除成功');
+
+  const card = document.querySelector<HTMLElement>(`[data-file-id="${CSS.escape(id)}"]`);
+  if (!card) {
+    refreshCurrentView();
+    return;
+  }
+  await dissolve(card);
+  // 服务端已经删掉了，直接从列表里摘掉，不再整页重新加载（那会闪一下加载态、补位动画也就看不到了）
+  const settle = captureLayout([...card.parentElement!.children].filter((item): item is HTMLElement => item instanceof HTMLElement && item !== card));
+  apiFiles.value = apiFiles.value.filter(item => String(item.id) !== id);
+  if (searchResult.value) searchResult.value = { ...searchResult.value, files: searchResult.value.files.filter(item => String(item.id) !== id) };
+  selectedFiles.value.delete(id);
+  await nextTick();
+  settle();
 }
 
 // 显示上下文菜单
