@@ -33,6 +33,19 @@ func gormLogLevel(level string) logger.LogLevel {
 	}
 }
 
+// dsn builds the SQLite connection string.
+//
+// _txlock=immediate makes every transaction take the write lock at BEGIN.
+// With the default deferred BEGIN, a transaction that reads first holds a WAL
+// read snapshot; if any other connection commits a write before it writes
+// (access logs, media metadata and heartbeats write constantly), its first
+// write fails with SQLITE_BUSY_SNAPSHOT (517) immediately — busy_timeout
+// cannot help, because retrying would still use the stale snapshot.
+// Taking the lock up front turns that into an ordinary wait on busy_timeout.
+func dsn(path string) string {
+	return path + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(10000)&_pragma=synchronous=NORMAL&_pragma=cache_size=10000&_pragma=temp_store=memory&_txlock=immediate"
+}
+
 // Init 初始化数据库连接并执行自动迁移。
 func Init(conf *config.Config, migrationModels ...any) (*gorm.DB, error) {
 	if len(migrationModels) == 0 {
@@ -61,7 +74,7 @@ func Init(conf *config.Config, migrationModels ...any) (*gorm.DB, error) {
 	fmt.Printf("数据库文件路径: %s\n", dbPath)
 
 	// 初始化数据库连接
-	db, err := gorm.Open(sqlite.Open(dbPath+"?_pragma=journal_mode(WAL)&_pragma=busy_timeout(10000)&_pragma=synchronous=NORMAL&_pragma=cache_size=10000&_pragma=temp_store=memory"), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(dsn(dbPath)), &gorm.Config{
 		Logger: newLogger,
 	})
 	// 使用 SQLite 驱动并从配置中读取数据库文件路径
