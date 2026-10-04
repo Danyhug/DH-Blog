@@ -4,8 +4,9 @@
     <HomeIcon class="shrink-0 cursor-pointer text-[#666] dark:text-zinc-400 w-4 h-4 transition-all duration-200 hover:text-[#2a8aff]" @click="emit('navigate-root')" />
     <span :class="SEGMENT_CLASS" @click="emit('navigate-root')">我的网盘</span>
     <template v-for="(segment, index) in segments" :key="segment.id || index">
-      <ChevronRightIcon class="shrink-0 text-[#aaa] dark:text-zinc-500 w-3 h-3" />
-      <span :class="SEGMENT_CLASS" @click="emit('navigate-segment', index)">{{ segment.name }}</span>
+      <!-- 进子目录时新的一级弹出来，已有的层级按 key 保留不动 -->
+      <ChevronRightIcon class="shrink-0 text-[#aaa] dark:text-zinc-500 w-3 h-3 animate-pop-in" />
+      <span :class="[SEGMENT_CLASS, 'animate-pop-in']" @click="emit('navigate-segment', index)">{{ segment.name }}</span>
     </template>
   </nav>
 </template>

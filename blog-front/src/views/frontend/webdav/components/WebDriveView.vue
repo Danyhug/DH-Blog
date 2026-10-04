@@ -5,7 +5,8 @@
       <!-- 文件预览组件 -->
       <FilePreview v-if="showFilePreview" :file="selectedFile" @close="closeFilePreview" />
 
-      <template v-else>
+      <!-- 从预览返回时整块淡入，与预览页自己的淡入对称 -->
+      <div v-else class="flex flex-col flex-1 min-h-0 animate-fade-in">
         <DriveHeader>
           <template #left>
             <DriveBreadcrumb
@@ -54,19 +55,19 @@
               <RefreshIcon class="size-4" :class="isSyncing && 'animate-spin'" />
               {{ isSyncing ? '同步中...' : '从磁盘同步' }}
             </button>
-            <button v-if="selectedFiles.size > 0" :class="[toolbarButtonClass, primaryButtonClass]" @click="downloadSelectedFiles">
+            <button v-if="selectedFiles.size > 0" :class="[toolbarButtonClass, primaryButtonClass, 'animate-pop-in']" @click="downloadSelectedFiles">
               <UploadIcon class="size-4" transform="rotate(180)" />
               下载 ({{ selectedFiles.size }})
             </button>
-            <button v-if="selectedFiles.size > 0 && !hasFolderSelected" :class="[toolbarButtonClass, outlineButtonClass]" @click="shareSelectedFiles">
+            <button v-if="selectedFiles.size > 0 && !hasFolderSelected" :class="[toolbarButtonClass, outlineButtonClass, 'animate-pop-in']" @click="shareSelectedFiles">
               <UploadIcon class="size-4" />
               分享 ({{ selectedFiles.size }})
             </button>
-            <button v-if="selectedFiles.size === 1 && !hasFolderSelected" :class="[toolbarButtonClass, outlineButtonClass, mobileActionClass]" @click="previewSelectedFile">
+            <button v-if="selectedFiles.size === 1 && !hasFolderSelected" :class="[toolbarButtonClass, outlineButtonClass, mobileActionClass, 'animate-pop-in']" @click="previewSelectedFile">
               <FileIcon class="size-4" />
               预览
             </button>
-            <button v-if="isSingleFolderSelected" :class="[toolbarButtonClass, primaryButtonClass, mobileActionClass]" @click="enterSelectedFolder">
+            <button v-if="isSingleFolderSelected" :class="[toolbarButtonClass, primaryButtonClass, mobileActionClass, 'animate-pop-in']" @click="enterSelectedFolder">
               <FolderIcon class="size-4" />
               进入文件夹
             </button>
@@ -105,7 +106,7 @@
             <!-- 空态：搜索无结果和空目录是两种完全不同的处境，给的下一步操作也不同 -->
             <div v-else-if="filteredFiles.length === 0" key="empty"
               class="flex flex-1 flex-col items-center justify-center min-h-[300px] px-6 text-center">
-              <div class="flex items-center justify-center w-16 h-16 mb-5 rounded-full bg-[#f4f6fa] dark:bg-white/5 text-[#9aa4b2] dark:text-zinc-500">
+              <div class="flex items-center justify-center w-16 h-16 mb-5 rounded-full bg-[#f4f6fa] dark:bg-white/5 text-[#9aa4b2] dark:text-zinc-500 animate-float">
                 <SearchIcon v-if="isSearchMode" class="w-7 h-7" />
                 <FolderIcon v-else class="w-7 h-7" />
               </div>
@@ -140,7 +141,7 @@
 
               <div class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4 flex-1 bg-white dark:bg-zinc-900 overflow-visible p-[10px] [@media(max-width:768px)]:grid-cols-[repeat(auto-fill,minmax(140px,1fr))] [@media(max-width:768px)]:gap-3 [@media(max-width:768px)]:p-2 [@media(max-width:480px)]:grid-cols-[repeat(auto-fit,minmax(120px,1fr))] [@media(max-width:480px)]:gap-2 [@media(max-width:480px)]:p-[5px]">
                 <div v-for="(file, index) in filteredFiles" :key="file.id || index"
-                  class="group/file cursor-pointer rounded-lg p-[15px] transition-all duration-300 ease-[ease] relative h-[140px] flex border-2 hover:bg-[#f5f5f5] dark:hover:bg-white/5 hover:[transform:translateY(-3px)] hover:shadow-[0_5px_15px_rgba(0,0,0,0.05)] [@media(max-width:768px)]:h-[120px] [@media(max-width:768px)]:p-3 [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:h-[100px] [@media(max-width:480px)]:p-[10px] [@media(max-width:480px)]:rounded"
+                  class="group/file cursor-pointer rounded-lg p-[15px] transition-all duration-300 ease-[ease] relative h-[140px] flex border-2 hover:bg-[#f5f5f5] dark:hover:bg-white/5 hover:[transform:translateY(-3px)] hover:shadow-[0_5px_15px_rgba(0,0,0,0.05)] active:scale-[0.98] [@media(max-width:768px)]:h-[120px] [@media(max-width:768px)]:p-3 [@media(max-width:768px)]:rounded-md [@media(max-width:480px)]:h-[100px] [@media(max-width:480px)]:p-[10px] [@media(max-width:480px)]:rounded"
                   :data-file-id="file.id"
                   :class="{
                     'folder-item': file.type === 'folder',
@@ -152,7 +153,10 @@
                   @click="handleFileClick(file)"
                   @dblclick="handleFileDoubleClick(file)"
                   @contextmenu.prevent="showContextMenu($event, file)">
-                  <div class="flex flex-col items-center h-full w-full">
+                  <!-- 入场动画放在内容层而不是卡片本身：卡片的 animation 留给新上传文件的高亮脉冲，
+                       两者共用一个属性，放在一起会互相顶掉；卡片底色与容器同色，看起来就是整张卡片浮入。
+                       进目录、换搜索结果时容器按 key 重建，卡片随之错峰出现；延迟封顶，文件多时不必等太久 -->
+                  <div class="flex flex-col items-center h-full w-full animate-rise-in" :style="{ animationDelay: `${Math.min(index, 24) * 18}ms` }">
                     <div class="size-[60px] flex items-center justify-center [@media(480px<width<=768px)]:size-[50px] [@media(max-width:480px)]:size-10">
                       <FolderIcon v-if="file.type === 'folder'" class="size-10 [transition:transform_0.3s_ease] [@media(480px<width<=768px)]:size-[35px] [@media(max-width:480px)]:size-[30px] text-[#2a8aff] group-[.folder-item:hover]/file:[transform:scale(1.1)]" />
                       <component v-else-if="file.icon" :is="file.icon" class="size-10 [transition:transform_0.3s_ease] [@media(480px<width<=768px)]:size-[35px] [@media(max-width:480px)]:size-[30px]"
@@ -185,7 +189,7 @@
         <!-- 拖拽框选的选择框，fixed 定位以免受容器滚动影响 -->
         <div v-if="boxSelect.visible" class="fixed z-40 pointer-events-none border border-blue-500 bg-blue-500/20 rounded-sm"
           :style="selectionBoxStyle"></div>
-      </template>
+      </div>
     </div>
 
     <!-- 分享管理 - 按需显示 -->
@@ -193,7 +197,7 @@
 
     <!-- 上传弹窗 - 按需显示 -->
     <div v-if="showUploadModal" class="fixed top-0 left-0 w-full h-full z-[1100] flex items-center justify-center pointer-events-none">
-      <div class="fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur-[2px] z-[1101] pointer-events-auto" @click="closeUploadModal"></div>
+      <div class="fixed inset-0 bg-[rgba(0,0,0,0.5)] backdrop-blur-[2px] z-[1101] pointer-events-auto animate-fade-in" @click="closeUploadModal"></div>
       <UploadModal ref="uploadModalRef" :upload-progress="uploadProgress" @close="closeUploadModal"
         @upload="handleUploadFiles" @retry="handleRetryUpload" @cancel="handleCancelUpload" />
     </div>
@@ -202,7 +206,7 @@
     <ShareLinkPopup v-if="showShareLinkPopup" :file="selectedFile" @close="showShareLinkPopup = false" />
 
     <!-- 新建文件夹弹窗 -->
-    <div v-if="showNewFolderDialog" class="fixed inset-0 bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-[1100]" @click.self="cancelDialog">
+    <div v-if="showNewFolderDialog" class="fixed inset-0 bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-[1100] animate-fade-in" @click.self="cancelDialog">
       <div class="bg-white dark:bg-zinc-900 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-[400px] max-w-[90%] overflow-hidden animate-dialog-appear [@media(max-width:768px)]:w-[95%] [@media(max-width:768px)]:max-w-[95%] [@media(max-width:768px)]:rounded-xl [@media(max-width:480px)]:w-full [@media(max-width:480px)]:max-w-full [@media(max-width:480px)]:h-full [@media(max-width:480px)]:max-h-full [@media(max-width:480px)]:rounded-none [@media(max-width:480px)]:flex [@media(max-width:480px)]:flex-col">
         <div class="dialog-header flex justify-between items-center px-5 py-4 border-b border-[#eee] dark:border-white/10 [@media(max-width:480px)]:p-5">
           <h3 class="font-medium! m-0 text-[18px] text-[#333] dark:text-zinc-100 [@media(max-width:768px)]:text-[20px] [@media(max-width:480px)]:text-[22px]">新建文件夹</h3>
@@ -222,7 +226,7 @@
     </div>
 
     <!-- 重命名弹窗 -->
-    <div v-if="showRenameDialog" class="fixed inset-0 bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-[1100]" @click.self="cancelDialog">
+    <div v-if="showRenameDialog" class="fixed inset-0 bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-[1100] animate-fade-in" @click.self="cancelDialog">
       <div class="bg-white dark:bg-zinc-900 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] w-[400px] max-w-[90%] overflow-hidden animate-dialog-appear [@media(max-width:768px)]:w-[95%] [@media(max-width:768px)]:max-w-[95%] [@media(max-width:768px)]:rounded-xl [@media(max-width:480px)]:w-full [@media(max-width:480px)]:max-w-full [@media(max-width:480px)]:h-full [@media(max-width:480px)]:max-h-full [@media(max-width:480px)]:rounded-none [@media(max-width:480px)]:flex [@media(max-width:480px)]:flex-col">
         <div class="dialog-header flex justify-between items-center px-5 py-4 border-b border-[#eee] dark:border-white/10 [@media(max-width:480px)]:p-5">
           <h3 class="font-medium! m-0 text-[18px] text-[#333] dark:text-zinc-100 [@media(max-width:768px)]:text-[20px] [@media(max-width:480px)]:text-[22px]">重命名</h3>
@@ -258,7 +262,7 @@
     </div>
 
     <!-- 右键菜单 -->
-    <div v-if="contextMenu.show" class="fixed bg-white dark:bg-zinc-900 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] z-[1000] min-w-[180px] max-w-[250px] [@media(max-width:768px)]:rounded-xl [@media(max-width:768px)]:min-w-[200px] [@media(max-width:768px)]:shadow-[0_8px_30px_rgba(0,0,0,0.2)]" :style="contextMenuStyle">
+    <div v-if="contextMenu.show" class="fixed origin-top-left animate-pop-in bg-white dark:bg-zinc-900 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.15)] z-[1000] min-w-[180px] max-w-[250px] [@media(max-width:768px)]:rounded-xl [@media(max-width:768px)]:min-w-[200px] [@media(max-width:768px)]:shadow-[0_8px_30px_rgba(0,0,0,0.2)]" :style="contextMenuStyle">
       <ul class="list-none p-0 m-0">
         <li class="py-3 px-4 flex items-center gap-3 cursor-pointer text-[14px] hover:bg-[#f5f5f5] dark:hover:bg-white/5 [@media(max-width:768px)]:py-4 [@media(max-width:768px)]:px-5 [@media(max-width:768px)]:text-[16px] [@media(max-width:768px)]:min-h-[48px] [@media(max-width:480px)]:py-[18px] [@media(max-width:480px)]:px-[22px] [@media(max-width:480px)]:text-[17px] [@media(max-width:480px)]:min-h-[52px]" @click="openFile(contextMenu.file)">
           <FileIcon class="size-4 [@media(max-width:768px)]:size-[18px]" /> 打开
@@ -311,7 +315,7 @@ import { notify } from '@/utils/notification'
 
 // Keep the two size ranges disjoint: arbitrary media variants are sorted lexically.
 const toolbarButtonClass = `
-  flex items-center gap-[5px] py-2 px-[15px] rounded cursor-pointer text-[14px]
+  flex items-center gap-[5px] py-2 px-[15px] rounded cursor-pointer text-[14px] transition-[background-color,scale] duration-150 active:scale-[0.97]
   [@media(480px<width<=768px)]:py-[10px] [@media(480px<width<=768px)]:px-4 [@media(480px<width<=768px)]:text-[15px] [@media(480px<width<=768px)]:min-h-[44px]
   [@media(max-width:480px)]:py-3 [@media(max-width:480px)]:px-4 [@media(max-width:480px)]:text-[16px] [@media(max-width:480px)]:flex-1 [@media(max-width:480px)]:justify-center [@media(max-width:480px)]:min-h-[48px]
   [@media(max-width:768px)]:[&:nth-child(n+3):nth-last-child(-n+4)]:flex-1 [@media(max-width:768px)]:[&:nth-child(n+3):nth-last-child(-n+4)]:min-w-full [@media(max-width:768px)]:[&:nth-child(n+3):nth-last-child(-n+4)]:my-1

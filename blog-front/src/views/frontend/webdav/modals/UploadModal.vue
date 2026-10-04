@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed top-1/2 left-1/2 z-[1102] w-[450px] max-w-[95vw] bg-[rgba(255,255,255,0.95)] dark:bg-zinc-900/95 backdrop-blur-[24px] rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.2)] pointer-events-auto [transform:translate(-50%,-50%)]">
+  <div class="fixed top-1/2 left-1/2 z-[1102] animate-pop-in w-[450px] max-w-[95vw] bg-[rgba(255,255,255,0.95)] dark:bg-zinc-900/95 backdrop-blur-[24px] rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.2)] pointer-events-auto [transform:translate(-50%,-50%)]">
     <div class="p-6 max-h-[80vh] overflow-y-auto">
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-semibold! text-[1.125rem] text-[#111827] dark:text-zinc-100 m-0">文件上传</h3>

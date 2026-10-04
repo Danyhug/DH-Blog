@@ -1,5 +1,5 @@
 <template>
-  <div class="absolute top-16 left-1/2 z-[25] w-[min(560px,calc(100%-2rem))] [transform:translateX(-50%)]">
+  <div class="absolute top-16 left-1/2 z-[25] w-[min(560px,calc(100%-2rem))] [transform:translateX(-50%)] origin-top animate-pop-in">
     <div class="bg-[rgba(255,255,255,0.97)] dark:bg-zinc-900/95 backdrop-blur-[24px] rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-[rgba(255,255,255,0.2)] p-5">
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-semibold! flex items-center gap-2 m-0 text-[1rem] text-[#111827] dark:text-zinc-100 truncate">
