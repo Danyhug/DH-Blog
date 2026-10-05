@@ -112,7 +112,8 @@ const isAuthenticated = (to: any) => {
   })
 }
 
-router.beforeEach(async (to, _, next) => {
+// 不用第三个参数 next：vue-router 5 已废弃，守卫正常返回（undefined）即放行
+router.beforeEach(async (to) => {
   NProgress.start()
 
   // Before any await: the request then overlaps the site config fetch, the chunk download and the leave transition.
@@ -134,9 +135,7 @@ router.beforeEach(async (to, _, next) => {
 
   if (to.path.startsWith('/admin') || to.path.startsWith('/webdav') || to.path.startsWith('/theater')) {
     await isAuthenticated(to)
-}
-
-  next()
+  }
 })
 
 router.afterEach(() => {
