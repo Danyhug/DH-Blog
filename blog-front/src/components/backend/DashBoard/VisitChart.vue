@@ -12,8 +12,8 @@
       </div>
       <div class="chart-controls flex items-center gap-[8px]">
         <el-radio-group v-model="chartMode" size="small" class="rounded-[4px] overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.05)]" @change="handleChartModeChange">
-          <el-radio-button label="daily">按天</el-radio-button>
-          <el-radio-button label="monthly">按月</el-radio-button>
+          <el-radio-button value="daily">按天</el-radio-button>
+          <el-radio-button value="monthly">按月</el-radio-button>
         </el-radio-group>
         
         <el-select 
@@ -44,8 +44,9 @@
         </el-select>
       </div>
     </div>
-    <div class="div-item-charts" v-loading="loading">
-      <v-chart class="mt-[10px] h-[400px]" :option="option" autoresize />
+    <!-- vue-echarts 注入的未分层样式 x-vue-echarts{height:100%} 会压过 Tailwind 的 @layer utilities，高度只能给到外层 -->
+    <div class="div-item-charts mt-[10px] h-[400px]" v-loading="loading">
+      <v-chart :option="option" autoresize />
     </div>
   </div>
 </template>
@@ -231,7 +232,9 @@ const option = computed(() => {
         left: "2.2%",
         right: "3%",
         top: "5%",
-        containLabel: true,
+        // ECharts 6 removed containLabel from the default build; this is its documented equivalent
+        outerBoundsMode: "same",
+        outerBoundsContain: "axisLabel",
       },
     };
   } else {
@@ -287,7 +290,9 @@ const option = computed(() => {
         left: "2.2%",
         right: "3%",
         top: "5%",
-        containLabel: true,
+        // ECharts 6 removed containLabel from the default build; this is its documented equivalent
+        outerBoundsMode: "same",
+        outerBoundsContain: "axisLabel",
       },
     };
   }
