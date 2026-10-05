@@ -44,11 +44,11 @@
 </template>
 
 <script lang="ts">
-import { getArticleInfo } from '@/api/user';
 import { Article } from '@/types/Article.ts'
 import { Tag } from 'element-plus';
 import { useUserStore, useSystemStore } from '@/store';
-import { getArticleBg, formatDate } from '@/utils/tool';
+import { formatDate } from '@/utils/tool';
+import { articleHeaderInfo, takeArticle } from '@/utils/articlePrefetch';
 import { nextTick, watch } from 'vue';
 import router from '@/router';
 import ArticleReadingTools from '@/components/frontend/ArticleReadingTools.vue';
@@ -108,7 +108,8 @@ export default {
       return
     }
 
-    getArticleInfo(this.$route.params.id as string).then((res: Article<Tag>) => {
+    // Usually already in flight: the router starts it when the navigation begins (utils/articlePrefetch.ts)
+    takeArticle(this.$route.params.id as string).then((res: Article<Tag>) => {
       this.changeArticleInfo(res)
     }).catch(err => {
       const message = err?.response?.data?.msg || err?.message || ''
@@ -152,15 +153,7 @@ export default {
       this.authorName = article.authorName || ''
 
       // 更改pinia内容
-      this.store.homeHeaderInfo = {
-        id: this.id,
-        title: this.title,
-        created: this.created,
-        wordNum: article.wordNum || 0,
-        timConSum: article.wordNum ? (article.wordNum / 400 + 0.5).toFixed(0) : '0',
-        thumbnailUrl: getArticleBg(article.thumbnailUrl, article.id),
-        tags: article.tags
-      }
+      this.store.homeHeaderInfo = articleHeaderInfo(article)
     }
   },
   // 卸载组件时

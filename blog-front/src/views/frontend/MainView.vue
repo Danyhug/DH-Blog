@@ -41,6 +41,11 @@ const getPageList = async (animate = false) => {
 onMounted(() => {
   // 每次进入首页都按当前登录状态刷新，避免复用访客或管理员的旧列表。
   getPageList()
+  // Warm the article page chunk while the reader browses the list, so the first click doesn't wait on it.
+  // Same specifier as the router's lazy import, so it resolves to the same module.
+  const warm = () => import('@/views/frontend/ArticleView.vue')
+  if ('requestIdleCallback' in window) requestIdleCallback(warm, { timeout: 3000 })
+  else setTimeout(warm, 1500)
 })
 
 // 更新页面

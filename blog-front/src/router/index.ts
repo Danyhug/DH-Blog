@@ -1,6 +1,7 @@
 import { userCheck } from '@/api/user';
 import { useSiteStore } from '@/store';
 import { createRouter, createWebHashHistory, type RouteLocationNormalizedLoaded } from 'vue-router'
+import { prefetchArticle } from '@/utils/articlePrefetch';
 // 前端路由组件
 const ArticleView = () => import(/* webpackChunkName: "article" */ '../views/frontend/ArticleView.vue');
 const MainView = () => import(/* webpackChunkName: "main" */ '../views/frontend/MainView.vue');
@@ -113,6 +114,12 @@ const isAuthenticated = (to: any) => {
 
 router.beforeEach(async (to, _, next) => {
   NProgress.start()
+
+  // Before any await: the request then overlaps the site config fetch, the chunk download and the leave transition.
+  // LockView hands over the unlocked article via localStorage, and fetching it here would only hit the lock error.
+  if (to.name === 'ArticleInfo' && !localStorage.getItem('unlockArticle')) {
+    prefetchArticle(String(to.params.id))
+  }
 
   // 站点标题取自后台「站点设置」，只在首次导航时拉取
   const siteStore = useSiteStore()
