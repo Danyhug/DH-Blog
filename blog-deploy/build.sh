@@ -12,7 +12,9 @@ EMBED_DIR="$BACKEND_DIR/internal/frontend/dist"
 
 # 1. 准备目录
 [ ! -d "$BUILD_DIR" ] && mkdir -p "$BUILD_DIR"
-[ -d "$EMBED_DIR" ] && rm -rf "$EMBED_DIR"
+# embed 目录先占个位：go:embed all:dist 在没有任何文件时会直接报错，前端构建期间
+# 如果有人同时跑 go build 也不至于失败。真正的内容由第 3 步的 prepare-assets.sh 铺进去。
+rm -rf "$EMBED_DIR"
 mkdir -p "$EMBED_DIR"
 
 # 2. 构建前端
@@ -20,19 +22,11 @@ echo "构建前端..."
 # --frozen-lockfile：依赖与 bun.lock 不一致时直接失败，而不是悄悄装出另一套版本
 (cd "$FRONTEND_DIR" && bun install --frozen-lockfile && bun run build -- --mode production)
 
-# 3. 嵌入前端到后端
+# 3. 嵌入前端到后端（顺带把文本资源预压缩成 .gz，只留压缩版）
 echo "嵌入前端到后端..."
-cp -r "$FRONTEND_DIR/dist"/* "$EMBED_DIR/"
-
-# 预压缩文本资源：后端对接受 gzip 的浏览器直接返回 .gz（internal/frontend/embed.go 的 serveAssets），
-# 首屏 JS/CSS 传输量降到约 1/3。图片、音频本身已压缩，不再处理。-n 不写入文件名和时间戳，产物可复现。
-# 桌宠素材（pet/）里的 js/json 也一起压：/pet/ 走的是同一个 serveAssets，有 .gz 就直接发。
-echo "预压缩前端资源..."
-gzip_dirs=("$EMBED_DIR/assets")
-if [ -d "$EMBED_DIR/pet" ]; then
-    gzip_dirs+=("$EMBED_DIR/pet")
-fi
-find "${gzip_dirs[@]}" -type f \( -name '*.js' -o -name '*.css' -o -name '*.svg' -o -name '*.json' \) -exec gzip -9 -k -n {} +
+# 后端对接受 gzip 的浏览器直接返回 .gz（internal/frontend/embed.go 的 serveAssets），
+# 首屏 JS/CSS 传输量降到约 1/3；原始文件同时删掉，否则二进制里每份 JS 存两遍。
+./prepare-assets.sh "$FRONTEND_DIR/dist" "$EMBED_DIR"
 
 # 4. 多平台构建
 build_for_platform() {

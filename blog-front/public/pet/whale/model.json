@@ -722,7 +722,7 @@
     {
      "id": "hood_back",
      "tex": "cape_hood_back",
-     "src": "outfits/cape/hood_back.png",
+     "src": "outfits/cape/hood_back.webp",
      "z": 0.5,
      "parent": "headBack",
      "grid": [
@@ -787,7 +787,7 @@
     {
      "id": "hood_lining",
      "tex": "cape_hood_lining",
-     "src": "outfits/cape/hood_lining.png",
+     "src": "outfits/cape/hood_lining.webp",
      "z": 2,
      "parent": "headBack",
      "grid": [
@@ -804,7 +804,7 @@
     {
      "id": "leg_front",
      "tex": "cape_leg_front",
-     "src": "outfits/cape/leg_front.png",
+     "src": "outfits/cape/leg_front.webp",
      "z": 3,
      "parent": "legFront",
      "grid": [
@@ -821,7 +821,7 @@
     {
      "id": "leg_back",
      "tex": "cape_leg_back",
-     "src": "outfits/cape/leg_back.png",
+     "src": "outfits/cape/leg_back.webp",
      "z": 4,
      "parent": "legBack",
      "grid": [
@@ -838,7 +838,7 @@
     {
      "id": "arm_far",
      "tex": "cape_arm_far",
-     "src": "outfits/cape/arm_far.png",
+     "src": "outfits/cape/arm_far.webp",
      "z": 4.5,
      "parent": "armFar",
      "grid": [
@@ -855,7 +855,7 @@
     {
      "id": "scarf_tail_back",
      "tex": "cape_scarf_tail_back",
-     "src": "outfits/cape/scarf_tail_back.png",
+     "src": "outfits/cape/scarf_tail_back.webp",
      "z": 4.8,
      "parent": "scarfBack",
      "grid": [
@@ -872,7 +872,7 @@
     {
      "id": "skirt",
      "tex": "cape_skirt",
-     "src": "outfits/cape/skirt.png",
+     "src": "outfits/cape/skirt.webp",
      "z": 4.9,
      "parent": "skirt",
      "grid": [
@@ -889,7 +889,7 @@
     {
      "id": "skirt_sit",
      "tex": "cape_skirt_sit",
-     "src": "outfits/cape/skirt_sit.png",
+     "src": "outfits/cape/skirt_sit.webp",
      "z": 4.95,
      "parent": "skirtSit",
      "grid": [
@@ -906,7 +906,7 @@
     {
      "id": "cloak",
      "tex": "cape_cloak",
-     "src": "outfits/cape/cloak.png",
+     "src": "outfits/cape/cloak.webp",
      "z": 5,
      "parent": "waist",
      "grid": [
@@ -939,7 +939,7 @@
     {
      "id": "arm_far_end_front",
      "tex": "cape_arm_far_end_front",
-     "src": "outfits/cape/arm_far_end_front.png",
+     "src": "outfits/cape/arm_far_end_front.webp",
      "z": 5.1,
      "parent": "armFar",
      "grid": [
@@ -956,7 +956,7 @@
     {
      "id": "scarf_tail_front",
      "tex": "cape_scarf_tail_front",
-     "src": "outfits/cape/scarf_tail_front.png",
+     "src": "outfits/cape/scarf_tail_front.webp",
      "z": 5.2,
      "parent": "scarfFront",
      "grid": [
@@ -989,7 +989,7 @@
     {
      "id": "arm_near",
      "tex": "cape_arm_near",
-     "src": "outfits/cape/arm_near.png",
+     "src": "outfits/cape/arm_near.webp",
      "z": 6,
      "parent": "armNear",
      "grid": [
@@ -1006,7 +1006,7 @@
     {
      "id": "cloak_shoulder_cover",
      "tex": "cape_cloak_shoulder_cover",
-     "src": "outfits/cape/cloak_shoulder_cover.png",
+     "src": "outfits/cape/cloak_shoulder_cover.webp",
      "z": 6.1,
      "parent": "waist",
      "grid": [
@@ -1023,7 +1023,7 @@
     {
      "id": "scarf_neck",
      "tex": "cape_scarf_neck",
-     "src": "outfits/cape/scarf_neck.png",
+     "src": "outfits/cape/scarf_neck.webp",
      "z": 6.2,
      "parent": "waist",
      "grid": [
@@ -1040,7 +1040,7 @@
     {
      "id": "hood_fin_far",
      "tex": "cape_hood_fin_far",
-     "src": "outfits/cape/hood_fin_far.png",
+     "src": "outfits/cape/hood_fin_far.webp",
      "z": 7,
      "parent": "finFar",
      "grid": [
@@ -1121,7 +1121,7 @@
     {
      "id": "hood_fin_near",
      "tex": "cape_hood_fin_near",
-     "src": "outfits/cape/hood_fin_near.png",
+     "src": "outfits/cape/hood_fin_near.webp",
      "z": 11,
      "parent": "finNear",
      "grid": [
@@ -1154,7 +1154,7 @@
     {
      "id": "hood_tie_far",
      "tex": "cape_hood_tie_far",
-     "src": "outfits/cape/hood_tie_far.png",
+     "src": "outfits/cape/hood_tie_far.webp",
      "z": 13.3,
      "parent": "tieFar",
      "grid": [
@@ -1171,7 +1171,7 @@
     {
      "id": "hood_tie_near",
      "tex": "cape_hood_tie_near",
-     "src": "outfits/cape/hood_tie_near.png",
+     "src": "outfits/cape/hood_tie_near.webp",
      "z": 13.35,
      "parent": "tieNear",
      "grid": [
@@ -1188,7 +1188,7 @@
     {
      "id": "spout",
      "tex": "cape_spout",
-     "src": "outfits/cape/spout.png",
+     "src": "outfits/cape/spout.webp",
      "z": 13.45,
      "parent": "ahoge",
      "grid": [
@@ -1205,7 +1205,7 @@
     {
      "id": "hood_front",
      "tex": "cape_hood_front",
-     "src": "outfits/cape/hood_front.png",
+     "src": "outfits/cape/hood_front.webp",
      "z": 13.5,
      "parent": "headFront",
      "grid": [

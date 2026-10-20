@@ -1,8 +1,11 @@
 package frontend
 
 import (
+	"bytes"
+	"compress/gzip"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -83,6 +86,62 @@ func TestServeAssetsPrefersPrecompressed(t *testing.T) {
 	}
 }
 
+// 打包时 (blog-deploy/prepare-assets.sh) 会把原始文本文件删掉、只留 .gz，
+// 否则二进制里每份 JS 都存两遍。这样在不接受 gzip 的客户端上就得服务端解压，
+// 不然请求会直接 404。
+func TestServeAssetsInflatesForClientsWithoutGzip(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	var compressed bytes.Buffer
+	writer := gzip.NewWriter(&compressed)
+	if _, err := writer.Write([]byte("plain-js-from-gz")); err != nil {
+		t.Fatalf("gzip write: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("gzip close: %v", err)
+	}
+
+	// 只有 .gz，没有原始文件 —— 这正是发布产物的布局
+	assets := fstest.MapFS{"app.js.gz": {Data: compressed.Bytes()}}
+	router := gin.New()
+	router.GET("/assets/*filepath", serveAssets(assets))
+
+	request := func(acceptEncoding string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, "/assets/app.js", nil)
+		if acceptEncoding != "" {
+			req.Header.Set("Accept-Encoding", acceptEncoding)
+		}
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec
+	}
+
+	plainRecorder := request("")
+	if plainRecorder.Code != http.StatusOK {
+		t.Fatalf("gz-only, client without gzip: status %d", plainRecorder.Code)
+	}
+	if body := plainRecorder.Body.String(); body != "plain-js-from-gz" {
+		t.Fatalf("gz-only body: %q", body)
+	}
+	if encoding := plainRecorder.Header().Get("Content-Encoding"); encoding != "" {
+		t.Fatalf("decompressed body must not claim an encoding, got %q", encoding)
+	}
+	if contentType := plainRecorder.Header().Get("Content-Type"); !strings.HasPrefix(contentType, "text/javascript") {
+		t.Fatalf("gz-only content type: %q", contentType)
+	}
+	if vary := plainRecorder.Header().Get("Vary"); vary != "Accept-Encoding" {
+		t.Fatalf("gz-only Vary: %q", vary)
+	}
+
+	gzipRecorder := request("gzip")
+	if body := gzipRecorder.Body.String(); body != compressed.String() {
+		t.Fatalf("gzip client should still receive the compressed bytes")
+	}
+	if encoding := gzipRecorder.Header().Get("Content-Encoding"); encoding != "gzip" {
+		t.Fatalf("gzip client encoding: %q", encoding)
+	}
+}
+
 // 桌宠素材走 /pet/ 而不是 /assets/：文件名没有内容哈希，浏览器得能直接把它当 ES module 加载。
 func TestServePetPack(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -117,6 +176,16 @@ func TestServePetPack(t *testing.T) {
 	}
 	if ct := get("/pet/whale/tex/face.png").Header().Get("Content-Type"); ct != "image/png" {
 		t.Fatalf("png content type: %q", ct)
+	}
+
+	// 贴图换成了无损 WebP（blog-deploy/webp-pet.sh），类型得跟着变
+	webpPack := fstest.MapFS{"whale/tex/face.webp": {Data: []byte("webp")}}
+	webpRouter := gin.New()
+	registerPetRoutes(webpRouter, webpPack)
+	webpRecorder := httptest.NewRecorder()
+	webpRouter.ServeHTTP(webpRecorder, httptest.NewRequest(http.MethodGet, "/pet/whale/tex/face.webp", nil))
+	if ct := webpRecorder.Header().Get("Content-Type"); ct != "image/webp" {
+		t.Fatalf("webp content type: %q", ct)
 	}
 
 	// 缺文件要真 404，不能被 NoRoute 兜成 index.html

@@ -34,7 +34,7 @@
   "entry": "figure.js",
   "export": "createWhaleBody",
   "model": "model.json",
-  "thumb": "thumbs/deepseek.png",
+  "thumb": "thumbs/deepseek.webp",
   "axes": [
     {
       "id": "scheme",
@@ -58,7 +58,7 @@
             "zh": "DeepSeek",
             "en": "DeepSeek"
           },
-          "thumb": "thumbs/deepseek.png",
+          "thumb": "thumbs/deepseek.webp",
           "accent": "#4D6BFE"
         },
         {
@@ -67,7 +67,7 @@
             "zh": "DeepSeek Harness",
             "en": "DeepSeek Harness"
           },
-          "thumb": "thumbs/harness.png",
+          "thumb": "thumbs/harness.webp",
           "accent": "#555555"
         },
         {
@@ -76,7 +76,7 @@
             "zh": "ChatGPT",
             "en": "ChatGPT"
           },
-          "thumb": "thumbs/chatgpt.png",
+          "thumb": "thumbs/chatgpt.webp",
           "accent": "#303030"
         },
         {
@@ -85,7 +85,7 @@
             "zh": "Claude",
             "en": "Claude"
           },
-          "thumb": "thumbs/claude.png",
+          "thumb": "thumbs/claude.webp",
           "accent": "#D97757"
         },
         {
@@ -94,7 +94,7 @@
             "zh": "Gemini",
             "en": "Gemini"
           },
-          "thumb": "thumbs/gemini.png",
+          "thumb": "thumbs/gemini.webp",
           "accent": "#4285F4"
         },
         {
@@ -104,7 +104,7 @@
             "zh-Hant": "千問",
             "en": "Qwen"
           },
-          "thumb": "thumbs/qwen.png",
+          "thumb": "thumbs/qwen.webp",
           "accent": "#7F69F0"
         },
         {
@@ -113,7 +113,7 @@
             "zh": "Kimi",
             "en": "Kimi"
           },
-          "thumb": "thumbs/kimi.png",
+          "thumb": "thumbs/kimi.webp",
           "accent": "#007CFF"
         },
         {
@@ -122,7 +122,7 @@
             "zh": "MiniMax",
             "en": "MiniMax"
           },
-          "thumb": "thumbs/minimax.png",
+          "thumb": "thumbs/minimax.webp",
           "accent": "#D92D7A"
         }
       ]
@@ -145,7 +145,7 @@
       "options": [
         {
           "id": "maid",
-          "thumb": "thumbs/maid.png",
+          "thumb": "thumbs/maid.webp",
           "name": {
             "zh": "女仆装",
             "zh-Hant": "女僕裝",
@@ -162,7 +162,7 @@
         },
         {
           "id": "cape",
-          "thumb": "thumbs/cape.png",
+          "thumb": "thumbs/cape.webp",
           "name": {
             "zh": "冬装",
             "zh-Hant": "冬裝",

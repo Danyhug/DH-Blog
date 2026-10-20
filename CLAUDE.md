@@ -24,7 +24,7 @@ golangci-lint run ./...                            # standard 全集（errcheck/
 deadcode -test ./...                               # 全程序可达性分析（x/tools/cmd/deadcode），CI 与本地同款
 ```
 
-`golangci-lint` 与 `deadcode` 都在 CI 的 lint job 里跑，本地改完应先跑通再推。两者对 Go 1.27 都有版本下限：golangci-lint 需要 **v2.14+**（v2.12 及更早是 go1.26 编译的，不认 1.27；v2.13.x 的 importer 只认 export data v4，读不了 go1.27.2 的产物，会整段 typecheck 崩掉），`deadcode` 需要装 CI 里 pin 的那个 commit（见「已知的坑」）。
+`golangci-lint` 与 `deadcode` 都在 CI 的 lint job 里跑，本地改完应先跑通再推。两者对 Go 1.27 都有版本下限：golangci-lint 需要 **v2.14+**（v2.12 及更早是 go1.26 编译的，不认 1.27；v2.13.x 的 importer 只认 export data v4，读不了 go1.27.2 的产物，会整段 typecheck 崩掉），`deadcode` 需要 **v0.52+**（见「已知的坑」）。
 
 **编译前必须先准备嵌入目录**：`internal/frontend/dist/` 被 gitignore，而 `embed.go` 声明了 `//go:embed all:dist`。全新 checkout 直接编译会失败：
 
@@ -75,6 +75,13 @@ tsgo（TypeScript 7 的 Go 实现），所以 `vue-tsc` / `knip` 一行不用改
 cd blog-deploy && ./build.sh
 # 构建前端 → 拷进 internal/frontend/dist → 交叉编译 darwin-arm64 / windows-amd64 / linux-amd64
 ```
+
+`build.sh` 调 `prepare-assets.sh` 铺包，后者只做两件事但都会影响最终体积：
+
+1. 文本资源（js/css/svg/json，`assets/` 与 `pet/` 下）压成 `.gz` 并**删掉原始文件**。原始文件同时留在二进制里等于每份 JS 存两遍；`serveAssets` 对不接受 gzip 的客户端现场解压，所以不传原始文件也不影响兼容性。`dist` 根目录的 `vite.svg` / `manifest.json` 例外，它们走 `serveCachedFile` 的 `fs.ReadFile`。
+2. 素材包里的贴图是**无损 WebP**（见 `blog-front/public/pet/README.md`），换上游素材后要用 `blog-deploy/webp-pet.sh` 重跑一次。
+
+两者合起来把单文件产物从约 41 MB 压到约 33 MB。剩下的 22 MB 是 Go 代码本身（`pclntab` 7 MB、modernc SQLite 1.9 MB），没有低成本再砍的余地；UPX 能压到 22 MB 但 macOS 不支持、Windows 上容易被 Defender 误报，故不采用。
 
 ## 架构
 
@@ -138,7 +145,7 @@ JWT 从 `Authorization` 头（`Bearer ` 前缀可选）或 `?token=` 读取。�
 
 - 路由是 **hash 模式**（`createWebHashHistory`），URL 形如 `/#/admin/dashboard`；`/admin` 与 `/webdav` 在 `beforeEach` 里调 `userCheck()` 鉴权。
 - `src/api/*.ts` 只用 `api/axios.ts` 的实例，所以 api 函数的返回值已经是拆包后的 `data`。
-- 首页侧栏的桌宠（`components/frontend/Pet.vue`）是**运行期加载的素材包**：`public/pet/`（kit + whale，约 12MB）不经过 Vite 打包，`Pet.vue` 用 `new URL('pet/whale/', document.baseURI)` 动态 import，后端由 `internal/frontend/embed.go` 的 `/pet/*` 路由提供。换素材 = 整包替换 `public/pet/`，不动代码；`public/pet/README.md` 记了 `whale/figure.js` 相对上游的补丁。她的状态走 `composables/usePetMood.ts`，心情框 `PetMood.vue` 只读那份状态，所以替换 `Pet.vue` 不会影响它。
+- 首页侧栏的桌宠（`components/frontend/Pet.vue`）是**运行期加载的素材包**：`public/pet/`（kit + whale，约 9MB，贴图是无损 WebP）不经过 Vite 打包，`Pet.vue` 用 `new URL('pet/whale/', document.baseURI)` 动态 import，后端由 `internal/frontend/embed.go` 的 `/pet/*` 路由提供。换素材 = 整包替换 `public/pet/` 再跑 `blog-deploy/webp-pet.sh`（把 PNG 转成无损 WebP 并改写三处文件名引用），不动代码；`public/pet/README.md` 记了 `whale/figure.js` 相对上游的补丁。她的状态走 `composables/usePetMood.ts`，心情框 `PetMood.vue` 只读那份状态，所以替换 `Pet.vue` 不会影响它。
 - 点她会唱歌：`composables/usePetSing.ts` 负责 Web Audio 循环播放（`src/assets/voice/let-me-go-loop.mp3`，11.625s 的离线无缝循环，`loopEnd` 精确到采样点，**不要**换成 `<audio loop>`，MP3 帧边界会留缝）并推算当前歌词，`PetMood.vue` 在唱歌时把气泡换成歌词。改音频要同步改 `LOOP_SECONDS` 与 `LYRICS` 的时间轴（相对循环起点）。
 - Pinia store 全部集中在 `src/store/index.ts`。
 - Vue API 与 Element Plus 组件自动导入；`auto-imports.d.ts` / `components.d.ts` 是生成物但**已纳入版本管理**，变更后要一起提交。
@@ -158,6 +165,6 @@ JWT 从 `Authorization` 头（`Bearer ` 前缀可选）或 `?token=` 读取。�
 - `docs/` 里的设计文档是**实现前**写的，可能尚未落地。以代码为准（`2026-08-10-文章摘要优化与批量生成设计.md` 已实现，并按最终实现回写过一次）。
 - CI 的 lint job 跑 `bunx knip`（前端）、`golangci-lint` 与 `deadcode -test`（后端），其中 golangci-lint 需要先放好 `internal/frontend/dist` 占位文件（见上文）。
 - **Go 的 patch 版本会滑动**：`go-version: '1.27'` 这种写法会跟着 hostedtoolcache 升级。go1.27.2 把 export data 格式从 v4 提到了 v5，读不懂它的 golangci-lint 会在 typecheck 阶段报一行 `export data version 5 is greater than maximum supported version 4` 就整体失败——看着像代码问题，其实是工具链版本错配。所以 workflow 里 Go 钉到了具体 patch，golangci-lint 必须 ≥ v2.14.0。
-- `deadcode` **不能用 `@latest`**：Go 1.27 给 `math/rand/v2.Rand` 加了泛型方法 `N`，而 x/tools 的 RTA 把 `Program.MethodValue` 的结果直接喂给 `addReachable`，泛型方法那里返回 nil，于是任何依赖图里有 `math/rand/v2` 的程序（本项目就是）都会 panic 在 `visitFunc`。已发布的 v0.49.0 仍有此问题，上游已修（golang/go#77549），CI 因此 pin 在 `@v0.49.1-0.20260828025639-2e922938d07f`；等修复进了正式 tag 就能换回 `@latest`。
+- `deadcode` **别用 `@latest`**：Go 1.27 给 `math/rand/v2.Rand` 加了泛型方法 `N`，而 x/tools 的 RTA 把 `Program.MethodValue` 的结果直接喂给 `addReachable`，泛型方法那里返回 nil，于是任何依赖图里有 `math/rand/v2` 的程序（本项目就是）都会 panic 在 `visitFunc`。v0.49.0 仍有此问题，golang/go#77549 修完后 v0.52.0 正常，CI 现在写死 `v0.52.0`——写死而非 `@latest` 是为了不让上游哪天再引入同类 panic 时 CI 无故变红。
 - `blog-front/README.md` 是旧版遗留（写的是 SpringBoot + MySQL），以根 `README.md` 为准。
 - 首次启动时若 `users` 表为空，程序会在 **stdin** 交互式索要管理员用户名和密码，非交互环境下会卡住。

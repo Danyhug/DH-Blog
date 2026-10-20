@@ -30,12 +30,12 @@ jobs:
 
     steps:
       - name: ⬇️ Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: ⚙️ Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.4.3
 
       - name: 📦 Install frontend dependencies
         working-directory: ${{ env.FRONTEND_DIR }}
@@ -46,11 +46,11 @@ jobs:
         run: bunx knip
 
       - name: ⚙️ Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           # 钉住 patch：'1.27' 会跟着 hostedtoolcache 滑到 1.27.2，而 1.27.2 把 Go 的
           # export data 格式从 v4 提到了 v5，旧版 golangci-lint 读不懂会整段 typecheck 崩掉
-          go-version: '1.27.2'
+          go-version: '1.27.3'
           cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
 
       # embed 声明了 all:dist，dist 被 gitignore，不占位 golangci-lint 无法加载 internal/frontend
@@ -70,12 +70,10 @@ jobs:
       - name: 🧟 Dead code (whole-program reachability)
         working-directory: ${{ env.BACKEND_DIR }}
         run: |
-          # Go 1.27 gave math/rand/v2.Rand a generic method (N). x/tools' RTA passes
-          # Program.MethodValue straight to addReachable, and MethodValue returns nil
-          # for generic methods, so the released v0.49.0 panics on any program that
-          # reaches math/rand/v2. Fixed upstream (golang/go#77549); pinned to that
-          # commit until it lands in a tagged release, then this can go back to @latest.
-          go install golang.org/x/tools/cmd/deadcode@v0.49.1-0.20260828025639-2e922938d07f
+          # Go 1.27 给 math/rand/v2.Rand 加了泛型方法 N，x/tools 的 RTA 在 v0.49.x 会因此 panic
+          # （golang/go#77549）。修复已进入正式 tag，v0.52.0 起正常，故不再 pin 到 commit；
+          # 这里仍然写死版本而不是 @latest，免得哪天上游又引入新的 panic。
+          go install golang.org/x/tools/cmd/deadcode@v0.52.0
           $(go env GOPATH)/bin/deadcode -test ./...
 
   build-and-upload-separately:
@@ -97,12 +95,12 @@ jobs:
 
     steps:
       - name: ⬇️ Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: ⚙️ Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.4.3
 
       - name: 📦 Build Frontend
         working-directory: ${{ env.FRONTEND_DIR }}
@@ -111,10 +109,10 @@ jobs:
           bun run build -- --mode production
 
       - name: ⚙️ Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           # 与 lint job 保持同一个 patch，构建结果才可复现
-          go-version: '1.27.2'
+          go-version: '1.27.3'
           cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
 
       - name: 🔍 Verify Go dependencies
@@ -126,23 +124,18 @@ jobs:
       # 关键步骤：100% 模拟 sh 脚本的文件复制和构建逻辑
       - name: 🏗️ Build Go Binary
         run: |
-          # 1. 定义 sh 脚本中的嵌入目录路径: .../internal/frontend/dist
           EMBED_DIR="${{ env.BACKEND_DIR }}/internal/frontend/dist"
-          
-          # 2. 与 build.sh 一致：先清空再创建，避免旧产物残留
-          rm -rf "$EMBED_DIR"
-          mkdir -p "$EMBED_DIR"
-          
-          # 3. 将前端构建产物复制到这个目录中
-          cp -r "${{ env.FRONTEND_DIR }}/dist/"* "$EMBED_DIR/"
-          
-          # 4. 创建最终的输出目录
+
+          # 1. 与 build.sh 共用同一个铺包脚本：拷贝 + 预压缩成 .gz（只留压缩版）
+          bash blog-deploy/prepare-assets.sh "${{ env.FRONTEND_DIR }}/dist" "$EMBED_DIR"
+
+          # 2. 创建最终的输出目录
           mkdir -p build
 
-          # 5. 构建 Go 二进制文件（nomsgpack: 排除 gin v1.12 无条件引入的 msgpack 绑定及 ugorji codec，省约 5MB，与 blog-deploy/build.sh 保持一致）
+          # 3. 构建 Go 二进制文件（nomsgpack: 排除 gin v1.12 无条件引入的 msgpack 绑定及 ugorji codec，省约 5MB，与 blog-deploy/build.sh 保持一致）
           (cd ${{ env.BACKEND_DIR }} && GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -tags nomsgpack -trimpath -ldflags="-s -w" -o ../build/${{ env.BINARY_NAME }}${{ matrix.ext }} ./cmd/blog-backend)
           
-          # 6. 验证嵌入成功（可选）
+          # 4. 验证嵌入成功（可选）
           if [ -f "build/${{ env.BINARY_NAME }}${{ matrix.ext }}" ]; then
             echo "✅ 构建成功: build/${{ env.BINARY_NAME }}${{ matrix.ext }}"
           else
@@ -151,7 +144,7 @@ jobs:
           fi
 
       - name: ⬆️ Upload Binary Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.BINARY_NAME }}${{ matrix.ext }}
           path: build/${{ env.BINARY_NAME }}${{ matrix.ext }}
@@ -167,15 +160,15 @@ jobs:
     
     steps:
       - name: ⬇️ Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         
       - name: 📥 Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: build
           
       - name: 🏷️ Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             build/${{ env.BINARY_NAME }}-darwin-arm64/${{ env.BINARY_NAME }}-darwin-arm64

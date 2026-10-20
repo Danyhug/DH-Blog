@@ -1,8 +1,11 @@
 package frontend
 
 import (
+	"bytes"
+	"compress/gzip"
 	"embed"
 	"fmt"
+	"io"
 	"io/fs"
 	"mime"
 	"net/http"
@@ -153,6 +156,10 @@ func cacheControlMiddleware() gin.HandlerFunc {
 // accepts gzip. The binary has no reverse proxy guaranteed in front of it, and
 // the JS bundles are megabytes uncompressed, so this cuts first-load transfer
 // to roughly a third without spending CPU on every request.
+//
+// The packaging step deletes the originals of compressed text files, so the
+// embedded FS usually holds "<name>.gz" and nothing else; clients that do not
+// accept gzip get the bytes decompressed here instead of a 404.
 func serveAssets(assets fs.FS) gin.HandlerFunc {
 	fileServer := http.FileServer(http.FS(assets))
 	return func(c *gin.Context) {
@@ -166,20 +173,44 @@ func serveAssets(assets fs.FS) gin.HandlerFunc {
 		if err == nil {
 			// Caches must keep the two encodings apart, even for clients that got the plain file.
 			c.Header("Vary", "Accept-Encoding")
+			contentType := mime.TypeByExtension(path.Ext(name))
+			if contentType == "" {
+				contentType = "application/octet-stream"
+			}
 			if acceptsGzip(c.GetHeader("Accept-Encoding")) {
-				contentType := mime.TypeByExtension(path.Ext(name))
-				if contentType == "" {
-					contentType = "application/octet-stream"
-				}
 				c.Header("Content-Encoding", "gzip")
 				c.Data(http.StatusOK, contentType, gz)
 				return
+			}
+
+			// Plain sibling wins when it is still around (an unpackaged dist), because
+			// serving it costs less than re-inflating. Only when it is gone — which is
+			// the shipped layout — do we decompress on the fly.
+			if _, statErr := fs.Stat(assets, name); statErr != nil {
+				plain, gunzipErr := gunzipBytes(gz)
+				if gunzipErr != nil {
+					logrus.WithError(gunzipErr).WithField("file", name).Warn("静态资源解压失败")
+				} else {
+					c.Data(http.StatusOK, contentType, plain)
+					return
+				}
 			}
 		}
 
 		c.Request.URL.Path = "/" + name
 		fileServer.ServeHTTP(c.Writer, c.Request)
 	}
+}
+
+// gunzipBytes inflates a precompressed asset for the rare client that does not
+// send Accept-Encoding: gzip.
+func gunzipBytes(compressed []byte) ([]byte, error) {
+	reader, err := gzip.NewReader(bytes.NewReader(compressed))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = reader.Close() }()
+	return io.ReadAll(reader)
 }
 
 // acceptsGzip reports whether an Accept-Encoding header allows gzip.
@@ -234,6 +265,8 @@ func getContentType(filePath string) string {
 		return "image/svg+xml"
 	case strings.HasSuffix(ext, ".png"):
 		return "image/png"
+	case strings.HasSuffix(ext, ".webp"):
+		return "image/webp"
 	case strings.HasSuffix(ext, ".jpg"), strings.HasSuffix(ext, ".jpeg"):
 		return "image/jpeg"
 	case strings.HasSuffix(ext, ".ico"):

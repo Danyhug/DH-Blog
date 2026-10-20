@@ -106,8 +106,8 @@ export async function createWhaleFigure(base = new URL('./', import.meta.url), o
     const set = { tex: {}, img: {} };
     loaded[key] = Promise.all([
       // an outfit's own part is drawn in the outfit's colours
-      ...partsOf(of).map(async p => { set.tex[p.tex] = await load(asset(p.src || `${dir}tex/${p.tex}.png`)); }),
-      ...featNames.map(async n => { set.img[n] = await load(asset(`${dir}feat/${n}.png`)); }),
+      ...partsOf(of).map(async p => { set.tex[p.tex] = await load(asset(p.src || `${dir}tex/${p.tex}.webp`)); }),
+      ...featNames.map(async n => { set.img[n] = await load(asset(`${dir}feat/${n}.webp`)); }),
     ]).then(() => (ready[key] = set));
     return loaded[key];
   }
