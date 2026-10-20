@@ -5,7 +5,7 @@ import { Tag } from "@/types/Tag";
 import request from "@/api/axios";
 import { UserLogin } from "@/types/User";
 import { OverView } from "@/types/DashBoard";
-import { Comment } from "@/types/Comment";
+import { Comment, CommentPageResult } from "@/types/Comment";
 import { SiteConfig } from "@/types/SystemConfig";
 
 /**
@@ -116,11 +116,16 @@ export const addComment = (comment: Comment) => {
 
 /**
  * 获取评论列表
+ *
+ * 分页按顶层评论切，回复随父评论一起返回。pageSize 不传就用后端的默认值（10）。
  */
 export const getCommentList = (
-  articleId: number
-): Promise<PageResult<Comment>> => {
-  return request.get("/comment/" + articleId);
+  articleId: number,
+  page = 1,
+  pageSize?: number
+): Promise<CommentPageResult> => {
+  const query = pageSize ? `?page=${page}&pageSize=${pageSize}` : `?page=${page}`;
+  return request.get(`/comment/${articleId}${query}`);
 };
 
 /**

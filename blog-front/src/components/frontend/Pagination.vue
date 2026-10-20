@@ -1,7 +1,7 @@
 <template>
   <nav v-if="totalPages > 1"
     class="flex items-center justify-center w-full min-h-[46px] dark:[--grey-6:#aaa] dark:[--grey-4:#555] py-1 [@media(max-width:600px)]:min-h-[42px] [@media(max-width:600px)]:py-[2px]"
-    aria-label="文章列表分页">
+    :aria-label="label">
     <el-pagination
       v-model:current-page="currentPageModel"
       class="article-pagination"
@@ -20,9 +20,13 @@ interface PaginationProps {
   currentPage: number
   pageSize: number
   total: number
+  // 这个组件首页文章列表和文章评论都在用，读屏时需要说清是哪一处翻页
+  label?: string
 }
 
-const props = defineProps<PaginationProps>()
+const props = withDefaults(defineProps<PaginationProps>(), {
+  label: '文章列表分页'
+})
 const emit = defineEmits<{
   'update:currentPage': [page: number]
 }>()

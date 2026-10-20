@@ -27,6 +27,12 @@ var (
 	ErrCommentClosed       = errors.New("评论功能已关闭")
 )
 
+// 文章详情页评论分页的边界。顶页给大一点没意义：一页渲染太多条，头像请求会把首屏拖慢。
+const (
+	defaultCommentPageSize = 10
+	maxCommentPageSize     = 100
+)
+
 type handler struct {
 	repo   *Repository
 	policy CommentPolicy
@@ -74,12 +80,25 @@ func (h *handler) GetCommentsByArticleID(c *gin.Context) {
 		return
 	}
 
-	comments, total, err := h.repo.GetCommentsByArticleID(int(articleID))
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	pageSize, err := strconv.Atoi(c.DefaultQuery("pageSize", strconv.Itoa(defaultCommentPageSize)))
+	if err != nil || pageSize < 1 || pageSize > maxCommentPageSize {
+		pageSize = defaultCommentPageSize
+	}
+
+	comments, rootTotal, commentTotal, err := h.repo.GetCommentsByArticleID(int(articleID), page, pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Error(fmt.Sprintf("%s: %v", ErrGetCommentsFailed.Error(), err)))
 		return
 	}
-	c.JSON(http.StatusOK, response.SuccessWithData(response.Page(total, int64(10), comments)))
+	c.JSON(http.StatusOK, response.SuccessWithData(CommentPage{
+		Total:     commentTotal,
+		RootTotal: rootTotal,
+		List:      comments,
+	}))
 }
 
 func (h *handler) DeleteComment(c *gin.Context) {

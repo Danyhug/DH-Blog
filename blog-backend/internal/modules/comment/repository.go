@@ -28,19 +28,84 @@ func (r *Repository) AddComment(comment *Comment) error {
 	return nil
 }
 
-// GetCommentsByArticleID 根据文章 ID 获取公开评论列表。
-func (r *Repository) GetCommentsByArticleID(articleID int) ([]*Comment, int64, error) {
-	var allComments []Comment
-	var total int64
-
-	if err := r.db.Model(&Comment{}).Where("article_id = ? AND is_public = ?", articleID, 1).Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("查询文章评论总数失败: %w", err)
+// GetCommentsByArticleID 按顶层评论分页获取某篇文章的公开评论树。
+//
+// 返回三个值：当前页的评论树、顶层评论总数（分页用）、公开评论总数（「N 条评论」用）。
+// 分页只切顶层，回复跟着自己的父评论整棵带出来 —— 把一条对话切到两页读者接不上。
+func (r *Repository) GetCommentsByArticleID(articleID, page, pageSize int) ([]*Comment, int64, int64, error) {
+	if page < 1 {
+		page = 1
 	}
-	if err := r.db.Where("article_id = ? AND is_public = ?", articleID, 1).Order("created_at desc").Find(&allComments).Error; err != nil {
-		return nil, 0, fmt.Errorf("查询文章评论失败: %w", err)
+	if pageSize < 1 {
+		pageSize = 10
 	}
 
-	return buildCommentTreeAndSort(allComments), total, nil
+	// 父评论被隐藏时，它的公开子回复在树上没有爹，buildCommentTreeAndSort 会把它们当成顶层评论。
+	// 分页要和这个口径一致，否则这几条回复在「顶层」里数不到、翻页时凭空消失。
+	var hiddenIDs []int
+	if err := r.db.Model(&Comment{}).
+		Where("article_id = ? AND is_public = ?", articleID, 0).
+		Pluck("id", &hiddenIDs).Error; err != nil {
+		return nil, 0, 0, fmt.Errorf("查询隐藏评论失败: %w", err)
+	}
+
+	rootScope := func() *gorm.DB {
+		query := r.db.Model(&Comment{}).Where("article_id = ? AND is_public = ?", articleID, 1)
+		if len(hiddenIDs) > 0 {
+			return query.Where("(parent_id IS NULL OR parent_id = 0 OR parent_id IN ?)", hiddenIDs)
+		}
+		return query.Where("(parent_id IS NULL OR parent_id = 0)")
+	}
+
+	var rootTotal int64
+	if err := rootScope().Count(&rootTotal).Error; err != nil {
+		return nil, 0, 0, fmt.Errorf("查询顶层评论总数失败: %w", err)
+	}
+
+	var roots []Comment
+	if err := rootScope().
+		Order("created_at desc").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Find(&roots).Error; err != nil {
+		return nil, 0, 0, fmt.Errorf("查询顶层评论失败: %w", err)
+	}
+
+	// 逐层把当前页这几棵树的子孙捞出来，层数等于树深，不会扫全表。
+	// seen 兜住 parent_id 被写出环的脏数据，否则这里会死循环。
+	collected := append([]Comment(nil), roots...)
+	seen := make(map[int]struct{}, len(roots))
+	frontier := make([]int, 0, len(roots))
+	for _, root := range roots {
+		seen[root.ID] = struct{}{}
+		frontier = append(frontier, root.ID)
+	}
+	for len(frontier) > 0 {
+		var children []Comment
+		if err := r.db.Where("is_public = ? AND parent_id IN ?", 1, frontier).
+			Order("created_at desc").
+			Find(&children).Error; err != nil {
+			return nil, 0, 0, fmt.Errorf("查询评论回复失败: %w", err)
+		}
+		frontier = make([]int, 0, len(children))
+		for _, child := range children {
+			if _, ok := seen[child.ID]; ok {
+				continue
+			}
+			seen[child.ID] = struct{}{}
+			collected = append(collected, child)
+			frontier = append(frontier, child.ID)
+		}
+	}
+
+	var commentTotal int64
+	if err := r.db.Model(&Comment{}).
+		Where("article_id = ? AND is_public = ?", articleID, 1).
+		Count(&commentTotal).Error; err != nil {
+		return nil, 0, 0, fmt.Errorf("查询文章评论总数失败: %w", err)
+	}
+
+	return buildCommentTreeAndSort(collected), rootTotal, commentTotal, nil
 }
 
 // DeleteComment 递归删除评论及其所有子评论。

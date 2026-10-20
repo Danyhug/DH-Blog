@@ -25,6 +25,18 @@ type ArticleCommentGroup struct {
 	Children          []*Comment     `json:"children"`
 }
 
+// CommentPage 是文章详情页的评论分页结果。
+//
+// 分页切的是**顶层评论**，因为一条对话连同它的回复必须留在同一页，切成两段读者接不上。
+// 所以这里有两个总数：
+//   - Total：这篇文章的全部公开评论数（父子都算），给「N 条评论」用；
+//   - RootTotal：顶层评论数，给分页器算页数用。
+type CommentPage struct {
+	Total     int64      `json:"total"`
+	RootTotal int64      `json:"rootTotal"`
+	List      []*Comment `json:"list"`
+}
+
 // TableName 保持原有数据库表名。
 func (Comment) TableName() string {
 	return "comments"
