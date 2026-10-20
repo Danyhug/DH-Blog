@@ -260,11 +260,13 @@
                     这里改的是供应商级的总数。按密钥配了额度之后，选路比的是每把密钥自己的计数，
                     要校准请用上面每把密钥的「额度」。
                 </p>
-                <p v-if="active.upstreamCostMicroUsd !== null" class="hint">
+                <!-- 外层 v-if="active" 已经保证有值，这里写 active?. 是因为模板插槽会生成独立的
+                     渲染函数，TS 的空值收窄跨不进去（vue-tsc 3.3.13 起会报 TS18048） -->
+                <p v-if="active?.upstreamCostMicroUsd != null" class="hint">
                     <el-icon class="align-middle mr-1">
                         <InfoFilled />
                     </el-icon>
-                    当前选路用的是上游报的花费 {{ formatUsd(active.upstreamCostMicroUsd) }}，本地数字仅供参考。
+                    当前选路用的是上游报的花费 {{ formatUsd(active?.upstreamCostMicroUsd ?? 0) }}，本地数字仅供参考。
                 </p>
                 <el-form label-position="top">
                     <el-row :gutter="14">
@@ -300,7 +302,7 @@
                                 Service Key
                                 <span class="ml-[6px] text-[12px] font-normal text-[#a8b0bd]">
                                     留空表示不修改；已保存的值只显示掩码
-                                    <template v-if="active.usageServiceKeyMasked">（当前 {{ active.usageServiceKeyMasked }}）</template>
+                                    <template v-if="active?.usageServiceKeyMasked">（当前 {{ active?.usageServiceKeyMasked }}）</template>
                                 </span>
                             </template>
                             <el-input v-model="usageCredential.serviceKey" placeholder="在 Exa 控制台创建 team service key"
@@ -311,7 +313,7 @@
                                 :disabled="!usageCredential.serviceKey.trim()" @click="onSaveUsageCredential">
                                 保存
                             </el-button>
-                            <el-button v-if="active.usageServiceKeyMasked" size="small" plain
+                            <el-button v-if="active?.usageServiceKeyMasked" size="small" plain
                                 :loading="savingCredential" @click="onClearUsageCredential">
                                 清除 Service Key
                             </el-button>
