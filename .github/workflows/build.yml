@@ -48,7 +48,9 @@ jobs:
       - name: ⚙️ Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.27'
+          # 钉住 patch：'1.27' 会跟着 hostedtoolcache 滑到 1.27.2，而 1.27.2 把 Go 的
+          # export data 格式从 v4 提到了 v5，旧版 golangci-lint 读不懂会整段 typecheck 崩掉
+          go-version: '1.27.2'
           cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
 
       # embed 声明了 all:dist，dist 被 gitignore，不占位 golangci-lint 无法加载 internal/frontend
@@ -61,7 +63,8 @@ jobs:
       - name: 🔍 golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.13
+          # 必须 >= v2.14.0：v2.13.x 的 importer 只认 export data v4，读不了 Go 1.27.2 的产物
+          version: v2.15.0
           working-directory: ${{ env.BACKEND_DIR }}
 
       - name: 🧟 Dead code (whole-program reachability)
@@ -110,7 +113,8 @@ jobs:
       - name: ⚙️ Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.27'
+          # 与 lint job 保持同一个 patch，构建结果才可复现
+          go-version: '1.27.2'
           cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
 
       - name: 🔍 Verify Go dependencies

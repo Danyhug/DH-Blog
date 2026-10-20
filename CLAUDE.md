@@ -24,7 +24,7 @@ golangci-lint run ./...                            # standard 全集（errcheck/
 deadcode -test ./...                               # 全程序可达性分析（x/tools/cmd/deadcode），CI 与本地同款
 ```
 
-`golangci-lint` 与 `deadcode` 都在 CI 的 lint job 里跑，本地改完应先跑通再推。两者对 Go 1.27 都有版本下限：golangci-lint 需要 **v2.13+**（v2.12 及更早的官方二进制是 go1.26 编译的，不认 1.27），`deadcode` 需要装 CI 里 pin 的那个 commit（见「已知的坑」）。
+`golangci-lint` 与 `deadcode` 都在 CI 的 lint job 里跑，本地改完应先跑通再推。两者对 Go 1.27 都有版本下限：golangci-lint 需要 **v2.14+**（v2.12 及更早是 go1.26 编译的，不认 1.27；v2.13.x 的 importer 只认 export data v4，读不了 go1.27.2 的产物，会整段 typecheck 崩掉），`deadcode` 需要装 CI 里 pin 的那个 commit（见「已知的坑」）。
 
 **编译前必须先准备嵌入目录**：`internal/frontend/dist/` 被 gitignore，而 `embed.go` 声明了 `//go:embed all:dist`。全新 checkout 直接编译会失败：
 
@@ -157,6 +157,7 @@ JWT 从 `Authorization` 头（`Bearer ` 前缀可选）或 `?token=` 读取。�
 
 - `docs/` 里的设计文档是**实现前**写的，可能尚未落地。以代码为准（`2026-08-10-文章摘要优化与批量生成设计.md` 已实现，并按最终实现回写过一次）。
 - CI 的 lint job 跑 `bunx knip`（前端）、`golangci-lint` 与 `deadcode -test`（后端），其中 golangci-lint 需要先放好 `internal/frontend/dist` 占位文件（见上文）。
+- **Go 的 patch 版本会滑动**：`go-version: '1.27'` 这种写法会跟着 hostedtoolcache 升级。go1.27.2 把 export data 格式从 v4 提到了 v5，读不懂它的 golangci-lint 会在 typecheck 阶段报一行 `export data version 5 is greater than maximum supported version 4` 就整体失败——看着像代码问题，其实是工具链版本错配。所以 workflow 里 Go 钉到了具体 patch，golangci-lint 必须 ≥ v2.14.0。
 - `deadcode` **不能用 `@latest`**：Go 1.27 给 `math/rand/v2.Rand` 加了泛型方法 `N`，而 x/tools 的 RTA 把 `Program.MethodValue` 的结果直接喂给 `addReachable`，泛型方法那里返回 nil，于是任何依赖图里有 `math/rand/v2` 的程序（本项目就是）都会 panic 在 `visitFunc`。已发布的 v0.49.0 仍有此问题，上游已修（golang/go#77549），CI 因此 pin 在 `@v0.49.1-0.20260828025639-2e922938d07f`；等修复进了正式 tag 就能换回 `@latest`。
 - `blog-front/README.md` 是旧版遗留（写的是 SpringBoot + MySQL），以根 `README.md` 为准。
 - 首次启动时若 `users` 表为空，程序会在 **stdin** 交互式索要管理员用户名和密码，非交互环境下会卡住。
