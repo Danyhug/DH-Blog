@@ -65,6 +65,9 @@ bunx knip                # 死代码检查（未使用的文件/导出/依赖）
 tsgo（TypeScript 7 的 Go 实现），所以 `vue-tsc` / `knip` 一行不用改就能跑快约 2 倍。
 运行时 stderr 会打一行 `▎ TNB ACTIVE` 表示生效；**没有这行说明回落到原生 typescript 了**。
 纯 TS 文件想直接跑 `tsc` 也行，但 `.vue` 的模板检查仍然只能靠 `vue-tsc`。
+编辑器不会自动跟上，`.vscode/settings.json` 已把 `js/ts.tsdk.path` 指到
+`blog-front/node_modules/typescript/lib`；如果状态栏显示的还是 VS Code 自带版本，
+执行一次「TypeScript: Select TypeScript Version → Use Workspace Version」。
 
 ### 打包发布
 

@@ -1,0 +1,9 @@
+{
+  // 编辑器默认用自己的 TypeScript，只有指到这里才会用仓库装的那份。
+  // 我们装的是 typescript-native-bridge（tsgo 引擎，见 CLAUDE.md），
+  // 不然命令行跑得飞快、编辑器却还是慢的原生 TS，两边诊断还可能不一致。
+  // 路径相对于工作区根目录，所以带 blog-front 前缀。
+  "js/ts.tsdk.path": "blog-front/node_modules/typescript/lib",
+  // 打开本项目时若还没切过来，弹一次提示
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true
+}
