@@ -51,11 +51,7 @@
           </li>
         </ul>
 
-        <div v-if="totalPages > 1" class="flex items-center justify-center gap-4 pt-3 border-t border-[rgba(229,231,235,0.8)] dark:border-white/10 mt-2">
-          <button class="bg-transparent border-none p-0 text-[0.75rem] cursor-pointer [&:hover:not(:disabled)]:underline disabled:cursor-not-allowed text-[#2563eb] dark:text-blue-400 disabled:text-[#9ca3af]" :disabled="page <= 1" @click="goPage(page - 1)">上一页</button>
-          <span class="text-[0.75rem] text-[#6b7280] dark:text-zinc-400">{{ page }} / {{ totalPages }}</span>
-          <button class="bg-transparent border-none p-0 text-[0.75rem] cursor-pointer [&:hover:not(:disabled)]:underline disabled:cursor-not-allowed text-[#2563eb] dark:text-blue-400 disabled:text-[#9ca3af]" :disabled="page >= totalPages" @click="goPage(page + 1)">下一页</button>
-        </div>
+        <SharePager :page="page" :total-pages="totalPages" label="分享链接分页" @update:page="goPage" />
       </div>
 
       <!-- 访问日志 -->
@@ -71,11 +67,7 @@
           </li>
         </ul>
 
-        <div v-if="logsTotalPages > 1" class="flex items-center justify-center gap-4 pt-3 border-t border-[rgba(229,231,235,0.8)] dark:border-white/10 mt-2">
-          <button class="bg-transparent border-none p-0 text-[0.75rem] cursor-pointer [&:hover:not(:disabled)]:underline disabled:cursor-not-allowed text-[#2563eb] dark:text-blue-400 disabled:text-[#9ca3af]" :disabled="logsPage <= 1" @click="goLogsPage(logsPage - 1)">上一页</button>
-          <span class="text-[0.75rem] text-[#6b7280] dark:text-zinc-400">{{ logsPage }} / {{ logsTotalPages }}</span>
-          <button class="bg-transparent border-none p-0 text-[0.75rem] cursor-pointer [&:hover:not(:disabled)]:underline disabled:cursor-not-allowed text-[#2563eb] dark:text-blue-400 disabled:text-[#9ca3af]" :disabled="logsPage >= logsTotalPages" @click="goLogsPage(logsPage + 1)">下一页</button>
-        </div>
+        <SharePager :page="logsPage" :total-pages="logsTotalPages" label="分享访问日志分页" @update:page="goLogsPage" />
       </div>
     </div>
   </div>
@@ -84,6 +76,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { XIcon } from '../utils/icons'
+import SharePager from './SharePager.vue'
 import {
   listShares, deleteShare, getShareAccessLogs,
   formatFileSize, generateShareLink,
