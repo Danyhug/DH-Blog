@@ -1,5 +1,5 @@
 <template>
-  <el-table :data="props.tags">
+  <el-table :data="pagedTags">
     <el-table-column prop="id" label="编号" />
     <el-table-column prop="name" label="名称" />
     <el-table-column prop="createTime" label="发布时间" />
@@ -14,6 +14,11 @@
       </template>
     </el-table-column>
   </el-table>
+
+  <div v-if="props.tags.length > PAGE_SIZE" class="mt-3 flex justify-end">
+    <el-pagination v-model:current-page="page" :page-size="PAGE_SIZE" :total="props.tags.length"
+      layout="total, prev, pager, next" />
+  </div>
 
   <el-dialog v-model="visible" title="标签管理" :show-close="false" width="300">
     <el-form :model="tag" size="small" label-position="top">
@@ -33,7 +38,7 @@
 <script lang="ts" setup>
 import { addTag, updateTag, deleteTag } from '@/api/admin';
 import { Tag } from '@/types/Tag'
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useAdminStore } from '@/store/index'
 import { notify } from '@/utils/notification'
 
@@ -44,6 +49,19 @@ const store = useAdminStore()
 
 const tag = reactive<Tag>({
   name: '',
+})
+
+// 和分类表一样，分页只在前端做：store.tags 还要给分类弹窗的「绑定标签」用，改服务端分页会牵连它
+const PAGE_SIZE = 10
+const page = ref(1)
+const pagedTags = computed(() => {
+  const start = (page.value - 1) * PAGE_SIZE
+  return props.tags.slice(start, start + PAGE_SIZE)
+})
+
+watch(() => props.tags.length, (length) => {
+  const lastPage = Math.max(1, Math.ceil(length / PAGE_SIZE))
+  if (page.value > lastPage) page.value = lastPage
 })
 
 // 新增
