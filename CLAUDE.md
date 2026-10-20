@@ -60,6 +60,12 @@ bunx knip                # 死代码检查（未使用的文件/导出/依赖）
 
 统一用 **bun**，不要用 npm/pnpm。前端没有测试框架，也没有 ESLint/Prettier 配置。
 
+`typescript` 装的是 `typescript-native-bridge`（别名安装，见 `package.json` 的
+`"typescript": "npm:typescript-native-bridge@…"`）：它保留 TS 的经典编译器 API，但把类型检查器换成
+tsgo（TypeScript 7 的 Go 实现），所以 `vue-tsc` / `knip` 一行不用改就能跑快约 2 倍。
+运行时 stderr 会打一行 `▎ TNB ACTIVE` 表示生效；**没有这行说明回落到原生 typescript 了**。
+纯 TS 文件想直接跑 `tsc` 也行，但 `.vue` 的模板检查仍然只能靠 `vue-tsc`。
+
 ### 打包发布
 
 ```bash
