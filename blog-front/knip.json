@@ -4,5 +4,8 @@
     "index.html",
     "components.d.ts"
   ],
+  "ignore": [
+    "public/pet/**"
+  ],
   "ignoreDependencies": []
 }

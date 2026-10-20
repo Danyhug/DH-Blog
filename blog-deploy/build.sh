@@ -26,8 +26,13 @@ cp -r "$FRONTEND_DIR/dist"/* "$EMBED_DIR/"
 
 # 预压缩文本资源：后端对接受 gzip 的浏览器直接返回 .gz（internal/frontend/embed.go 的 serveAssets），
 # 首屏 JS/CSS 传输量降到约 1/3。图片、音频本身已压缩，不再处理。-n 不写入文件名和时间戳，产物可复现。
+# 桌宠素材（pet/）里的 js/json 也一起压：/pet/ 走的是同一个 serveAssets，有 .gz 就直接发。
 echo "预压缩前端资源..."
-find "$EMBED_DIR/assets" -type f \( -name '*.js' -o -name '*.css' -o -name '*.svg' -o -name '*.json' \) -exec gzip -9 -k -n {} +
+gzip_dirs=("$EMBED_DIR/assets")
+if [ -d "$EMBED_DIR/pet" ]; then
+    gzip_dirs+=("$EMBED_DIR/pet")
+fi
+find "${gzip_dirs[@]}" -type f \( -name '*.js' -o -name '*.css' -o -name '*.svg' -o -name '*.json' \) -exec gzip -9 -k -n {} +
 
 # 4. 多平台构建
 build_for_platform() {

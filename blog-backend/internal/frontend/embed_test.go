@@ -82,3 +82,45 @@ func TestServeAssetsPrefersPrecompressed(t *testing.T) {
 		t.Fatalf("missing file should be 404, got %d", rec.Code)
 	}
 }
+
+// 桌宠素材走 /pet/ 而不是 /assets/：文件名没有内容哈希，浏览器得能直接把它当 ES module 加载。
+func TestServePetPack(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	pack := fstest.MapFS{
+		"kit/body.js":        {Data: []byte("export const a = 1;")},
+		"whale/model.json":   {Data: []byte(`{"id":"whale"}`)},
+		"whale/tex/face.png": {Data: []byte("png")},
+	}
+	router := gin.New()
+	registerPetRoutes(router, pack)
+
+	get := func(path string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		return rec
+	}
+
+	rec := get("/pet/kit/body.js")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("/pet/kit/body.js: %d", rec.Code)
+	}
+	// 浏览器只接受 text/javascript 或 application/javascript 的模块，别的类型会拒绝执行
+	if ct := rec.Header().Get("Content-Type"); ct != "text/javascript; charset=utf-8" && ct != "application/javascript" {
+		t.Fatalf("module content type: %q", ct)
+	}
+	if cc := rec.Header().Get("Cache-Control"); cc != "public, max-age=600" {
+		t.Fatalf("cache control: %q", cc)
+	}
+
+	if ct := get("/pet/whale/model.json").Header().Get("Content-Type"); ct != "application/json" {
+		t.Fatalf("json content type: %q", ct)
+	}
+	if ct := get("/pet/whale/tex/face.png").Header().Get("Content-Type"); ct != "image/png" {
+		t.Fatalf("png content type: %q", ct)
+	}
+
+	// 缺文件要真 404，不能被 NoRoute 兜成 index.html
+	if rec = get("/pet/whale/missing.png"); rec.Code != http.StatusNotFound {
+		t.Fatalf("missing pet file should be 404, got %d", rec.Code)
+	}
+}

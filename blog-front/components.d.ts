@@ -93,6 +93,7 @@ declare module 'vue' {
     Odometer: typeof import('@element-plus/icons-vue')['Odometer']
     Pagination: typeof import('./src/components/frontend/Pagination.vue')['default']
     Pet: typeof import('./src/components/frontend/Pet.vue')['default']
+    PetMood: typeof import('./src/components/frontend/PetMood.vue')['default']
     ProviderLogo: typeof import('./src/components/backend/gateway/ProviderLogo.vue')['default']
     Publish: typeof import('./src/components/frontend/Comment/Publish.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

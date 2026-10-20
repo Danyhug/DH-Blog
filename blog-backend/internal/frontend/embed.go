@@ -55,6 +55,11 @@ func RegisterFrontendRoutes(router *gin.Engine, conf *config.Config) {
 		"/manifest.json": "dist/manifest.json",
 	}
 
+	// 桌宠素材（front/public/pet）：整包替换即可更新，包内多了少了文件都不需要改后端路由
+	if petFS, subErr := fs.Sub(distFS, "dist/pet"); subErr == nil {
+		registerPetRoutes(router, petFS)
+	}
+
 	for route, filePath := range staticFiles {
 		route := route // 创建局部变量
 		filePath := filePath
@@ -117,6 +122,18 @@ window.__SERVER_CONFIG__ = {
 	})
 
 	logrus.Info("前端静态文件路由注册成功（已启用缓存优化）")
+}
+
+// registerPetRoutes 把桌宠素材包挂在 /pet/ 下。文件名没有内容哈希（素材是整包替换的），
+// 所以缓存时间给得比 assets 短：换了素材，刷新就能看到。
+func registerPetRoutes(router *gin.Engine, petFS fs.FS) {
+	serve := serveAssets(petFS)
+	handler := func(c *gin.Context) {
+		c.Header("Cache-Control", "public, max-age=600")
+		serve(c)
+	}
+	router.GET("/pet/*filepath", handler)
+	router.HEAD("/pet/*filepath", handler)
 }
 
 // cacheControlMiddleware 为静态文件添加缓存控制头的中间件
