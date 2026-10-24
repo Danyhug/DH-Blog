@@ -78,6 +78,7 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 	admin := routes.AdminAPI.Group("/gateway")
 	admin.GET("/settings", m.handler.getSettings)
 	admin.PUT("/settings", m.handler.updateSettings)
+	admin.POST("/settings/model-router/test", m.handler.testModelRouter)
 	admin.GET("/providers", m.handler.listProviders)
 	admin.PUT("/providers/:name", m.handler.updateProvider)
 	admin.POST("/providers/:name/test", m.handler.testProvider)

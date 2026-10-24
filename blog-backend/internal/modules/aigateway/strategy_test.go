@@ -74,12 +74,18 @@ func TestAdminSettingsExposeStrategyOptions(t *testing.T) {
 			t.Errorf("缺少调度方式 %q", value)
 		}
 	}
-	// 模型调度必须被标记为未接入，否则界面会谎称它已经生效
-	if byValue[string(StrategyModel)].Implemented {
-		t.Error("模型调度尚未接入，不应标记为已实现")
+	for value, option := range byValue {
+		if !option.Implemented {
+			t.Errorf("调度方式 %q 应标记为已实现", value)
+		}
 	}
-	if !byValue[string(StrategyBalanced)].Implemented || !byValue[string(StrategyPriority)].Implemented {
-		t.Error("负载均衡与按优先级应标记为已实现")
+	router := view.ModelRouter
+	if router.Configured || router.APIKeyMasked != "" {
+		t.Errorf("未配置时判断模型不应显示为已配置: %+v", router)
+	}
+	if router.Backend != string(RouterBackendJev) || router.MinConfidence != defaultMinConfidence ||
+		router.Prompt != defaultRouterPrompt || len(router.Backends) != 2 {
+		t.Errorf("判断模型默认值不对: %+v", router)
 	}
 }
 
@@ -173,11 +179,19 @@ func TestStrategyChangesLiveRouting(t *testing.T) {
 		t.Errorf("按优先级下 provider = %q, 期望优先级更高的 brave", got)
 	}
 
-	// 模型调度未接入，行为应与负载均衡一致
+	// 没配判断模型不能启用模型判断，否则显示的和实际执行的又不是一回事
+	if err := module.service.SetStrategy(ctx, StrategyModel); err != ErrModelRouterNotConfigured {
+		t.Fatalf("SetStrategy(model) 错误 = %v, 期望 ErrModelRouterNotConfigured", err)
+	}
+
+	// Jev 选了配额紧张的 brave：模型判断下应听它的
+	server := httptest.NewServer(jevAnswer("brave", 0.9))
+	t.Cleanup(server.Close)
+	configureTestJev(t, module, server.URL)
 	if err := module.service.SetStrategy(ctx, StrategyModel); err != nil {
 		t.Fatalf("SetStrategy 返回错误: %v", err)
 	}
-	if got := search("model 模式"); got != "tavily" {
-		t.Errorf("模型调度未接入时 provider = %q, 应回落到负载均衡的结果", got)
+	if got := search("model 模式"); got != "brave" {
+		t.Errorf("模型判断下 provider = %q, 期望 Jev 选中的 brave", got)
 	}
 }

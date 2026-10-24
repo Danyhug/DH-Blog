@@ -75,7 +75,11 @@ type routeInput struct {
 	NeedAnswer       bool
 	NeedRawContent   bool
 	PrefersOperators bool
-	Candidates       []candidate
+	// Preferred is the provider the model strategy's classifier picked for
+	// this query, or "" when it was not asked or was not confident enough.
+	// Only StrategyModel reads it.
+	Preferred  string
+	Candidates []candidate
 }
 
 // route returns the providers to try, best first. The caller attempts them in
@@ -118,20 +122,12 @@ func route(in routeInput) ([]string, error) {
 // autoOrder applies the whitelist, capability, health and quota filters, then
 // ranks what is left according to the configured strategy.
 func autoOrder(in routeInput, exclude string) []string {
-	pool := make([]candidate, 0, len(in.Candidates))
-	for _, item := range in.Candidates {
-		if item.Name == exclude || !allowedBy(in.Allowed, item.Name) || !usable(item) {
-			continue
-		}
-		pool = append(pool, item)
-	}
-
-	pool = filterCapability(pool, in)
+	pool := eligible(in, exclude)
 	if len(pool) == 0 {
 		return nil
 	}
 
-	sortByStrategy(pool, in.Strategy, in.PrefersOperators)
+	sortByStrategy(pool, in)
 
 	order := make([]string, 0, len(pool))
 	for _, item := range pool {
@@ -140,10 +136,24 @@ func autoOrder(in routeInput, exclude string) []string {
 	return order
 }
 
+// eligible is every candidate auto routing may pick, before ordering. The model
+// strategy asks its classifier to choose among exactly this set, so it can never
+// steer a request towards a provider the filters would have dropped.
+func eligible(in routeInput, exclude string) []candidate {
+	pool := make([]candidate, 0, len(in.Candidates))
+	for _, item := range in.Candidates {
+		if item.Name == exclude || !allowedBy(in.Allowed, item.Name) || !usable(item) {
+			continue
+		}
+		pool = append(pool, item)
+	}
+	return filterCapability(pool, in)
+}
+
 // sortByStrategy orders the surviving candidates. Every comparison ends in a
 // name tiebreak so routing stays deterministic for identical configurations.
-func sortByStrategy(pool []candidate, strategy RoutingStrategy, prefersOperators bool) {
-	switch strategy {
+func sortByStrategy(pool []candidate, in routeInput) {
+	switch in.Strategy {
 	case StrategyPriority:
 		// Primary/standby: the configured order is the whole answer, and
 		// remaining quota only matters for the exclusion done earlier. An
@@ -157,24 +167,39 @@ func sortByStrategy(pool []candidate, strategy RoutingStrategy, prefersOperators
 			}
 			return pool[i].Name < pool[j].Name
 		})
+	case StrategyModel:
+		// The classifier only says who suits the query best. Everything behind
+		// its pick — and the whole order when it abstained — is the balanced
+		// ranking, so a fallback still lands where quota is.
+		sortBalanced(pool, in.PrefersOperators)
+		for index, item := range pool {
+			if item.Name == in.Preferred {
+				copy(pool[1:index+1], pool[:index])
+				pool[0] = item
+				break
+			}
+		}
 	default:
-		// Balanced, and the not-yet-built model strategy, which falls back
-		// here rather than inventing an ordering it cannot justify.
-		totals := balanceTotalsOf(pool)
-		sort.SliceStable(pool, func(i, j int) bool {
-			left := score(pool[i], totals, prefersOperators)
-			right := score(pool[j], totals, prefersOperators)
-			if left != right {
-				return left > right
-			}
-			// An untouched pool scores everyone alike, so weight is what says
-			// who should be picked first; the name keeps it deterministic.
-			if pool[i].Weight != pool[j].Weight {
-				return pool[i].Weight > pool[j].Weight
-			}
-			return pool[i].Name < pool[j].Name
-		})
+		sortBalanced(pool, in.PrefersOperators)
 	}
+}
+
+// sortBalanced ranks by score(), falling back to weight and then name.
+func sortBalanced(pool []candidate, prefersOperators bool) {
+	totals := balanceTotalsOf(pool)
+	sort.SliceStable(pool, func(i, j int) bool {
+		left := score(pool[i], totals, prefersOperators)
+		right := score(pool[j], totals, prefersOperators)
+		if left != right {
+			return left > right
+		}
+		// An untouched pool scores everyone alike, so weight is what says
+		// who should be picked first; the name keeps it deterministic.
+		if pool[i].Weight != pool[j].Weight {
+			return pool[i].Weight > pool[j].Weight
+		}
+		return pool[i].Name < pool[j].Name
+	})
 }
 
 // filterCapability drops providers that cannot express what the caller asked

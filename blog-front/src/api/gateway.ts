@@ -246,7 +246,7 @@ export interface GatewayStats {
   quotas: GatewayQuota[]
 }
 
-/** 调度方式；model 尚未接入，选中后后端仍按 balanced 执行 */
+/** 调度方式；model 由判断模型（Jev 或 OpenAI 兼容模型）挑首选供应商，需先配置判断模型 */
 export type RoutingStrategy = 'balanced' | 'priority' | 'model'
 
 export interface StrategyOption {
@@ -257,17 +257,100 @@ export interface StrategyOption {
   implemented: boolean
 }
 
+export type RouterBackend = 'jev' | 'openai'
+
+/** 判断模型的一种后端；默认值与说明由后端下发，免得界面和实际行为对不上 */
+interface RouterBackendOption {
+  value: RouterBackend
+  label: string
+  description: string
+  endpointHint: string
+  defaultEndpoint: string
+  defaultModel: string
+  defaultTimeoutMs: number
+  keyRequired: boolean
+}
+
+/** 最近一次判断的结果，只存在内存里，重启或切换模型后清空 */
+interface ModelRouterStatus {
+  lastProvider: string
+  lastConfidence: number
+  /** false 表示模型没给出概率（聊天模型不支持 logprobs），此时阈值不生效 */
+  lastCalibrated: boolean
+  lastModel: string
+  /** 是否被采用；未采用时这次仍按负载均衡调度 */
+  lastAccepted: boolean
+  lastDecidedAt: string | null
+  lastError: string
+  lastErrorAt: string | null
+}
+
+export interface ModelRouterSettings {
+  backend: RouterBackend
+  backends: RouterBackendOption[]
+  configured: boolean
+  /** 永远只有脱敏后的 Key */
+  apiKeyMasked: string
+  endpoint: string
+  model: string
+  /** 实际生效的提示词（未修改时就是默认值） */
+  prompt: string
+  defaultPrompt: string
+  /** 各供应商实际生效的描述 */
+  profiles: Record<string, string>
+  defaultProfiles: Record<string, string>
+  minConfidence: number
+  timeoutMs: number
+  status: ModelRouterStatus
+}
+
+/**
+ * apiKey 传空串表示不修改；但切换类型或改了接口地址时，没填新 Key 会清空旧 Key，
+ * 免得一家的 Key 被发到另一家
+ */
+export interface ModelRouterUpdate {
+  backend?: RouterBackend
+  endpoint?: string
+  apiKey?: string
+  clearApiKey?: boolean
+  model?: string
+  prompt?: string
+  profiles?: Record<string, string>
+  minConfidence?: number
+  /** 0 表示使用该后端的默认超时 */
+  timeoutMs?: number
+}
+
 export interface GatewaySettings {
   routingStrategy: RoutingStrategy
   strategies: StrategyOption[]
+  modelRouter: ModelRouterSettings
+}
+
+export interface RouterProbeResult {
+  query: string
+  backend: RouterBackend
+  model: string
+  choice: string
+  confidence: number
+  calibrated: boolean
+  probabilities: Record<string, number> | null
+  accepted: boolean
+  inputTokens: number
+  latencyMs: number
 }
 
 export function getGatewaySettings(): Promise<GatewaySettings> {
   return request({ url: '/admin/gateway/settings', method: 'get' })
 }
 
-export function updateGatewaySettings(data: { routingStrategy: RoutingStrategy }) {
+export function updateGatewaySettings(data: { routingStrategy?: RoutingStrategy; modelRouter?: ModelRouterUpdate }) {
   return request({ url: '/admin/gateway/settings', method: 'put', data })
+}
+
+/** 用已保存的判断模型配置判断一次，不发起真实搜索 */
+export function testModelRouter(query: string): Promise<RouterProbeResult> {
+  return request({ url: '/admin/gateway/settings/model-router/test', method: 'post', data: { query } })
 }
 
 export function getGatewayProviders(): Promise<GatewayProvider[]> {

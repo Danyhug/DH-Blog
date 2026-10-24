@@ -313,13 +313,13 @@ func TestAdminRevealAPIKeyReturnsSamePlaintext(t *testing.T) {
 	}
 }
 
-func TestAdminRejectsUnimplementedStrategy(t *testing.T) {
+func TestAdminRejectsModelStrategyWithoutClassifier(t *testing.T) {
 	module := newGatewayTestModule(t, gatewayTestConfig{})
 	engine := newTestEngine(module)
 
 	recorder := doAdmin(engine, http.MethodPut, "/api/admin/gateway/settings", `{"routingStrategy":"model"}`)
 	if recorder.Code != http.StatusBadRequest {
-		t.Fatalf("状态码 = %d, 未接入的调度方式应被拒绝", recorder.Code)
+		t.Fatalf("状态码 = %d, 没配判断模型时应拒绝启用模型判断", recorder.Code)
 	}
 	if got := module.service.Strategy(); got != StrategyBalanced {
 		t.Fatalf("调度方式 = %q, 不该被改动", got)

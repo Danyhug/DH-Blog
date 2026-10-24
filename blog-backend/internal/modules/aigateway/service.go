@@ -397,6 +397,9 @@ type Service struct {
 	mu       sync.RWMutex
 	runtimes map[string]*providerRuntime
 	strategy RoutingStrategy
+	// router is the classifier behind StrategyModel. It has its own lock: a
+	// decision is an outbound call and must not hold s.mu while it runs.
+	router *modelRouter
 
 	rates *minuteCounters
 	now   func() time.Time
@@ -419,6 +422,7 @@ func newService(deps Dependencies) (*Service, error) {
 		options:    deps.Options,
 		runtimes:   make(map[string]*providerRuntime),
 		rates:      newMinuteCounters(),
+		router:     &modelRouter{},
 		now:        time.Now,
 		events:     deps.Events,
 		logs:       make(chan RequestLog, logBuffer),
@@ -462,6 +466,11 @@ func (s *Service) Reload(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	routerSettings, err := s.loadModelRouterSettings(ctx)
+	if err != nil {
+		return err
+	}
+	s.router.configure(routerSettings, s.httpClient)
 
 	byProvider := make(map[string][]ProviderKey, len(providers))
 	for _, credential := range credentials {
@@ -1097,6 +1106,45 @@ func usageSubjects(runtimes []*providerRuntime) []string {
 
 // plan asks the routing policy for an ordered candidate list.
 func (s *Service) plan(ctx context.Context, key *APIKey, req SearchRequest, now time.Time) ([]string, error) {
+	candidates, err := s.candidates(ctx, now)
+	if err != nil {
+		return nil, err
+	}
+
+	input := routeInput{
+		Requested:        req.Provider,
+		Strategy:         s.Strategy(),
+		AllowFallback:    req.AllowFallback,
+		NeedAnswer:       req.IncludeAnswer,
+		NeedRawContent:   req.IncludeRawContent,
+		PrefersOperators: queryUsesOperators(req.Query),
+		Candidates:       candidates,
+	}
+	if key != nil {
+		input.Allowed = key.AllowedList()
+	}
+	// The classifier is only consulted when the gateway is choosing: an
+	// explicit provider is the caller's decision, and its fallback is ranked
+	// on quota like any other.
+	if input.Strategy == StrategyModel && isAutoProvider(req.Provider) {
+		input.Preferred = s.router.decide(ctx, req, eligible(input, ""))
+	}
+
+	order, err := route(input)
+	if err != nil {
+		return nil, routeGatewayError(err)
+	}
+	return order, nil
+}
+
+func isAutoProvider(requested string) bool {
+	requested = strings.ToLower(strings.TrimSpace(requested))
+	return requested == "" || requested == providerAuto
+}
+
+// candidates is every enabled provider with a usable credential, as the
+// routing policy sees it.
+func (s *Service) candidates(ctx context.Context, now time.Time) ([]candidate, error) {
 	runtimes := s.snapshot()
 	if len(runtimes) == 0 {
 		return nil, newGatewayError(http.StatusServiceUnavailable, "no_provider_available", ErrNoProviderAvailable.Error(), "")
@@ -1136,25 +1184,7 @@ func (s *Service) plan(ctx context.Context, key *APIKey, req SearchRequest, now 
 		item.UpstreamHeadroom, item.HasUpstreamHeadroom = runtime.upstreamHeadroom(now)
 		candidates = append(candidates, item)
 	}
-
-	input := routeInput{
-		Requested:        req.Provider,
-		Strategy:         s.Strategy(),
-		AllowFallback:    req.AllowFallback,
-		NeedAnswer:       req.IncludeAnswer,
-		NeedRawContent:   req.IncludeRawContent,
-		PrefersOperators: queryUsesOperators(req.Query),
-		Candidates:       candidates,
-	}
-	if key != nil {
-		input.Allowed = key.AllowedList()
-	}
-
-	order, err := route(input)
-	if err != nil {
-		return nil, routeGatewayError(err)
-	}
-	return order, nil
+	return candidates, nil
 }
 
 func (s *Service) checkKeyQuota(ctx context.Context, key *APIKey, now time.Time) error {
@@ -1260,15 +1290,17 @@ func (s *Service) SetStrategy(ctx context.Context, strategy RoutingStrategy) err
 	if !strategy.Valid() {
 		return fmt.Errorf("未知的调度方式: %s", strategy)
 	}
+	// Without a classifier every decision abstains, so the setting would read
+	// "model" while routing is balanced — the mismatch this check prevents.
+	if strategy == StrategyModel && !s.router.configured() {
+		return ErrModelRouterNotConfigured
+	}
 	if err := s.repo.saveSetting(ctx, SettingKeyRoutingStrategy, string(strategy)); err != nil {
 		return err
 	}
 	s.mu.Lock()
 	s.strategy = strategy
 	s.mu.Unlock()
-	if !strategy.Implemented() {
-		logrus.Warnf("调度方式已设为 %s，但该方式尚未接入，实际仍按 %s 执行", strategy, StrategyBalanced)
-	}
 	return nil
 }
 

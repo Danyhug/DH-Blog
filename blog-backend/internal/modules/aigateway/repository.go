@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"dh-blog/internal/platform/search"
@@ -236,7 +237,15 @@ func (r *repository) touchProviderKey(ctx context.Context, id int, now time.Time
 
 func defaultSettings() map[string]string {
 	return map[string]string{
-		SettingKeyRoutingStrategy: string(StrategyBalanced),
+		SettingKeyRoutingStrategy:     string(StrategyBalanced),
+		SettingKeyRouterBackend:       string(RouterBackendJev),
+		SettingKeyRouterEndpoint:      "",
+		SettingKeyRouterAPIKey:        "",
+		SettingKeyRouterModel:         "",
+		SettingKeyRouterPrompt:        "",
+		SettingKeyRouterProfiles:      "",
+		SettingKeyRouterMinConfidence: strconv.FormatFloat(defaultMinConfidence, 'f', -1, 64),
+		SettingKeyRouterTimeoutMS:     "0",
 	}
 }
 

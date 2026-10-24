@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"dh-blog/internal/platform/ai"
+	"dh-blog/internal/platform/jev"
 	"dh-blog/internal/response"
 
 	"github.com/gin-gonic/gin"
@@ -40,6 +42,7 @@ type strategyOption struct {
 type settingsView struct {
 	RoutingStrategy string           `json:"routingStrategy"`
 	Strategies      []strategyOption `json:"strategies"`
+	ModelRouter     modelRouterView  `json:"modelRouter"`
 }
 
 func strategyOptions() []strategyOption {
@@ -53,8 +56,9 @@ func strategyOptions() []strategyOption {
 			Description: "严格按优先级从小到大选择，同级看权重。剩余配额只用于剔除已用尽的供应商。适合主备场景。",
 		},
 		{
-			Value: string(StrategyModel), Label: "模型判断", Implemented: false,
-			Description: "由小模型判断问题适合交给哪家。尚未接入，选中后实际仍按负载均衡执行。",
+			Value: string(StrategyModel), Label: "模型判断", Implemented: true,
+			Description: "由判断模型（Jev 或 OpenAI 兼容模型）判断问题适合交给哪家并优先尝试，其余按负载均衡排序；" +
+				"模型不够确定、超时或调用失败时整体按负载均衡执行。需先在下方配置判断模型。",
 		},
 	}
 }
@@ -63,11 +67,13 @@ func (h *handler) getSettings(c *gin.Context) {
 	adminSuccess(c, settingsView{
 		RoutingStrategy: string(h.service.Strategy()),
 		Strategies:      strategyOptions(),
+		ModelRouter:     h.service.modelRouterView(),
 	})
 }
 
 type updateSettingsRequest struct {
-	RoutingStrategy *string `json:"routingStrategy"`
+	RoutingStrategy *string            `json:"routingStrategy"`
+	ModelRouter     *ModelRouterUpdate `json:"modelRouter"`
 }
 
 func (h *handler) updateSettings(c *gin.Context) {
@@ -75,6 +81,15 @@ func (h *handler) updateSettings(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		adminFailure(c, http.StatusBadRequest, "参数错误: "+err.Error())
 		return
+	}
+
+	// The classifier first, so one request can configure it and switch to the
+	// model strategy that needs it.
+	if req.ModelRouter != nil {
+		if err := h.service.UpdateModelRouter(c.Request.Context(), *req.ModelRouter); err != nil {
+			adminFailure(c, http.StatusBadRequest, err.Error())
+			return
+		}
 	}
 	if req.RoutingStrategy == nil {
 		adminSuccess(c)
@@ -86,17 +101,47 @@ func (h *handler) updateSettings(c *gin.Context) {
 		adminFailure(c, http.StatusBadRequest, "未知的调度方式: "+*req.RoutingStrategy)
 		return
 	}
-	// 没接入的调度方式一律拒收。之前允许保存再回落到负载均衡，等于后台显示的和
-	// 实际执行的不是一回事，还不如直接不让选。
-	if !strategy.Implemented() {
-		adminFailure(c, http.StatusBadRequest, "该调度方式尚未接入，暂时不能启用")
-		return
-	}
 	if err := h.service.SetStrategy(c.Request.Context(), strategy); err != nil {
-		adminFailure(c, http.StatusInternalServerError, err.Error())
+		status := http.StatusInternalServerError
+		if errors.Is(err, ErrModelRouterNotConfigured) {
+			status = http.StatusBadRequest
+		}
+		adminFailure(c, status, err.Error())
 		return
 	}
 	adminSuccess(c)
+}
+
+type testModelRouterRequest struct {
+	Query string `json:"query"`
+}
+
+// testModelRouter runs one real classification so an operator can check the
+// configuration and see how a query would be routed before trusting the model
+// with traffic.
+func (h *handler) testModelRouter(c *gin.Context) {
+	var req testModelRouterRequest
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			adminFailure(c, http.StatusBadRequest, "参数错误: "+err.Error())
+			return
+		}
+	}
+	result, err := h.service.TestModelRouter(c.Request.Context(), req.Query)
+	if err != nil {
+		var jevErr *jev.Error
+		var chatErr *ai.APIError
+		switch {
+		case errors.Is(err, ErrModelRouterNotConfigured), errors.Is(err, ErrNoProviderAvailable):
+			adminFailure(c, http.StatusBadRequest, err.Error())
+		case errors.As(err, &jevErr), errors.As(err, &chatErr):
+			adminFailure(c, http.StatusBadGateway, "判断模型调用失败: "+err.Error())
+		default:
+			adminFailure(c, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+	adminSuccess(c, result)
 }
 
 // providerKeyView is one upstream credential as the admin page sees it.

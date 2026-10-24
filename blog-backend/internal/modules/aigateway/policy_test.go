@@ -309,8 +309,8 @@ func TestRoutePriorityStrategyBreaksTiesByWeight(t *testing.T) {
 	}
 }
 
-func TestRouteModelStrategyFallsBackToBalanced(t *testing.T) {
-	// 模型调度尚未接入，必须退回一个说得清的顺序，而不是自造一个
+func TestRouteModelStrategyWithoutPickMatchesBalanced(t *testing.T) {
+	// Jev 弃权（不确定、超时、未配置）时必须退回一个说得清的顺序，而不是自造一个
 	rich := healthyCandidate("tavily", tavilyCapability)
 	rich.MonthlyQuota, rich.Used = 1000, 10
 
@@ -330,25 +330,79 @@ func TestRouteModelStrategyFallsBackToBalanced(t *testing.T) {
 	}
 }
 
+func TestRouteModelStrategyPutsPickFirst(t *testing.T) {
+	rich := healthyCandidate("tavily", tavilyCapability)
+	rich.MonthlyQuota, rich.Used = 1000, 10
+	middle := healthyCandidate("exa", exaCapability)
+	middle.MonthlyQuota, middle.Used = 1000, 500
+	poor := healthyCandidate("brave", braveCapability)
+	poor.MonthlyQuota, poor.Used = 2000, 1990
+
+	order, err := route(routeInput{
+		Strategy:   StrategyModel,
+		Preferred:  "brave",
+		Candidates: []candidate{poor, middle, rich},
+	})
+	if err != nil {
+		t.Fatalf("route 返回错误: %v", err)
+	}
+	// 模型的选择排第一，其余仍按负载均衡：回退要落在配额充足的那家
+	if want := []string{"brave", "tavily", "exa"}; !reflect.DeepEqual(order, want) {
+		t.Fatalf("顺序 = %v, 期望 %v", order, want)
+	}
+}
+
+func TestRouteModelPickCannotBypassFilters(t *testing.T) {
+	exhausted := healthyCandidate("brave", braveCapability)
+	exhausted.MonthlyQuota, exhausted.Used = 100, 100
+
+	order, err := route(routeInput{
+		Strategy:   StrategyModel,
+		Preferred:  "brave",
+		Candidates: []candidate{exhausted, healthyCandidate("tavily", tavilyCapability)},
+	})
+	if err != nil {
+		t.Fatalf("route 返回错误: %v", err)
+	}
+	if !reflect.DeepEqual(order, []string{"tavily"}) {
+		t.Fatalf("顺序 = %v, 配额用尽的供应商不能因为模型选中而复活", order)
+	}
+}
+
+func TestRoutePreferredIgnoredOutsideModelStrategy(t *testing.T) {
+	rich := healthyCandidate("tavily", tavilyCapability)
+	rich.MonthlyQuota, rich.Used = 1000, 10
+	poor := healthyCandidate("brave", braveCapability)
+	poor.MonthlyQuota, poor.Used = 2000, 1990
+
+	order, err := route(routeInput{
+		Strategy:   StrategyBalanced,
+		Preferred:  "brave",
+		Candidates: []candidate{poor, rich},
+	})
+	if err != nil {
+		t.Fatalf("route 返回错误: %v", err)
+	}
+	if order[0] != "tavily" {
+		t.Fatalf("首选 = %q, 负载均衡不应理会模型的选择", order[0])
+	}
+}
+
 func TestRoutingStrategyValidity(t *testing.T) {
 	tests := []struct {
-		strategy    RoutingStrategy
-		valid       bool
-		implemented bool
+		strategy RoutingStrategy
+		valid    bool
 	}{
-		{StrategyBalanced, true, true},
-		{StrategyPriority, true, true},
-		{StrategyModel, true, false},
-		{RoutingStrategy("random"), false, true},
-		{RoutingStrategy(""), false, true},
+		{StrategyBalanced, true},
+		{StrategyPriority, true},
+		{StrategyModel, true},
+		{RoutingStrategy("random"), false},
+		{RoutingStrategy(""), false},
 	}
 	for _, test := range tests {
 		t.Run(string(test.strategy), func(t *testing.T) {
 			if got := test.strategy.Valid(); got != test.valid {
 				t.Errorf("Valid() = %v, 期望 %v", got, test.valid)
-			}
-			if got := test.strategy.Implemented(); got != test.implemented {
-				t.Errorf("Implemented() = %v, 期望 %v", got, test.implemented)
 			}
 		})
 	}

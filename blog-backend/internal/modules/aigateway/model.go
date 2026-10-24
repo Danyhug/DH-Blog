@@ -455,9 +455,10 @@ const (
 	// only to exclude an exhausted provider. This is primary/standby: the
 	// primary keeps serving as long as it is usable.
 	StrategyPriority RoutingStrategy = "priority"
-	// StrategyModel will ask a small model which provider suits the query.
-	// Not implemented yet; the engine falls back to StrategyBalanced and the
-	// admin page says so rather than pretending the routing changed.
+	// StrategyModel asks a classifier model (Jev or any OpenAI-compatible chat
+	// model) which provider suits the query, and tries that one first. The rest
+	// of the order, and the whole order whenever the model is unsure or
+	// unreachable, is StrategyBalanced.
 	StrategyModel RoutingStrategy = "model"
 )
 
@@ -471,9 +472,6 @@ func (s RoutingStrategy) Valid() bool {
 	}
 }
 
-// Implemented reports whether the strategy actually changes routing today.
-func (s RoutingStrategy) Implemented() bool { return s != StrategyModel }
-
 // Setting is a gateway-wide key/value option, mirroring the shape the system
 // module uses for blog settings.
 type Setting struct {
@@ -486,6 +484,20 @@ func (Setting) TableName() string { return "ai_gateway_settings" }
 
 // SettingKeyRoutingStrategy stores the active RoutingStrategy.
 const SettingKeyRoutingStrategy = "routing_strategy"
+
+// Settings for the classifier behind StrategyModel. They live with the gateway
+// rather than in the system module's AI settings: the classifier may not be a
+// chat model at all, and nothing else in the blog calls it.
+const (
+	SettingKeyRouterBackend       = "model_router_backend"
+	SettingKeyRouterEndpoint      = "model_router_endpoint"
+	SettingKeyRouterAPIKey        = "model_router_api_key"
+	SettingKeyRouterModel         = "model_router_model"
+	SettingKeyRouterPrompt        = "model_router_prompt"
+	SettingKeyRouterProfiles      = "model_router_profiles"
+	SettingKeyRouterMinConfidence = "model_router_min_confidence"
+	SettingKeyRouterTimeoutMS     = "model_router_timeout_ms"
+)
 
 // MigrationModels declares the database tables owned by this module.
 func MigrationModels() []any {
