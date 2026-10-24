@@ -84,7 +84,7 @@ func webSearchDescription(providers []providerStatus) string {
 		"查报错原因、确认某个库的最新版本与用法变更、查新闻与时效性事实，" +
 		"以及任何超出模型已有知识的问题。\n")
 	builder.WriteString("返回标题、链接和摘要。摘要通常已经够回答问题，不必再逐条抓取网页；" +
-		"确实要读全文时把 include_raw_content 设为 true，可以省掉单独的抓取步骤。\n")
+		"要读其中某一条的全文用 web_fetch，要好几条的全文时把 include_raw_content 设为 true 一次拿齐。\n")
 
 	if len(providers) == 0 {
 		builder.WriteString("注意：当前没有可用的搜索供应商，调用会直接失败。")

@@ -89,15 +89,15 @@ func TestMCPToolListFiltersByScope(t *testing.T) {
 
 	t.Run("空 scope 只见搜索与无 scope 工具", func(t *testing.T) {
 		token := issueTestKey(t, module, nil)
-		assertTools(t, list(t, token), mcpToolWebSearch, openTool.name)
+		assertTools(t, list(t, token), mcpToolWebSearch, mcpToolWebFetch, openTool.name)
 	})
 	t.Run("只有 content:write 也看不到 content:read 工具", func(t *testing.T) {
 		token := issueTestKey(t, module, func(key *APIKey) { key.Scopes = ScopeContentWrite })
-		assertTools(t, list(t, token), mcpToolWebSearch, openTool.name)
+		assertTools(t, list(t, token), mcpToolWebSearch, mcpToolWebFetch, openTool.name)
 	})
 	t.Run("有 content:read 全部可见", func(t *testing.T) {
 		token := issueTestKey(t, module, func(key *APIKey) { key.Scopes = ScopeContentRead })
-		assertTools(t, list(t, token), mcpToolWebSearch, readTool.name, openTool.name)
+		assertTools(t, list(t, token), mcpToolWebSearch, mcpToolWebFetch, readTool.name, openTool.name)
 	})
 }
 

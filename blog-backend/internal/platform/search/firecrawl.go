@@ -450,4 +450,116 @@ func firecrawlErrorMessage(body []byte) string {
 var (
 	_ Forwarder     = (*FirecrawlProvider)(nil)
 	_ UsageReporter = (*FirecrawlProvider)(nil)
+	_ Fetcher       = (*FirecrawlProvider)(nil)
 )
+
+// firecrawlScrapeFloor is the shortest timeout the scrape endpoint accepts.
+const firecrawlScrapeFloor = time.Second
+
+type firecrawlScrapeRequest struct {
+	URL     string   `json:"url"`
+	Formats []string `json:"formats"`
+	// OnlyMainContent is Firecrawl's default too; sent explicitly so a
+	// self-hosted instance with a different default still drops nav and footer.
+	OnlyMainContent bool `json:"onlyMainContent"`
+	Timeout         int  `json:"timeout,omitempty"`
+}
+
+type firecrawlScrapeResponse struct {
+	Success bool `json:"success"`
+	Data    struct {
+		Markdown string `json:"markdown"`
+		Metadata struct {
+			Title       flexString `json:"title"`
+			Description flexString `json:"description"`
+			URL         string     `json:"url"`
+			SourceURL   string     `json:"sourceURL"`
+			StatusCode  int        `json:"statusCode"`
+			ContentType string     `json:"contentType"`
+			// NumPages is set for PDFs, which are billed per parsed page.
+			NumPages int `json:"numPages"`
+		} `json:"metadata"`
+	} `json:"data"`
+	Error string `json:"error"`
+}
+
+// Fetch reads one URL through the scrape endpoint and returns its main content
+// as Markdown. Firecrawl renders JavaScript and works around common anti-bot
+// pages, which is what a plain HTTP GET from the gateway could not do.
+func (p *FirecrawlProvider) Fetch(ctx context.Context, req FetchRequest) (FetchResponse, error) {
+	if p.apiKey == "" {
+		return FetchResponse{}, newError(ProviderFirecrawl, KindAuthFailed, 0, "未配置 Firecrawl API Key")
+	}
+
+	body := firecrawlScrapeRequest{URL: strings.TrimSpace(req.URL), Formats: []string{"markdown"}, OnlyMainContent: true}
+	if req.Timeout > 0 {
+		body.Timeout = int(max(req.Timeout, firecrawlScrapeFloor) / time.Millisecond)
+	}
+	encoded, err := json.Marshal(body)
+	if err != nil {
+		return FetchResponse{}, newError(ProviderFirecrawl, KindBadRequest, 0, err.Error())
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, p.baseURL+"/scrape", bytes.NewReader(encoded))
+	if err != nil {
+		return FetchResponse{}, newError(ProviderFirecrawl, KindBadRequest, 0, err.Error())
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Accept", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
+
+	httpResp, err := p.client.Do(httpReq)
+	if err != nil {
+		return FetchResponse{}, newError(ProviderFirecrawl, classifyTransport(err), 0, err.Error())
+	}
+	defer func() { _ = httpResp.Body.Close() }()
+
+	responseBody, err := io.ReadAll(io.LimitReader(httpResp.Body, 8<<20))
+	if err != nil {
+		return FetchResponse{}, newError(ProviderFirecrawl, KindUnavailable, httpResp.StatusCode, err.Error())
+	}
+	if httpResp.StatusCode != http.StatusOK {
+		return FetchResponse{}, newError(ProviderFirecrawl, firecrawlErrorKind(httpResp.StatusCode),
+			httpResp.StatusCode, firecrawlErrorMessage(responseBody))
+	}
+
+	var payload firecrawlScrapeResponse
+	if err := json.Unmarshal(responseBody, &payload); err != nil {
+		return FetchResponse{}, newError(ProviderFirecrawl, KindUnavailable, httpResp.StatusCode, "解析 Firecrawl 响应失败: "+err.Error())
+	}
+	// A 200 with success=false is Firecrawl answering for the page, not for
+	// itself: the site never responded or would not render. Classed as a bad
+	// request so it is neither retried elsewhere nor counted against
+	// Firecrawl's health — a run of dead links must not trip the breaker that
+	// its search traffic shares.
+	if !payload.Success {
+		message := payload.Error
+		if message == "" {
+			message = "Firecrawl 未返回页面内容"
+		}
+		return FetchResponse{}, newError(ProviderFirecrawl, KindBadRequest, httpResp.StatusCode, message)
+	}
+
+	metadata := payload.Data.Metadata
+	finalURL := strings.TrimSpace(metadata.URL)
+	if finalURL == "" {
+		finalURL = strings.TrimSpace(metadata.SourceURL)
+	}
+	if finalURL == "" {
+		finalURL = body.URL
+	}
+	// One credit per returned document; a PDF is one credit per parsed page.
+	credits := 1
+	if metadata.NumPages > 1 {
+		credits = metadata.NumPages
+	}
+	return FetchResponse{
+		URL:         finalURL,
+		Title:       string(metadata.Title),
+		Description: string(metadata.Description),
+		Content:     strings.TrimSpace(payload.Data.Markdown),
+		ContentType: metadata.ContentType,
+		StatusCode:  metadata.StatusCode,
+		Credits:     credits,
+	}, nil
+}

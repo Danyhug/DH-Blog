@@ -35,8 +35,9 @@ const (
 // the tool table is already filtered by scope, and telling a content-only key's
 // model about tools it cannot see — or naming tools that were never mounted —
 // is exactly the kind of claim that makes a model stop trusting the server.
-const mcpSearchInstructions = "本服务器提供该环境的联网搜索能力。" +
-	"需要现网信息时调用 web_search，它返回标题、链接与摘要，通常不必再逐条抓取网页。" +
+const mcpSearchInstructions = "本服务器提供该环境的联网搜索与网页读取能力。" +
+	"需要现网信息时调用 web_search，它返回标题、链接与摘要，通常不必再逐条抓取网页；" +
+	"确实要读某个网页的全文时调用 web_fetch。" +
 	"不要凭记忆回答会随时间变化的问题。"
 
 // mcpInstructionsFor appends a sentence per non-baseline capability the key
@@ -147,12 +148,12 @@ func (t rateLimitedTool) Scope() string { return toolScope(t.Tool) }
 
 // mcpToolsFor filters the tool table down to what this key may see. Extra
 // tools that declare a Scope() are gated on the key's scopes; tools without
-// one are baseline and always visible. The built-in web search is mounted
+// one are baseline and always visible. The built-in web tools are mounted
 // unconditionally. The auth middleware guarantees a key here; a nil one
 // defensively sees the base tool set unwrapped (rate limiting needs a key).
 func (h *handler) mcpToolsFor(key *APIKey) []mcp.Tool {
-	tools := make([]mcp.Tool, 0, len(h.extraTools)+1)
-	tools = append(tools, h.webSearch)
+	tools := make([]mcp.Tool, 0, len(h.extraTools)+2)
+	tools = append(tools, h.webSearch, h.webFetch)
 	for _, tool := range h.extraTools {
 		if scope := toolScope(tool); scope != ScopeSearch && (key == nil || !key.HasScope(scope)) {
 			continue

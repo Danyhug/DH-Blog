@@ -186,7 +186,7 @@ func (s *Service) passthrough(ctx context.Context, key *APIKey, provider string,
 		if err := s.repo.touchProviderKey(ctx, picked.config.ID, now); err != nil {
 			logrus.Warnf("更新供应商密钥使用时间失败: %v", err)
 		}
-		s.accountPassthrough(ctx, key, provider, picked.config.ID, response.Credits, response.CostMicroUSD, now)
+		s.accountUsage(ctx, key, provider, picked.config.ID, response.Credits, response.CostMicroUSD, now)
 		if s.options.CacheTTL > 0 && len(response.Body) <= maxCachedPassthroughBody {
 			_ = s.cache.Set(cacheKey, cachedPassthrough{
 				Status: response.Status, ContentType: response.ContentType,
@@ -211,14 +211,17 @@ func retryableKind(kind search.ErrorKind) bool {
 	}
 }
 
-func (s *Service) accountPassthrough(ctx context.Context, key *APIKey, provider string,
+// accountUsage bills one call outside the search path (a passthrough, a fetch)
+// to the provider, the credential that served it and the caller's key — the
+// same three counters a search updates in finish.
+func (s *Service) accountUsage(ctx context.Context, key *APIKey, provider string,
 	providerKeyID, credits, costMicroUSD int, now time.Time) {
 
 	period := currentPeriod(now)
 	if err := s.repo.addUsage(ctx, providerSubject(provider), period, 1, credits, costMicroUSD); err != nil {
 		logrus.Warnf("累计供应商用量失败: %v", err)
 	}
-	// 透传同样要落到具体密钥上，否则密钥级额度只统计得到 /search 的流量
+	// 同样要落到具体密钥上，否则密钥级额度只统计得到 /search 的流量
 	if providerKeyID > 0 {
 		if err := s.repo.addUsage(ctx, providerKeySubject(providerKeyID), period, 1, credits, costMicroUSD); err != nil {
 			logrus.Warnf("累计供应商密钥用量失败: %v", err)

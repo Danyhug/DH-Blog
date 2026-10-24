@@ -47,7 +47,7 @@ type mcpCatalogView struct {
 // which is the right answer for a catalog.
 func (h *handler) listMCPTools(c *gin.Context) {
 	ctx := c.Request.Context()
-	mounted := append([]mcp.Tool{h.webSearch}, h.extraTools...)
+	mounted := append([]mcp.Tool{h.webSearch, h.webFetch}, h.extraTools...)
 	tools := make([]mcpToolView, 0, len(mounted))
 	for _, tool := range mounted {
 		definition := tool.Definition(ctx)

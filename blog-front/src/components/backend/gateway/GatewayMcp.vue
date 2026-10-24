@@ -124,11 +124,13 @@
             <CodeBlock :code="denyWebSearchJson" label="配置" />
             <p class="mt-3 mb-0 text-xs leading-relaxed text-[#98a2b3]">
                 内置 <code>WebSearch</code> 只给标题和链接，要读正文还得再 <code>WebFetch</code> 一次；
-                <code>web_search</code> 直接带摘要，需要全文时把 <code>include_raw_content</code> 设为 true 即可，省掉那一步。<br />
+                <code>web_search</code> 直接带摘要，需要好几条的全文时把 <code>include_raw_content</code> 设为 true 即可，省掉那一步。<br />
+                要细读某一个网页用 <code>web_fetch</code>：经 Firecrawl 渲染，能读 JS 页面和带反爬的站点，长页面分段返回、后续分段走缓存。
+                内置 <code>WebFetch</code> 不必禁用，它从本机直接抓取、不花额度，读普通静态页足够。<br />
                 域名过滤同时认 <code>allowed_domains</code> / <code>blocked_domains</code>（内置搜索的叫法）
                 和 <code>include_domains</code> / <code>exclude_domains</code>。<br />
                 可选的 provider 会按这把 Key 的供应商限制自动裁剪；调用与统一接口共用限速、配额与缓存，
-                流水里的 endpoint 记为 <code>mcp/search</code>。
+                流水里的 endpoint 记为 <code>mcp/search</code> 与 <code>mcp/fetch</code>。
             </p>
 
             <el-divider />

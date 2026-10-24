@@ -45,6 +45,7 @@ func TestMCPCatalogListsEveryMountedToolWithItsScope(t *testing.T) {
 
 	wantScopes := map[string]string{
 		mcpToolWebSearch: ScopeSearch,
+		mcpToolWebFetch:  ScopeSearch,
 		"list_articles":  ScopeContentRead,
 		"get_article":    ScopeContentRead,
 		"create_article": ScopeContentWrite,

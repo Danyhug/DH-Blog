@@ -134,7 +134,7 @@ func TestMCPToolListReflectsKeyAllowlist(t *testing.T) {
 	token := issueTestKey(t, module, func(key *APIKey) { key.AllowedProviders = "tavily" })
 
 	result := rpcResultAs[mcp.ToolListResult](t, doMCP(engine, token, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`))
-	if len(result.Tools) != 1 || result.Tools[0].Name != mcpToolWebSearch {
+	if len(result.Tools) != 2 || result.Tools[0].Name != mcpToolWebSearch || result.Tools[1].Name != mcpToolWebFetch {
 		t.Fatalf("工具列表 = %+v", result.Tools)
 	}
 

@@ -73,6 +73,8 @@ internal/modules/aigateway/
 | POST | `/api/gateway/v1/search` | 统一搜索主入口 |
 | GET | `/api/gateway/v1/search?q=...` | 同上，便于 curl 与轻量 agent |
 | GET | `/api/gateway/v1/providers` | 查询当前可用供应商与剩余配额 |
+| POST | `/api/gateway/v1/fetch` | 读取一个网页的正文（见 §20） |
+| GET | `/api/gateway/v1/fetch?url=...` | 同上 |
 | POST | `/api/gateway/v1/mcp` | MCP Server（见 §15） |
 
 ### 3.2 鉴权
@@ -1072,3 +1074,55 @@ Firecrawl 报的是 `remainingCredits` / `planCredits`，用量得自己相减�
 
 `planCredits` 缺失或为 0 时返回 `ErrUsageUnavailable` 而不是编一个上限——
 0 在 `UsageReport` 的约定里表示"没有上限"，硬填会让选路按假数字行事。
+
+## 20. 网页读取 `web_fetch`（九期）
+
+搜索与抓取是两种能力：搜索给出链接与摘要，抓取把一个 URL 变成干净的正文。常见的 agent 组合是
+「Brave / Tavily 负责搜，Firecrawl 负责取全文」，所以在 `web_search` 之外加了按 URL 读取的入口。
+
+### 20.1 入口
+
+| 入口 | 形态 | 流水 endpoint |
+| --- | --- | --- |
+| `POST /api/gateway/v1/fetch` | `{"url", "max_length"?, "start_index"?, "no_cache"?}` | `fetch` |
+| `GET /api/gateway/v1/fetch?url=...` | 同上，参数放 query | `fetch` |
+| MCP 工具 `web_fetch` | `url`、`max_length`（默认 20000，上限 100000）、`start_index` | `mcp/fetch` |
+
+响应：`url`（重定向后的最终地址）、`title`、`description`、`status_code`（**目标站**的状态码）、
+`content`（Markdown）、`start_index`、`total_length`、`next_start_index`（还有下一段时才有）、`meta`。
+HTTP 不传 `max_length` 时返回整页；MCP 默认 20000 字符一段，避免长文档挤占模型上下文。
+长度一律按字符而不是字节计，分段不会切在多字节字符中间。
+
+### 20.2 供应商
+
+`search.Fetcher` 接口，目前只有 Firecrawl 实现：`POST {base}/scrape`，
+`formats: ["markdown"]`、`onlyMainContent: true`。计费按文档：返回了文档就是 1 credit，PDF 按 `numPages` 计；
+目标站 404/403 但 Firecrawl 拿回了文档同样计费，所以作为正常结果返回，`status_code` 交给调用方判断，
+MCP 输出里会提示「下面可能是错误页」。
+
+上游超时取 `upstreamTimeout - 2s` 传给 Firecrawl 的 `timeout`：让上游先放弃，
+否则网关已经断开、上游却抓完了，照样扣费而没人收到。
+
+### 20.3 与搜索共用的部分
+
+Key 的分钟限速与月配额、供应商白名单、健康与配额过滤、出站限速、密钥轮换与停用、三级用量计数、流水、结果缓存，
+全部和搜索走同一套（`callWithRotation` / `accountUsage` 从搜索与透传里抽出来复用）。
+多家可抓取时按 `balanced` 分数排序、最多两次尝试；调度方式与判断模型不参与。
+
+缓存只按 URL 作键、存整页（超过 2 MB 的不缓存），分段是从缓存里切的，所以读后续分段不再计费。
+MCP 不暴露 `no_cache`：重复为同一页面付费不是模型该做的决定。
+
+### 20.4 熔断的口径
+
+熔断器与 Firecrawl 的搜索共用。页面级失败——4xx，或 200 + `success:false`（站点无响应、渲染失败）——
+记为请求问题：不重试、不计入熔断。否则模型连抓几个死链就会把 Firecrawl 的搜索一起停掉。
+只有 5xx、超时、限流这类可重试错误才计入，口径与原生透传一致。
+
+### 20.5 地址校验
+
+只收 http / https，拒绝带用户名密码的 URL（会原样交给上游），拒绝 `localhost` 与内网、回环、链路本地、
+未指定、组播等字面地址。抓取是上游去做的，这不是网关在保护自己，而是不让网关成为别人内网的入口：
+自部署的 Firecrawl 就在运维者的内网里。解析到内网的公网域名属于上游该防的范围，网关不做 DNS 解析。
+
+Key 的权限仍是 `search`（基础能力），不新增 scope。
+

@@ -58,6 +58,10 @@ func (m *Module) RegisterRoutes(routes *router.Routes) {
 		gateway.POST("/search", m.handler.Search)
 		gateway.GET("/search", m.handler.SearchGET)
 		gateway.GET("/providers", m.handler.Providers)
+		// Page fetch: read one URL's main content through a provider that can
+		// render it, metered exactly like a search.
+		gateway.POST("/fetch", m.handler.Fetch)
+		gateway.GET("/fetch", m.handler.FetchGET)
 
 		// Native passthrough: same auth, metering and accounting, but the
 		// request and response stay in the provider's own format so an existing

@@ -23,11 +23,12 @@ const apiKeyContextKey = "gatewayAPIKey"
 
 type handler struct {
 	service *Service
-	// webSearch is the built-in search tool, mounted for every key.
+	// webSearch and webFetch are the built-in web tools, mounted for every key.
 	// extraTools are the externally contributed tools (agent content writing);
 	// the request path filters them by the caller's scopes, so no server is
 	// assembled at construction time.
 	webSearch  *webSearchTool
+	webFetch   *webFetchTool
 	extraTools []mcp.Tool
 }
 
@@ -35,6 +36,7 @@ func newHandler(service *Service, extraTools []mcp.Tool) *handler {
 	return &handler{
 		service:    service,
 		webSearch:  &webSearchTool{service: service},
+		webFetch:   &webFetchTool{service: service},
 		extraTools: extraTools,
 	}
 }
@@ -255,6 +257,8 @@ type providerStatus struct {
 	MonthlyCost      int  `json:"monthly_cost_micro_usd"`
 	SupportsAnswer   bool `json:"supports_answer"`
 	SupportsRaw      bool `json:"supports_raw_content"`
+	// SupportsFetch marks a provider web_fetch and /fetch can read pages with.
+	SupportsFetch bool `json:"supports_fetch"`
 }
 
 // Providers handles GET /api/gateway/v1/providers so an agent can see what the

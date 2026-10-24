@@ -73,10 +73,11 @@ type providerKeyRuntime struct {
 // matter which key is presented.
 type providerRuntime struct {
 	config Provider
-	// capability and passthrough come from a keyless probe adapter — both are
-	// static per provider, so asking them never requires a live credential.
+	// capability, passthrough and fetches come from a keyless probe adapter —
+	// all static per provider, so asking them never requires a live credential.
 	capability  search.Capability
 	passthrough bool
+	fetches     bool
 	// reportsUsage records whether this provider can be asked what it has
 	// spent. It is per provider rather than per key, and the admin page shows
 	// it so a missing number reads as "this upstream does not tell us" instead
@@ -489,11 +490,13 @@ func (s *Service) Reload(ctx context.Context) error {
 			continue
 		}
 		_, forwards := probe.(search.Forwarder)
+		_, fetches := probe.(search.Fetcher)
 		_, reportsUsage := probe.(search.UsageReporter)
 		runtime := &providerRuntime{
 			config:       config,
 			capability:   probe.Capabilities(),
 			passthrough:  forwards,
+			fetches:      fetches,
 			reportsUsage: reportsUsage,
 		}
 		for _, credential := range byProvider[config.Name] {
@@ -816,18 +819,35 @@ func (s *Service) search(ctx context.Context, key *APIKey, req SearchRequest, re
 	return SearchResult{}, s.exhausted(lastErr)
 }
 
-// callProvider runs one provider attempt, rotating through that provider's
+// callProvider runs one search attempt against a provider; see callWithRotation.
+func (s *Service) callProvider(ctx context.Context, runtime *providerRuntime,
+	upstream search.Request, now time.Time) (search.Response, int, bool, error) {
+
+	var response search.Response
+	providerKeyID, reached, err := s.callWithRotation(ctx, runtime, now, func(provider search.Provider) error {
+		var callErr error
+		response, callErr = provider.Search(ctx, upstream)
+		return callErr
+	})
+	if err != nil {
+		return search.Response{}, 0, reached, err
+	}
+	return response, providerKeyID, true, nil
+}
+
+// callWithRotation runs one provider attempt, rotating through that provider's
 // credentials. A key the upstream rejects for authentication or quota is parked
 // and the next one takes over, because that is a credential problem rather than
 // a provider outage — falling back to a different provider there would waste a
-// perfectly good upstream.
+// perfectly good upstream. call is the operation itself (a search, a fetch),
+// handed the adapter built for the credential being tried.
 //
 // It returns the credential that served the request, so the caller can bill the
 // call to the account that actually paid for it, and a bool reporting whether
 // any call reached the upstream, so the caller knows whether the circuit breaker
 // saw real evidence.
-func (s *Service) callProvider(ctx context.Context, runtime *providerRuntime,
-	upstream search.Request, now time.Time) (search.Response, int, bool, error) {
+func (s *Service) callWithRotation(ctx context.Context, runtime *providerRuntime, now time.Time,
+	call func(search.Provider) error) (int, bool, error) {
 
 	reached := false
 	var lastErr error
@@ -846,22 +866,22 @@ func (s *Service) callProvider(ctx context.Context, runtime *providerRuntime,
 		}
 
 		if err := runtime.limiter.Wait(ctx, s.options.QueueWait); err != nil {
-			return search.Response{}, 0, reached, err
+			return 0, reached, err
 		}
 
-		response, err := picked.provider.Search(ctx, upstream)
+		err := call(picked.provider)
 		reached = true
 		if err == nil {
 			if err := s.repo.touchProviderKey(ctx, picked.config.ID, now); err != nil {
 				logrus.Warnf("更新供应商密钥使用时间失败: %v", err)
 			}
-			return response, picked.config.ID, true, nil
+			return picked.config.ID, true, nil
 		}
 
 		lastErr = err
 		if !s.parkKey(ctx, runtime, picked, err, now) {
 			// 不是凭据的问题，换一把也一样，交给上层决定要不要换供应商
-			return search.Response{}, 0, true, err
+			return 0, true, err
 		}
 	}
 
@@ -869,7 +889,7 @@ func (s *Service) callProvider(ctx context.Context, runtime *providerRuntime,
 		// 一把可用密钥都没有：这不是调用失败，是这家根本没得用
 		lastErr = ErrNoProviderAvailable
 	}
-	return search.Response{}, 0, reached, lastErr
+	return 0, reached, lastErr
 }
 
 // parkKey takes a rejected credential out of rotation and reports whether
@@ -1256,6 +1276,7 @@ func (s *Service) ProviderStatuses(ctx context.Context, key *APIKey) ([]provider
 			MonthlyCost:      usage[providerSubject(runtime.config.Name)].CostMicroUSD,
 			SupportsAnswer:   capability.Answer,
 			SupportsRaw:      capability.RawContent,
+			SupportsFetch:    runtime.fetches,
 		})
 	}
 	return statuses, nil

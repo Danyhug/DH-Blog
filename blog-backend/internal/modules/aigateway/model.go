@@ -203,7 +203,7 @@ func ScopeCatalog() []ScopeDescriptor {
 	return []ScopeDescriptor{
 		{
 			Value: ScopeSearch, Label: "联网搜索", Baseline: true,
-			Description: "调用网关配置的搜索供应商。每把 Key 都有，无需勾选。",
+			Description: "调用网关配置的搜索供应商，包括联网搜索与读取网页。每把 Key 都有，无需勾选。",
 		},
 		{
 			Value: ScopeContentRead, Label: "读取文章",

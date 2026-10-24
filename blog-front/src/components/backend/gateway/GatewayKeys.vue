@@ -208,6 +208,8 @@ const baseUrl = gatewayBaseUrl();
 const endpoints = [
     { method: 'POST', path: '/search', desc: '统一搜索，网关按调度方式选路，响应为统一格式' },
     { method: 'GET', path: '/search?q=...', desc: '同上，方便用浏览器或 curl 直接试' },
+    { method: 'POST', path: '/fetch', desc: '读取一个网页的正文（Markdown），经 Firecrawl 渲染，计费与限速同搜索' },
+    { method: 'GET', path: '/fetch?url=...', desc: '同上；可加 max_length / start_index 分段读取' },
     { method: 'GET', path: '/providers', desc: '列出当前可用的供应商及其能力' },
     { method: 'POST', path: '/tavily/search', desc: 'Tavily 原生透传' },
     { method: 'GET', path: '/brave/web/search', desc: 'Brave 原生透传' },
