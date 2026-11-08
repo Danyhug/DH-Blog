@@ -34,7 +34,7 @@
         <!-- 文件摘要：标题只说「在做什么」，具体分享哪个文件放在这里 -->
         <div class="flex items-center gap-3 p-3 rounded-xl bg-[#f6f8fb] dark:bg-white/5">
           <div class="flex items-center justify-center w-9 h-9 shrink-0 rounded-lg bg-[#e3edff] dark:bg-blue-500/15">
-            <component :is="file.icon || FileTextIcon" class="w-4 h-4 text-[#2a8aff] dark:text-blue-400" />
+            <component :is="fileIcon" class="w-4 h-4 text-[#2a8aff] dark:text-blue-400" />
           </div>
           <div class="flex-1 min-w-0">
             <p class="m-0 text-[0.875rem] font-medium text-[#111827] dark:text-zinc-100 truncate" :title="file.name">{{ file.name }}</p>
@@ -240,7 +240,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, markRaw, onBeforeUnmount, onMounted, ref, toRaw } from 'vue'
 import QrcodeVue from 'qrcode.vue'
 import { CheckIcon, FileTextIcon, RefreshIcon, XIcon } from '../utils/icons'
 import type { FileItem } from '../utils/types/file'
@@ -283,6 +283,12 @@ const shareInfo = ref<ShareInfo | null>(null)
 const submittedPassword = ref('')
 
 const shareUrl = computed(() => (shareInfo.value ? generateShareLink(shareInfo.value.share_id) : ''))
+// file 是父组件 ref 里的深层响应式对象，直接读 icon 会拿到组件的 reactive 代理，
+// Vue 会警告「Component that was made a reactive object」，所以取回原始组件再 markRaw
+const fileIcon = computed(() => {
+  const icon = props.file.icon
+  return icon ? markRaw(toRaw(icon)) : FileTextIcon
+})
 const createdPassword = computed(() => shareInfo.value?.password || submittedPassword.value)
 
 const expireHint = computed(() => (expireDays.value > 0 ? `${expireDays.value} 天后自动失效` : '创建后长期有效'))
