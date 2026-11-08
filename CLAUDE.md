@@ -158,7 +158,6 @@ JWT 从 `Authorization` 头（`Bearer ` 前缀可选）或 `?token=` 读取。�
 - CI 的 lint job 跑 `bunx knip`（前端）、`golangci-lint` 与 `deadcode -test`（后端）。`internal/frontend/dist` 的占位文件已入库，`.gitkeep` 别再删。
 - **Go 的 patch 版本会滑动**：`go-version: '1.27'` 这种写法会跟着 hostedtoolcache 升级。go1.27.2 把 export data 格式从 v4 提到了 v5，读不懂它的 golangci-lint 会在 typecheck 阶段报一行 `export data version 5 is greater than maximum supported version 4` 就整体失败——看着像代码问题，其实是工具链版本错配。所以 workflow 里 Go 钉到了具体 patch，golangci-lint 必须 ≥ v2.14.0。
 - `deadcode` **别用 `@latest`**：Go 1.27 给 `math/rand/v2.Rand` 加了泛型方法 `N`，而 x/tools 的 RTA 把 `Program.MethodValue` 的结果直接喂给 `addReachable`，泛型方法那里返回 nil，于是任何依赖图里有 `math/rand/v2` 的程序（本项目就是）都会 panic 在 `visitFunc`。v0.49.0 仍有此问题，golang/go#77549 修完后 v0.52.0 正常，CI 现在写死 `v0.52.0`——写死而非 `@latest` 是为了不让上游哪天再引入同类 panic 时 CI 无故变红。
-- `blog-front/README.md` 是旧版遗留（写的是 SpringBoot + MySQL），以根 `README.md` 为准。
 - **`vue-tsc` 钉在 3.3.13**：3.3.14 把模板虚拟代码包进 `const __VLS_template = () => {}`，同时去掉了 `__VLS_withDotValue` 前面的 `@ts-ignore`，于是任何一个模板属性值里出现 `//`（`https://…` 这类 URL 最常见的）都会让 props 拷贝那一行拼出非法 TS，整个模板的 dot-value 收窄失效，
   一次性报出满屏 `TS2339: Property 'value' does not exist`（vuejs/language-tools#6322，尚未修复）。升级前先在 `GatewayRouting.vue` 这类带 URL 占位符的组件上跑一次 `bun run build:type-check`。
 - 首次启动且 `users` 表为空时，管理员账号优先取 `DHBLOG_ADMIN_USERNAME` / `DHBLOG_ADMIN_PASSWORD`（两个必须同时设，密码至少 6 位）；

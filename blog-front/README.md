@@ -1,77 +1,36 @@
-# DH-Blog
+# DH-Blog 前端
+
+DH-Blog 的后台与前台界面。完整的项目说明、架构与部署方式见[根目录 README](../README.md)，
+这里只记录前端自己的东西。
 
 ## 技术栈
 
-### 后端部分
+Vue 3 + TypeScript + Vite + Element Plus + Tailwind CSS v4（CSS-first 配置，没有 `tailwind.config.js`）。
+包管理器是 **bun**，不要用 npm / pnpm / yarn。
 
-- JDK21 + SpringBoot3
-- MySQL + MybatisPlus
-- Redis
-- Swagger
+## 常用命令
 
-### 前端部分
+```bash
+bun install
+bun run dev              # 开发服务器，接口指向 http://localhost:2233/api（见 .env）
+bun run build:type-check # vue-tsc 类型检查 + 构建；前端唯一的自动化验证手段
+bun run build            # 只构建
+bunx knip                # 未使用的文件 / 导出 / 依赖，CI 同步执行
+```
 
-- TS + Vue3 + ElementPlus + Echarts
-- Axios
-- [vue-echarts](https://github.com/ecomfe/vue-echarts)
-- [md-editor-v3](https://github.com/imzbf/md-editor-v3) `作为 markdown 编辑器`
+## 目录
 
-## 博客功能
+- `src/views/frontend/` — 博客、网盘（`webdav/`）、影院
+- `src/views/backend/` — 后台各页面，按功能分目录
+- `src/components/` — 组件，`backend/` 与 `frontend/` 对应两侧
+- `src/api/` — 接口封装，统一走 `api/axios.ts` 的实例，返回值已是拆包后的 `data`
+- `src/store/index.ts` — 全部 Pinia store 集中在这里
+- `public/pet/` — 桌宠素材包，运行期动态加载，不经过 Vite 打包
 
-### 前端部分实现
+## 几个约定
 
-- [x] 首页设计实现
-- [x] 文章页设计实现
-- [x] 加密页面设计实现
-- [x] 登录页面设计实现
-- [x] 文章评论设计实现
-
-### 后端部分实现
-
-- [x] 通用功能
-  - [x] 分页功能
-  - [x] 文章访问密码
-  - [x] 登录注册功能
-  - [ ] 搜索功能
-  - [ ] 文章类型功能 `博客 / 随笔，在不同页面展现`
-- [ ] 数据总览页
-  - [x] 在线人数统计
-  - [x] 文章、标签、分类数据统计
-  - [ ] 评论数据统计
-  - [x] 访问记录统计
-  - [x] 访问量统计
-- [x] 博客发布功页
-  - [x] emoji 文字添加
-  - [x] 图片上传
-  - [x] 增删改查
-  - [x] 加密文章
-  - [ ] 语音上传
-- [x] 博客管理页
-  - [x] 文章管理
-  - [x] 分类管理
-    - [x] 分类添加默认标签
-  - [x] 标签功能
-- [ ] 系统配置页
-- [ ] 评论管理页
-
-## 部署
-
-> `DH-Blog` 使用前后端分离技术，因此前端可以部署到任意地方，直接在 `.env.production` 中更改服务器地址和端口即可
-
-> 后端推荐使用 `docker` 进行部署
-
-### 前端部分
-
-1. 下载源代码
-2. 进入根目录
-3. 更改配置中的后端接口地址，执行 `bun run build`
-4. 将打包文件部署到 `nginx` 中
-
-### 后端部分
-
-1. 进入 `admin` 目录下
-2. docker 容器开启端口 `8080:8080`
-3. 博客使用 `Swagger` 书写 API 文档，可以访问 `http://localhost:8080/doc.html` 直接打开文档
-4. 后台默认账号密码为 `admin` `admin`，博客为个人设计故不提供注册接口，可以去 `admin/src/test/java/top/zzf4/blog/JwtTest.java` 调用 `addUser` 方法手动添加用户
-5. 执行 `.\docker-run.bat` 打包镜像（有 WSL 环境可以再用 gzip 压缩一下）
-6. 部署到 `docker` 中
+- 路由是 **hash 模式**，地址形如 `/#/admin/dashboard`。
+- Vue API 与 Element Plus 组件自动导入；`auto-imports.d.ts` / `components.d.ts` 是生成物但已入库，改完要一起提交。
+- 不写自定义 CSS，一律用 Tailwind 工具类 + Element Plus 组件。
+- `typescript` 装的是 `typescript-native-bridge`（tsgo 后端），`vue-tsc` 能直接跑；运行时看到 `▎ TNB ACTIVE` 说明生效。
+- `vue-tsc` 钉在 3.3.13，升级前先看根目录 `CLAUDE.md` 的「已知的坑」。
