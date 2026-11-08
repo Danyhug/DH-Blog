@@ -76,10 +76,10 @@ func TestNormalizeScopes(t *testing.T) {
 
 func TestAPIKeyJSONExposesScopesAndAuthorName(t *testing.T) {
 	key := APIKey{
-		Name:       "writer",
-		KeyPrefix:  "gw_live_abc12345",
-		Scopes:     "search,content:write",
-		Byline:     "写作助手",
+		Name:      "writer",
+		KeyPrefix: "gw_live_abc12345",
+		Scopes:    "search,content:write",
+		Byline:    "写作助手",
 	}
 	encoded, err := json.Marshal(key)
 	if err != nil {

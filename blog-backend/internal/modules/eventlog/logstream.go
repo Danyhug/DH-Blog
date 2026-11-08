@@ -28,10 +28,10 @@ type LogLine struct {
 	Seq int64 `json:"seq"`
 	// Time is the compact clock-only stamp shown in the console; Timestamp
 	// carries the full date so a hover tooltip can show which day it was.
-	Time      string `json:"time"`
-	Timestamp string `json:"timestamp"`
-	Level     string `json:"level"`
-	Message   string `json:"message"`
+	Time      string            `json:"time"`
+	Timestamp string            `json:"timestamp"`
+	Level     string            `json:"level"`
+	Message   string            `json:"message"`
 	Fields    map[string]string `json:"fields,omitempty"`
 }
 

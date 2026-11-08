@@ -53,9 +53,9 @@ func TestCredentialsFromEnv(t *testing.T) {
 			wantPassword: " s3cret! ",
 		},
 		{
-			name:     "nothing configured falls back to prompt",
-			wantOK:   false,
-			wantErr:  false,
+			name:    "nothing configured falls back to prompt",
+			wantOK:  false,
+			wantErr: false,
 		},
 		{
 			// 只配一半时不能悄悄回落去问终端，那正是无人值守启动出问题的地方
