@@ -10,9 +10,12 @@ pet/
 └── whale/          figure.js（大肥鱼本体）、model.json（部件盒与锚点）、figure.json（清单）
     ├── tex/ feat/  默认配色（DeepSeek 原版）的分层贴图与表情部件（WebP）
     ├── schemes/    另外 7 套配色，同一套几何、只换贴图
-    ├── outfits/    cape 冬装的整套部件
-    └── thumbs/     各配色的 144×144 预览图（当前 UI 未使用，留给以后的选择器）
+    └── outfits/    cape 冬装的整套部件
 ```
+
+上游还有 `thumbs/`（各配色 144×144 预览图，10 张 244 KB），这里**删掉了**：它只服务于上游的
+配色选择器，本项目双击随机换装用不上，`figure.json` 里对应的 11 个 `thumb` 字段也一并去掉，
+省得以后照着字段去找会 404 的文件。真要加选择器时从上游取回 `thumbs/` 并把字段补回即可。
 
 ## 与上游的差异
 
@@ -38,7 +41,7 @@ pet/
 430 张贴图全部换成了**无损** WebP（`cwebp -lossless`，像素与原 PNG 完全一致，alpha 通道原样保留），
 整包从 11.1 MB 降到 7.8 MB，直接体现在打包后的可执行文件体积上。同时改了三处文件名引用：
 `figure.js` 里拼 `${dir}tex/...` 与 `${dir}feat/...` 的两行模板字符串、`model.json` 的 20 个
-`outfits` src、`figure.json` 的 11 个 `thumbs`。
+`outfits` src、`figure.json` 的 11 个 `thumbs`（删掉 `thumbs/` 时这 11 个字段已移除，见上）。
 
 **换上游素材后要重跑一次**（脚本幂等，已经转过的文件不会再动）：
 
