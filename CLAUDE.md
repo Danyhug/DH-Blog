@@ -137,7 +137,7 @@ JWT 从 `Authorization` 头（`Bearer ` 前缀可选）或 `?token=` 读取。�
 
 - 路由是 **hash 模式**（`createWebHashHistory`），URL 形如 `/#/admin/dashboard`；`/admin` 与 `/webdav` 在 `beforeEach` 里调 `userCheck()` 鉴权。
 - `src/api/*.ts` 只用 `api/axios.ts` 的实例，所以 api 函数的返回值已经是拆包后的 `data`。
-- 首页侧栏的桌宠（`components/frontend/Pet.vue`）是**运行期加载的素材包**：`public/pet/`（kit + whale，约 9MB，贴图是无损 WebP）不经过 Vite 打包，`Pet.vue` 用 `new URL('pet/whale/', document.baseURI)` 动态 import，后端由 `internal/frontend/embed.go` 的 `/pet/*` 路由提供。换素材 = 整包替换 `public/pet/` 再跑 `blog-deploy/webp-pet.sh`（把 PNG 转成无损 WebP 并改写三处文件名引用），不动代码；`public/pet/README.md` 记了 `whale/figure.js` 相对上游的补丁。她的状态走 `composables/usePetMood.ts`，心情框 `PetMood.vue` 只读那份状态，所以替换 `Pet.vue` 不会影响它。
+- 首页侧栏的桌宠（`components/frontend/Pet.vue`）是**运行期加载的素材包**：`public/pet/`（kit + whale，约 7.7MB，420 张贴图是无损 WebP）不经过 Vite 打包，`Pet.vue` 用 `new URL('pet/whale/', document.baseURI)` 动态 import，后端由 `internal/frontend/embed.go` 的 `/pet/*` 路由提供。换素材 = 整包替换 `public/pet/` 再跑 `blog-deploy/webp-pet.sh`（把 PNG 转成无损 WebP 并改写三处文件名引用），不动代码；`public/pet/README.md` 记了 `whale/figure.js` 相对上游的补丁，以及为什么删掉了上游的 `thumbs/`。她的状态走 `composables/usePetMood.ts`，心情框 `PetMood.vue` 只读那份状态，所以替换 `Pet.vue` 不会影响它。
 - 点她会唱歌：`composables/usePetSing.ts` 负责 Web Audio 循环播放（`src/assets/voice/let-me-go-loop.mp3`，11.625s 的离线无缝循环，`loopEnd` 精确到采样点，**不要**换成 `<audio loop>`，MP3 帧边界会留缝）并推算当前歌词，`PetMood.vue` 在唱歌时把气泡换成歌词。改音频要同步改 `LOOP_SECONDS` 与 `LYRICS` 的时间轴（相对循环起点）。
 - Pinia store 全部集中在 `src/store/index.ts`。
 - Vue API 与 Element Plus 组件自动导入；`auto-imports.d.ts` / `components.d.ts` 是生成物但**已纳入版本管理**，变更后要一起提交。

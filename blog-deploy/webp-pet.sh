@@ -1,8 +1,8 @@
 #!/bin/bash
 # 把桌宠素材包的 PNG 贴图转成无损 WebP。
 #
-# 素材包是照搬上游的（见 blog-front/public/pet/README.md），430 张贴图里有 7 套配色
-# 是同一形状的换色版，PNG 编码下共 11.1 MB。无损 WebP 能压到 7.8 MB，而且像素完全一致
+# 素材包是照搬上游的（见 blog-front/public/pet/README.md），420 张贴图里有 7 套配色
+# 是同一形状的换色版，PNG 编码下共 11.1 MB。无损 WebP 能压到 7.5 MB，而且像素完全一致
 # （cwebp -lossless 是可逆编码），所以这不是"降质换体积"。
 #
 # 用法：./webp-pet.sh [素材包目录]

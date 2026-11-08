@@ -38,8 +38,9 @@ pet/
 
 ## 贴图格式：WebP（不是上游的 PNG）
 
-430 张贴图全部换成了**无损** WebP（`cwebp -lossless`，像素与原 PNG 完全一致，alpha 通道原样保留），
-整包从 11.1 MB 降到 7.8 MB，直接体现在打包后的可执行文件体积上。同时改了三处文件名引用：
+剩下的 420 张贴图全部换成了**无损** WebP（`cwebp -lossless`，像素与原 PNG 完全一致，alpha 通道原样保留），
+整包从 11.1 MB 降到 7.7 MB（删掉 `thumbs/` 之后的数字；只算贴图是 7.5 MB），
+直接体现在打包后的可执行文件体积上。同时改了三处文件名引用：
 `figure.js` 里拼 `${dir}tex/...` 与 `${dir}feat/...` 的两行模板字符串、`model.json` 的 20 个
 `outfits` src、`figure.json` 的 11 个 `thumbs`（删掉 `thumbs/` 时这 11 个字段已移除，见上）。
 
