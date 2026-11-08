@@ -117,7 +117,7 @@ JWT 从 `Authorization` 头（`Bearer ` 前缀可选）或 `?token=` 读取。�
 - 迁移只有 GORM `AutoMigrate`，没有迁移文件。表结构变更 = 改 struct + 确认它在模块的 `MigrationModels()` 里。
 - 共享基类 `model.BaseModel`（`id` / `createTime` / `updateTime` / 软删除）；时间字段用 `model.JSONTime`，JSON 固定输出 `"2006-01-02 15:04:05"`。
 - **两套配置，不要混**：
-  - `data/config.yaml`（Viper，重启生效）只放部署相关的启动参数：监听端口、DB 路径、JWT 密钥与有效期、WebDAV 开关、网关运行参数。给 `config.Config` 加字段必须同步 `config.Init()` 里的 `v.SetDefault`，否则不会落盘；默认值集合一旦变化，启动时会把旧文件备份成 `config_backup_<时间戳>.yaml` 再重写。
+  - `data/config.yaml`（Viper，重启生效）只放部署相关的启动参数：监听端口、DB 路径、JWT 密钥与有效期、WebDAV 开关、网关运行参数。给 `config.Config` 加字段必须同步 `config.Init()` 里的 `v.SetDefault`，否则不会落盘；删除字段要把它加进 `config.Init()` 上方的 `retiredSettingKeys`（键名全小写，viper 的 `AllSettings()` 只给小写），启动时会把旧键从文件里清掉。默认值集合或退役键一旦变化，启动时会把旧文件备份成 `config_backup_<时间戳>.yaml` 再重写。
   - `system_settings` 表（system 模块，带缓存，热生效）放运行期可改的内容：站点信息、AI endpoint/key/model/提示词、文件存储路径、分片大小、评论开关。默认值见 `system/defaults.go` 的 `DefaultSettings()`；改默认提示词时要用 `legacyPromptDefault` 登记旧值，`ensureDefaults` 只在库里存的仍是旧默认值时才升级。
 - SQLite 以 WAL 模式打开。测试用 `sqlite.Open(":memory:")` + 模块自己的 `MigrationModels()`（参考 `files/test_helpers_test.go`），测试文件与实现同目录。
 

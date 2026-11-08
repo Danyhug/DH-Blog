@@ -1,9 +1,9 @@
 package config
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -14,35 +14,15 @@ import (
 )
 
 type Server struct {
-	Address    string        `yaml:"address"`
-	HttpPort   int           `yaml:"httpPort"`
-	HttpsPort  int           `yaml:"httpsPort"`
-	CertFile   string        `yaml:"certFile"`
-	KeyFile    string        `yaml:"keyFile"`
-	StaticPath string        `yaml:"staticPath"` // 新增：静态文件服务路径
-	JwtExpire  time.Duration `yaml:"jwtExpire"`  // 新增：JWT 过期时间
+	Address   string        `yaml:"address"`
+	HttpPort  int           `yaml:"httpPort"`
+	JwtExpire time.Duration `yaml:"jwtExpire"`
 }
 
 type DataBase struct {
-	Type   string `yaml:"type"`
-	DBFile string `yaml:"dbFile"` // For SQLite, this will be the file path
-	Dsn    string `yaml:"dsn"`    // For other databases like MySQL, this will be the DSN
-}
-
-type LocalUpload struct {
-	Path string `yaml:"path"` // Local upload base path, e.g., "uploads/article"
-}
-
-type WebdavUpload struct {
-	URL      string `yaml:"url"`
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-	Path     string `yaml:"path"` // WebDAV base path, e.g., "uploads/webdav"
-}
-
-type Upload struct {
-	Local  LocalUpload  `yaml:"local"`
-	Webdav WebdavUpload `yaml:"webdav"`
+	// Only the SQLite file is configurable: the driver is linked in directly and
+	// there is no code path that would read a DSN or a database type.
+	DBFile string `yaml:"dbFile"`
 }
 
 type WebDAVServer struct {
@@ -64,19 +44,31 @@ type Config struct {
 	Server       Server       `yaml:"server"`
 	DataBase     DataBase     `yaml:"database"`
 	JwtSecret    string       `yaml:"jwtSecret"`
-	Upload       Upload       `yaml:"upload"`       // New upload configuration
 	WebDAVServer WebDAVServer `yaml:"webdavServer"` // WebDAV 服务端配置
 	AIGateway    AIGateway    `yaml:"aiGateway"`    // AI 网关配置
 	LogLevel     string       `yaml:"logLevel"`     // 日志级别: debug/info/warn/error，默认 info
 }
 
-// 获取一个随机字符串，用于生成 JWT 密钥
+// getRandomString 生成 JWT 密钥。用 crypto/rand 而不是 math/rand：这个值直接决定
+// 令牌可被伪造的难度，可预测的伪随机源不合适。
 func getRandomString(length int) string {
-	var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+"
-	cLen := len(chars)
+	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+"
 	jwtChars := make([]byte, length)
-	for ; length > 0; length-- {
-		jwtChars = append(jwtChars, chars[rand.Intn(cLen)])
+	// Rejection sampling keeps every character equally likely; the modulo
+	// shortcut would favour the first 256%len(chars) characters.
+	limit := byte(256 - 256%len(chars))
+	for index := 0; index < length; {
+		buffer := make([]byte, 1)
+		if _, err := rand.Read(buffer); err != nil {
+			// crypto/rand failing means the platform is broken; the caller cannot
+			// recover either, so surfacing it beats silently minting a weak secret.
+			panic(fmt.Sprintf("生成 JWT 密钥失败: %v", err))
+		}
+		if buffer[0] >= limit {
+			continue
+		}
+		jwtChars[index] = chars[int(buffer[0])%len(chars)]
+		index++
 	}
 	return string(jwtChars)
 }
@@ -84,29 +76,14 @@ func getRandomString(length int) string {
 func DefaultConfig() *Config {
 	return &Config{
 		Server: Server{
-			Address:    "0.0.0.0",
-			HttpPort:   2233,
-			HttpsPort:  -1,
-			StaticPath: "data/upload",       // 默认静态文件服务路径
-			JwtExpire:  time.Hour * 24 * 30, // 默认一个月
+			Address:   "0.0.0.0",
+			HttpPort:  2233,
+			JwtExpire: time.Hour * 24 * 30, // 默认一个月
 		},
 		DataBase: DataBase{
-			Type:   "sqlite3",
 			DBFile: "data/dhblog.db", // Default SQLite database file
-			Dsn:    "",               // DSN will be empty for SQLite by default
 		},
 		JwtSecret: getRandomString(16),
-		Upload: Upload{
-			Local: LocalUpload{
-				Path: "article", // Default local upload path
-			},
-			Webdav: WebdavUpload{
-				URL:      "", // Default empty WebDAV URL
-				Username: "",
-				Password: "",
-				Path:     "data/webdav", // Default WebDAV path
-			},
-		},
 		WebDAVServer: WebDAVServer{
 			Enabled: true,
 			Prefix:  "/dav",
@@ -120,6 +97,57 @@ func DefaultConfig() *Config {
 		},
 		LogLevel: "info",
 	}
+}
+
+// retiredSettingKeys 是曾经写入过 config.yaml、但现在没有任何代码读取的配置项。
+// 留着它们比删掉更糟：改这些值完全没效果，看起来却像是生效的开关。
+// 只删键、不动结构，老配置升级时由 Init 顺手清掉一次。
+//
+// 必须全小写：viper 的键大小写不敏感，AllSettings() 交出来的是小写形式
+// （config.yaml 里也写成 httpsport 而不是 httpsPort）。
+var retiredSettingKeys = [][]string{
+	{"server", "httpsport"},  // HTTPS 从未实现
+	{"server", "certfile"},   // 同上
+	{"server", "keyfile"},    // 同上
+	{"server", "staticpath"}, // 实际路径来自 system_settings.file_storage_path
+	{"database", "type"},     // 只支持 SQLite，驱动写死在 database.Init
+	{"database", "dsn"},      // 同上，没有其它数据库的连接逻辑
+	{"upload"},               // 上传路径同样由 system_settings 管理
+}
+
+// dropRetiredSettings 就地删除退役键，返回是否真的删掉了东西。
+func dropRetiredSettings(settings map[string]any) bool {
+	dropped := false
+	for _, path := range retiredSettingKeys {
+		node := settings
+		for _, key := range path[:len(path)-1] {
+			child, ok := node[key].(map[string]any)
+			if !ok {
+				node = nil
+				break
+			}
+			node = child
+		}
+		if node == nil {
+			continue
+		}
+		leaf := path[len(path)-1]
+		if _, ok := node[leaf]; ok {
+			delete(node, leaf)
+			dropped = true
+		}
+	}
+	return dropped
+}
+
+// writeSettings 把整理过的配置落盘。不复用原来的 viper：它没有删除键的公开接口，
+// 另起一个实例写入才能把退役键真正从文件里去掉。
+func writeSettings(settings map[string]any, path string) error {
+	out := viper.New()
+	for key, value := range settings {
+		out.Set(key, value)
+	}
+	return out.WriteConfigAs(path)
 }
 
 func Init() (*Config, error) {
@@ -147,31 +175,14 @@ func Init() (*Config, error) {
 	// 设置默认值
 	defaultCfg := DefaultConfig()
 	v.SetDefault("server", map[string]any{
-		"address":    defaultCfg.Server.Address,
-		"httpPort":   defaultCfg.Server.HttpPort,
-		"httpsPort":  defaultCfg.Server.HttpsPort,
-		"certFile":   defaultCfg.Server.CertFile,
-		"keyFile":    defaultCfg.Server.KeyFile,
-		"staticPath": defaultCfg.Server.StaticPath,
-		"jwtExpire":  defaultCfg.Server.JwtExpire,
+		"address":   defaultCfg.Server.Address,
+		"httpPort":  defaultCfg.Server.HttpPort,
+		"jwtExpire": defaultCfg.Server.JwtExpire,
 	})
 	v.SetDefault("database", map[string]any{
-		"type":   defaultCfg.DataBase.Type,
 		"dbFile": defaultCfg.DataBase.DBFile,
-		"dsn":    defaultCfg.DataBase.Dsn,
 	})
 	v.SetDefault("jwtSecret", defaultCfg.JwtSecret)
-	v.SetDefault("upload", map[string]any{
-		"local": map[string]any{
-			"path": defaultCfg.Upload.Local.Path,
-		},
-		"webdav": map[string]any{
-			"url":      defaultCfg.Upload.Webdav.URL,
-			"username": defaultCfg.Upload.Webdav.Username,
-			"password": defaultCfg.Upload.Webdav.Password,
-			"path":     defaultCfg.Upload.Webdav.Path,
-		},
-	})
 	v.SetDefault("webdavServer", map[string]any{
 		"enabled": defaultCfg.WebDAVServer.Enabled,
 		"prefix":  defaultCfg.WebDAVServer.Prefix,
@@ -232,6 +243,11 @@ func Init() (*Config, error) {
 	}
 
 	// 5. 执行更新操作（如果需要）
+	settings := v.AllSettings()
+	if dropRetiredSettings(settings) {
+		needsUpdate = true
+	}
+
 	if needsUpdate {
 		// 备份现有配置文件（如果存在）
 		if configExists {
@@ -244,7 +260,7 @@ func Init() (*Config, error) {
 		}
 
 		// 将合并后的配置写入新的 config.yaml
-		if err := v.WriteConfigAs(configFilePath); err != nil {
+		if err := writeSettings(settings, configFilePath); err != nil {
 			return nil, fmt.Errorf("写入新配置文件失败: %w", err)
 		}
 		fmt.Printf("已更新配置文件至: %s\n", configFilePath)
