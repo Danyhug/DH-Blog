@@ -169,4 +169,5 @@ JWT 从 `Authorization` 头（`Bearer ` 前缀可选）或 `?token=` 读取。�
 - `blog-front/README.md` 是旧版遗留（写的是 SpringBoot + MySQL），以根 `README.md` 为准。
 - **`vue-tsc` 钉在 3.3.13**：3.3.14 把模板虚拟代码包进 `const __VLS_template = () => {}`，同时去掉了 `__VLS_withDotValue` 前面的 `@ts-ignore`，于是任何一个模板属性值里出现 `//`（`https://…` 这类 URL 最常见的）都会让 props 拷贝那一行拼出非法 TS，整个模板的 dot-value 收窄失效，
   一次性报出满屏 `TS2339: Property 'value' does not exist`（vuejs/language-tools#6322，尚未修复）。升级前先在 `GatewayRouting.vue` 这类带 URL 占位符的组件上跑一次 `bun run build:type-check`。
-- 首次启动时若 `users` 表为空，程序会在 **stdin** 交互式索要管理员用户名和密码，非交互环境下会卡住。
+- 首次启动且 `users` 表为空时，管理员账号优先取 `DHBLOG_ADMIN_USERNAME` / `DHBLOG_ADMIN_PASSWORD`（两个必须同时设，密码至少 6 位）；
+  只有 stdin 是真正的终端时才会退化成交互式提问，其余情况直接报错退出——即无人值守启动需要显式给这两个环境变量。
