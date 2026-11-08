@@ -21,6 +21,8 @@ fi
 # 先清空再拷：embed 目录是生成物，留着上一次的旧 chunk 会让它们被打进二进制
 rm -rf "$EMBED_DIR"
 mkdir -p "$EMBED_DIR"
+# 占位文件在 .gitignore 里被显式放行，删掉它会让工作区看起来丢了一个已跟踪文件
+touch "$EMBED_DIR/.gitkeep"
 cp -r "$FRONTEND_DIST"/. "$EMBED_DIR"/
 
 # 只压 assets/ 和 pet/ —— 这两处走 embed.go 的 serveAssets，它认识 .gz 并且能现场解压。

@@ -26,18 +26,10 @@ deadcode -test ./...                               # 全程序可达性分析（
 
 `golangci-lint` 与 `deadcode` 都在 CI 的 lint job 里跑，本地改完应先跑通再推。两者对 Go 1.27 都有版本下限：golangci-lint 需要 **v2.14+**（v2.12 及更早是 go1.26 编译的，不认 1.27；v2.13.x 的 importer 只认 export data v4，读不了 go1.27.2 的产物，会整段 typecheck 崩掉），`deadcode` 需要 **v0.52+**（见「已知的坑」）。
 
-**编译前必须先准备嵌入目录**：`internal/frontend/dist/` 被 gitignore，而 `embed.go` 声明了 `//go:embed all:dist`。全新 checkout 直接编译会失败：
-
-```
-internal/frontend/embed.go:17:12: pattern all:dist: no matching files found
-```
-
-放任意占位文件即可解除（该错误只影响 `internal/frontend` 及其下游 `router` / `app` / `cmd`，其余包的测试不受影响）：
-
-```bash
-mkdir -p blog-backend/internal/frontend/dist && \
-  printf '<!doctype html>' > blog-backend/internal/frontend/dist/index.html
-```
+`internal/frontend/dist/` 是 `//go:embed all:dist` 的目标目录，正常情况下由 `blog-deploy/prepare-assets.sh` 铺入前端构建产物。
+目录里有一个已入库的空占位文件 `.gitkeep`（`.gitignore` 用 `dist/*` + `!dist/.gitkeep` 放行），
+所以全新 checkout 直接 `go build ./...` 是通的；`prepare-assets.sh` 清空目录后会重新 touch 它，
+免得工作区总是显示少了一个已跟踪文件。
 
 本仓库的开发编译约定是把产物输出到 `blog-deploy/backend/`，该目录下的 `data/dhblog.db` 是开发数据库。改完后端要编译验证，但**不要运行**编译产物：
 
@@ -158,12 +150,12 @@ JWT 从 `Authorization` 头（`Bearer ` 前缀可选）或 `?token=` 读取。�
 - 后端：改完必须编译验证（见上），不要运行编译产物；面向用户的错误信息用中文。注释语言跟随所在文件 —— 新代码倾向用英文解释**为什么**（见 `registry.go`、`policy.go`、`middleware/ip.go`），老代码是中文。
 - 前端：不写自定义 CSS，一律用 Tailwind + Element Plus 组件；除非明确要求，不要改样式。
 - 不熟悉的库或框架先查官方文档（context7 或搜索）再动手，不要凭记忆写 API。
-- 不要提交 `data/`、`dhblog.db`、上传内容、编译产物、`internal/frontend/dist/`。
+- 不要提交 `data/`、`dhblog.db`、上传内容、编译产物、`internal/frontend/dist/` 里除 `.gitkeep` 之外的东西。
 
 ## 已知的坑
 
 - `docs/` 里的设计文档是**实现前**写的，可能尚未落地。以代码为准（`2026-08-10-文章摘要优化与批量生成设计.md` 已实现，并按最终实现回写过一次）。
-- CI 的 lint job 跑 `bunx knip`（前端）、`golangci-lint` 与 `deadcode -test`（后端），其中 golangci-lint 需要先放好 `internal/frontend/dist` 占位文件（见上文）。
+- CI 的 lint job 跑 `bunx knip`（前端）、`golangci-lint` 与 `deadcode -test`（后端）。`internal/frontend/dist` 的占位文件已入库，`.gitkeep` 别再删。
 - **Go 的 patch 版本会滑动**：`go-version: '1.27'` 这种写法会跟着 hostedtoolcache 升级。go1.27.2 把 export data 格式从 v4 提到了 v5，读不懂它的 golangci-lint 会在 typecheck 阶段报一行 `export data version 5 is greater than maximum supported version 4` 就整体失败——看着像代码问题，其实是工具链版本错配。所以 workflow 里 Go 钉到了具体 patch，golangci-lint 必须 ≥ v2.14.0。
 - `deadcode` **别用 `@latest`**：Go 1.27 给 `math/rand/v2.Rand` 加了泛型方法 `N`，而 x/tools 的 RTA 把 `Program.MethodValue` 的结果直接喂给 `addReachable`，泛型方法那里返回 nil，于是任何依赖图里有 `math/rand/v2` 的程序（本项目就是）都会 panic 在 `visitFunc`。v0.49.0 仍有此问题，golang/go#77549 修完后 v0.52.0 正常，CI 现在写死 `v0.52.0`——写死而非 `@latest` 是为了不让上游哪天再引入同类 panic 时 CI 无故变红。
 - `blog-front/README.md` 是旧版遗留（写的是 SpringBoot + MySQL），以根 `README.md` 为准。

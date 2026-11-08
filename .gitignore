@@ -3,7 +3,10 @@ blog-deploy/build/
 blog-deploy/front/
 
 blog-backend/tmp/
-blog-backend/internal/frontend/dist/
+# embed 声明了 all:dist，目录完全不在时全新 checkout 直接编译失败；
+# 留一个空占位文件即可，构建产物本身仍然不入库
+blog-backend/internal/frontend/dist/*
+!blog-backend/internal/frontend/dist/.gitkeep
 blog-backend/dhblog.db
 
 blog-front/node_modules/

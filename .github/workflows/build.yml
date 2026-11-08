@@ -53,12 +53,13 @@ jobs:
           go-version: '1.27.3'
           cache-dependency-path: '${{ env.BACKEND_DIR }}/go.sum'
 
-      # embed 声明了 all:dist，dist 被 gitignore，不占位 golangci-lint 无法加载 internal/frontend
-      - name: 📁 Prepare embed dir
+      # .gitkeep 已入库，checkout 后目录就在；这一步只是防止占位文件被误删时
+      # golangci-lint 因为 internal/frontend 加载不出 all:dist 而整段失败
+      - name: 📁 Ensure embed placeholder
         working-directory: ${{ env.BACKEND_DIR }}
         run: |
           mkdir -p internal/frontend/dist
-          printf '<!doctype html>' > internal/frontend/dist/index.html
+          touch internal/frontend/dist/.gitkeep
 
       - name: 🔍 golangci-lint
         uses: golangci/golangci-lint-action@v9
