@@ -62,3 +62,21 @@ export function formatDate(dateString: string): string {
   const date = new Date(dateString);
   return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
 }
+
+/**
+ * 把字节数格式化成人读的大小。
+ *
+ * 全应用只此一份实现：网盘列表、上传弹窗、分享列表和预览页曾经各写一套，
+ * 保留位数还不一样（1.5 MB / 1.50 MB 混着出现）。要改显示格式就改这里。
+ *
+ * @param bytes 字节数；0 或非法值统一显示 "0 B"
+ */
+export function formatFileSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  // 1023 B 仍按字节显示；超出 TB 的极端值不再往上一级换算，避免出现 undefined 单位
+  const unitIndex = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  if (unitIndex === 0) return `${Math.round(bytes)} B`;
+  return `${(bytes / 1024 ** unitIndex).toFixed(1)} ${units[unitIndex]}`;
+}

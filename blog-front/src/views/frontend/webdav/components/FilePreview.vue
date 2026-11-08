@@ -210,9 +210,9 @@
                   <span class="font-medium text-[#333] dark:text-zinc-100">文件名</span>
                   <span class="font-normal text-[#666] dark:text-zinc-400 max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis">{{ currentFileName }}</span>
                 </div>
-                <div v-if="currentFileSize" class="flex justify-between items-center border-b border-dashed border-black/5 dark:border-white/10 pb-2">
+                <div v-if="currentFileSizeLabel" class="flex justify-between items-center border-b border-dashed border-black/5 dark:border-white/10 pb-2">
                   <span class="font-medium text-[#333] dark:text-zinc-100">大小</span>
-                  <span class="font-normal text-[#666] dark:text-zinc-400 max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis">{{ formatFileSize(currentFileSize) }}</span>
+                  <span class="font-normal text-[#666] dark:text-zinc-400 max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis">{{ currentFileSizeLabel }}</span>
                 </div>
                 <div v-if="currentFileCreateTime" class="flex justify-between items-center">
                   <span class="font-medium text-[#333] dark:text-zinc-100">创建时间</span>
@@ -244,6 +244,7 @@ import ThemeToggle from '@/components/Child/ThemeToggle.vue'
 import { getDownloadUrl } from '@/api/file'
 import { SERVER_URL } from '@/types/Constant'
 import { notify } from '@/utils/notification'
+import { formatFileSize } from '@/utils/tool'
 import {
   getShareInfo,
   verifySharePassword,
@@ -382,12 +383,14 @@ const currentFileUrl = computed(() => {
   return fileUrl.value
 })
 
-// 统一的文件大小
-const currentFileSize = computed(() => {
+// 统一的文件大小。列表里传下来的 file.size 已经是格式化好的字符串（"1.5 MB"），
+// 不能再当字节数交给 formatFileSize —— 早先的 parseInt 会把 "1.5 MB" 变成 1 字节。
+const currentFileSizeLabel = computed(() => {
   if (props.shareMode) {
-    return shareInfo.value?.file_size || 0
+    return shareInfo.value?.file_size ? formatFileSize(shareInfo.value.file_size) : ''
   }
-  return props.file.originalFile?.size || props.file.size || 0
+  const bytes = props.file.originalFile?.size
+  return bytes === undefined ? (props.file.size || '') : formatFileSize(bytes)
 })
 
 // 统一的文件创建时间
@@ -641,21 +644,6 @@ const getIconClass = (fileType: string) => {
   }
 
   return typeClassMap[fileType as keyof typeof typeClassMap] || 'text-[#999] dark:text-zinc-500'
-}
-
-// 格式化文件大小
-const formatFileSize = (bytes: number | string) => {
-  if (typeof bytes === 'string') {
-    // 尝试将字符串转换为数字
-    bytes = parseInt(bytes, 10);
-    if (isNaN(bytes)) return 'Unknown';
-  }
-  
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 // 格式化日期

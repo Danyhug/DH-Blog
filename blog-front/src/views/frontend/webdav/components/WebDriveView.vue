@@ -320,6 +320,7 @@ import {
 } from '../utils/icons'
 import { detectFileType, getFileIcon } from '../utils/fileType'
 import { syncFromDisk, listFiles, searchFiles as searchFilesApi, createFolder, getDownloadUrl, getBatchDownloadUrl, renameFile as apiRenameFile, deleteFile as apiDeleteFile, initChunkUpload, uploadChunk, completeChunkUpload, getUploadedChunks, cancelChunkUpload, FileInfo, type SearchResult } from '@/api/file'
+import { formatFileSize } from '@/utils/tool'
 import { notify } from '@/utils/notification'
 
 // Keep the two size ranges disjoint: arbitrary media variants are sorted lexically.
@@ -416,10 +417,7 @@ const apiFiles = ref<FileInfo[]>([])
 // 格式化文件大小
 function formatSize(size: number, isFolder: boolean): string {
   if (isFolder) return '文件夹';
-  if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-  if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  return formatFileSize(size);
 }
 
 // 格式化修改日期

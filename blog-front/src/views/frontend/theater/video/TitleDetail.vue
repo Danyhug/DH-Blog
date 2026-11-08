@@ -44,7 +44,7 @@
         </div>
         <div class="flex flex-col gap-2 text-sm text-[#777]">
           <p class="m-0"><span>位置：</span><span class="text-zinc-700 dark:text-[#ddd]">{{ target.folder_path || '我的网盘' }}</span></p>
-          <p class="m-0"><span>大小：</span><span class="text-zinc-700 dark:text-[#ddd]">{{ formatSize(target.size) }}</span></p>
+          <p class="m-0"><span>大小：</span><span class="text-zinc-700 dark:text-[#ddd]">{{ formatFileSize(target.size) }}</span></p>
           <p v-if="target.subtitles.length" class="m-0"><span>字幕：</span><span class="text-zinc-700 dark:text-[#ddd]">{{ target.subtitles.map(s => s.label).join('、') }}</span></p>
           <button v-if="hasProgress" class="mt-1 w-fit cursor-pointer border-none bg-transparent p-0 text-left text-zinc-500 dark:text-[#bcbcbc] underline-offset-2 hover:text-zinc-900 dark:hover:text-white hover:underline" @click="emit('remove-progress', title)">
             清除观看记录
@@ -95,6 +95,7 @@ import type { Video } from '@/api/media'
 import VideoThumb from './VideoThumb.vue'
 import { episodeLabel, resumeTarget, seasonsOf, type Title } from './catalog'
 import { formatRuntime } from '../utils/format'
+import { formatFileSize } from '@/utils/tool'
 import { CloseIcon, PlayIcon, RepeatIcon } from '../components/icons'
 import { focusElement, useFocusRestore } from '../utils/tv'
 
@@ -137,11 +138,6 @@ const qualityBadge = computed(() => {
   if (/1080[pi]/.test(name)) return 'HD'
   return ''
 })
-
-function formatSize(size: number) {
-  if (size >= 1024 ** 3) return `${(size / 1024 ** 3).toFixed(2)} GB`
-  return `${(size / 1024 ** 2).toFixed(1)} MB`
-}
 
 function onKey(event: KeyboardEvent) {
   // 播放器叠在详情上面时 Esc 归播放器（它先处理并 preventDefault）

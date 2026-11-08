@@ -151,6 +151,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { XIcon, FileTextIcon, ImageIcon, VideoIcon, MusicIcon, UploadIcon } from '../utils/icons'
+import { formatFileSize } from '@/utils/tool'
 
 interface Props {
   uploadProgress: number
@@ -316,14 +317,6 @@ function getFileIconClass(file: File) {
   } else {
     return 'bg-[#f3f4f6] dark:bg-white/10 [&>svg]:text-[#6b7280]'
   }
-}
-
-// 格式化文件大小
-function formatFileSize(size: number): string {
-  if (size < 1024) return `${size} B`
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
-  if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`
-  return `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`
 }
 
 // 暴露方法给父组件调用

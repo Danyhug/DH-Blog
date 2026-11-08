@@ -78,10 +78,10 @@ import { ref, computed, onMounted } from 'vue'
 import { XIcon } from '../utils/icons'
 import SharePager from './SharePager.vue'
 import {
-  listShares, deleteShare, getShareAccessLogs,
-  formatFileSize, generateShareLink,
+  listShares, deleteShare, getShareAccessLogs, generateShareLink,
   type ShareSummary, type ShareAccessLog
 } from '@/api/share'
+import { formatFileSize } from '@/utils/tool'
 import { notify } from '@/utils/notification'
 
 defineEmits(['close'])
