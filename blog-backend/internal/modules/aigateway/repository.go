@@ -246,6 +246,7 @@ func defaultSettings() map[string]string {
 		SettingKeyRouterProfiles:      "",
 		SettingKeyRouterMinConfidence: strconv.FormatFloat(defaultMinConfidence, 'f', -1, 64),
 		SettingKeyRouterTimeoutMS:     "0",
+		SettingKeyRouterReasoning:     "",
 	}
 }
 

@@ -102,6 +102,91 @@ func TestChooseRejectsAnswerWithoutOption(t *testing.T) {
 	}
 }
 
+func TestChooseExplainsUnusableReply(t *testing.T) {
+	cases := []struct {
+		name         string
+		content      string
+		reasoning    string
+		finishReason string
+		want         string
+	}{
+		{
+			name: "推理模型只返回了思考过程", reasoning: "Weighing brave against tavily...",
+			finishReason: "length", want: "思维强度",
+		},
+		{
+			name: "输出预算被截断", finishReason: "length", want: "8 个输出 token",
+		},
+		{
+			name: "答不到选项", content: "The best option is", finishReason: "length", want: "finish_reason=length",
+		},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			_, client := chatServer(t, func(w http.ResponseWriter, r *http.Request) {
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"model": "test-model",
+					"choices": []any{map[string]any{
+						"message": map[string]any{
+							"content":           testCase.content,
+							"reasoning_content": testCase.reasoning,
+						},
+						"finish_reason": testCase.finishReason,
+					}},
+				})
+			})
+			_, err := client.Choose(context.Background(), threeOptions)
+			if err == nil || !strings.Contains(err.Error(), testCase.want) {
+				t.Fatalf("err = %v, 期望包含 %q", err, testCase.want)
+			}
+			// 200 响应的语义错误不该伪装成 HTTP 请求失败
+			if strings.Contains(err.Error(), "HTTP") {
+				t.Fatalf("err = %v, 不应带 HTTP 状态前缀", err)
+			}
+		})
+	}
+}
+
+func TestChooseSendsReasoningEffort(t *testing.T) {
+	requestBody := make(chan map[string]any, 1)
+	_, client := chatServer(t, func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		requestBody <- body
+		reply(w, "A", nil)
+	})
+	client.SetReasoningEffort("none")
+
+	if _, err := client.Choose(context.Background(), threeOptions); err != nil {
+		t.Fatalf("Choose 返回错误: %v", err)
+	}
+	body := <-requestBody
+	if body["reasoning_effort"] != "none" {
+		t.Fatalf("request = %v, 思维强度应作为标准 reasoning_effort 字段发出", body)
+	}
+	if body["model"] != "test-model" || body["messages"] == nil {
+		t.Fatalf("request = %v, 原有字段不该被覆盖掉", body)
+	}
+}
+
+func TestChooseOmitsReasoningEffortWhenUnset(t *testing.T) {
+	requestBody := make(chan map[string]any, 1)
+	_, client := chatServer(t, func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		requestBody <- body
+		reply(w, "A", nil)
+	})
+
+	if _, err := client.Choose(context.Background(), threeOptions); err != nil {
+		t.Fatalf("Choose 返回错误: %v", err)
+	}
+	// 不选就完全不出现在请求体里，让模型用自己的默认档位
+	if _, set := (<-requestBody)["reasoning_effort"]; set {
+		t.Fatal("未设置思维强度时不该发送 reasoning_effort")
+	}
+}
+
 func TestChooseReportsOpenAIError(t *testing.T) {
 	_, client := chatServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)

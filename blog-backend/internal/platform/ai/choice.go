@@ -30,6 +30,11 @@ type ChoiceClient struct {
 	model    string
 	client   *http.Client
 
+	// reasoningEffort is sent as the standard reasoning_effort field when set.
+	// The router needs a one-token answer, and a thinking model spends the
+	// whole budget on its chain of thought instead.
+	reasoningEffort string
+
 	// noLogprobs remembers that this endpoint rejected the logprobs request
 	// parameters, so only the first call pays for the retry.
 	mu         sync.Mutex
@@ -57,7 +62,9 @@ type ChoiceResult struct {
 	InputTokens   int
 }
 
-// APIError is a non-200 answer from the chat endpoint.
+// APIError is a failed classifier call: a non-200 answer, or a 200 whose body
+// cannot be used. Status stays zero for the latter, so the message is not
+// prefixed with a misleading "HTTP 200".
 type APIError struct {
 	Status  int
 	Message string
@@ -70,12 +77,20 @@ func (e *APIError) Error() string {
 	return e.Message
 }
 
-// choiceLetters caps the option set: one letter per option keeps every answer
-// a single token.
-const choiceLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const (
+	// choiceLetters caps the option set: one letter per option keeps every answer
+	// a single token.
+	choiceLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-// maxTopLogprobs is the most alternatives OpenAI returns per token.
-const maxTopLogprobs = 20
+	// maxTopLogprobs is the most alternatives OpenAI returns per token.
+	maxTopLogprobs = 20
+
+	// choiceMaxTokens is the answer budget. A letter is one token; the slack
+	// covers models that answer "A." or "Option A" despite being told not to.
+	// Thinking models spend all of it on their chain of thought and never write
+	// the answer, which is why the router insists on a non-thinking model.
+	choiceMaxTokens = 8
+)
 
 const choiceAnswerFormat = "Reply with the letter of exactly one option and nothing else."
 
@@ -102,18 +117,27 @@ func NewChoiceClient(endpoint, apiKey, model string, client *http.Client) *Choic
 // is optional: local servers such as Ollama accept requests without one.
 func (c *ChoiceClient) Configured() bool { return c != nil && c.endpoint != "" && c.model != "" }
 
+// SetReasoningEffort constrains reasoning through the standard reasoning_effort
+// request field. Empty means "do not send it", leaving the model's default.
+// Call it before the client is shared: a new client is built whenever the
+// configuration changes, so it needs no lock.
+func (c *ChoiceClient) SetReasoningEffort(effort string) {
+	c.reasoningEffort = strings.TrimSpace(effort)
+}
+
 type chatMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
 type choiceRequestBody struct {
-	Model       string        `json:"model"`
-	Messages    []chatMessage `json:"messages"`
-	Temperature float64       `json:"temperature"`
-	MaxTokens   int           `json:"max_tokens"`
-	Logprobs    bool          `json:"logprobs,omitempty"`
-	TopLogprobs int           `json:"top_logprobs,omitempty"`
+	Model           string        `json:"model"`
+	Messages        []chatMessage `json:"messages"`
+	Temperature     float64       `json:"temperature"`
+	MaxTokens       int           `json:"max_tokens"`
+	ReasoningEffort string        `json:"reasoning_effort,omitempty"`
+	Logprobs        bool          `json:"logprobs,omitempty"`
+	TopLogprobs     int           `json:"top_logprobs,omitempty"`
 }
 
 type tokenLogprob struct {
@@ -125,17 +149,26 @@ type tokenLogprob struct {
 	} `json:"top_logprobs"`
 }
 
+type chatReplyMessage struct {
+	Content string `json:"content"`
+	// ReasoningContent is where thinking models (DeepSeek, Qwen, GLM and the
+	// OpenAI-compatible endpoints exposing them) put their chain of thought.
+	// Present with an empty Content means the answer never made it out.
+	ReasoningContent string `json:"reasoning_content"`
+}
+
+type chatReplyChoice struct {
+	Message      chatReplyMessage `json:"message"`
+	FinishReason string           `json:"finish_reason"`
+	Logprobs     *struct {
+		Content []tokenLogprob `json:"content"`
+	} `json:"logprobs"`
+}
+
 type choiceResponseBody struct {
-	Model   string `json:"model"`
-	Choices []struct {
-		Message struct {
-			Content string `json:"content"`
-		} `json:"message"`
-		Logprobs *struct {
-			Content []tokenLogprob `json:"content"`
-		} `json:"logprobs"`
-	} `json:"choices"`
-	Usage struct {
+	Model   string            `json:"model"`
+	Choices []chatReplyChoice `json:"choices"`
+	Usage   struct {
 		PromptTokens int `json:"prompt_tokens"`
 	} `json:"usage"`
 }
@@ -177,15 +210,15 @@ func (c *ChoiceClient) Choose(ctx context.Context, req ChoiceRequest) (ChoiceRes
 		return ChoiceResult{}, &APIError{Message: err.Error()}
 	}
 	body := choiceRequestBody{
-		Model: c.model,
+		Model:       c.model,
+		MaxTokens:   choiceMaxTokens,
+		Temperature: 0,
+		// Omitted when empty, so a model with its own default keeps it.
+		ReasoningEffort: c.reasoningEffort,
 		Messages: []chatMessage{
 			{Role: "system", Content: prompt.String()},
 			{Role: "user", Content: string(state)},
 		},
-		Temperature: 0,
-		// A letter is one token; the slack covers models that answer "A." or
-		// "Option A" despite being told not to.
-		MaxTokens: 8,
 	}
 
 	c.mu.Lock()
@@ -209,20 +242,44 @@ func (c *ChoiceClient) Choose(ctx context.Context, req ChoiceRequest) (ChoiceRes
 		return ChoiceResult{}, err
 	}
 	if len(payload.Choices) == 0 {
-		return ChoiceResult{}, &APIError{Status: http.StatusOK, Message: "模型响应里没有 choices"}
+		return ChoiceResult{}, &APIError{Message: "模型响应里没有 choices"}
 	}
 
 	answer := payload.Choices[0]
 	letter := answerLetter(answer.Message.Content, byLetter)
 	if letter == "" {
-		return ChoiceResult{}, &APIError{Status: http.StatusOK,
-			Message: fmt.Sprintf("模型没有给出有效选项: %q", truncate(answer.Message.Content, 80))}
+		return ChoiceResult{}, &APIError{Message: invalidAnswerMessage(c.model, answer.Message, answer.FinishReason)}
 	}
 	result := ChoiceResult{Choice: byLetter[letter], Model: payload.Model, InputTokens: payload.Usage.PromptTokens}
 	if answer.Logprobs != nil {
 		result.Probabilities = letterProbabilities(answer.Logprobs.Content, byLetter)
 	}
 	return result, nil
+}
+
+// invalidAnswerMessage explains an unusable reply in terms the operator can
+// act on. The important case is the thinking model: it spends the whole output
+// budget on its chain of thought and stops before writing an option, so the
+// bare `模型没有给出有效选项: ""` would look like a parser bug. The model name
+// is part of the message because it is what the operator has to change.
+func invalidAnswerMessage(model string, message chatReplyMessage, finishReason string) string {
+	if content := strings.TrimSpace(message.Content); content != "" {
+		text := fmt.Sprintf("模型 %q 没有给出有效选项: %q", model, truncate(content, 80))
+		if finishReason != "" && finishReason != "stop" {
+			text += "（finish_reason=" + finishReason + "）"
+		}
+		return text
+	}
+	if strings.TrimSpace(message.ReasoningContent) != "" {
+		return fmt.Sprintf("模型 %q 只返回了思考过程，没有给出选项："+
+			"请把「思维强度」设为 off，或改用非推理模型", model)
+	}
+	if finishReason == "length" {
+		return fmt.Sprintf("模型 %q 在 %d 个输出 token 内没有给出选项（finish_reason=length）："+
+			"推理模型会先把预算花在思考过程上，请把「思维强度」设为 off 或改用非推理模型",
+			model, choiceMaxTokens)
+	}
+	return fmt.Sprintf("模型 %q 没有给出有效选项: %q", model, "")
 }
 
 func (c *ChoiceClient) post(ctx context.Context, body choiceRequestBody) (choiceResponseBody, error) {

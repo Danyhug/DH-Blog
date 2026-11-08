@@ -301,7 +301,22 @@ export interface ModelRouterSettings {
   defaultProfiles: Record<string, string>
   minConfidence: number
   timeoutMs: number
+  /** 实际生效的思维强度档位，空串表示不指定、用模型自己的默认值 */
+  reasoningEffort: ReasoningEffort
+  /** 可选的思维强度档位，由后端下发，界面不自己维护这份列表 */
+  reasoningEfforts: ReasoningEffortOption[]
   status: ModelRouterStatus
+}
+
+/** off / low / medium / high / max；空串表示不指定 */
+export type ReasoningEffort = '' | 'off' | 'low' | 'medium' | 'high' | 'max'
+
+interface ReasoningEffortOption {
+  value: ReasoningEffort
+  label: string
+  /** 真正写进请求体的值，off 对应 OpenAI 的 none */
+  wireValue: string
+  description: string
 }
 
 /**
@@ -319,6 +334,8 @@ export interface ModelRouterUpdate {
   minConfidence?: number
   /** 0 表示使用该后端的默认超时 */
   timeoutMs?: number
+  /** 传空串表示不指定，让模型用自己的默认档位；仅 OpenAI 兼容后端有效 */
+  reasoningEffort?: ReasoningEffort
 }
 
 export interface GatewaySettings {

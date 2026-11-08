@@ -497,6 +497,7 @@ const (
 	SettingKeyRouterProfiles      = "model_router_profiles"
 	SettingKeyRouterMinConfidence = "model_router_min_confidence"
 	SettingKeyRouterTimeoutMS     = "model_router_timeout_ms"
+	SettingKeyRouterReasoning     = "model_router_reasoning_effort"
 )
 
 // MigrationModels declares the database tables owned by this module.

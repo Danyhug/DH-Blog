@@ -418,11 +418,52 @@ func TestAdminRejectsInvalidModelRouterSettings(t *testing.T) {
 		`{"modelRouter":{"endpoint":"ftp://x"}}`,
 		`{"modelRouter":{"timeoutMs":60000}}`,
 		`{"modelRouter":{"profiles":{"google":"x"}}}`,
+		`{"modelRouter":{"reasoningEffort":"extreme"}}`,
 	} {
 		recorder := adminRequest(&handler, http.MethodPut, "/api/admin/gateway/settings", body)
 		if recorder.Code != http.StatusBadRequest {
 			t.Errorf("%s: 状态码 = %d, 期望 400", body, recorder.Code)
 		}
+	}
+}
+
+func TestModelStrategyForwardsReasoningEffort(t *testing.T) {
+	chat := &recorder{next: chatAnswer("A", 0.8, true)}
+	module, token := newModelStrategyModule(t, chat, configureTestChat)
+	var handler http.Handler = newTestEngine(module)
+
+	// 页面上的 off 对应 OpenAI 的 none：关掉思考，模型才会把字母直接写进 content
+	body := `{"modelRouter":{"reasoningEffort":"off"}}`
+	if recorder := adminRequest(&handler, http.MethodPut, "/api/admin/gateway/settings", body); recorder.Code != http.StatusOK {
+		t.Fatalf("状态码 = %d, body=%s", recorder.Code, recorder.Body.String())
+	}
+	searchProvider(t, module, token, `{"query":"x"}`)
+
+	var sent map[string]any
+	if err := json.Unmarshal(chat.bodies[0], &sent); err != nil {
+		t.Fatalf("解析请求失败: %v", err)
+	}
+	if sent["reasoning_effort"] != "none" {
+		t.Fatalf("request = %v, 思维强度 off 应发成 reasoning_effort=none", sent)
+	}
+	// 界面回显的是页面档位，不是线上字段的写法
+	if view := module.service.modelRouterView().ReasoningEffort; view != ReasoningEffortOff {
+		t.Errorf("reasoningEffort = %q", view)
+	}
+}
+
+func TestModelStrategyOmitsReasoningEffortWhenUnset(t *testing.T) {
+	chat := &recorder{next: chatAnswer("A", 0.8, true)}
+	module, token := newModelStrategyModule(t, chat, configureTestChat)
+
+	searchProvider(t, module, token, `{"query":"x"}`)
+
+	var sent map[string]any
+	if err := json.Unmarshal(chat.bodies[0], &sent); err != nil {
+		t.Fatalf("解析请求失败: %v", err)
+	}
+	if _, set := sent["reasoning_effort"]; set {
+		t.Fatal("没选思维强度时不该发送 reasoning_effort")
 	}
 }
 

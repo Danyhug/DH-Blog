@@ -1,5 +1,12 @@
 <template>
-    <div class="p-5">
+    <div class="flex flex-col gap-3 p-5">
+        <div>
+            <h2 class="text-[16px] font-semibold leading-6 text-[#1f2937]">AI 网关</h2>
+            <p class="mt-0.5 text-xs text-[#98a2b3]">
+                把搜索供应商收敛成一套 API，按配额、健康与调度策略自动选路
+            </p>
+        </div>
+
         <el-tabs v-model="activeTab">
             <el-tab-pane name="overview" lazy>
                 <template #label>

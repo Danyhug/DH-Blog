@@ -58,6 +58,66 @@ const (
 	routerProbeQuery = "latest release notes of the Go programming language"
 )
 
+// Reasoning effort levels offered on the admin page. They are the standard
+// OpenAI chat-completions values except "off", which is what an operator means
+// and what the page says; the wire field spells it "none". Empty means the
+// field is not sent at all and the model keeps its own default.
+const (
+	ReasoningEffortOff    = "off"
+	ReasoningEffortLow    = "low"
+	ReasoningEffortMedium = "medium"
+	ReasoningEffortHigh   = "high"
+	ReasoningEffortMax    = "max"
+)
+
+// reasoningEffortOptions is the closed set the page offers, in increasing order.
+func reasoningEffortOptions() []reasoningEffortOption {
+	return []reasoningEffortOption{
+		{
+			Value: ReasoningEffortOff, Label: "off", WireValue: "none",
+			Description: "不思考，直接作答。判断模型只要一个字母，这一档最稳也最快",
+		},
+		{
+			Value: ReasoningEffortLow, Label: "low", WireValue: "low",
+			Description: "少量思考",
+		},
+		{
+			Value: ReasoningEffortMedium, Label: "medium", WireValue: "medium",
+			Description: "中等思考，多数模型的默认档",
+		},
+		{
+			Value: ReasoningEffortHigh, Label: "high", WireValue: "high",
+			Description: "深度思考，判断会更慢",
+		},
+		{
+			Value: ReasoningEffortMax, Label: "max", WireValue: "max",
+			Description: "最高强度思考，只适合本来就要慢的场景",
+		},
+	}
+}
+
+// validReasoningEffort reports whether level is one the page may store.
+func validReasoningEffort(level string) bool {
+	if level == "" {
+		return true
+	}
+	for _, option := range reasoningEffortOptions() {
+		if option.Value == level {
+			return true
+		}
+	}
+	return false
+}
+
+// reasoningEffortWire translates a stored level into the request field's
+// spelling. "off" is the page's word; OpenAI calls the same thing "none".
+func reasoningEffortWire(level string) string {
+	if level == ReasoningEffortOff {
+		return "none"
+	}
+	return level
+}
+
 // ErrModelRouterNotConfigured means the model strategy was chosen, or tested,
 // without a usable classifier configuration.
 var ErrModelRouterNotConfigured = errors.New("请先在「判断模型」里填好接口与密钥，再启用模型判断")
@@ -108,6 +168,10 @@ type ModelRouterSettings struct {
 	MinConfidence float64
 	// Timeout is zero for the backend's default.
 	Timeout time.Duration
+	// ReasoningEffort is the page's level (off/low/medium/high/max), empty to
+	// leave the model's default alone. Only the chat backend sends it; Jev's
+	// request shape has no such field.
+	ReasoningEffort string
 }
 
 func (s ModelRouterSettings) prompt() string {
@@ -210,7 +274,9 @@ func (c chatClassifier) classify(ctx context.Context, prompt string, state map[s
 
 func buildClassifier(settings ModelRouterSettings, httpClient *http.Client) classifier {
 	if settings.Backend == RouterBackendOpenAI {
-		return chatClassifier{client: ai.NewChoiceClient(settings.Endpoint, settings.APIKey, settings.Model, httpClient)}
+		client := ai.NewChoiceClient(settings.Endpoint, settings.APIKey, settings.Model, httpClient)
+		client.SetReasoningEffort(reasoningEffortWire(settings.ReasoningEffort))
+		return chatClassifier{client: client}
 	}
 	return jevClassifier{client: jev.New(settings.APIKey, settings.Endpoint, settings.Model, httpClient)}
 }
@@ -242,15 +308,19 @@ type modelRouter struct {
 func (r *modelRouter) configure(settings ModelRouterSettings, httpClient *http.Client) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.classifier != nil && !sameBackend(r.settings, settings) {
+	if r.classifier != nil && !sameWireConfig(r.settings, settings) {
 		r.status = ModelRouterStatus{}
 	}
 	r.settings = settings
 	r.classifier = buildClassifier(settings, httpClient)
 }
 
-func sameBackend(a, b ModelRouterSettings) bool {
-	return a.Backend == b.Backend && a.Endpoint == b.Endpoint && a.APIKey == b.APIKey && a.Model == b.Model
+// sameWireConfig compares everything that changes what the classifier sends.
+// The status describes one request shape, so editing the body (turning thinking
+// off, say) must clear the error recorded against the old one.
+func sameWireConfig(a, b ModelRouterSettings) bool {
+	return a.Backend == b.Backend && a.Endpoint == b.Endpoint && a.APIKey == b.APIKey &&
+		a.Model == b.Model && a.ReasoningEffort == b.ReasoningEffort
 }
 
 func (r *modelRouter) configured() bool {
@@ -371,6 +441,7 @@ func (s *Service) loadModelRouterSettings(ctx context.Context) (ModelRouterSetti
 	keys := []string{
 		SettingKeyRouterBackend, SettingKeyRouterEndpoint, SettingKeyRouterAPIKey, SettingKeyRouterModel,
 		SettingKeyRouterPrompt, SettingKeyRouterProfiles, SettingKeyRouterMinConfidence, SettingKeyRouterTimeoutMS,
+		SettingKeyRouterReasoning,
 	}
 	values := make(map[string]string, len(keys))
 	for _, key := range keys {
@@ -382,13 +453,14 @@ func (s *Service) loadModelRouterSettings(ctx context.Context) (ModelRouterSetti
 	}
 
 	settings := ModelRouterSettings{
-		Backend:       RouterBackend(values[SettingKeyRouterBackend]),
-		Endpoint:      values[SettingKeyRouterEndpoint],
-		APIKey:        values[SettingKeyRouterAPIKey],
-		Model:         values[SettingKeyRouterModel],
-		Prompt:        values[SettingKeyRouterPrompt],
-		Profiles:      map[string]string{},
-		MinConfidence: defaultMinConfidence,
+		Backend:         RouterBackend(values[SettingKeyRouterBackend]),
+		Endpoint:        values[SettingKeyRouterEndpoint],
+		APIKey:          values[SettingKeyRouterAPIKey],
+		Model:           values[SettingKeyRouterModel],
+		Prompt:          values[SettingKeyRouterPrompt],
+		Profiles:        map[string]string{},
+		MinConfidence:   defaultMinConfidence,
+		ReasoningEffort: values[SettingKeyRouterReasoning],
 	}
 	if !settings.Backend.valid() {
 		settings.Backend = RouterBackendJev
@@ -425,6 +497,9 @@ type ModelRouterUpdate struct {
 	Profiles      map[string]string `json:"profiles"`
 	MinConfidence *float64          `json:"minConfidence"`
 	TimeoutMS     *int              `json:"timeoutMs"`
+	// ReasoningEffort is one of the page's levels, or "" to leave the model's
+	// own default; it does not apply to the Jev backend.
+	ReasoningEffort *string `json:"reasoningEffort"`
 }
 
 // UpdateModelRouter validates and persists a configuration change, then
@@ -532,6 +607,13 @@ func modelRouterValues(current ModelRouterSettings, update ModelRouterUpdate) (m
 		}
 		values[SettingKeyRouterTimeoutMS] = strconv.Itoa(millis)
 	}
+	if update.ReasoningEffort != nil {
+		level := strings.ToLower(strings.TrimSpace(*update.ReasoningEffort))
+		if !validReasoningEffort(level) {
+			return nil, fmt.Errorf("未知的思维强度: %s", *update.ReasoningEffort)
+		}
+		values[SettingKeyRouterReasoning] = level
+	}
 	return values, nil
 }
 
@@ -563,7 +645,8 @@ func routerBackendOptions() []routerBackendOption {
 		{
 			Value: string(RouterBackendOpenAI), Label: "OpenAI 兼容",
 			Description: "任意 chat completions 接口（DeepSeek、通义、Ollama 等）。模型只回一个选项字母，" +
-				"置信度取自 logprobs；接口不支持 logprobs 时阈值不生效。比 Jev 慢，建议用非推理模型。",
+				"置信度取自 logprobs；接口不支持 logprobs 时阈值不生效。比 Jev 慢，建议把「思维强度」设为 off，" +
+				"否则模型的思考会吃掉只够写一个字母的输出预算。",
 			EndpointHint:     "完整的 chat completions 地址，如 https://api.deepseek.com/v1/chat/completions",
 			DefaultTimeoutMS: defaultChatTimeout.Milliseconds(),
 			KeyRequired:      false,
@@ -588,7 +671,22 @@ type modelRouterView struct {
 	DefaultProfiles map[string]string     `json:"defaultProfiles"`
 	MinConfidence   float64               `json:"minConfidence"`
 	TimeoutMS       int64                 `json:"timeoutMs"`
-	Status          ModelRouterStatus     `json:"status"`
+	// ReasoningEffort is the effective level, "" when the model's own default
+	// is in use. ReasoningEfforts is the closed set the page offers, sent from
+	// here so the form cannot drift from what the backend accepts.
+	ReasoningEffort  string                  `json:"reasoningEffort"`
+	ReasoningEfforts []reasoningEffortOption `json:"reasoningEfforts"`
+	Status           ModelRouterStatus       `json:"status"`
+}
+
+// reasoningEffortOption is one level as the admin page shows it, including the
+// value that actually goes on the wire, so the page can be honest about "off"
+// being sent as "none".
+type reasoningEffortOption struct {
+	Value       string `json:"value"`
+	Label       string `json:"label"`
+	WireValue   string `json:"wireValue"`
+	Description string `json:"description"`
 }
 
 func (s *Service) modelRouterView() modelRouterView {
@@ -598,19 +696,21 @@ func (s *Service) modelRouterView() modelRouterView {
 		profiles[name] = settings.profile(name)
 	}
 	return modelRouterView{
-		Backend:         string(settings.Backend),
-		Backends:        routerBackendOptions(),
-		Configured:      model != nil && model.configured(),
-		APIKeyMasked:    MaskSecret(settings.APIKey),
-		Endpoint:        settings.Endpoint,
-		Model:           settings.Model,
-		Prompt:          settings.prompt(),
-		DefaultPrompt:   defaultRouterPrompt,
-		Profiles:        profiles,
-		DefaultProfiles: defaultProviderProfiles,
-		MinConfidence:   settings.MinConfidence,
-		TimeoutMS:       settings.timeout().Milliseconds(),
-		Status:          status,
+		Backend:          string(settings.Backend),
+		Backends:         routerBackendOptions(),
+		Configured:       model != nil && model.configured(),
+		APIKeyMasked:     MaskSecret(settings.APIKey),
+		Endpoint:         settings.Endpoint,
+		Model:            settings.Model,
+		Prompt:           settings.prompt(),
+		DefaultPrompt:    defaultRouterPrompt,
+		Profiles:         profiles,
+		DefaultProfiles:  defaultProviderProfiles,
+		MinConfidence:    settings.MinConfidence,
+		TimeoutMS:        settings.timeout().Milliseconds(),
+		ReasoningEffort:  settings.ReasoningEffort,
+		ReasoningEfforts: reasoningEffortOptions(),
+		Status:           status,
 	}
 }
 
