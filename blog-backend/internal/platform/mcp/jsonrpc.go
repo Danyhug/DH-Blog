@@ -17,7 +17,6 @@ const (
 	InvalidRequest = -32600
 	MethodNotFound = -32601
 	InvalidParams  = -32602
-	InternalError  = -32603
 )
 
 // DefaultProtocolVersion is what negotiation falls back to when the client asks

@@ -285,8 +285,6 @@ export const FilePresentationIcon = defineComponent({
   }
 })
 
-// 导出所有图标类型
-
 // 锁图标
 export const LockIcon = defineComponent({
   render() {
@@ -331,8 +329,6 @@ export const EyeOffIcon = defineComponent({
     ])
   }
 })
-
-// 时钟图标
 
 // 分享管理入口图标（三点连线）
 export const ShareIcon = defineComponent({
